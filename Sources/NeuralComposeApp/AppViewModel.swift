@@ -14,6 +14,15 @@ public struct CalibrationMetrics: Sendable {
     public let samplesPerSec: Double
 }
 
+/// Coarse signal-health bucket derived from per-channel RMS each window.
+/// "Healthy" range is 5–200 µV — below = electrode lifted / dry, above =
+/// muscle/motion contamination or 50/60 Hz interference.
+public enum SignalQuality: Sendable, Equatable {
+    case healthy   // ≥3/4 channels in range
+    case poor      // 1–2 channels in range
+    case lost      // 0 channels in range
+}
+
 /// Owns the live pipeline lifecycle. The view model itself stays on
 /// `@MainActor` so SwiftUI observation is straightforward, but the heavy
 /// loops — EEG ingestion, windowing, classification, smoothing — all run on
@@ -48,6 +57,9 @@ public final class AppViewModel: ObservableObject {
     @Published public private(set) var calibrationSampleRate: Double = 0
     @Published public private(set) var droppedWindowCount: Int = 0
     @Published public private(set) var calibrationMetrics: CalibrationMetrics?
+
+    @Published public private(set) var signalQuality: SignalQuality?
+    @Published public private(set) var isReconnecting: Bool = false
 
     // ── Immutable wiring (lives for the lifetime of the view model) ──────
     public let container: AppContainer
@@ -171,6 +183,16 @@ public final class AppViewModel: ObservableObject {
                             if let window = try await windowing.ingest(sample) {
                                 metrics.recordWindowing(durationMicros: elapsedMicros(since: started))
 
+                                // Signal-quality bucket from per-channel RMS, one update per
+                                // window. Cheap and avoids needing the full CalibrationMetrics
+                                // struct when not recording.
+                                let quality = Self.signalQuality(of: window)
+                                await MainActor.run {
+                                    if self?.signalQuality != quality {
+                                        self?.signalQuality = quality
+                                    }
+                                }
+
                                 // Record window and compute metrics if in calibration mode
                                 if isCalibrating, let recorder = recorder {
                                     await recorder.recordWindow(window)
@@ -220,10 +242,16 @@ public final class AppViewModel: ObservableObject {
                     BCILog.pipeline.notice("Live stream exhausted \(maxLiveRetries) retries — falling back to synthetic")
                     current = EEGStreamFactory.makeSynthetic()
                     liveRetries = 0
+                    await MainActor.run { self?.isReconnecting = false }
                 } else {
                     let backoff = min(8.0, pow(2.0, Double(liveRetries - 1)))
                     BCILog.pipeline.notice("Live stream interrupted (\(samplesThisAttempt) samples); retry \(liveRetries)/\(maxLiveRetries) after \(backoff)s")
+                    await MainActor.run {
+                        self?.isReconnecting = true
+                        self?.signalQuality = .lost
+                    }
                     try? await Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
+                    await MainActor.run { self?.isReconnecting = false }
                 }
             }
             await current.stream.stop()
@@ -359,6 +387,26 @@ public final class AppViewModel: ObservableObject {
             peak: peak,
             samplesPerSec: window.sampleRate
         )
+    }
+
+    /// Bucket per-channel RMS into healthy/poor/lost. A channel counts as
+    /// "in range" when its RMS sits in 5–200 µV; below = electrode lifted or
+    /// dry pad, above = muscle / mains interference.
+    private nonisolated static func signalQuality(of window: EEGWindow) -> SignalQuality {
+        var inRange = 0
+        for ch in window.samples {
+            let n = Float(ch.count)
+            if n == 0 { continue }
+            var sumSq: Float = 0
+            for v in ch { sumSq += v * v }
+            let rms = (sumSq / n).squareRoot()
+            if rms >= 5 && rms <= 200 { inRange += 1 }
+        }
+        switch inRange {
+        case 3...: return .healthy
+        case 1...2: return .poor
+        default:    return .lost
+        }
     }
 
     private nonisolated static func publishMode(

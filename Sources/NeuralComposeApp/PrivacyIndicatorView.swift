@@ -7,6 +7,8 @@ import BCICore
 struct PrivacyIndicatorView: View {
     let mode: PipelineMode
     let lastError: String?
+    var signalQuality: SignalQuality? = nil
+    var isReconnecting: Bool = false
 
     @State private var expanded: Bool = false
 
@@ -17,6 +19,7 @@ struct PrivacyIndicatorView: View {
                 Text(statusTitle).font(.callout.bold())
                 Text(mode.substitutionSummary).font(.caption).foregroundStyle(.secondary)
                 Spacer()
+                signalBadge
                 Button(action: { expanded.toggle() }) {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
                 }
@@ -58,13 +61,54 @@ struct PrivacyIndicatorView: View {
     }
 
     private var statusTitle: String {
+        if isReconnecting             { return "Reconnecting…" }
         if lastError != nil           { return "Degraded — see details" }
         if mode.isFullyLive           { return "Live pipeline" }
         return "Standby pipeline"
     }
     private var statusColor: Color {
+        if isReconnecting             { return .orange }
         if lastError != nil           { return .red }
         if mode.isFullyLive           { return .green }
         return .orange
+    }
+
+    @ViewBuilder
+    private var signalBadge: some View {
+        if let q = signalQuality, mode.source != .synthetic {
+            HStack(spacing: 4) {
+                Image(systemName: signalIcon(q))
+                    .foregroundStyle(signalColor(q))
+                Text(signalLabel(q))
+                    .font(.caption)
+                    .foregroundStyle(signalColor(q))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(signalColor(q).opacity(0.12))
+            .cornerRadius(4)
+        }
+    }
+
+    private func signalIcon(_ q: SignalQuality) -> String {
+        switch q {
+        case .healthy: return "waveform"
+        case .poor:    return "waveform.path.badge.minus"
+        case .lost:    return "waveform.slash"
+        }
+    }
+    private func signalColor(_ q: SignalQuality) -> Color {
+        switch q {
+        case .healthy: return .green
+        case .poor:    return .orange
+        case .lost:    return .red
+        }
+    }
+    private func signalLabel(_ q: SignalQuality) -> String {
+        switch q {
+        case .healthy: return "Signal OK"
+        case .poor:    return "Signal weak"
+        case .lost:    return "No signal"
+        }
     }
 }

@@ -11,7 +11,9 @@ struct ContentView: View {
         VStack(spacing: 0) {
             PrivacyIndicatorView(
                 mode: viewModel.pipelineMode,
-                lastError: viewModel.lastError
+                lastError: viewModel.lastError,
+                signalQuality: viewModel.signalQuality,
+                isReconnecting: viewModel.isReconnecting
             )
             Divider()
 
