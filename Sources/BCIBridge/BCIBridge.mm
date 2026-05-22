@@ -136,10 +136,11 @@ bci_status_t bci_bridge_create_session(
                 out = s.substr(pos, end - pos);
                 return true;
             };
-            extract("serial_port",  params.serial_port);
-            extract("mac_address",  params.mac_address);
-            extract("ip_address",   params.ip_address);
-            extract("other_info",   params.other_info);
+            extract("serial_port",   params.serial_port);
+            extract("mac_address",   params.mac_address);
+            extract("serial_number", params.serial_number);
+            extract("ip_address",    params.ip_address);
+            extract("other_info",    params.other_info);
         }
         auto* session = new bci_session_t();
         session->boardId = board_id;

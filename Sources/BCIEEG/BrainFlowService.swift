@@ -154,6 +154,13 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
             pairs.append("\"mac_address\":\"\(escapeJSON(envMac))\"")
         }
 
+        // serial_number: BrainFlow's Muse/Muse S/Athena docs list this as an
+        // optional selector alongside mac_address. Useful when the MAC isn't
+        // known but the printed serial is.
+        if let serialNumber = env["NEURALCOMPOSE_MUSE_SERIAL_NUMBER"], !serialNumber.isEmpty {
+            pairs.append("\"serial_number\":\"\(escapeJSON(serialNumber))\"")
+        }
+
         // other_info: BrainFlow 5.22+ uses this to pass Athena startup
         // options such as the preset (p1041 / p1042 / p1043) and
         // low_latency=true. We supply a sensible default for Athena; any

@@ -79,9 +79,23 @@ NEURALCOMPOSE_BRAINFLOW_OTHER_INFO='preset=p1042;low_latency=true' \
 
 ### Multi-device disambiguation
 
-If multiple Muse devices are in range, pin one by MAC address with
-`NEURALCOMPOSE_MUSE_MAC=AA:BB:CC:DD:EE:FF` — this becomes
-`BrainFlowInputParams.mac_address` and is honored across all profiles.
+If multiple Muse devices are in range, pin one by either MAC address or
+printed serial number — BrainFlow's Muse / Muse S / Athena docs accept both
+as optional selectors on `BrainFlowInputParams`:
+
+```bash
+# Selector A — MAC address (becomes BrainFlowInputParams.mac_address)
+NEURALCOMPOSE_MUSE_MAC=AA:BB:CC:DD:EE:FF \
+    ./Scripts/run-synthetic.sh --profile athena
+
+# Selector B — serial number (becomes BrainFlowInputParams.serial_number)
+NEURALCOMPOSE_MUSE_SERIAL_NUMBER=MUSE-XXXX \
+    ./Scripts/run-synthetic.sh --profile athena
+```
+
+You can set both; BrainFlow uses whichever it can match. Honored across all
+profiles. (Note: `NEURALCOMPOSE_MUSE_SERIAL` is something different — that
+points at a `/dev/cu.usbmodem*` *serial port*, used by the BLED112 profiles.)
 
 All wiring is confined to `BrainFlowService.makeParamsJSON()` and opaque to
 the rest of the codebase.
