@@ -101,6 +101,40 @@ It shouldn't — `BrainFlowService` catches the disconnect and emits a single
 If you see a hard crash, capture the stack trace, the BrainFlow board profile,
 and the dongle model, and file an issue.
 
+### Old recording (`labels.csv` is all "none", `eeg.csv` huge for short session)
+
+Two compounding bugs in pre-v0.4.3 builds produced unusable
+recordings. Both are fixed in current builds, but old session
+directories still carry the broken artifacts:
+
+- **Sample duplication.** The BrainFlow drain used `get_current_board_data`
+  (peek-without-consume), so polling at 20 Hz re-yielded the same
+  buffered samples ~80× before they aged out. An `eeg.csv` with
+  1.5M rows for a 90 s session is the giveaway. Fixed in `1d4fb33`
+  by switching to `get_board_data` + `get_board_data_count`.
+
+- **Event/EEG epoch mismatch.** Event timestamps were written via
+  `timeIntervalSinceReferenceDate` (seconds since 2001) while EEG
+  samples carry BrainFlow's `timeIntervalSince1970` (Unix epoch). The
+  978307200 s offset meant no event ever overlapped any window, so
+  `labels.csv` came out uniformly "none". Fixed by switching the
+  event writers to `timeIntervalSince1970`.
+
+`Scripts/train-intent-classifier.py` auto-detects the epoch offset and
+re-derives labels from `events.csv` directly, so a pre-fix session with
+real EEG and real events can still train without re-recording — as
+long as both actually cover the same wall-clock window.
+
+### Sticky-label events (`rest`, `jaw_clench`, `artifact`) absent from `labels.csv`
+
+Pre-v0.4.4: `startStickyLabel` pushed a struct copy into both an
+`activeEvents` and `allEvents` array. When `endStickyLabel` updated
+the duration, only `activeEvents` saw it — `allEvents` (the writer
+source for `events.csv`) kept the original zero-duration record. Every
+sticky press was therefore a single-instant event that never made the
+50 % overlap threshold during label resolution. Fixed in `e54d9f6`;
+re-record to get usable rest/clench/artifact labels.
+
 ### Muse keeps disconnecting / "Reconnecting…" stays up
 
 The Muse S auto-powers-off after ~30 s of poor scalp contact, looking to

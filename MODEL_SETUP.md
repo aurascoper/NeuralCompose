@@ -64,8 +64,9 @@ If your model uses different names, adjust the input/output keys in
    ```
 2. **`Models/IntentClassifier.mlpackage`** — raw export from
    `Scripts/train-intent-classifier.py` (or any coremltools `.convert()`
-   call). Core ML auto-compiles on first load and caches the result. No
-   Xcode required, slightly slower cold-start.
+   call). `CoreMLIntentClassifier` runs `MLModel.compileModel(at:)` on
+   first load (~500 ms one-time), then loads the resulting `.mlmodelc`
+   from the per-launch temp dir. No Xcode required.
 
 If both exist, `.mlmodelc` wins.
 
