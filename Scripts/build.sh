@@ -64,4 +64,13 @@ if [[ "$USE_BRAINFLOW" -eq 1 ]]; then
 fi
 
 echo "swift build ${ARGS[*]}"
-exec swift build "${ARGS[@]}"
+swift build "${ARGS[@]}"
+BUILD_EXIT=$?
+
+# Copy BrainFlow runtime dylibs next to binary for local testing
+if [[ "$USE_BRAINFLOW" -eq 1 && "$BUILD_EXIT" -eq 0 ]]; then
+    cp "$BRAINFLOW_PATH/compiled"/lib*.dylib ".build/$CONFIG/" 2>/dev/null || true
+    echo "Copied BrainFlow runtime libraries to .build/$CONFIG/"
+fi
+
+exit $BUILD_EXIT
