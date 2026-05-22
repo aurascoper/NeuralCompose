@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <new>
+#include <string>
 #include <vector>
 
 #if defined(BCI_BRAINFLOW_AVAILABLE)
@@ -35,6 +36,7 @@ struct bci_session_t {
     double sampleRate{0.0};
     std::vector<int32_t> eegChannels;
     bool streaming{false};
+    std::string paramsJson;
 #else
     int dummy{0};
 #endif
@@ -115,9 +117,10 @@ bci_status_t bci_bridge_create_session(
 #if defined(BCI_BRAINFLOW_AVAILABLE)
     auto* session = new bci_session_t();
     session->boardId = board_id;
+    session->paramsJson = (params_json != NULL) ? std::string(params_json) : std::string("{}");
 
     // Call prepare_session with the C API.
-    int status = prepare_session(board_id, params_json != NULL ? params_json : "{}");
+    int status = prepare_session(board_id, session->paramsJson.c_str());
     if (status != 0) {
         delete session;
         return BCI_ERR_PREPARE_FAILED;
@@ -127,7 +130,7 @@ bci_status_t bci_bridge_create_session(
     int sampling_rate = 0;
     status = get_sampling_rate(board_id, 0, &sampling_rate);
     if (status != 0) {
-        release_session(board_id, params_json != NULL ? params_json : "{}");
+        release_session(board_id, session->paramsJson.c_str());
         delete session;
         return BCI_ERR_PREPARE_FAILED;
     }
@@ -140,7 +143,7 @@ bci_status_t bci_bridge_create_session(
     status = get_eeg_channels(board_id, 0, channels_buf, &channels_len);
     if (status != 0 || channels_len <= 0) {
         free(channels_buf);
-        release_session(board_id, params_json != NULL ? params_json : "{}");
+        release_session(board_id, session->paramsJson.c_str());
         delete session;
         return BCI_ERR_PREPARE_FAILED;
     }
@@ -186,8 +189,8 @@ bci_status_t bci_bridge_start_stream(
     int32_t bufSamples = (buffer_size_seconds > 0)
         ? static_cast<int32_t>(buffer_size_seconds * (handle->sampleRate > 0 ? handle->sampleRate : 256))
         : 7680;
-    // Call start_stream with the C API.
-    int status = start_stream(bufSamples, "", handle->boardId, "{}");
+    // Call start_stream with the C API using stored params.
+    int status = start_stream(bufSamples, "", handle->boardId, handle->paramsJson.c_str());
     if (status != 0) {
         return BCI_ERR_START_FAILED;
     }
@@ -226,7 +229,7 @@ bci_status_t bci_bridge_drain_samples(
 
     int returned_samples = 0;
     status = get_current_board_data(max_samples, 0, board_data, &returned_samples,
-                                    handle->boardId, "{}");
+                                    handle->boardId, handle->paramsJson.c_str());
     if (status != 0) {
         free(board_data);
         return BCI_ERR_READ_FAILED;
@@ -277,7 +280,7 @@ bci_status_t bci_bridge_stop_stream(bci_session_handle_t handle) {
     if (handle == NULL) return BCI_ERR_INVALID_HANDLE;
 #if defined(BCI_BRAINFLOW_AVAILABLE)
     if (handle->streaming) {
-        int status = stop_stream(handle->boardId, "{}");
+        int status = stop_stream(handle->boardId, handle->paramsJson.c_str());
         if (status != 0) {
             return BCI_ERR_STOP_FAILED;
         }
@@ -293,10 +296,10 @@ void bci_bridge_destroy_session(bci_session_handle_t handle) {
     if (handle == NULL) return;
 #if defined(BCI_BRAINFLOW_AVAILABLE)
     if (handle->streaming) {
-        stop_stream(handle->boardId, "{}");
+        stop_stream(handle->boardId, handle->paramsJson.c_str());
         handle->streaming = false;
     }
-    release_session(handle->boardId, "{}");
+    release_session(handle->boardId, handle->paramsJson.c_str());
 #endif
     delete handle;
 }

@@ -134,43 +134,84 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
 
     private func makeParamsJSON() -> String {
         let env = ProcessInfo.processInfo.environment
-        var pairs: [String] = []
+
+        // BrainFlow's board_controller requires ALL fields to be present in the JSON
+        // (even if empty strings for string fields, 0 for int fields).
+        // The JSON parser assigns each field directly, and missing fields become null,
+        // which causes a type error when assigning to std::string.
+
+        var serial_port = ""
+        var mac_address = ""
+        var ip_address = ""
+        var ip_address_aux = ""
+        var ip_address_anc = ""
+        var ip_protocol = 0
+        var ip_port = 0
+        var ip_port_aux = 0
+        var ip_port_anc = 0
+        var other_info = ""
+        var timeout = 0
+        var serial_number = ""
+        var file = ""
+        var file_aux = ""
+        var file_anc = ""
+        var master_board = -100 // BoardIds::NO_BOARD
 
         // serial_port: BLED112 dongle variants. Caller-supplied wins;
         // otherwise honor NEURALCOMPOSE_MUSE_SERIAL for the BLED profiles.
-        if let serialPort = serialPort {
-            pairs.append("\"serial_port\":\"\(escapeJSON(serialPort))\"")
+        if let serialPort = self.serialPort {
+            serial_port = serialPort
         } else if profile.usesBLEDDongle,
                   let envSerial = env["NEURALCOMPOSE_MUSE_SERIAL"] {
-            pairs.append("\"serial_port\":\"\(escapeJSON(envSerial))\"")
+            serial_port = envSerial
         }
 
         // mac_address: caller wins; otherwise honor NEURALCOMPOSE_MUSE_MAC.
-        // BrainFlow uses this to disambiguate when multiple Muse devices are
-        // in range.
+        // BrainFlow uses this to disambiguate when multiple Muse devices are in range.
         if let mac = macAddress {
-            pairs.append("\"mac_address\":\"\(escapeJSON(mac))\"")
+            mac_address = mac
         } else if let envMac = env["NEURALCOMPOSE_MUSE_MAC"] {
-            pairs.append("\"mac_address\":\"\(escapeJSON(envMac))\"")
+            mac_address = envMac
         }
 
         // serial_number: BrainFlow's Muse/Muse S/Athena docs list this as an
         // optional selector alongside mac_address. Useful when the MAC isn't
         // known but the printed serial is.
-        if let serialNumber = env["NEURALCOMPOSE_MUSE_SERIAL_NUMBER"], !serialNumber.isEmpty {
-            pairs.append("\"serial_number\":\"\(escapeJSON(serialNumber))\"")
+        if let serialNum = env["NEURALCOMPOSE_MUSE_SERIAL_NUMBER"], !serialNum.isEmpty {
+            serial_number = serialNum
         }
 
         // other_info: BrainFlow 5.22+ uses this to pass Athena startup
-        // options such as the preset (p1041 / p1042 / p1043) and
-        // low_latency=true. We supply a sensible default for Athena; any
-        // profile can override via NEURALCOMPOSE_BRAINFLOW_OTHER_INFO.
+        // options such as the preset (p1041 / p1042 / p1043) and low_latency=true.
+        // We supply a sensible default for Athena; any profile can override
+        // via NEURALCOMPOSE_BRAINFLOW_OTHER_INFO.
         if let envOther = env["NEURALCOMPOSE_BRAINFLOW_OTHER_INFO"], !envOther.isEmpty {
-            pairs.append("\"other_info\":\"\(escapeJSON(envOther))\"")
+            other_info = envOther
         } else if profile == .museSAthena {
-            pairs.append("\"other_info\":\"preset=p1041;low_latency=true\"")
+            other_info = "preset=p1041;low_latency=true"
         }
-        return "{\(pairs.joined(separator: ","))}"
+
+        // Construct JSON with all required fields (using default C++ values when not set).
+        return """
+        {
+            "serial_port":"\(escapeJSON(serial_port))",
+            "mac_address":"\(escapeJSON(mac_address))",
+            "ip_address":"\(escapeJSON(ip_address))",
+            "ip_address_aux":"\(escapeJSON(ip_address_aux))",
+            "ip_address_anc":"\(escapeJSON(ip_address_anc))",
+            "ip_protocol":\(ip_protocol),
+            "ip_port":\(ip_port),
+            "ip_port_aux":\(ip_port_aux),
+            "ip_port_anc":\(ip_port_anc),
+            "other_info":"\(escapeJSON(other_info))",
+            "timeout":\(timeout),
+            "serial_number":"\(escapeJSON(serial_number))",
+            "file":"\(escapeJSON(file))",
+            "file_aux":"\(escapeJSON(file_aux))",
+            "file_anc":"\(escapeJSON(file_anc))",
+            "master_board":\(master_board)
+        }
+        """
     }
 
     /// Verify `MuseBoardProfile.brainFlowBoardID` against the *compiled*
