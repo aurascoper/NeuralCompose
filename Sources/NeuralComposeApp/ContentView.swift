@@ -4,6 +4,8 @@ import BCICore
 struct ContentView: View {
     @ObservedObject var viewModel: AppViewModel
     @State private var showMetrics: Bool = false
+    @State private var showCalibration: Bool = false
+    @State private var keyboardMonitor: Any?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,10 +43,58 @@ struct ContentView: View {
                     .transition(.opacity)
             }
 
+            if showCalibration {
+                Divider()
+                CalibrationView(viewModel: viewModel)
+                    .padding(12)
+                    .transition(.opacity)
+            }
+
             Divider()
-            ControlsView(viewModel: viewModel, showMetrics: $showMetrics)
+            ControlsView(viewModel: viewModel, showMetrics: $showMetrics, showCalibration: $showCalibration)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+        }
+        .onAppear { setupKeyboardMonitoring() }
+        .onDisappear { teardownKeyboardMonitoring() }
+    }
+
+    private func setupKeyboardMonitoring() {
+        guard showCalibration else { return }
+        let monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { event in
+            guard viewModel.isCalibrating else { return event }
+            let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
+            let isKeyDown = event.type == .keyDown
+
+            if isKeyDown {
+                switch key {
+                case "r": Task { await viewModel.startStickyLabel(.rest) }
+                case "j": Task { await viewModel.startStickyLabel(.jawClench) }
+                case "x": Task { await viewModel.startStickyLabel(.artifact) }
+                case "b": Task { await viewModel.addTimedEvent(.blink) }
+                case "d": Task { await viewModel.addTimedEvent(.doubleBlink) }
+                case "s": Task { await viewModel.addTimedEvent(.select) }
+                default: break
+                }
+            } else {
+                if ["r", "j", "x"].contains(key) {
+                    Task { await viewModel.endStickyLabel() }
+                }
+            }
+
+            if event.keyCode == 53 { // Escape key
+                Task { await viewModel.endStickyLabel() }
+            }
+
+            return event
+        }
+        keyboardMonitor = monitor
+    }
+
+    private func teardownKeyboardMonitoring() {
+        if let monitor = keyboardMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyboardMonitor = nil
         }
     }
 }
@@ -52,6 +102,7 @@ struct ContentView: View {
 private struct ControlsView: View {
     @ObservedObject var viewModel: AppViewModel
     @Binding var showMetrics: Bool
+    @Binding var showCalibration: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -73,6 +124,11 @@ private struct ControlsView: View {
 
             Toggle(isOn: $showMetrics) {
                 Label("Metrics", systemImage: "gauge.with.dots.needle.33percent")
+            }
+            .toggleStyle(.button)
+
+            Toggle(isOn: $showCalibration) {
+                Label("Calibrate", systemImage: "waveform.circle")
             }
             .toggleStyle(.button)
         }
