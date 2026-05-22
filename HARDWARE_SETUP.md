@@ -140,6 +140,38 @@ You should see the privacy indicator switch from "Synthetic" to the chosen
 profile name, the channel count update to 4, and the intent classifier start
 firing predictions within ~2 seconds (one full windowing period).
 
+## Native BLE smoke test
+
+For Muse S native BLE (requires BrainFlow built with `-DBUILD_BLE=ON`):
+
+```bash
+./Scripts/build.sh --with-brainflow
+./Scripts/run-muse-s.sh
+```
+
+With serial number (if multiple Muse devices nearby):
+
+```bash
+NEURALCOMPOSE_MUSE_SERIAL_NUMBER="MUSE-6018-MB9D-a715" \
+./Scripts/run-muse-s.sh
+```
+
+### Pre-test checklist
+
+Before each hardware test:
+
+1. Quit competing apps (Muse, Mind Monitor, Bluetooth connections)
+2. Power-cycle Muse S (off → on, wait for LED to pulse)
+3. Keep within a few feet of the Mac, off charger
+4. Run NeuralCompose within the advertising window (~30–60s)
+
+### Troubleshooting device discovery
+
+- **SimpleBLE missing?** Rebuild BrainFlow with `-DBUILD_BLE=ON` flag
+- **Adapter found but device not found?** Reset macOS Bluetooth: `sudo pkill bluetoothd`
+- **Want to test BrainFlow directly?** Run the Python test in the prompts above
+- **Got "Failed to find Muse Device"?** Device may be off, out of range, or held by another app
+
 ## Falling back
 
 If BrainFlow returns an error at any point during streaming, `BrainFlowService`
