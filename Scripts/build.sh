@@ -70,6 +70,10 @@ BUILD_EXIT=$?
 # Copy BrainFlow runtime dylibs next to binary for local testing
 if [[ "$USE_BRAINFLOW" -eq 1 && "$BUILD_EXIT" -eq 0 ]]; then
     cp "$BRAINFLOW_PATH/compiled"/lib*.dylib ".build/$CONFIG/" 2>/dev/null || true
+    # Also copy SimpleBLE dylibs if BrainFlow was built with BLE support
+    find "$BRAINFLOW_PATH/build" \
+        \( -name "libsimpleble*.dylib" -o -name "libsimpleble-c*.dylib" \) \
+        -exec cp {} ".build/$CONFIG/" \; 2>/dev/null || true
     echo "Copied BrainFlow runtime libraries to .build/$CONFIG/"
 fi
 
