@@ -14,12 +14,15 @@ cd "$REPO_ROOT"
 
 CONFIG="debug"
 USE_BRAINFLOW=0
+BRAINFLOW_PATH=""
 
 for arg in "$@"; do
     case "$arg" in
         --release)        CONFIG="release" ;;
         --debug)          CONFIG="debug" ;;
         --with-brainflow) USE_BRAINFLOW=1 ;;
+        --brainflow-path=*)
+            BRAINFLOW_PATH="${arg#*=}" ;;
         -h|--help)
             grep '^#' "$0" | sed 's/^# \{0,1\}//'
             exit 0 ;;
@@ -32,15 +35,32 @@ done
 ARGS=(-c "$CONFIG")
 
 if [[ "$USE_BRAINFLOW" -eq 1 ]]; then
-    BREW_PREFIX="$(brew --prefix 2>/dev/null || echo /opt/homebrew)"
+    # Determine BrainFlow path: explicit arg > ~/Developer/brainflow > homebrew
+    if [[ -z "$BRAINFLOW_PATH" ]]; then
+        if [[ -d "$HOME/Developer/brainflow" ]]; then
+            BRAINFLOW_PATH="$HOME/Developer/brainflow"
+        else
+            BRAINFLOW_PATH="$(brew --prefix brainflow 2>/dev/null || echo /opt/homebrew)"
+        fi
+    fi
+
+    BRAINFLOW_PATH="$(cd "$BRAINFLOW_PATH" 2>/dev/null && pwd)"
+    if [[ ! -d "$BRAINFLOW_PATH" ]]; then
+        echo "Error: BrainFlow not found at $BRAINFLOW_PATH" >&2
+        exit 1
+    fi
+
+    # Include paths for board-controller C API
     ARGS+=(
         -Xcc "-DBCI_BRAINFLOW_AVAILABLE=1"
-        -Xcc "-I${BREW_PREFIX}/include"
-        -Xlinker "-L${BREW_PREFIX}/lib"
-        -Xlinker "-lBrainflow"
+        -Xcc "-I${BRAINFLOW_PATH}/src/board_controller/inc"
+        -Xcc "-I${BRAINFLOW_PATH}/src/utils/inc"
+        -Xcc "-I${BRAINFLOW_PATH}/src/data_handler/inc"
+        -Xcc "-I${BRAINFLOW_PATH}/third_party/json"
+        -Xlinker "-L${BRAINFLOW_PATH}/compiled"
         -Xlinker "-lBoardController"
     )
-    echo "Linking against BrainFlow at ${BREW_PREFIX}"
+    echo "Linking against BrainFlow at ${BRAINFLOW_PATH}"
 fi
 
 echo "swift build ${ARGS[*]}"
