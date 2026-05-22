@@ -140,13 +140,45 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
         if let mac = macAddress {
             pairs.append("\"mac_address\":\"\(escapeJSON(mac))\"")
         }
-        // Muse S Athena: the dongle is the recommended transport for
-        // stability. The user can override via env var.
-        if profile == .museSAthena, serialPort == nil,
+        // BLED112 dongle path: BrainFlow expects `serial_port` (e.g.
+        // /dev/cu.usbmodem*) for the BLED variants. If the caller didn't
+        // pass one, fall through to NEURALCOMPOSE_MUSE_SERIAL.
+        if profile.usesBLEDDongle, serialPort == nil,
            let envSerial = ProcessInfo.processInfo.environment["NEURALCOMPOSE_MUSE_SERIAL"] {
             pairs.append("\"serial_port\":\"\(escapeJSON(envSerial))\"")
         }
         return "{\(pairs.joined(separator: ","))}"
+    }
+
+    /// Best-effort debug dump of the board IDs BrainFlow exposes at runtime,
+    /// to verify our `MuseBoardProfile.brainFlowBoardID` table matches the
+    /// installed BrainFlow version. Currently prints only what our bridge
+    /// reports about a freshly-prepared session for each candidate; it does
+    /// not call into the C++ `BoardIds` enum directly because that would
+    /// require widening the bridge ABI.
+    ///
+    /// Run in a scratch tool when you suspect ID drift after a BrainFlow
+    /// upgrade. Safe to call repeatedly; it cleans up its sessions.
+    public static func debugDumpKnownBoards() {
+        guard bci_bridge_is_available() else {
+            BCILog.eeg.notice("debugDumpKnownBoards: bridge unavailable")
+            return
+        }
+        for profile in MuseBoardProfile.allCases where profile.requiresBrainFlow {
+            guard let id = profile.brainFlowBoardID else { continue }
+            var handle: bci_session_handle_t?
+            let status = bci_bridge_create_session(id, "{}", &handle)
+            if status == BCI_OK, let h = handle {
+                let ch = bci_bridge_eeg_channel_count(h)
+                let sr = bci_bridge_sample_rate(h)
+                BCILog.eeg.notice("\(profile.displayName, privacy: .public) [id=\(id)] ch=\(ch) sr=\(sr)")
+                bci_bridge_destroy_session(h)
+            } else {
+                BCILog.eeg.notice(
+                    "\(profile.displayName, privacy: .public) [id=\(id)] — prepare_session failed (status \(status.rawValue))"
+                )
+            }
+        }
     }
 
     private func escapeJSON(_ s: String) -> String {

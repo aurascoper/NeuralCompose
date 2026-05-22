@@ -9,12 +9,16 @@ import Foundation
 ///     spurious select prediction doesn't trigger a token commit.
 ///
 /// Strategy:
-///   • Maintain a small ring of the last N predictions.
-///   • An intent is *active* iff ≥ `activationCount` of the last N predictions
-///     match it AND the average confidence over those windows ≥ `minConfidence`.
-///   • A select requires a *higher* activation count than an advance.
+///   • Maintain a ring of the last `historySize` predictions.
+///   • For each candidate class, compute count + **average confidence** over
+///     all predictions in the ring for that class.
+///   • An intent is *active* iff its count ≥ activation bar AND its
+///     averaged confidence ≥ `minConfidence`. A select requires a higher
+///     activation count than an advance.
+///   • Advance requires a *single* class to cross `activationCount` —
+///     alternating noisy classes (jaw → blink → jaw → blink) do not fire.
 ///   • After firing `selectActive`, enter a refractory period during which
-///     only `idle` can be emitted — prevents double-fires.
+///     only `idle` can be emitted.
 public actor IntentSmoother {
 
     public struct Config: Sendable {
@@ -57,27 +61,37 @@ public actor IntentSmoother {
             return .idle
         }
 
-        // Count per-class hits with confidence ≥ threshold.
-        var counts: [IntentClass: (count: Int, sumConfidence: Float)] = [:]
-        for p in history where p.confidence >= config.minConfidence {
-            counts[p.intent, default: (0, 0)].count += 1
-            counts[p.intent, default: (0, 0)].sumConfidence += p.confidence
+        // Tally count + summed confidence per class across the whole ring.
+        // (No per-window threshold filter — the bar is on the *averaged*
+        // confidence across the matching windows, which is what the docs say.)
+        var totals: [IntentClass: (count: Int, sumConfidence: Float)] = [:]
+        for p in history {
+            var entry = totals[p.intent] ?? (0, 0)
+            entry.count += 1
+            entry.sumConfidence += p.confidence
+            totals[p.intent] = entry
+        }
+
+        func meetsBar(_ entry: (count: Int, sumConfidence: Float), threshold: Int) -> Bool {
+            guard entry.count >= threshold else { return false }
+            let avg = entry.sumConfidence / Float(entry.count)
+            return avg >= config.minConfidence
         }
 
         // Prefer .select if it crosses its higher bar.
-        if let s = counts[.select],
-           s.count >= config.selectActivationCount {
+        if let s = totals[.select], meetsBar(s, threshold: config.selectActivationCount) {
             refractoryRemaining = config.refractoryWindows
             return .selectActive
         }
 
-        // Advance: any non-rest, non-select intent reaches its activation bar.
+        // Advance: a *single* non-rest, non-select class crosses
+        // activationCount with sufficient averaged confidence. We do not sum
+        // counts across classes — alternating noise must not fire.
         let advanceCandidates: [IntentClass] = [.jawClench, .singleBlink, .doubleBlink]
-        let advanceTotal = advanceCandidates.reduce(0) { acc, c in
-            acc + (counts[c]?.count ?? 0)
-        }
-        if advanceTotal >= config.activationCount {
-            return .advance
+        for c in advanceCandidates {
+            if let entry = totals[c], meetsBar(entry, threshold: config.activationCount) {
+                return .advance
+            }
         }
         return .idle
     }

@@ -37,10 +37,13 @@ schedule freely) or `.cpuOnly` (debug fallback). It never offers
 
 The default wrapper expects:
 
-- **Input**:  `MLMultiArray<Float32>` of shape `[1, channels, samples]`
-              where `channels` defaults to 4 (TP9, AF7, AF8, TP10 for Muse)
-              and `samples` defaults to 256 (1.024 s @ 256 Hz, but the
-              window length is configurable in `EEGWindowingConfig`).
+- **Input**:  `MLMultiArray<Float32>` of shape **`[1, 4, 512]`** (i.e.
+              `[1, channels, samples]`). The `512` matches a 2 s window at
+              256 Hz, which is what `EEGWindowingConfig` and `AppContainer`
+              configure by default, and equals `CoreMLIntentClassifier.expectedSamples`
+              out of the box. If you change `EEGWindowingConfig.windowSeconds`
+              or `sampleRate`, also update `expectedSamples` — the two must
+              agree, and the wrapper validates channel count at runtime.
 - **Output**: `MLMultiArray<Float32>` of shape `[1, classes]`, logits or
               probabilities for the intent labels in
               `IntentClass.modelOutputOrder`.

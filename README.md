@@ -50,10 +50,13 @@ can immediately see the carousel cycle and commit tokens. Everything works
 | Real Core ML model | Drop a compiled `.mlmodelc` into `Models/IntentClassifier.mlmodelc` and toggle "Use Core ML" in the UI. |
 | Real MLX LLM       | Drop a converted MLX model into `Models/<name>/` and toggle "Use MLX" in the UI. See [MODEL_SETUP.md](MODEL_SETUP.md). |
 
-If anything fails (missing weights, ANE in use, etc.) the app **falls back to
-the synthetic / mock / stub** path automatically and surfaces the degraded
-mode in the privacy indicator bar — it never crashes silently and it never
-reaches out to the network.
+If something is missing at **launch** (no `.mlmodelc`, no MLX weights, bridge
+in stub mode) the factory wires up the mock / stub equivalent and the privacy
+banner reflects it. At **runtime**, if the live EEG stream errors or
+disconnects, `AppViewModel`'s supervisor swaps in the synthetic stream and
+updates the banner to degraded mode — the session does not crash and never
+reaches the network. We do not auto-reconnect to the same device; restart the
+app (or call `viewModel.stop()` then `start()`) to retry the live stream.
 
 ## Architecture in one paragraph
 

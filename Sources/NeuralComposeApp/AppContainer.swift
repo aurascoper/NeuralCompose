@@ -67,11 +67,20 @@ public struct AppContainer: Sendable {
     private static func profileFromEnvironment() -> MuseBoardProfile {
         let raw = ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] ?? "synthetic"
         switch raw.lowercased() {
-        case "muse2", "musetwo":          return .museTwo
-        case "muses":                     return .museS
-        case "musesathena", "athena":     return .museSAthena
-        case "playback":                  return .playback
-        default:                          return .synthetic
+        case "muse2", "musetwo", "muse2-ble", "musetwo-ble":
+            return .museTwoNativeBLE
+        case "muse2-bled", "musetwo-bled", "muse2bled":
+            return .museTwoBLED
+        case "muses", "muses-ble":
+            return .museSNativeBLE
+        case "muses-bled", "musesbled":
+            return .museSBLED
+        case "musesathena", "athena", "muses-athena":
+            return .museSAthena
+        case "playback":
+            return .playback
+        default:
+            return .synthetic
         }
     }
 }

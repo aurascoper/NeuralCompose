@@ -1,10 +1,13 @@
 ## Swift / SwiftPM
 .build/
 .swiftpm/
-Package.resolved
 *.xcodeproj/
 *.xcworkspace/
 DerivedData/
+
+# Package.resolved is intentionally NOT ignored — the MLX/Transformers
+# dependency graph is fragile across releases, and we want every machine to
+# resolve to the same vetted versions.
 
 ## Apple
 .DS_Store

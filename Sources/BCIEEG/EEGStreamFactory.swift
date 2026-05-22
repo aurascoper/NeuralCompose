@@ -29,26 +29,18 @@ public enum EEGStreamFactory {
                     profile: .playback
                 )
             }
-            // No path supplied — fall back to synthetic.
             BCILog.eeg.notice("Playback profile selected without path; falling back to synthetic")
-            return Resolved(
-                stream: SyntheticEEGStream(),
-                source: .synthetic,
-                profile: .synthetic
-            )
+            return Resolved(stream: SyntheticEEGStream(), source: .synthetic, profile: .synthetic)
 
         case .synthetic:
-            // Even synthetic *could* route through BrainFlow's synthetic
-            // generator if the bridge is available — but the pure-Swift
-            // synthetic stream is fully self-contained and friendlier for
-            // tests and offline runs. Prefer it.
-            return Resolved(
-                stream: SyntheticEEGStream(),
-                source: .synthetic,
-                profile: .synthetic
-            )
+            // The pure-Swift synthetic stream is fully self-contained and
+            // friendlier for tests and offline runs than going through the
+            // BrainFlow synthetic generator. Prefer it.
+            return Resolved(stream: SyntheticEEGStream(), source: .synthetic, profile: .synthetic)
 
-        case .museTwo, .museS, .museSAthena:
+        case .museTwoNativeBLE, .museTwoBLED,
+             .museSNativeBLE,   .museSBLED,
+             .museSAthena:
             if bci_bridge_is_available() {
                 return Resolved(
                     stream: BrainFlowService(profile: profile),
@@ -59,11 +51,14 @@ public enum EEGStreamFactory {
             BCILog.eeg.notice(
                 "Bridge unavailable (BCI_BRAINFLOW_AVAILABLE not set); falling back to synthetic"
             )
-            return Resolved(
-                stream: SyntheticEEGStream(),
-                source: .synthetic,
-                profile: .synthetic
-            )
+            return Resolved(stream: SyntheticEEGStream(), source: .synthetic, profile: .synthetic)
         }
+    }
+
+    /// Construct a synthetic-only resolved value. Used by `AppViewModel`'s
+    /// runtime supervisor when a live stream throws and we want to keep the
+    /// session alive in degraded mode.
+    public static func makeSynthetic() -> Resolved {
+        Resolved(stream: SyntheticEEGStream(), source: .synthetic, profile: .synthetic)
     }
 }
