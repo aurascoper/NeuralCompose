@@ -4,7 +4,7 @@ import BCICore
 @main
 struct NeuralComposeAppEntry: App {
 
-    @State private var loader = AppLoader()
+    @StateObject private var loader = AppLoader()
 
     var body: some Scene {
         WindowGroup("NeuralCompose") {
