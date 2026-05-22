@@ -211,13 +211,22 @@ bci_status_t bci_bridge_drain_samples(
         return BCI_ERR_INVALID_ARGS;
     *out_count = 0;
 #if defined(BCI_BRAINFLOW_AVAILABLE)
+    // Get the number of total rows to size the buffer correctly.
+    // Buffer layout: board_data[row * num_samples + point]
+    int num_rows = 0;
+    int status = get_num_rows(handle->boardId, 0, &num_rows);
+    if (status != 0 || num_rows <= 0) {
+        return BCI_ERR_READ_FAILED;
+    }
+
     // Allocate buffer for board data: [total_rows * max_samples]
-    double* board_data = static_cast<double*>(malloc(256 * max_samples * sizeof(double)));
+    // Caller (get_current_board_data) will fill this with row-major flattened data.
+    double* board_data = static_cast<double*>(malloc(num_rows * max_samples * sizeof(double)));
     if (board_data == NULL) return BCI_ERR_UNKNOWN;
 
     int returned_samples = 0;
-    int status = get_current_board_data(max_samples, 0, board_data, &returned_samples,
-                                        handle->boardId, "{}");
+    status = get_current_board_data(max_samples, 0, board_data, &returned_samples,
+                                    handle->boardId, "{}");
     if (status != 0) {
         free(board_data);
         return BCI_ERR_READ_FAILED;
@@ -230,14 +239,6 @@ bci_status_t bci_bridge_drain_samples(
     if (returned_samples > max_samples) {
         free(board_data);
         return BCI_ERR_BUFFER_TOO_SMALL;
-    }
-
-    // Get the number of total rows to interpret the flat buffer layout.
-    int num_rows = 0;
-    status = get_num_rows(handle->boardId, 0, &num_rows);
-    if (status != 0) {
-        free(board_data);
-        return BCI_ERR_READ_FAILED;
     }
 
     // Get timestamp channel (optional).
