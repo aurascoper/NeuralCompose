@@ -65,6 +65,51 @@ bool bci_bridge_is_available(void) {
 #endif
 }
 
+// ── Compiled BoardIds enum getters (no hardware session needed) ──────────
+
+int32_t bci_bridge_board_id_synthetic(void) {
+#if defined(BCI_BRAINFLOW_AVAILABLE)
+    return static_cast<int32_t>(BoardIds::SYNTHETIC_BOARD);
+#else
+    return BCI_BRIDGE_BOARD_ID_UNAVAILABLE;
+#endif
+}
+int32_t bci_bridge_board_id_muse_2(void) {
+#if defined(BCI_BRAINFLOW_AVAILABLE)
+    return static_cast<int32_t>(BoardIds::MUSE_2_BOARD);
+#else
+    return BCI_BRIDGE_BOARD_ID_UNAVAILABLE;
+#endif
+}
+int32_t bci_bridge_board_id_muse_2_bled(void) {
+#if defined(BCI_BRAINFLOW_AVAILABLE)
+    return static_cast<int32_t>(BoardIds::MUSE_2_BLED_BOARD);
+#else
+    return BCI_BRIDGE_BOARD_ID_UNAVAILABLE;
+#endif
+}
+int32_t bci_bridge_board_id_muse_s(void) {
+#if defined(BCI_BRAINFLOW_AVAILABLE)
+    return static_cast<int32_t>(BoardIds::MUSE_S_BOARD);
+#else
+    return BCI_BRIDGE_BOARD_ID_UNAVAILABLE;
+#endif
+}
+int32_t bci_bridge_board_id_muse_s_bled(void) {
+#if defined(BCI_BRAINFLOW_AVAILABLE)
+    return static_cast<int32_t>(BoardIds::MUSE_S_BLED_BOARD);
+#else
+    return BCI_BRIDGE_BOARD_ID_UNAVAILABLE;
+#endif
+}
+int32_t bci_bridge_board_id_muse_s_athena(void) {
+#if defined(BCI_BRAINFLOW_AVAILABLE)
+    return static_cast<int32_t>(BoardIds::MUSE_S_ATHENA_BOARD);
+#else
+    return BCI_BRIDGE_BOARD_ID_UNAVAILABLE;
+#endif
+}
+
 bci_status_t bci_bridge_create_session(
     int32_t board_id,
     const char* params_json,

@@ -57,6 +57,25 @@ const char* bci_bridge_runtime_version(void);
 /// AND the runtime can be loaded.
 bool bci_bridge_is_available(void);
 
+/// Compiled `BoardIds` enum getters. These return the integer values from
+/// the *installed* BrainFlow headers without opening any hardware session,
+/// so they're safe to call when no Muse is connected and Bluetooth is off.
+/// When the bridge is built in stub mode (no BrainFlow), they all return
+/// `BCI_BRIDGE_BOARD_ID_UNAVAILABLE`.
+///
+/// Used by `BrainFlowService.verifyBoardIDsAgainstBridge()` to detect drift
+/// between `MuseBoardProfile.brainFlowBoardID` and the BrainFlow C++ enum
+/// after upgrades — much more reliable than the "try to prepare_session()"
+/// strategy, which can fail for unrelated reasons.
+#define BCI_BRIDGE_BOARD_ID_UNAVAILABLE  ((int32_t)0x7FFFFFFF)
+
+int32_t bci_bridge_board_id_synthetic(void);
+int32_t bci_bridge_board_id_muse_2(void);
+int32_t bci_bridge_board_id_muse_2_bled(void);
+int32_t bci_bridge_board_id_muse_s(void);
+int32_t bci_bridge_board_id_muse_s_bled(void);
+int32_t bci_bridge_board_id_muse_s_athena(void);
+
 /// Allocate and prepare a session. `board_id` matches BrainFlow's enum.
 /// `params_json` is a UTF-8 JSON blob mapping to BrainFlowInputParams
 /// (serial_port, mac_address, etc.). May be NULL for defaults.

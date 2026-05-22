@@ -27,8 +27,12 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
     case museSBLED
 
     // Muse S Athena (2024+). Dedicated board in BrainFlow 5.22+. Native BLE
-    // is the recommended transport; BLED for Athena is not officially
-    // supported as of this writing.
+    // is the recommended transport; BLED is deprecated for new boards.
+    //
+    // Note on spelling: BrainFlow's 5.22.0 *announcement post* spells the
+    // constant `MUSE_S_ANTHENA_BOARD`, but the actual C++ enum in
+    // `src/utils/inc/brainflow_constants.h` is `MUSE_S_ATHENA_BOARD`.
+    // We follow the source-of-truth enum name and value.
     case museSAthena
 
     case synthetic           // BrainFlow's built-in synthetic generator
@@ -41,18 +45,24 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
     //   MUSE_2_BLED_BOARD       = 22
     //   MUSE_2_BOARD            = 38
     //   MUSE_S_BOARD            = 39
-    //   MUSE_S_ANTHENA_BOARD    = 60  (added in 5.22.0; verify your install)
+    //   MUSE_S_ATHENA_BOARD     = 67  (added in BrainFlow 5.22+;
+    //                                  blog spells it MUSE_S_ANTHENA_BOARD,
+    //                                  source enum is MUSE_S_ATHENA_BOARD)
+    //   OB5000_8_CHANNELS_BOARD = 60  (NOT Muse — do not confuse with Athena)
     //   SYNTHETIC_BOARD         = -1
     //
-    // Run `BrainFlowService.debugDumpKnownBoards()` to print the live values
-    // your installed BrainFlow reports for these names.
+    // Verified against
+    //   brainflow-dev/brainflow@master:src/utils/inc/brainflow_constants.h
+    // To re-verify against the installed BrainFlow C++ enum at runtime
+    // (without opening any hardware session), call
+    // `BrainFlowService.verifyBoardIDsAgainstBridge()` in a debug build.
     public var brainFlowBoardID: Int32? {
         switch self {
         case .museTwoNativeBLE:  return 38   // MUSE_2_BOARD
         case .museTwoBLED:       return 22   // MUSE_2_BLED_BOARD
         case .museSNativeBLE:    return 39   // MUSE_S_BOARD
         case .museSBLED:         return 21   // MUSE_S_BLED_BOARD
-        case .museSAthena:       return 60   // MUSE_S_ANTHENA_BOARD — verify!
+        case .museSAthena:       return 67   // MUSE_S_ATHENA_BOARD
         case .synthetic:         return -1   // SYNTHETIC_BOARD
         case .playback:          return nil
         }

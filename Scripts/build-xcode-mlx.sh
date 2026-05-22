@@ -46,13 +46,26 @@ fi
 
 # `xcodebuild -scheme` works on SwiftPM packages directly in modern Xcode.
 # The product is the executable target.
+#
+# We honor xcbeautify *if it's installed*, but never swallow xcodebuild's
+# exit status — `set -o pipefail` plus the explicit conditional ensure that
+# a failed build aborts this script instead of letting us fall through to
+# `Built: $BIN` against a stale binary.
+set -o pipefail
 echo "xcodebuild -scheme NeuralCompose -configuration $CONFIG"
-xcodebuild \
-    -scheme NeuralCompose \
-    -configuration "$CONFIG" \
-    -derivedDataPath "$REPO_ROOT/.build/xcode" \
-    build \
-    | xcbeautify 2>/dev/null || true
+if command -v xcbeautify >/dev/null 2>&1; then
+    xcodebuild \
+        -scheme NeuralCompose \
+        -configuration "$CONFIG" \
+        -derivedDataPath "$REPO_ROOT/.build/xcode" \
+        build | xcbeautify
+else
+    xcodebuild \
+        -scheme NeuralCompose \
+        -configuration "$CONFIG" \
+        -derivedDataPath "$REPO_ROOT/.build/xcode" \
+        build
+fi
 
 BIN="$REPO_ROOT/.build/xcode/Build/Products/${CONFIG}/NeuralCompose"
 if [[ ! -x "$BIN" ]]; then

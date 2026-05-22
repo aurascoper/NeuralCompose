@@ -6,44 +6,85 @@ exists for when you want to use a real device.
 
 ## Supported devices
 
-Native BLE vs **BLED112 USB dongle** is a first-class distinction. Same Muse
-hardware, different BrainFlow board ID, different connection parameters —
-the profile picks both.
+Native BLE vs **BLED112 USB dongle** is a first-class distinction. They are
+*different connection methods*, not a hardware-vs-software detail:
 
-| Profile               | Env value          | BrainFlow Board ID                | Notes                                                                   |
-|-----------------------|--------------------|-----------------------------------|-------------------------------------------------------------------------|
-| `.museTwoNativeBLE`   | `muse2`            | `MUSE_2_BOARD` = 38               | Muse 2 over Apple's BLE stack.                                          |
-| `.museTwoBLED`        | `muse2-bled`       | `MUSE_2_BLED_BOARD` = 22          | Muse 2 over a BLED112 dongle.                                           |
-| `.museSNativeBLE`     | `muses`            | `MUSE_S_BOARD` = 39               | Muse S over native BLE.                                                 |
-| `.museSBLED`          | `muses-bled`       | `MUSE_S_BLED_BOARD` = 21          | Muse S over a BLED112 dongle.                                           |
-| `.museSAthena`        | `athena`           | `MUSE_S_ANTHENA_BOARD` = 60       | New dedicated Athena board, BrainFlow 5.22+. **Verify integer on your install.** |
-| `.synthetic`          | `synthetic`        | `SYNTHETIC_BOARD` = -1            | BrainFlow's built-in synthetic generator.                               |
-| `.playback`           | `playback`         | n/a                               | Reads a CSV produced by an earlier `Recordings/` run.                   |
+- **Native BLE.** macOS' built-in Bluetooth Low Energy stack. Works through
+  whatever BLE radio macOS happens to be using — the internal one in Apple
+  Silicon Macs, or a generic USB-BT adapter such as an ASUS USB-BT500. The
+  generic adapter just extends the native stack; it is **not** a BLED112.
+- **BLED112 (Silicon Labs / Bluegiga BLED112).** A specific USB BLE dongle
+  that speaks a proprietary serial protocol. BrainFlow has dedicated board
+  IDs for it (`MUSE_*_BLED_BOARD`). Modern BrainFlow (5.22+) considers the
+  BLED boards deprecated and recommends native BLE.
 
-These integers are *implementation detail of* `MuseBoardProfile.swift`. After a
-BrainFlow upgrade, sanity-check them with:
+| Profile               | Env value          | BrainFlow Board ID            | Connection method                                       |
+|-----------------------|--------------------|-------------------------------|---------------------------------------------------------|
+| `.museTwoNativeBLE`   | `muse2`            | `MUSE_2_BOARD` = 38           | Native BLE (built-in or generic adapter, e.g. USB-BT500). |
+| `.museTwoBLED`        | `muse2-bled`       | `MUSE_2_BLED_BOARD` = 22      | BLED112 dongle. Set `NEURALCOMPOSE_MUSE_SERIAL`.         |
+| `.museSNativeBLE`     | `muses`            | `MUSE_S_BOARD` = 39           | Native BLE.                                              |
+| `.museSBLED`          | `muses-bled`       | `MUSE_S_BLED_BOARD` = 21      | BLED112 dongle. Set `NEURALCOMPOSE_MUSE_SERIAL`.         |
+| `.museSAthena`        | `athena`           | `MUSE_S_ATHENA_BOARD` = 67    | Native BLE only (BLED variants do not exist for Athena). |
+| `.synthetic`          | `synthetic`        | `SYNTHETIC_BOARD` = -1        | BrainFlow's built-in synthetic generator.                |
+| `.playback`           | `playback`         | n/a                           | Reads a CSV produced by an earlier `Recordings/` run.    |
+
+> **Naming note.** BrainFlow's 5.22 *announcement post* spells the Athena
+> constant `MUSE_S_ANTHENA_BOARD`. The actual C++ enum in
+> `src/utils/inc/brainflow_constants.h` is `MUSE_S_ATHENA_BOARD = 67`. We
+> follow the source enum.
+
+These integers are *implementation detail of* `MuseBoardProfile.swift`.
+After a BrainFlow upgrade, verify them against the compiled BrainFlow enum
+*without opening any hardware session* by running:
 
 ```swift
 import BCIEEG
-BrainFlowService.debugDumpKnownBoards()
+
+switch BrainFlowService.verifyBoardIDsAgainstBridge() {
+case .matched:             print("MuseBoardProfile matches installed BrainFlow")
+case .bridgeUnavailable:   print("Bridge stubbed — verification skipped")
+case .mismatched(let xs):  xs.forEach { print("DRIFT: \($0)") }
+}
 ```
 
-which exercises each ID against your installed BrainFlow and logs the channel
-count and sample rate it reports for each candidate.
+The verifier compares `MuseBoardProfile.brainFlowBoardID` against the
+`BoardIds::*` integers your linked BrainFlow exposes via the bridge's
+`bci_bridge_board_id_*` getters. No BLE permission required, no Muse
+required.
 
 ## Bluetooth transport
 
-- **Native BLE.** Best for Muse 2 and Muse S Athena on Apple Silicon. Pair the
-  device once via System Settings → Bluetooth so macOS knows it exists, then
-  let BrainFlow connect by name/MAC.
-- **BLED112 dongle (e.g. ASUS USB-BT500).** Required if you've had stability
-  issues with native BLE, or for the BLED-only boards. Set `serial_port` on
-  `BrainFlowInputParams`, or export `NEURALCOMPOSE_MUSE_SERIAL=/dev/cu.usbmodem*`
-  before launch — the dongle path is honored automatically for the
-  `*BLED` profiles via `MuseBoardProfile.usesBLEDDongle`.
+- **Native BLE.** Best for Muse 2, Muse S, and Muse S Athena on Apple
+  Silicon. Pair the device once via System Settings → Bluetooth so macOS
+  knows it exists, then let BrainFlow connect by name/MAC. Do **not** set
+  `serial_port` for native-BLE profiles.
 
-Both wirings are confined to `BrainFlowService.makeParamsJSON()` and opaque
-to the rest of the codebase.
+- **BLED112 dongle.** Required only for the explicit `*BLED` profiles. Set
+  `NEURALCOMPOSE_MUSE_SERIAL=/dev/cu.usbmodem*` before launch — the dongle
+  serial path is honored automatically for the BLED profiles via
+  `MuseBoardProfile.usesBLEDDongle`. Athena does **not** have a BLED variant
+  in current BrainFlow.
+
+### Athena startup options
+
+For `.museSAthena`, BrainFlow expects startup options via
+`BrainFlowInputParams.other_info`. We default to
+`preset=p1041;low_latency=true` (one of the three Athena presets), and let
+you override with `NEURALCOMPOSE_BRAINFLOW_OTHER_INFO`:
+
+```bash
+NEURALCOMPOSE_BRAINFLOW_OTHER_INFO='preset=p1042;low_latency=true' \
+    ./Scripts/run-synthetic.sh --profile athena
+```
+
+### Multi-device disambiguation
+
+If multiple Muse devices are in range, pin one by MAC address with
+`NEURALCOMPOSE_MUSE_MAC=AA:BB:CC:DD:EE:FF` — this becomes
+`BrainFlowInputParams.mac_address` and is honored across all profiles.
+
+All wiring is confined to `BrainFlowService.makeParamsJSON()` and opaque to
+the rest of the codebase.
 
 ## Installing BrainFlow
 

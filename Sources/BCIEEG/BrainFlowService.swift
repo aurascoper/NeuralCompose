@@ -133,51 +133,86 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
     // MARK: - Helpers
 
     private func makeParamsJSON() -> String {
+        let env = ProcessInfo.processInfo.environment
         var pairs: [String] = []
+
+        // serial_port: BLED112 dongle variants. Caller-supplied wins;
+        // otherwise honor NEURALCOMPOSE_MUSE_SERIAL for the BLED profiles.
         if let serialPort = serialPort {
             pairs.append("\"serial_port\":\"\(escapeJSON(serialPort))\"")
+        } else if profile.usesBLEDDongle,
+                  let envSerial = env["NEURALCOMPOSE_MUSE_SERIAL"] {
+            pairs.append("\"serial_port\":\"\(escapeJSON(envSerial))\"")
         }
+
+        // mac_address: caller wins; otherwise honor NEURALCOMPOSE_MUSE_MAC.
+        // BrainFlow uses this to disambiguate when multiple Muse devices are
+        // in range.
         if let mac = macAddress {
             pairs.append("\"mac_address\":\"\(escapeJSON(mac))\"")
+        } else if let envMac = env["NEURALCOMPOSE_MUSE_MAC"] {
+            pairs.append("\"mac_address\":\"\(escapeJSON(envMac))\"")
         }
-        // BLED112 dongle path: BrainFlow expects `serial_port` (e.g.
-        // /dev/cu.usbmodem*) for the BLED variants. If the caller didn't
-        // pass one, fall through to NEURALCOMPOSE_MUSE_SERIAL.
-        if profile.usesBLEDDongle, serialPort == nil,
-           let envSerial = ProcessInfo.processInfo.environment["NEURALCOMPOSE_MUSE_SERIAL"] {
-            pairs.append("\"serial_port\":\"\(escapeJSON(envSerial))\"")
+
+        // other_info: BrainFlow 5.22+ uses this to pass Athena startup
+        // options such as the preset (p1041 / p1042 / p1043) and
+        // low_latency=true. We supply a sensible default for Athena; any
+        // profile can override via NEURALCOMPOSE_BRAINFLOW_OTHER_INFO.
+        if let envOther = env["NEURALCOMPOSE_BRAINFLOW_OTHER_INFO"], !envOther.isEmpty {
+            pairs.append("\"other_info\":\"\(escapeJSON(envOther))\"")
+        } else if profile == .museSAthena {
+            pairs.append("\"other_info\":\"preset=p1041;low_latency=true\"")
         }
         return "{\(pairs.joined(separator: ","))}"
     }
 
-    /// Best-effort debug dump of the board IDs BrainFlow exposes at runtime,
-    /// to verify our `MuseBoardProfile.brainFlowBoardID` table matches the
-    /// installed BrainFlow version. Currently prints only what our bridge
-    /// reports about a freshly-prepared session for each candidate; it does
-    /// not call into the C++ `BoardIds` enum directly because that would
-    /// require widening the bridge ABI.
+    /// Verify `MuseBoardProfile.brainFlowBoardID` against the *compiled*
+    /// BrainFlow C++ enum, without opening any hardware session.
     ///
-    /// Run in a scratch tool when you suspect ID drift after a BrainFlow
-    /// upgrade. Safe to call repeatedly; it cleans up its sessions.
-    public static func debugDumpKnownBoards() {
+    /// Returns the list of mismatches. Empty list means everything's lined
+    /// up. Each mismatch carries both the expected (from MuseBoardProfile)
+    /// and the actual (from the bridge's BoardIds getter) so the caller can
+    /// log a precise diagnostic.
+    ///
+    /// In stub-mode builds (no BrainFlow linked) this returns
+    /// `.bridgeUnavailable` and skips the comparison — pretending to verify
+    /// against nothing would be worse than honestly saying we can't.
+    public static func verifyBoardIDsAgainstBridge() -> BoardIDVerification {
         guard bci_bridge_is_available() else {
-            BCILog.eeg.notice("debugDumpKnownBoards: bridge unavailable")
-            return
+            return .bridgeUnavailable
         }
-        for profile in MuseBoardProfile.allCases where profile.requiresBrainFlow {
-            guard let id = profile.brainFlowBoardID else { continue }
-            var handle: bci_session_handle_t?
-            let status = bci_bridge_create_session(id, "{}", &handle)
-            if status == BCI_OK, let h = handle {
-                let ch = bci_bridge_eeg_channel_count(h)
-                let sr = bci_bridge_sample_rate(h)
-                BCILog.eeg.notice("\(profile.displayName, privacy: .public) [id=\(id)] ch=\(ch) sr=\(sr)")
-                bci_bridge_destroy_session(h)
-            } else {
-                BCILog.eeg.notice(
-                    "\(profile.displayName, privacy: .public) [id=\(id)] — prepare_session failed (status \(status.rawValue))"
-                )
+        var mismatches: [BoardIDMismatch] = []
+        let pairs: [(MuseBoardProfile, () -> Int32)] = [
+            (.synthetic,        { bci_bridge_board_id_synthetic()        }),
+            (.museTwoNativeBLE, { bci_bridge_board_id_muse_2()           }),
+            (.museTwoBLED,      { bci_bridge_board_id_muse_2_bled()      }),
+            (.museSNativeBLE,   { bci_bridge_board_id_muse_s()           }),
+            (.museSBLED,        { bci_bridge_board_id_muse_s_bled()      }),
+            (.museSAthena,      { bci_bridge_board_id_muse_s_athena()    }),
+        ]
+        for (profile, getter) in pairs {
+            let actual = getter()
+            guard actual != BCI_BRIDGE_BOARD_ID_UNAVAILABLE else { continue }
+            let expected = profile.brainFlowBoardID
+            if expected != actual {
+                mismatches.append(BoardIDMismatch(profile: profile, expected: expected, actual: actual))
             }
+        }
+        return mismatches.isEmpty ? .matched : .mismatched(mismatches)
+    }
+
+    public enum BoardIDVerification: Sendable {
+        case matched
+        case mismatched([BoardIDMismatch])
+        case bridgeUnavailable
+    }
+
+    public struct BoardIDMismatch: Sendable, CustomStringConvertible {
+        public let profile: MuseBoardProfile
+        public let expected: Int32?
+        public let actual: Int32
+        public var description: String {
+            "\(profile.displayName): MuseBoardProfile=\(expected.map(String.init) ?? "nil"), BrainFlow=\(actual)"
         }
     }
 
