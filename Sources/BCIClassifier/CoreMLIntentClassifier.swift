@@ -48,8 +48,29 @@ public final class CoreMLIntentClassifier: IntentClassifying, @unchecked Sendabl
         let config = MLModelConfiguration()
         config.computeUnits = Self.translate(computeMode)
         config.allowLowPrecisionAccumulationOnGPU = false
+
+        // Core ML's `MLModel(contentsOf:)` wants a compiled `.mlmodelc`. A
+        // raw `.mlpackage` from coremltools.convert() must be compiled first
+        // via `MLModel.compileModel(at:)` — which writes a `.mlmodelc` into
+        // the temp dir, valid until next launch. We cache that location for
+        // the lifetime of the process; for production, compile once with
+        // `xcrun coremlcompiler` and ship the `.mlmodelc` instead.
+        let loadURL: URL
+        if modelURL.pathExtension == "mlpackage" {
+            do {
+                loadURL = try MLModel.compileModel(at: modelURL)
+            } catch {
+                throw BCIError.classifierLoadFailed(
+                    path: modelURL.path,
+                    underlying: "compileModel: \(error.localizedDescription)"
+                )
+            }
+        } else {
+            loadURL = modelURL
+        }
+
         do {
-            self.model = try MLModel(contentsOf: modelURL, configuration: config)
+            self.model = try MLModel(contentsOf: loadURL, configuration: config)
         } catch {
             throw BCIError.classifierLoadFailed(
                 path: modelURL.path,
