@@ -214,26 +214,38 @@ bci_status_t bci_bridge_drain_samples(
         return BCI_ERR_INVALID_ARGS;
     *out_count = 0;
 #if defined(BCI_BRAINFLOW_AVAILABLE)
-    // Get the number of total rows to size the buffer correctly.
-    // Buffer layout: board_data[row * num_samples + point]
+    // Get the number of total rows (channels per sample) and how many samples
+    // are currently buffered. We must use get_board_data (drain) rather than
+    // get_current_board_data (peek) — the peek API does NOT consume from the
+    // ring buffer, so polling repeatedly returns the same samples and the
+    // recorder ends up storing N× duplicates.
     int num_rows = 0;
     int status = get_num_rows(handle->boardId, 0, &num_rows);
     if (status != 0 || num_rows <= 0) {
         return BCI_ERR_READ_FAILED;
     }
 
-    // Allocate buffer for board data: [total_rows * max_samples]
-    // Caller (get_current_board_data) will fill this with row-major flattened data.
-    double* board_data = static_cast<double*>(malloc(num_rows * max_samples * sizeof(double)));
+    int available = 0;
+    status = get_board_data_count(0, &available, handle->boardId, handle->paramsJson.c_str());
+    if (status != 0) {
+        return BCI_ERR_READ_FAILED;
+    }
+    if (available <= 0) {
+        return BCI_OK;
+    }
+    int to_drain = (available < max_samples) ? available : max_samples;
+
+    double* board_data = static_cast<double*>(malloc(num_rows * to_drain * sizeof(double)));
     if (board_data == NULL) return BCI_ERR_UNKNOWN;
 
     int returned_samples = 0;
-    status = get_current_board_data(max_samples, 0, board_data, &returned_samples,
-                                    handle->boardId, handle->paramsJson.c_str());
+    status = get_board_data(to_drain, 0, board_data,
+                            handle->boardId, handle->paramsJson.c_str());
     if (status != 0) {
         free(board_data);
         return BCI_ERR_READ_FAILED;
     }
+    returned_samples = to_drain;
 
     if (returned_samples == 0) {
         free(board_data);

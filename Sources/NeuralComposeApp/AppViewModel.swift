@@ -345,19 +345,19 @@ public final class AppViewModel: ObservableObject {
 
     public func startStickyLabel(_ label: CalibrationLabel) async {
         guard let recorder = calibrationRecorder else { return }
-        let now = Date().timeIntervalSinceReferenceDate
+        let now = Date().timeIntervalSince1970   // EEG samples use Unix epoch; events must match
         await recorder.startStickyLabel(label, at: now)
     }
 
     public func endStickyLabel() async {
         guard let recorder = calibrationRecorder else { return }
-        let now = Date().timeIntervalSinceReferenceDate
+        let now = Date().timeIntervalSince1970   // EEG samples use Unix epoch; events must match
         await recorder.endStickyLabel(at: now)
     }
 
     public func addTimedEvent(_ label: CalibrationLabel) async {
         guard let recorder = calibrationRecorder else { return }
-        let now = Date().timeIntervalSinceReferenceDate
+        let now = Date().timeIntervalSince1970   // EEG samples use Unix epoch; events must match
         await recorder.addTimedEvent(label, at: now)
     }
 

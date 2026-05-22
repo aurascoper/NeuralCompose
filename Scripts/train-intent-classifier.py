@@ -54,58 +54,88 @@ EXPECTED_SAMPLES = 512
 EXPECTED_RATE = 256.0  # Muse S
 
 
+REF_DATE_OFFSET = 978307200.0   # seconds between Unix epoch (1970) and ref date (2001)
+
+
 def load_session(session_dir: Path):
-    """Slice (eeg.csv, labels.csv) → list of (window[4,512], label_idx)."""
+    """Slice eeg.csv against events.csv → list of (window[4,512], label_idx).
+
+    We deliberately re-derive labels from `events.csv` rather than trust the
+    pre-computed `labels.csv`, because pre-v0.4.2 NeuralCompose wrote event
+    timestamps in reference-date seconds while EEG samples carried Unix-epoch
+    timestamps — every window in those `labels.csv` files came out "none".
+    The offset is exactly 978307200 s when present; we autodetect it.
+    """
     eeg_path = session_dir / "eeg.csv"
-    labels_path = session_dir / "labels.csv"
+    events_path = session_dir / "events.csv"
     meta_path = session_dir / "metadata.json"
 
-    if not all(p.exists() for p in (eeg_path, labels_path, meta_path)):
+    if not all(p.exists() for p in (eeg_path, events_path, meta_path)):
         print(f"  skip {session_dir.name}: missing files", file=sys.stderr)
         return []
 
     with open(meta_path) as f:
         meta = json.load(f)
     sample_rate = float(meta.get("sample_rate", EXPECTED_RATE))
+    window_seconds = float(meta.get("window_seconds", 2.0))
+    stride_seconds = float(meta.get("stride_seconds", 1.0))
 
-    # eeg.csv: t_seconds, TP9, AF7, AF8, TP10
     eeg = np.loadtxt(eeg_path, delimiter=",", skiprows=1, dtype=np.float64)
     if eeg.ndim == 1 or eeg.shape[0] < EXPECTED_SAMPLES:
         print(f"  skip {session_dir.name}: only {eeg.shape[0] if eeg.ndim else 0} samples",
               file=sys.stderr)
         return []
     eeg_t = eeg[:, 0]
-    eeg_x = eeg[:, 1:1 + EXPECTED_CHANNELS].astype(np.float32)  # [N, 4]
+    eeg_x = eeg[:, 1:1 + EXPECTED_CHANNELS].astype(np.float32)
 
-    # labels.csv: session_id, window_seq, t_start, t_end, label, profile, sample_rate
-    labels = np.genfromtxt(
-        labels_path, delimiter=",", skip_header=1, dtype=None, encoding="utf-8"
-    )
-    if labels.ndim == 0:  # single row
-        labels = labels.reshape(1)
+    events = []
+    with open(events_path) as f:
+        next(f, None)  # header
+        for line in f:
+            parts = line.strip().split(",")
+            if len(parts) < 4:
+                continue
+            try:
+                t_start = float(parts[1])
+                t_end = float(parts[2])
+                label = parts[3].strip().lower()
+            except ValueError:
+                continue
+            if label in DROP_LABELS or label not in LABEL_TO_INDEX:
+                continue
+            events.append((t_start, t_end, label))
 
+    if not events:
+        print(f"  {session_dir.name}: 0 usable events", file=sys.stderr)
+        return []
+
+    # Auto-correct ref-date/Unix-epoch mismatch (pre-v0.4.2 sessions).
+    min_event_t = min(e[0] for e in events)
+    if min_event_t < eeg_t.min() - REF_DATE_OFFSET / 2:
+        events = [(s + REF_DATE_OFFSET, e + REF_DATE_OFFSET, l) for (s, e, l) in events]
+        print(f"  {session_dir.name}: applied +{int(REF_DATE_OFFSET)}s epoch offset to events")
+
+    # Slide a window across the EEG and label by the event with the largest
+    # overlap (≥50% of the window must be inside a labeled event to count).
     windows = []
-    for row in labels:
-        # numpy structured array indexing
-        try:
-            t_start = float(row[2])
-            t_end = float(row[3])
-            label = str(row[4]).strip().lower()
-        except (IndexError, ValueError):
+    sr = sample_rate
+    win_n = int(round(window_seconds * sr))
+    stride_n = int(round(stride_seconds * sr))
+    n_total = eeg_x.shape[0]
+    for i0 in range(0, n_total - win_n + 1, stride_n):
+        i1 = i0 + win_n
+        t0, t1 = eeg_t[i0], eeg_t[i1 - 1]
+        # Find the event with the largest overlap with [t0, t1].
+        best_label = None
+        best_overlap = 0.0
+        for (es, ee, lbl) in events:
+            overlap = max(0.0, min(t1, ee) - max(t0, es))
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_label = lbl
+        if best_label is None or best_overlap < (t1 - t0) * 0.5:
             continue
-        if label in DROP_LABELS:
-            continue
-        if label not in LABEL_TO_INDEX:
-            continue
-
-        # Find samples in [t_start, t_end). Window length ~ sample_rate * 2 s.
-        i0 = np.searchsorted(eeg_t, t_start, side="left")
-        i1 = np.searchsorted(eeg_t, t_end, side="left")
-        if i1 - i0 < EXPECTED_SAMPLES // 2:  # need at least 1 s of samples
-            continue
-
-        block = eeg_x[i0:i1]  # [n, 4]
-        # Resample / pad / truncate to exactly EXPECTED_SAMPLES via simple interp.
+        block = eeg_x[i0:i1]
         if block.shape[0] != EXPECTED_SAMPLES:
             old_idx = np.linspace(0, block.shape[0] - 1, block.shape[0])
             new_idx = np.linspace(0, block.shape[0] - 1, EXPECTED_SAMPLES)
@@ -113,11 +143,10 @@ def load_session(session_dir: Path):
                 [np.interp(new_idx, old_idx, block[:, c]) for c in range(EXPECTED_CHANNELS)],
                 axis=1,
             ).astype(np.float32)
+        windows.append((block.T, LABEL_TO_INDEX[best_label]))
 
-        window = block.T  # [4, 512]
-        windows.append((window, LABEL_TO_INDEX[label]))
-
-    print(f"  {session_dir.name}: {len(windows)} windows (rate={sample_rate} Hz)")
+    print(f"  {session_dir.name}: {len(windows)} labeled windows from {len(events)} events "
+          f"(rate={sample_rate} Hz, win={window_seconds}s)")
     return windows
 
 
