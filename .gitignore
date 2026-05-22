@@ -33,3 +33,9 @@ Recordings/*
 ## Logs / coverage
 *.log
 coverage/
+
+## Python (training pipeline)
+venv/
+venv.*.parked/
+__pycache__/
+*.pyc
