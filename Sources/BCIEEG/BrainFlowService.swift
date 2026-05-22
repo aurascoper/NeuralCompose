@@ -48,30 +48,34 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                 underlying: "profile has no BrainFlow board id"
             )
         }
-        // Build a minimal JSON for BrainFlowInputParams. The bridge's parser
-        // only knows about a handful of keys; this is the right surface for
-        // Muse over BLE / USB-BT.
         let paramsJSON = makeParamsJSON()
+        BCILog.eeg.debug("BrainFlow: boardID=\(boardID), profile=\(self.profile.displayName)")
+
         var newHandle: bci_session_handle_t?
         let status = bci_bridge_create_session(boardID, paramsJSON, &newHandle)
+        let statusCode = Int32(status.rawValue)
+        BCILog.eeg.debug("BrainFlow: prepare_session completed with status=\(statusCode)")
+
         guard status == BCI_OK, let h = newHandle else {
-            throw BCIError.streamConnectFailed(profile: profile, underlying: "status \(status)")
+            throw BCIError.streamConnectFailed(profile: self.profile, underlying: "status \(status.rawValue)")
         }
-        // Refresh metadata from the device.
         let bridgeCh  = bci_bridge_eeg_channel_count(h)
         let bridgeSR  = bci_bridge_sample_rate(h)
         if bridgeCh > 0 { self.channelCount = Int(bridgeCh) }
         if bridgeSR > 0 { self.effectiveSampleRate = bridgeSR }
+        BCILog.eeg.debug("BrainFlow: channels=\(self.channelCount), sampleRate=\(self.effectiveSampleRate) Hz")
 
         let startStatus = bci_bridge_start_stream(h, 30)
         guard startStatus == BCI_OK else {
             bci_bridge_destroy_session(h)
-            throw BCIError.streamConnectFailed(profile: profile, underlying: "start_stream \(startStatus)")
+            throw BCIError.streamConnectFailed(profile: self.profile, underlying: "start_stream \(startStatus.rawValue)")
         }
+        BCILog.eeg.notice("BrainFlow stream started: \(self.profile.displayName)")
         self.lock.withLock { self.handle = h }
 
         let cc = channelCount
         let poll = pollIntervalSec
+
         return AsyncThrowingStream<EEGSample, any Error> { continuation in
             let task = Task.detached(priority: .userInitiated) { [weak self] in
                 let maxBatch: Int32 = 1024
@@ -82,6 +86,8 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                     samplesBuf.deallocate()
                     tsBuf.deallocate()
                 }
+                var sampleCount = 0
+                var lastLogTime = Date()
                 while !Task.isCancelled {
                     guard let self = self,
                           let handle = (self.lock.withLock { self.handle }) else {
@@ -95,6 +101,13 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                         return
                     }
                     if got > 0 {
+                        sampleCount += Int(got)
+                        let now = Date()
+                        if now.timeIntervalSince(lastLogTime) >= 1.0 {
+                            BCILog.eeg.debug("BrainFlow: \(sampleCount) samples, rate=\(Double(sampleCount) / now.timeIntervalSince(lastLogTime)) Hz")
+                            lastLogTime = now
+                            sampleCount = 0
+                        }
                         for i in 0..<Int(got) {
                             var ch: [Float] = []
                             ch.reserveCapacity(cc)
