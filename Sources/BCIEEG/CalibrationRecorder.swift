@@ -1,0 +1,178 @@
+import Foundation
+import BCICore
+
+struct CalibrationLabelEvent: Sendable {
+    let tStart: Double
+    var tEnd: Double
+    let label: CalibrationLabel
+}
+
+public actor CalibrationRecorder {
+    public private(set) var sessionID: String = ""
+    public private(set) var windowCount: Int = 0
+    public private(set) var sampleCount: Int = 0
+
+    private var eegFileHandle: FileHandle?
+    private var eventsFileHandle: FileHandle?
+    private var labelsFileHandle: FileHandle?
+    private var sessionURL: URL?
+    private var channelLabels: [String] = []
+    private var activeEvents: [CalibrationLabelEvent] = []
+    private var allEvents: [CalibrationLabelEvent] = []
+    private var windowingConfig: (seconds: Double, strideSeconds: Double) = (2.0, 1.0)
+    private var profile: MuseBoardProfile = .synthetic
+    private var sampleRate: Double = 256.0
+
+    public init() {}
+
+    public func beginSession(
+        to directory: URL,
+        profile: MuseBoardProfile,
+        windowingSeconds: Double = 2.0,
+        strideSeconds: Double = 1.0,
+        sampleRate: Double = 256.0
+    ) throws {
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withFullDate, .withTime]
+        let ts = dateFormatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
+
+        let profileStr = profile == .synthetic ? "synthetic" : "muses"
+        sessionID = "calibration_\(ts)_\(profileStr)"
+
+        let sessionDir = directory.appendingPathComponent(sessionID)
+        try FileManager.default.createDirectory(at: sessionDir, withIntermediateDirectories: true)
+
+        self.profile = profile
+        self.sampleRate = sampleRate
+        self.windowingConfig = (windowingSeconds, strideSeconds)
+        channelLabels = profile.channelLabels.isEmpty ? ["ch0","ch1","ch2","ch3"] : profile.channelLabels
+
+        let eegHeader = "t_seconds," + channelLabels.joined(separator: ",") + "\n"
+        let eegURL = sessionDir.appendingPathComponent("eeg.csv")
+        FileManager.default.createFile(atPath: eegURL.path, contents: nil)
+        eegFileHandle = try FileHandle(forWritingTo: eegURL)
+        eegFileHandle?.write(Data(eegHeader.utf8))
+
+        let eventsHeader = "session_id,t_start,t_end,label\n"
+        let eventsURL = sessionDir.appendingPathComponent("events.csv")
+        FileManager.default.createFile(atPath: eventsURL.path, contents: nil)
+        eventsFileHandle = try FileHandle(forWritingTo: eventsURL)
+        eventsFileHandle?.write(Data(eventsHeader.utf8))
+
+        let labelsHeader = "session_id,window_seq,t_start,t_end,label,profile,sample_rate\n"
+        let labelsURL = sessionDir.appendingPathComponent("labels.csv")
+        FileManager.default.createFile(atPath: labelsURL.path, contents: nil)
+        labelsFileHandle = try FileHandle(forWritingTo: labelsURL)
+        labelsFileHandle?.write(Data(labelsHeader.utf8))
+
+        sessionURL = sessionDir
+        windowCount = 0
+        sampleCount = 0
+    }
+
+    public func startStickyLabel(_ label: CalibrationLabel, at t: Double) {
+        endStickyLabel(at: t)
+        let event = CalibrationLabelEvent(tStart: t, tEnd: t, label: label)
+        activeEvents.append(event)
+        allEvents.append(event)
+    }
+
+    public func endStickyLabel(at t: Double) {
+        if let idx = activeEvents.firstIndex(where: { $0.label == .rest || $0.label == .jawClench || $0.label == .artifact }) {
+            activeEvents[idx].tEnd = t
+        }
+        activeEvents.removeAll { $0.label == .rest || $0.label == .jawClench || $0.label == .artifact }
+    }
+
+    public func addTimedEvent(_ label: CalibrationLabel, at t: Double) {
+        let duration: Double
+        switch label {
+        case .blink:       duration = 2.0
+        case .doubleBlink: duration = 3.0
+        case .select:      duration = 2.0
+        default:           duration = 2.0
+        }
+        let event = CalibrationLabelEvent(tStart: t, tEnd: t + duration, label: label)
+        allEvents.append(event)
+        writeEvent(event)
+    }
+
+    public func recordSample(_ sample: EEGSample) {
+        guard let fh = eegFileHandle else { return }
+        let chStr = sample.channels.map { String(format: "%.6f", $0) }.joined(separator: ",")
+        let row = "\(String(format: "%.9f", sample.timestamp)),\(chStr)\n"
+        fh.write(Data(row.utf8))
+        sampleCount += 1
+    }
+
+    public func recordWindow(_ window: EEGWindow) {
+        guard let fh = labelsFileHandle else { return }
+        let tStart = window.endTimestamp - window.durationSeconds
+        let tEnd = window.endTimestamp
+
+        let resolvedLabel = resolveLabel(for: tStart, to: tEnd)
+        let profileStr = profile == .synthetic ? "synthetic" : "muses"
+        let row = "\(sessionID),\(window.sequence),\(String(format: "%.6f", tStart)),\(String(format: "%.6f", tEnd)),\(resolvedLabel),\(profileStr),\(String(format: "%.1f", window.sampleRate))\n"
+        fh.write(Data(row.utf8))
+        windowCount += 1
+    }
+
+    public func finishSession() async {
+        if let fh = eventsFileHandle {
+            for event in allEvents {
+                let row = "\(self.sessionID),\(String(format: "%.6f", event.tStart)),\(String(format: "%.6f", event.tEnd)),\(event.label.rawValue)\n"
+                fh.write(Data(row.utf8))
+            }
+        }
+
+        eegFileHandle?.closeFile()
+        eventsFileHandle?.closeFile()
+        labelsFileHandle?.closeFile()
+
+        if let sessionURL = self.sessionURL {
+            let metadata: [String: Any] = [
+                "session_id": self.sessionID,
+                "profile": self.profile == .synthetic ? "synthetic" : "muses",
+                "sample_rate": self.sampleRate,
+                "window_seconds": self.windowingConfig.seconds,
+                "stride_seconds": self.windowingConfig.strideSeconds,
+                "timestamp": ISO8601DateFormatter().string(from: Date())
+            ]
+            if let jsonData = try? JSONSerialization.data(withJSONObject: metadata, options: .prettyPrinted) {
+                let metadataURL = sessionURL.appendingPathComponent("metadata.json")
+                FileManager.default.createFile(atPath: metadataURL.path, contents: jsonData)
+            }
+        }
+
+        BCILog.pipeline.notice("CalibrationRecorder: session \(self.sessionID) complete — \(self.windowCount) windows, \(self.sampleCount) samples → \(self.sessionURL?.path ?? "?")")
+
+        eegFileHandle = nil
+        eventsFileHandle = nil
+        labelsFileHandle = nil
+    }
+
+    private func writeEvent(_ event: CalibrationLabelEvent) {
+        guard let fh = eventsFileHandle else { return }
+        let row = "\(sessionID),\(String(format: "%.6f", event.tStart)),\(String(format: "%.6f", event.tEnd)),\(event.label.rawValue)\n"
+        fh.write(Data(row.utf8))
+    }
+
+    private func resolveLabel(for tStart: Double, to tEnd: Double) -> String {
+        let windowDuration = tEnd - tStart
+        var maxOverlap: Double = 0
+        var resolvedLabel = "none"
+
+        for event in allEvents {
+            let overlapStart = max(tStart, event.tStart)
+            let overlapEnd = min(tEnd, event.tEnd)
+            let overlap = max(0, overlapEnd - overlapStart)
+
+            if overlap > maxOverlap {
+                maxOverlap = overlap
+                resolvedLabel = event.label.rawValue
+            }
+        }
+
+        return maxOverlap > 0 ? resolvedLabel : "none"
+    }
+}

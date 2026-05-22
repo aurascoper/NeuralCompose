@@ -1,5 +1,13 @@
 import Foundation
 
+/// Result of a `send()` call. Distinguishes between successful enqueueing,
+/// buffer overflow (older element dropped), and channel termination.
+public struct BoundedAsyncChannelSendResult: Sendable {
+    public let accepted: Bool
+    public let droppedBufferedElement: Bool
+    public let terminated: Bool
+}
+
 /// Bounded async channel for moving a stream of `Sendable` values from one
 /// concurrency domain to another, with strict backpressure: if the consumer
 /// can't keep up, the producer either drops the oldest element (`.dropOldest`)
@@ -35,14 +43,17 @@ public struct BoundedAsyncChannel<Element: Sendable>: Sendable {
     }
 
     /// Push an element. Will drop per overflow policy if the buffer is full.
-    /// Returns `false` if the channel has been finished and the value was
-    /// dropped on the floor.
     @discardableResult
-    public func send(_ element: Element) -> Bool {
+    public func send(_ element: Element) -> BoundedAsyncChannelSendResult {
         switch continuation.yield(element) {
-        case .enqueued, .dropped: return true
-        case .terminated:         return false
-        @unknown default:         return false
+        case .enqueued:
+            return BoundedAsyncChannelSendResult(accepted: true, droppedBufferedElement: false, terminated: false)
+        case .dropped:
+            return BoundedAsyncChannelSendResult(accepted: true, droppedBufferedElement: true, terminated: false)
+        case .terminated:
+            return BoundedAsyncChannelSendResult(accepted: false, droppedBufferedElement: false, terminated: true)
+        @unknown default:
+            return BoundedAsyncChannelSendResult(accepted: false, droppedBufferedElement: false, terminated: false)
         }
     }
 

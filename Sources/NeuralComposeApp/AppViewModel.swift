@@ -6,6 +6,14 @@ import BCIEEG
 import BCIClassifier
 import BCILLM
 
+public struct CalibrationMetrics: Sendable {
+    public let channelCount: Int
+    public let channelLabels: [String]
+    public let rms: [Float]
+    public let peak: [Float]
+    public let samplesPerSec: Double
+}
+
 /// Owns the live pipeline lifecycle. The view model itself stays on
 /// `@MainActor` so SwiftUI observation is straightforward, but the heavy
 /// loops — EEG ingestion, windowing, classification, smoothing — all run on
@@ -35,6 +43,12 @@ public final class AppViewModel: ObservableObject {
     @Published public var computeMode: ClassifierComputeMode
     @Published public private(set) var isRunning: Bool = false
 
+    @Published public private(set) var isCalibrating: Bool = false
+    @Published public private(set) var calibrationWindowCount: Int = 0
+    @Published public private(set) var calibrationSampleRate: Double = 0
+    @Published public private(set) var droppedWindowCount: Int = 0
+    @Published public private(set) var calibrationMetrics: CalibrationMetrics?
+
     // ── Immutable wiring (lives for the lifetime of the view model) ──────
     public let container: AppContainer
     private let metrics: MetricsCollector
@@ -46,6 +60,7 @@ public final class AppViewModel: ObservableObject {
     // ── Per-start resources (recreated each call to start()) ─────────────
     private var composition: TextCompositionController?
     private var windowChannel: BoundedAsyncChannel<EEGWindow>?
+    private var calibrationRecorder: CalibrationRecorder?
 
     private var streamTask: Task<Void, Never>?
     private var classifyTask: Task<Void, Never>?
@@ -120,17 +135,49 @@ public final class AppViewModel: ObservableObject {
         streamTask = Task.detached(priority: .userInitiated) {
             [weak self, windowing, metrics = metricsRef, channel] in
             var current = initialResolved
+            var calibrationSampleCounter = 0
+            var calibrationLastLogTime = Date()
             while !Task.isCancelled {
                 await Self.publishMode(current: current, container: containerRef, on: self)
                 do {
                     let stream = try await current.stream.start()
                     for try await sample in stream {
                         if Task.isCancelled { break }
+
+                        // Record sample if in calibration mode
+                        let (isCalibrating, recorder) = await MainActor.run { (self?.isCalibrating ?? false, self?.calibrationRecorder) }
+                        if isCalibrating, let recorder = recorder {
+                            await recorder.recordSample(sample)
+                            calibrationSampleCounter += 1
+                            let now = Date()
+                            if now.timeIntervalSince(calibrationLastLogTime) >= 1.0 {
+                                await MainActor.run {
+                                    self?.calibrationSampleRate = Double(calibrationSampleCounter) / now.timeIntervalSince(calibrationLastLogTime)
+                                }
+                                calibrationSampleCounter = 0
+                                calibrationLastLogTime = now
+                            }
+                        }
+
                         let started = DispatchTime.now()
                         do {
                             if let window = try await windowing.ingest(sample) {
                                 metrics.recordWindowing(durationMicros: elapsedMicros(since: started))
-                                _ = channel.send(window)
+
+                                // Record window and compute metrics if in calibration mode
+                                if isCalibrating, let recorder = recorder {
+                                    await recorder.recordWindow(window)
+                                    let calibMetrics = await MainActor.run { self?.computeCalibrationMetrics(window: window) }
+                                    await MainActor.run {
+                                        self?.calibrationWindowCount += 1
+                                        self?.calibrationMetrics = calibMetrics
+                                    }
+                                }
+
+                                let result = channel.send(window)
+                                if result.droppedBufferedElement {
+                                    await MainActor.run { self?.droppedWindowCount += 1 }
+                                }
                             } else {
                                 metrics.recordWindowing(durationMicros: elapsedMicros(since: started))
                             }
@@ -191,6 +238,7 @@ public final class AppViewModel: ObservableObject {
 
     public func stop() async {
         guard isRunning else { return }
+        await stopCalibrationRecording()
         streamTask?.cancel();   streamTask = nil
         classifyTask?.cancel(); classifyTask = nil
         carouselTask?.cancel(); carouselTask = nil
@@ -210,7 +258,84 @@ public final class AppViewModel: ObservableObject {
         await composition?.reset(to: seed)
     }
 
+    // MARK: - Calibration
+
+    public func startCalibrationRecording() async {
+        guard isRunning else { return }
+        let recorder = CalibrationRecorder()
+        let recordingsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("NeuralCompose")
+            .appendingPathComponent("Recordings")
+        do {
+            try FileManager.default.createDirectory(at: recordingsURL, withIntermediateDirectories: true)
+            let profile = container.streamResolved.profile
+            let sampleRate = container.streamResolved.stream.effectiveSampleRate
+            try await recorder.beginSession(to: recordingsURL, profile: profile, sampleRate: sampleRate)
+            self.calibrationRecorder = recorder
+            isCalibrating = true
+            calibrationWindowCount = 0
+            calibrationSampleRate = 0
+            droppedWindowCount = 0
+            calibrationMetrics = nil
+        } catch {
+            lastError = "Failed to start calibration: \(error.localizedDescription)"
+        }
+    }
+
+    public func stopCalibrationRecording() async {
+        guard isCalibrating else { return }
+        if let recorder = calibrationRecorder {
+            await recorder.finishSession()
+            self.calibrationRecorder = nil
+        }
+        isCalibrating = false
+    }
+
+    public func startStickyLabel(_ label: CalibrationLabel) async {
+        guard let recorder = calibrationRecorder else { return }
+        let now = Date().timeIntervalSinceReferenceDate
+        await recorder.startStickyLabel(label, at: now)
+    }
+
+    public func endStickyLabel() async {
+        guard let recorder = calibrationRecorder else { return }
+        let now = Date().timeIntervalSinceReferenceDate
+        await recorder.endStickyLabel(at: now)
+    }
+
+    public func addTimedEvent(_ label: CalibrationLabel) async {
+        guard let recorder = calibrationRecorder else { return }
+        let now = Date().timeIntervalSinceReferenceDate
+        await recorder.addTimedEvent(label, at: now)
+    }
+
     // MARK: - Helpers
+
+    private func computeCalibrationMetrics(window: EEGWindow) -> CalibrationMetrics {
+        let channelLabels = container.streamResolved.profile.channelLabels.isEmpty
+            ? ["ch0", "ch1", "ch2", "ch3"]
+            : container.streamResolved.profile.channelLabels
+
+        var rms: [Float] = []
+        var peak: [Float] = []
+
+        for ch in window.samples {
+            let samples = ch
+            let sumSq = samples.reduce(0.0) { $0 + Float($1 * $1) }
+            let rmsVal = sqrt(sumSq / Float(samples.count))
+            let peakVal = samples.map(abs).max() ?? 0
+            rms.append(rmsVal)
+            peak.append(peakVal)
+        }
+
+        return CalibrationMetrics(
+            channelCount: window.channelCount,
+            channelLabels: channelLabels,
+            rms: rms,
+            peak: peak,
+            samplesPerSec: window.sampleRate
+        )
+    }
 
     private nonisolated static func publishMode(
         current: EEGStreamFactory.Resolved,
