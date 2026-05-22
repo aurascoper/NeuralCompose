@@ -7,6 +7,23 @@ struct CalibrationLabelEvent: Sendable {
     let label: CalibrationLabel
 }
 
+/// Bookkeeping for an in-flight sticky press: points at the row inside
+/// `allEvents` so `endStickyLabel` can backfill `tEnd` without copying a
+/// value-type event around.
+struct StickyState: Sendable {
+    let label: CalibrationLabel
+    let allEventsIndex: Int
+}
+
+private extension CalibrationLabel {
+    var isSticky: Bool {
+        switch self {
+        case .rest, .jawClench, .artifact: return true
+        case .blink, .doubleBlink, .select: return false
+        }
+    }
+}
+
 public actor CalibrationRecorder {
     public private(set) var sessionID: String = ""
     public private(set) var windowCount: Int = 0
@@ -17,7 +34,7 @@ public actor CalibrationRecorder {
     private var labelsFileHandle: FileHandle?
     private var sessionURL: URL?
     private var channelLabels: [String] = []
-    private var activeEvents: [CalibrationLabelEvent] = []
+    private var activeEvents: [StickyState] = []
     private var allEvents: [CalibrationLabelEvent] = []
     private var windowingConfig: (seconds: Double, strideSeconds: Double) = (2.0, 1.0)
     private var profile: MuseBoardProfile = .synthetic
@@ -72,16 +89,22 @@ public actor CalibrationRecorder {
 
     public func startStickyLabel(_ label: CalibrationLabel, at t: Double) {
         endStickyLabel(at: t)
+        // Store once in allEvents and remember its index so endStickyLabel
+        // can backfill tEnd. CalibrationLabelEvent is a struct, so the copy
+        // we put in activeEvents is independent of the one in allEvents —
+        // mutating activeEvents[idx] doesn't update allEvents at all.
+        // (That divergence is the bug that wrote 0-duration sticky events.)
         let event = CalibrationLabelEvent(tStart: t, tEnd: t, label: label)
-        activeEvents.append(event)
         allEvents.append(event)
+        let allEventsIndex = allEvents.count - 1
+        activeEvents.append(StickyState(label: label, allEventsIndex: allEventsIndex))
     }
 
     public func endStickyLabel(at t: Double) {
-        if let idx = activeEvents.firstIndex(where: { $0.label == .rest || $0.label == .jawClench || $0.label == .artifact }) {
-            activeEvents[idx].tEnd = t
+        for sticky in activeEvents where sticky.label.isSticky {
+            allEvents[sticky.allEventsIndex].tEnd = t
         }
-        activeEvents.removeAll { $0.label == .rest || $0.label == .jawClench || $0.label == .artifact }
+        activeEvents.removeAll { $0.label.isSticky }
     }
 
     public func addTimedEvent(_ label: CalibrationLabel, at t: Double) {
