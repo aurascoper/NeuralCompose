@@ -139,12 +139,17 @@ public final class AppViewModel: ObservableObject {
             var current = initialResolved
             var calibrationSampleCounter = 0
             var calibrationLastLogTime = Date()
+            var liveRetries = 0
+            let maxLiveRetries = 3
+            var samplesThisAttempt = 0
             while !Task.isCancelled {
                 await Self.publishMode(current: current, container: containerRef, on: self)
+                samplesThisAttempt = 0
                 do {
                     let stream = try await current.stream.start()
                     for try await sample in stream {
                         if Task.isCancelled { break }
+                        samplesThisAttempt += 1
 
                         // Record sample if in calibration mode
                         let (isCalibrating, recorder) = await MainActor.run { (self?.isCalibrating ?? false, self?.calibrationRecorder) }
@@ -188,8 +193,9 @@ public final class AppViewModel: ObservableObject {
                             await MainActor.run { self?.lastError = bci.description }
                         }
                     }
-                    // Clean completion (not an error). Exit.
-                    break
+                    // Clean completion: for live, the Muse likely auto-powered
+                    // off — fall through to retry/fallback. For synthetic,
+                    // a clean exit means we're done.
                 } catch let bci as BCIError {
                     metrics.recordError(bci)
                     await MainActor.run { self?.lastError = bci.description }
@@ -201,8 +207,24 @@ public final class AppViewModel: ObservableObject {
                 await current.stream.stop()
                 if Task.isCancelled { break }
                 if current.source == .synthetic { break }   // already at last resort
-                BCILog.pipeline.notice("Stream failure — falling back to synthetic")
-                current = EEGStreamFactory.makeSynthetic()
+
+                // Live stream stopped (error or clean completion). Retry the
+                // live source a few times — Muse S powers itself off after
+                // ~30 s of poor signal and reconnects when contact returns,
+                // and reconnecting beats a silent fallback to synthetic.
+                // A productive attempt (≥256 samples ≈ 1 s of data) resets
+                // the budget so transient hiccups don't accumulate.
+                if samplesThisAttempt >= 256 { liveRetries = 0 }
+                liveRetries += 1
+                if liveRetries > maxLiveRetries {
+                    BCILog.pipeline.notice("Live stream exhausted \(maxLiveRetries) retries — falling back to synthetic")
+                    current = EEGStreamFactory.makeSynthetic()
+                    liveRetries = 0
+                } else {
+                    let backoff = min(8.0, pow(2.0, Double(liveRetries - 1)))
+                    BCILog.pipeline.notice("Live stream interrupted (\(samplesThisAttempt) samples); retry \(liveRetries)/\(maxLiveRetries) after \(backoff)s")
+                    try? await Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
+                }
             }
             await current.stream.stop()
         }
