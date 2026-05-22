@@ -6,9 +6,12 @@ import BCICore
 /// compiled model exists at the standard location, mock otherwise.
 public enum ClassifierFactory {
 
-    /// Default location for the compiled Core ML model bundle.
-    /// `Models/IntentClassifier.mlmodelc` relative to the app working directory.
+    /// Search paths, in priority order. `.mlmodelc` is pre-compiled (needs
+    /// Xcode's `coremlcompiler` to produce) and loads instantly. `.mlpackage`
+    /// is the raw export from `Scripts/train-intent-classifier.py` and is
+    /// auto-compiled by Core ML on first load — slower start, no Xcode needed.
     public static let defaultModelPath = "Models/IntentClassifier.mlmodelc"
+    public static let defaultPackagePath = "Models/IntentClassifier.mlpackage"
 
     public struct Resolved: Sendable {
         public let classifier: any IntentClassifying
@@ -21,7 +24,7 @@ public enum ClassifierFactory {
         computeMode: ClassifierComputeMode = .cpuAndNeuralEngine,
         modelPath: String? = nil
     ) -> Resolved {
-        let path = modelPath ?? defaultModelPath
+        let path = modelPath ?? Self.resolvePath()
         let url = URL(fileURLWithPath: path)
         if FileManager.default.fileExists(atPath: url.path) {
             do {
@@ -50,5 +53,12 @@ public enum ClassifierFactory {
             computeMode: .cpuOnly,
             warning: nil
         )
+    }
+
+    private static func resolvePath() -> String {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: defaultModelPath) { return defaultModelPath }
+        if fm.fileExists(atPath: defaultPackagePath) { return defaultPackagePath }
+        return defaultModelPath
     }
 }

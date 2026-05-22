@@ -65,6 +65,39 @@ public final class StubNextWordPredictor: NextWordPredicting, @unchecked Sendabl
         "please":[("help", 0.30), ("come", 0.20), ("wait", 0.12), ("stop", 0.10)],
         "yes":   [("please", 0.40), ("thank", 0.20), ("I", 0.20)],
         "no":    [("thanks", 0.30), ("not", 0.20), ("more", 0.15)],
+
+        // Break the "the X" → unigrams → "the" loop: every common object the
+        // determiner emits gets at least one continuation that ends the clause
+        // or pivots away from determiners.
+        "water": [("please", 0.30), ("now", 0.22), ("here", 0.16), ("there", 0.12), ("soon", 0.10)],
+        "food":  [("please", 0.30), ("now", 0.22), ("here", 0.16), ("ready", 0.12), ("soon", 0.10)],
+        "door":  [("please", 0.30), ("now", 0.22), ("open", 0.18), ("closed", 0.12)],
+        "light": [("please", 0.30), ("off", 0.24), ("on", 0.22), ("now", 0.12)],
+        "room":  [("please", 0.30), ("now", 0.18), ("here", 0.14), ("quiet", 0.12)],
+        "the water": [("please", 0.34), ("now", 0.24), ("is", 0.16), ("here", 0.14)],
+        "the food":  [("please", 0.34), ("now", 0.24), ("is", 0.16), ("ready", 0.14)],
+        "the door":  [("please", 0.34), ("open", 0.22), ("closed", 0.18), ("now", 0.14)],
+        "the light": [("off", 0.34), ("on", 0.28), ("please", 0.18), ("now", 0.10)],
+        "the room":  [("please", 0.30), ("is", 0.22), ("now", 0.16), ("quiet", 0.12)],
+
+        // Closers — when the carousel surfaces these and the user commits one,
+        // the trailing-punctuation branch in `candidates(for:)` triggers starters
+        // on the next call, restarting the sentence cleanly.
+        "now":   [(".", 0.40), ("please", 0.22), ("thank", 0.14)],
+        "soon":  [(".", 0.50), ("please", 0.20)],
+        "here":  [(".", 0.40), ("please", 0.22)],
+        "there": [(".", 0.40), ("please", 0.22)],
+        "off":   [(".", 0.50), ("now", 0.18)],
+        "on":    [(".", 0.40), ("please", 0.18)],
+        "open":  [(".", 0.45), ("please", 0.22)],
+        "closed":[(".", 0.45), ("now", 0.18)],
+        "ready": [(".", 0.50), ("now", 0.18)],
+        "quiet": [(".", 0.50), ("please", 0.18)],
+        "help":  [("please", 0.40), ("me", 0.30), (".", 0.18)],
+        "tired": [(".", 0.55), ("now", 0.18)],
+        "hungry":[(".", 0.55), ("please", 0.18)],
+        "fine":  [(".", 0.55), (",", 0.15)],
+        "happy": [(".", 0.55), (",", 0.15)],
     ]
 
     private func candidates(for context: String, count: Int) -> [(text: String, prob: Float)] {
