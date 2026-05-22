@@ -47,11 +47,6 @@ public actor MLXNextWordPredictor: NextWordPredicting {
         self.modelDirectory = modelDirectory
 
         #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
-        // GPU configuration is API-stable across MLX-Swift versions — do this
-        // unconditionally even in the placeholder path.
-        MLX.GPU.set(cacheLimit: 64 * 1024 * 1024)
-        // Throw to indicate the integration is not wired up. Concrete model
-        // loading is the user-side step described above.
         throw BCIError.predictorInitFailed(
             reason: "MLXNextWordPredictor: integration stub — wire up MLXLLM loader for your pinned version (see file comment)"
         )

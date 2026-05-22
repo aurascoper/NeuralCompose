@@ -101,9 +101,11 @@ public final class AppViewModel: ObservableObject {
         await composition.start()
 
         // ── snapshots → UI (MainActor) ────────────────────────────────────
-        snapshotTask = Task { @MainActor [weak self, composition] in
+        snapshotTask = Task {
             for await snap in composition.snapshots {
-                self?.apply(snapshot: snap)
+                await MainActor.run { [weak self] in
+                    self?.apply(snapshot: snap)
+                }
             }
         }
 
