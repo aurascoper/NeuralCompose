@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>NeuralCompose</string>
+    <key>CFBundleDisplayName</key>
+    <string>NeuralCompose</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.neuralcompose.app</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <false/>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>NeuralCompose connects to your Muse headband over Bluetooth to read EEG locally. EEG data never leaves your machine.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>NeuralCompose — local-only research prototype.</string>
+</dict>
+</plist>

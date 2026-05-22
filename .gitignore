@@ -1,0 +1,32 @@
+## Swift / SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+
+## Apple
+.DS_Store
+xcuserdata/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Local model weights & recorded EEG (never committed by default)
+Models/*
+!Models/.gitkeep
+!Models/README.md
+Recordings/*
+!Recordings/.gitkeep
+!Recordings/README.md
+
+## Editors
+.vscode/
+.idea/
+*.swp
+
+## Logs / coverage
+*.log
+coverage/
