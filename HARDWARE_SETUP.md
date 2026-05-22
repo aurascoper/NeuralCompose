@@ -103,28 +103,31 @@ the rest of the codebase.
 ## Installing BrainFlow
 
 NeuralCompose links BrainFlow as a system library, not as a SwiftPM package.
+There is no Homebrew formula for BrainFlow at the time of writing
+(`brew search brainflow` returns nothing) — build from source:
 
 ```bash
-# Homebrew (preferred)
-brew install brainflow
-
-# Or build from source — https://brainflow.readthedocs.io
-git clone https://github.com/brainflow-dev/brainflow.git
-cd brainflow && tools/build.sh
+git clone https://github.com/brainflow-dev/brainflow.git ~/Developer/brainflow
+cd ~/Developer/brainflow && tools/build.sh
 ```
 
-After installation, rebuild NeuralCompose with the bridge enabled:
+For native-BLE Muse support (Muse S, Muse S Athena) you also need
+`-DBUILD_BLE=ON` when configuring the CMake build; see
+[brainflow.readthedocs.io](https://brainflow.readthedocs.io) for the full
+flag list. The `compiled/` directory afterward should contain
+`libBoardController.dylib`, `libMuseLib.dylib`, and the matching SimpleBLE
+dylibs.
+
+After installation, rebuild NeuralCompose:
 
 ```bash
-swift build \
-  -Xcc -DBCI_BRAINFLOW_AVAILABLE=1 \
-  -Xcc -I/opt/homebrew/include \
-  -Xlinker -L/opt/homebrew/lib \
-  -Xlinker -lBrainflow \
-  -c release
+./Scripts/build.sh --with-brainflow
 ```
 
-Or use `Scripts/build.sh --with-brainflow`, which expands these flags for you.
+The script auto-detects BrainFlow at `~/Developer/brainflow` (override with
+`--brainflow-path=…` or `BRAINFLOW_ROOT`). On success it copies BrainFlow's
+runtime dylibs next to the NeuralCompose binary in `.build/<config>/` so
+they resolve at launch.
 
 ## Sanity check
 

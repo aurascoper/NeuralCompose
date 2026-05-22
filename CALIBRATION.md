@@ -42,7 +42,7 @@ NEURALCOMPOSE_BOARD_PROFILE=synthetic ./Scripts/run-calibration.sh
 
 1. Click **Calibrate** to show the calibration panel
 2. Click **Start Recording** to begin a session
-   - A new directory is created under `~/NeuralCompose/Recordings/` with timestamp
+   - A new directory is created under `~/Documents/NeuralCompose/Recordings/` with timestamp
    - EEG and label files are written in real time
 3. Label gestures using keyboard or buttons (see protocol below)
 4. Click **Stop Recording** to finish
@@ -127,12 +127,31 @@ Session configuration and timestamps:
 }
 ```
 
+## Training a Core ML classifier from a session
+
+After one or more usable sessions:
+
+```bash
+./venv/bin/python Scripts/train-intent-classifier.py
+```
+
+With no args, the script trains on every session under
+`~/Documents/NeuralCompose/Recordings/`. Pass specific session paths to scope.
+The output is `Models/IntentClassifier.mlpackage`, which `ClassifierFactory`
+auto-detects on next launch — no Xcode-compile step required (Core ML
+auto-compiles on first load and caches the result). The architecture is a
+small 1-D CNN (~25K params, ANE-friendly); see the script header for the
+exact I/O contract that must match `CoreMLIntentClassifier.swift`.
+
+If you also have `Models/IntentClassifier.mlmodelc` (Xcode-compiled), it
+wins over `.mlpackage` — same model, faster first-launch.
+
 ## Evaluating a Session
 
 Once you have a recorded session and a trained classifier, replay the EEG and compare predictions to ground-truth labels:
 
 ```bash
-swift Scripts/evaluate-calibration.swift --session Recordings/calibration_20260522_010000_muses/
+swift Scripts/evaluate-calibration.swift --session ~/Documents/NeuralCompose/Recordings/calibration_<timestamp>_muses/
 ```
 
 Output: a 6×6 confusion matrix (rest, blink, double_blink, jaw_clench, select, artifact, plus "none") with per-class accuracy.
@@ -175,10 +194,26 @@ Overall Accuracy: 90.2%
 ## Troubleshooting
 
 ### "Failed to start calibration: …"
-Check file permissions on `~/NeuralCompose/Recordings/`. Create the directory manually if needed:
+Check file permissions on `~/Documents/NeuralCompose/Recordings/`. Create the directory manually if needed:
 ```bash
 mkdir -p ~/NeuralCompose/Recordings
 ```
+
+### Recording captured zero samples
+
+Open the session dir — if `eeg.csv` is just the header and `metadata.json`
+exists, the Muse stopped emitting during the recording window. Common
+causes:
+
+- **Headset auto-power-off from poor scalp contact.** Muse S sleeps after
+  ~30 s of bad signal. The privacy banner badge ("Signal weak / lost")
+  warns you when contact has dropped; re-wet the pads and press the Muse
+  power button before it sleeps. Since v0.4.1 the supervisor retries the
+  live stream 3 times with exponential backoff when this happens — watch
+  for the banner switching to "Reconnecting…".
+- **Headset never connected** in the first place. The banner would show
+  "Synthetic" (amber) instead of "Live pipeline" (green). Stop, fix BLE,
+  restart the app.
 
 ### "Dropped: X" (non-zero dropped window count)
 On synthetic or idle hardware, expect ~0. On real hardware under system load, small drops (1–3 per 60 s) are acceptable. Large numbers indicate:

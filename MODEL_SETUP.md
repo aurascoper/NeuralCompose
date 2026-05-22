@@ -51,11 +51,39 @@ The default wrapper expects:
 If your model uses different names, adjust the input/output keys in
 `CoreMLIntentClassifier.swift` — that's the only place they appear.
 
-### Compiling
+### Two file layouts, both accepted
+
+`ClassifierFactory` looks for either:
+
+1. **`Models/IntentClassifier.mlmodelc/`** — Xcode-compiled bundle. Fastest
+   first-launch (no compile step at runtime). Requires full **Xcode.app**
+   (not just Command Line Tools) since `xcrun coremlcompiler` ships only
+   with Xcode:
+   ```bash
+   xcrun coremlcompiler compile path/to/IntentClassifier.mlpackage Models/
+   ```
+2. **`Models/IntentClassifier.mlpackage`** — raw export from
+   `Scripts/train-intent-classifier.py` (or any coremltools `.convert()`
+   call). Core ML auto-compiles on first load and caches the result. No
+   Xcode required, slightly slower cold-start.
+
+If both exist, `.mlmodelc` wins.
+
+### Training from a calibration session
+
+The repo ships a training script that turns one or more calibration sessions
+into a `.mlpackage`:
 
 ```bash
-xcrun coremlcompiler compile path/to/IntentClassifier.mlpackage Models/
+./venv/bin/python Scripts/train-intent-classifier.py
+# or scope to specific sessions:
+./venv/bin/python Scripts/train-intent-classifier.py \
+    ~/Documents/NeuralCompose/Recordings/calibration_<ts>_muses/
 ```
+
+Architecture is a 1-D CNN (~25K params, ANE-friendly). Output:
+`Models/IntentClassifier.mlpackage`. See [CALIBRATION.md](CALIBRATION.md)
+for how to collect the input data.
 
 ---
 
@@ -76,12 +104,16 @@ recent Apple Silicon mac (M1 → M4). Good starting points:
 ### Conversion
 
 The easiest path is to download an already-MLX-converted variant from the
-Hugging Face `mlx-community` org and unpack it into `Models/`:
+Hugging Face `mlx-community` org and unpack it into `Models/`. With the
+modern `hf` CLI from `huggingface_hub`:
 
 ```bash
-huggingface-cli download mlx-community/Qwen2.5-0.5B-Instruct-4bit \
+hf download mlx-community/Qwen2.5-0.5B-Instruct-4bit \
   --local-dir Models/Qwen2.5-0.5B-Instruct-4bit
 ```
+
+(The older `huggingface-cli download` command works on installations
+predating `huggingface_hub` 0.27 but is deprecated.)
 
 The expected layout under `Models/<name>/`:
 
@@ -103,6 +135,29 @@ Either edit `defaultMLXModelName` in `BCILLM/PredictorFactory.swift`, or set
 is malformed, or `MLXLMCommon` raises during weight load, the factory logs the
 specific reason once and returns a `StubNextWordPredictor` in its place. The
 app continues working in degraded mode and the privacy banner reflects it.
+
+### Xcode requirement (Metal kernels)
+
+MLX-swift's Metal kernels are compiled from `.metal` sources by SPM at
+build time, which needs `xcrun metal` — that binary ships **only** with
+the full Xcode.app (not with Command Line Tools). If you build under CLT
+alone, the binary links but launching the predictor raises:
+
+```
+MLX error: Failed to load the default metallib. library not found ...
+```
+
+The C++ exception isn't catchable from Swift, so the whole process exits.
+Workaround until Xcode is installed: do not place MLX weights in `Models/`
+— `PredictorFactory.live()` will skip MLX init entirely and fall back to
+the stub. Once Xcode is installed:
+
+```bash
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+xcrun -find metal      # should print a path
+rm -rf .build && ./Scripts/build.sh --with-brainflow
+```
 
 ---
 

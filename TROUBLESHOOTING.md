@@ -38,6 +38,28 @@ swift build \
 
 `Scripts/build.sh --with-brainflow` does this for you.
 
+### MLX runtime: "Failed to load the default metallib"
+
+mlx-swift's Metal kernels are compiled by SPM during the Cmlx build using
+`xcrun metal`, which ships only with full Xcode.app (not with Command
+Line Tools). Confirm with `xcrun -find metal` — if it errors "not a
+developer tool", that's the cause. Resolution:
+
+```bash
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+xcodebuild -runFirstLaunch
+rm -rf .build && ./Scripts/build.sh --with-brainflow
+```
+
+The matching Homebrew `mlx.metallib` does not work as a drop-in
+(`/opt/homebrew/lib/mlx.metallib` is from `mlx` C++ 0.31.x; mlx-swift
+0.25.6 vendors mlx 0.24.2, and the function specializations diverge —
+`rope_single_float16` validation fails at first Metal call).
+
+The same Xcode install also gets you `xcrun coremlcompiler` for
+`.mlmodelc` compilation — see [MODEL_SETUP.md](MODEL_SETUP.md).
+
 ### Strict concurrency warnings
 
 The package is built with strict concurrency on. Most warnings are real —
@@ -78,6 +100,23 @@ It shouldn't — `BrainFlowService` catches the disconnect and emits a single
 `BCIError.streamFailed`, after which the app swaps in the synthetic stream.
 If you see a hard crash, capture the stack trace, the BrainFlow board profile,
 and the dongle model, and file an issue.
+
+### Muse keeps disconnecting / "Reconnecting…" stays up
+
+The Muse S auto-powers-off after ~30 s of poor scalp contact, looking to
+the BrainFlow stream like a clean completion. Since v0.4.1 the supervisor
+retries the live source 3 times with exponential backoff (1 s / 2 s / 4 s)
+before falling back to synthetic — that's the "Reconnecting…" banner state.
+If it never recovers to "Live pipeline":
+
+- **Signal-health badge stays red.** Re-wet the pad and the two ear
+  electrodes; dry pads are the most common cause.
+- **Muse battery low.** A drained Muse will reconnect briefly and drop
+  again within seconds. There is no battery readout for the non-Athena
+  Muse S — BrainFlow doesn't expose it (only board id 67 / Athena has a
+  `battery_channel`). Charge the headset.
+- **Another app holds the BLE connection.** Quit Muse Direct / Mind
+  Monitor; only one app can own the Muse at a time.
 
 ## Tests
 

@@ -46,17 +46,19 @@ can immediately see the carousel cycle and commit tokens. Everything works
 
 | Component         | Enable by                                                            |
 |-------------------|----------------------------------------------------------------------|
-| Muse via BrainFlow | Install BrainFlow C++ libs, rebuild with `-D BCI_BRAINFLOW_AVAILABLE`. See [HARDWARE_SETUP.md](HARDWARE_SETUP.md). |
-| Real Core ML model | Drop a compiled `.mlmodelc` into `Models/IntentClassifier.mlmodelc` and toggle "Use Core ML" in the UI. |
-| Real MLX LLM       | Drop a converted MLX model into `Models/<name>/` and toggle "Use MLX" in the UI. See [MODEL_SETUP.md](MODEL_SETUP.md). |
+| Muse via BrainFlow | Install BrainFlow, rebuild with `./Scripts/build.sh --with-brainflow`. See [HARDWARE_SETUP.md](HARDWARE_SETUP.md). |
+| Real Core ML model | Drop `Models/IntentClassifier.mlmodelc` (Xcode-compiled) **or** `Models/IntentClassifier.mlpackage` (no Xcode needed, auto-compiled on first load). `ClassifierFactory` auto-detects on launch — no UI toggle. Train from calibration data with `Scripts/train-intent-classifier.py`. |
+| Real MLX LLM       | Drop a converted MLX model into `Models/<name>/`. `PredictorFactory` auto-detects on launch. Requires full **Xcode** (not just CLT) so SPM can compile mlx-swift's Metal kernels — see [MODEL_SETUP.md](MODEL_SETUP.md). |
 
-If something is missing at **launch** (no `.mlmodelc`, no MLX weights, bridge
-in stub mode) the factory wires up the mock / stub equivalent and the privacy
-banner reflects it. At **runtime**, if the live EEG stream errors or
-disconnects, `AppViewModel`'s supervisor swaps in the synthetic stream and
-updates the banner to degraded mode — the session does not crash and never
-reaches the network. We do not auto-reconnect to the same device; restart the
-app (or call `viewModel.stop()` then `start()`) to retry the live stream.
+If something is missing at **launch** (no Core ML model, no MLX weights,
+bridge in stub mode) the factory wires up the mock / stub equivalent and the
+privacy banner reflects it. At **runtime**, if the live EEG stream errors or
+the device auto-powers-off, `AppViewModel`'s supervisor retries the live
+source up to 3 times with exponential backoff before falling back to the
+synthetic stream. The banner shows "Reconnecting…" during retries and a
+signal-health badge (Signal OK / weak / lost) bucketed from per-channel
+RMS — useful for diagnosing electrode contact without taking the headset
+off.
 
 ## Architecture in one paragraph
 
@@ -95,7 +97,8 @@ Models/             where you drop .mlmodelc and MLX weight folders
 ## Documentation
 
 - [HARDWARE_SETUP.md](HARDWARE_SETUP.md) — Muse + BrainFlow + Bluetooth dongle.
-- [MODEL_SETUP.md](MODEL_SETUP.md)   — Core ML and MLX model files.
+- [MODEL_SETUP.md](MODEL_SETUP.md)   — Core ML and MLX model files; training script.
+- [CALIBRATION.md](CALIBRATION.md)   — recording labeled EEG to train a Core ML classifier.
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — common build / runtime issues.
 
 ## License
