@@ -141,6 +141,13 @@ public actor CalibrationRecorder {
     }
 
     public func finishSession() async {
+        // Close any still-active sticky labels at stop time. Without this an
+        // orphan sticky (e.g. user clicked the [r] Rest button but never hit
+        // [Esc] Clear before Stop) would be written as a zero-duration event
+        // and contribute nothing to label resolution.
+        let now = Date().timeIntervalSince1970
+        endStickyLabel(at: now)
+
         if let fh = eventsFileHandle {
             for event in allEvents {
                 let row = "\(self.sessionID),\(String(format: "%.6f", event.tStart)),\(String(format: "%.6f", event.tEnd)),\(event.label.rawValue)\n"

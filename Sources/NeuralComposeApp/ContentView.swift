@@ -59,6 +59,18 @@ struct ContentView: View {
         }
         .onAppear { setupKeyboardMonitoring() }
         .onDisappear { teardownKeyboardMonitoring() }
+        .onChange(of: showCalibration) { _, isOn in
+            // Calibration panel just toggled — install or tear down the
+            // keyboard monitor accordingly. The original onAppear runs once,
+            // before the user has had a chance to enable calibration, so the
+            // guard inside setupKeyboardMonitoring fell through and no
+            // listener was ever installed. Result: keyboard `r`/`j`/`x`
+            // were silently ignored and the only label events came from
+            // button clicks (which have no end action → zero-duration
+            // sticky events).
+            teardownKeyboardMonitoring()
+            if isOn { setupKeyboardMonitoring() }
+        }
     }
 
     private func setupKeyboardMonitoring() {
