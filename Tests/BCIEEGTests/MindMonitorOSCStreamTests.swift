@@ -187,4 +187,65 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         }
         await stream.stop()
     }
+
+    /// The deferred "F3" test from the OSC transport review: proves a
+    /// silently stalled link (packets simply stop, no NWConnection error)
+    /// actually surfaces as a thrown stream error — which is what
+    /// AppViewModel's retry/backoff/reconnecting-UI supervisor needs to
+    /// react to. Before the staleTimeoutSec watchdog existed, this
+    /// scenario produced no error and no completion at all; the stream
+    /// just sat forever, and the supervisor never got a reason to react —
+    /// exactly the same failure mode found live on the BrainFlow path
+    /// (BrainFlowService's equivalent watchdog, same commit).
+    func testStreamThrowsAfterPacketsStopArriving() async throws {
+        let port = testPort + 4
+        let stream = MindMonitorOSCStream(port: port, staleTimeoutSec: 1.0)
+        let eegStream = try await stream.start()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // One real packet so lastHeartbeat is set from an actual arrival,
+        // not just sessionStart — closer to the real "was streaming, then
+        // stopped" scenario than "never received anything."
+        await sendUDP(makeEEGPacket([1, 2, 3, 4]), port: port)
+
+        let collectTask = Task { () -> Error? in
+            do {
+                for try await _ in eegStream {}
+                return nil // stream finished cleanly — not what we expect here
+            } catch {
+                return error
+            }
+        }
+
+        // Deliberately send nothing more. staleTimeoutSec is 1.0s; allow
+        // up to 3s for the watchdog to fire and the stream to throw.
+        let outcome = await withTimeout(seconds: 3) { await collectTask.value }
+        await stream.stop()
+
+        let thrown = try XCTUnwrap(
+            outcome.flatMap { $0 },
+            "watchdog did not fire within 3s — stream neither threw nor finished"
+        )
+        guard case BCIError.streamFailed(let reason) = thrown else {
+            return XCTFail("expected BCIError.streamFailed, got \(thrown)")
+        }
+        XCTAssertTrue(reason.contains("no OSC packets"), "unexpected failure reason: \(reason)")
+    }
+
+    /// Races `operation` against a timeout, returning `nil` on timeout
+    /// instead of hanging the test indefinitely if the watchdog regresses.
+    private func withTimeout<T: Sendable>(
+        seconds: Double, _ operation: @escaping @Sendable () async -> T
+    ) async -> T? {
+        await withTaskGroup(of: T?.self) { group in
+            group.addTask { await operation() }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return nil
+            }
+            let result = await group.next() ?? nil
+            group.cancelAll()
+            return result
+        }
+    }
 }

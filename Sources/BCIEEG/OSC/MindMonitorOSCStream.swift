@@ -41,9 +41,11 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
     public let channelCount: Int = 4
 
     private let port: NWEndpoint.Port
+    private let staleTimeoutSec: Double
     private let lock = NSLock()
     private var listener: NWListener?
     private var startNanos: UInt64?
+    private var watchdogTask: Task<Void, Never>?
 
     // Diagnostics bookkeeping — see `currentDiagnostics()`.
     private var lastArrivalNanos: UInt64?
@@ -58,11 +60,23 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
     /// which can lag the first received packet slightly.
     private var localInterfaceName: String?
 
-    /// - Parameter port: UDP port to listen on. Must match the "OSC Port"
-    ///   configured in Mind Monitor's settings. Default matches
-    ///   `HARDWARE_SETUP.md`'s documented convention for this project.
-    public init(port: UInt16 = 5000) {
+    /// - Parameters:
+    ///   - port: UDP port to listen on. Must match the "OSC Port"
+    ///     configured in Mind Monitor's settings. Default matches
+    ///     `HARDWARE_SETUP.md`'s documented convention for this project.
+    ///   - staleTimeoutSec: If no packet arrives for longer than this, the
+    ///     stream finishes with `.streamFailed` instead of waiting on
+    ///     `receiveMessage` forever. Same failure mode as
+    ///     `BrainFlowService`'s equivalent watchdog: a phone that stops
+    ///     sending (backgrounded, out of Tailscale range, Mind Monitor
+    ///     killed) never causes an `NWConnection` error — the
+    ///     `receiveMessage` callback just never fires again — so without
+    ///     this, `AppViewModel`'s retry/backoff/reconnecting-UI supervisor,
+    ///     which only reacts to the stream throwing or finishing, never
+    ///     fires either. Default matches `BrainFlowService`'s 5s.
+    public init(port: UInt16 = 5000, staleTimeoutSec: Double = 5.0) {
         self.port = NWEndpoint.Port(rawValue: port) ?? 5000
+        self.staleTimeoutSec = staleTimeoutSec
     }
 
     public func start() async throws -> AsyncThrowingStream<EEGSample, any Error> {
@@ -104,8 +118,30 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
                 }
             }
             newListener.start(queue: .global(qos: .userInitiated))
-            continuation.onTermination = { @Sendable _ in
+
+            let sessionStart = Date()
+            let watchdog = Task { [weak self] in
+                guard let self else { return }
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    if Task.isCancelled { break }
+                    let staleness = self.secondsSinceLastHeartbeat(sessionStart: sessionStart)
+                    if staleness > self.staleTimeoutSec {
+                        BCILog.eeg.error(
+                            "MindMonitorOSCStream: no packets for \(staleness, format: .fixed(precision: 1))s (>\(self.staleTimeoutSec, format: .fixed(precision: 1))s timeout) — treating as a dead link"
+                        )
+                        continuation.finish(throwing: BCIError.streamFailed(
+                            reason: "no OSC packets received for \(Int(staleness))s — link likely dead"
+                        ))
+                        return
+                    }
+                }
+            }
+            self.recordWatchdogTask(watchdog)
+
+            continuation.onTermination = { @Sendable [weak self] _ in
                 newListener.cancel()
+                self?.cancelWatchdog()
             }
         }
     }
@@ -151,6 +187,30 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         localInterfaceName = name
+    }
+
+    private func recordWatchdogTask(_ task: Task<Void, Never>) {
+        lock.lock()
+        defer { lock.unlock() }
+        watchdogTask = task
+    }
+
+    private func cancelWatchdog() {
+        lock.lock()
+        let task = watchdogTask
+        watchdogTask = nil
+        lock.unlock()
+        task?.cancel()
+    }
+
+    /// `lastHeartbeat` starts `nil` (no packet has arrived yet), so a
+    /// stream that never receives its first packet is measured against
+    /// `sessionStart` rather than reporting `nil`/never-stale.
+    private func secondsSinceLastHeartbeat(sessionStart: Date) -> Double {
+        lock.lock()
+        defer { lock.unlock() }
+        let reference = lastHeartbeat ?? sessionStart
+        return Date().timeIntervalSince(reference)
     }
 
     // MARK: - Receiving
