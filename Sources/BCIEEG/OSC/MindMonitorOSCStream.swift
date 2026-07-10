@@ -51,6 +51,10 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
     private var packetsReceived = 0
     private var packetsDropped = 0
     private var lastHeartbeat: Date?
+    /// Best-effort — set from the most recent connection's `NWPath`, once
+    /// that path resolves. `nil` until the first connection reports a path,
+    /// which can lag the first received packet slightly.
+    private var localInterfaceName: String?
 
     /// - Parameter port: UDP port to listen on. Must match the "OSC Port"
     ///   configured in Mind Monitor's settings. Default matches
@@ -81,6 +85,9 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
         return AsyncThrowingStream<EEGSample, any Error> { continuation in
             newListener.newConnectionHandler = { [weak self] connection in
                 guard let self else { return }
+                connection.pathUpdateHandler = { [weak self] path in
+                    self?.recordLocalInterfaceName(path.availableInterfaces.first?.name)
+                }
                 connection.start(queue: .global(qos: .userInitiated))
                 self.receiveLoop(on: connection, continuation: continuation)
             }
@@ -135,6 +142,13 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
         let current = listener
         listener = nil
         return current
+    }
+
+    private func recordLocalInterfaceName(_ name: String?) {
+        guard let name else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        localInterfaceName = name
     }
 
     // MARK: - Receiving
@@ -218,7 +232,9 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
             packetLossEstimate: nil, // no sequence numbers in Mind Monitor's OSC stream to detect gaps against
             packetJitterMillis: jitter,
             lastInterArrivalMillis: interArrivalMillis.last,
-            lastHeartbeat: lastHeartbeat
+            lastHeartbeat: lastHeartbeat,
+            boundPort: port.rawValue,
+            localInterfaceName: localInterfaceName
         )
     }
 }

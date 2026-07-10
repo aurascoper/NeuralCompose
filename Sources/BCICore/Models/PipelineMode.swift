@@ -31,17 +31,26 @@ public struct PipelineMode: Sendable, Hashable {
     public let sourceProfile: MuseBoardProfile
     public let classifier: Classifier
     public let predictor: Predictor
+    /// Extra transport-specific detail for the privacy banner, e.g.
+    /// `"UDP 5000 · utun3"` for `.oscRemote`. `Source` can't carry this
+    /// itself — it's a `String`-raw-value `Codable` enum, and Swift doesn't
+    /// allow associated values on individual cases of a raw-value enum.
+    /// `nil` for sources with nothing more specific to show than
+    /// `sourceProfile.displayName` already gives.
+    public let transportDetail: String?
 
     public init(
         source: Source,
         sourceProfile: MuseBoardProfile,
         classifier: Classifier,
-        predictor: Predictor
+        predictor: Predictor,
+        transportDetail: String? = nil
     ) {
         self.source = source
         self.sourceProfile = sourceProfile
         self.classifier = classifier
         self.predictor = predictor
+        self.transportDetail = transportDetail
     }
 
     /// True if every stage is a real, hardware/model-backed component.
@@ -53,7 +62,11 @@ public struct PipelineMode: Sendable, Hashable {
     public var substitutionSummary: String {
         var notes: [String] = []
         if source != .brainflowMuse {
-            notes.append("EEG: \(sourceProfile.displayName)")
+            if let transportDetail {
+                notes.append("EEG: \(sourceProfile.displayName) (\(transportDetail))")
+            } else {
+                notes.append("EEG: \(sourceProfile.displayName)")
+            }
         }
         if classifier == .mock {
             notes.append("Classifier: mock")

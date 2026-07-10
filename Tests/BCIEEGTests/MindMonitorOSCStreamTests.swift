@@ -110,6 +110,15 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(diagnostics.packetsReceived, 2)
         XCTAssertGreaterThanOrEqual(diagnostics.packetsDropped, 1) // the /muse/acc packet
         XCTAssertNotNil(diagnostics.lastHeartbeat)
+        // F2: a heartbeat that just happened should read back as ~0s stale,
+        // not nil and not some stale baked-in value.
+        let staleness = try XCTUnwrap(diagnostics.secondsSinceLastHeartbeat)
+        XCTAssertGreaterThanOrEqual(staleness, 0)
+        XCTAssertLessThan(staleness, 1.0)
+        // F1: bound port should always reflect the configured port, so the
+        // privacy banner can show it without the listener needing to have
+        // received anything yet.
+        XCTAssertEqual(diagnostics.boundPort, testPort + 1)
     }
 
     func testStartingTwiceThrows() async throws {

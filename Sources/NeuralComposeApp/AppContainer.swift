@@ -20,8 +20,23 @@ public struct AppContainer: Sendable {
             source: streamResolved.source,
             sourceProfile: streamResolved.profile,
             classifier: classifierResolved.kind,
-            predictor: predictorResolved.kind
+            predictor: predictorResolved.kind,
+            transportDetail: Self.transportDetail(for: streamResolved.stream)
         )
+    }
+
+    /// Extra detail for the privacy banner beyond `sourceProfile.displayName`
+    /// — currently just the OSC bound port/interface, since that's the one
+    /// transport where "which port, which interface" is actually useful to
+    /// see without grepping logs. `nil` for every other transport.
+    private static func transportDetail(for stream: any EEGStreaming) -> String? {
+        guard let oscStream = stream as? MindMonitorOSCStream else { return nil }
+        let diagnostics = oscStream.currentDiagnostics()
+        guard let boundPort = diagnostics.boundPort else { return nil }
+        if let interfaceName = diagnostics.localInterfaceName {
+            return "UDP \(boundPort) · \(interfaceName)"
+        }
+        return "UDP \(boundPort)"
     }
 
     public init(

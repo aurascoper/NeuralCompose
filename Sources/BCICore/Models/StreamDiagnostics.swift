@@ -22,9 +22,11 @@ public struct StreamDiagnostics: Sendable, Equatable {
     /// or a `/muse/*` address this decoder doesn't map yet (e.g. `/muse/acc`).
     public var packetsDropped: Int
     /// Estimated packet loss as a 0...1 fraction, or `nil` if it isn't
-    /// computable. Mind Monitor's OSC stream carries no sequence numbers,
-    /// so there's no gap to detect against — this stays `nil` for
-    /// `MindMonitorOSCStream` today rather than reporting a fabricated 0%.
+    /// computable. `MindMonitorOSCStream` returns `nil` because Mind
+    /// Monitor's OSC payload carries no per-packet sequence number to
+    /// detect gaps against — not a limitation of this type. A future
+    /// transport with sequence numbers (e.g. anything timetag-based) can
+    /// populate this field as-is; nothing about its shape assumes OSC.
     public var packetLossEstimate: Double?
     /// Standard deviation of inter-packet arrival intervals over a short
     /// rolling window, in milliseconds — a jitter proxy computed entirely
@@ -39,6 +41,17 @@ public struct StreamDiagnostics: Sendable, Equatable {
     /// Wall-clock time the most recent packet arrived, for a UI staleness
     /// indicator ("no data for Ns").
     public var lastHeartbeat: Date?
+    /// UDP port this transport is listening on, for display (e.g. in the
+    /// privacy banner) without grepping the log. `nil` for transports with
+    /// no port concept.
+    public var boundPort: UInt16?
+    /// Best-effort local network interface name serving the most recent
+    /// packet (e.g. `utun3` for a Tailscale interface), if the transport
+    /// can determine it. This is a sanity check for the user — "does the
+    /// traffic look like it's arriving over my VPN, not some other
+    /// interface" — not a security boundary; the VPN is still what keeps
+    /// unwanted traffic out. `nil` if not yet known or not applicable.
+    public var localInterfaceName: String?
 
     public init(
         transport: String,
@@ -48,7 +61,9 @@ public struct StreamDiagnostics: Sendable, Equatable {
         packetLossEstimate: Double? = nil,
         packetJitterMillis: Double? = nil,
         lastInterArrivalMillis: Double? = nil,
-        lastHeartbeat: Date? = nil
+        lastHeartbeat: Date? = nil,
+        boundPort: UInt16? = nil,
+        localInterfaceName: String? = nil
     ) {
         self.transport = transport
         self.sampleRate = sampleRate
@@ -58,5 +73,19 @@ public struct StreamDiagnostics: Sendable, Equatable {
         self.packetJitterMillis = packetJitterMillis
         self.lastInterArrivalMillis = lastInterArrivalMillis
         self.lastHeartbeat = lastHeartbeat
+        self.boundPort = boundPort
+        self.localInterfaceName = localInterfaceName
+    }
+
+    /// Seconds since `lastHeartbeat`, computed fresh at access time (not
+    /// baked in at construction) — the primitive a "no data for Ns" UI
+    /// indicator or a stall watchdog should actually read, since
+    /// `lastInterArrivalMillis` reflects the *previous* gap and doesn't
+    /// update while the stream is stalled (a stalled stream has no new
+    /// packets to compute a new inter-arrival from). `nil` if no packet
+    /// has arrived yet.
+    public var secondsSinceLastHeartbeat: TimeInterval? {
+        guard let lastHeartbeat else { return nil }
+        return Date().timeIntervalSince(lastHeartbeat)
     }
 }

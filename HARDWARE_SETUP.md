@@ -131,6 +131,13 @@ numbering in Mind Monitor's OSC stream, so `StreamDiagnostics.packetLossEstimate
 stays `nil` rather than reporting a number that isn't really measurable;
 jitter and last-heartbeat are computed from local arrival timing instead.
 
+The privacy banner shows the bound UDP port and (once a packet has arrived
+and the connection's path resolves) the local network interface it came in
+on, e.g. "EEG: OSC Remote (network) (UDP 5000 · utun3)" — a quick sanity
+check that traffic is actually arriving over your VPN interface, not some
+other one. This is informational only; the VPN itself is still what keeps
+unwanted traffic out, not this display.
+
 Binding is to `0.0.0.0` (all interfaces) — that's necessary, not a bug: a
 VPN interface's IP isn't known ahead of time, so the listener has to bind
 broadly to receive on whatever interface Tailscale creates. The actual
