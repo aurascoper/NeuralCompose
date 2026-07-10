@@ -148,23 +148,23 @@ where `budget` is the `TMRBudget` (5 cues/night max, 15-min min interval, 2 wake
 
 ## Current Validation Results
 
-**Live Muse S through BrainFlow** — 2026-07-10, single participant, 80-second protocol. Three runs captured; the 01:42 session is the canonical reference (cleanest signal, all four conditions within the expected envelope on 3 of 4 channels):
+**Live Muse S through BrainFlow** — 2026-07-10, single participant, 80-second protocol. Four sessions captured; the AF7 channel has been saturated (~900 µV RMS) across all four runs, indicating a hardware issue with this specific Muse S unit (multiple position adjustments did not resolve it). TP9, AF8, and TP10 are healthy and produce physiological EEG. The 01:42 session is the canonical reference:
 
 | Condition | Signature | Result |
 |-----------|-----------|--------|
-| Eyes-closed alpha (TP9) | $P_\alpha^{\text{closed}} / P_\alpha^{\text{open}}$ | **2.98×** (PASS ≥1.5×) |
-| Eyes-closed alpha (TP10) | ratio | **3.88×** (PASS) |
-| Eyes-closed alpha (AF8) | ratio | 1.20× (borderline; AF7 saturated) |
-| Eyes-closed alpha (AF7) | ratio | 1.03× (saturated pad; ratio not meaningful) |
-| Blink transient (AF8) | $\max \lvert x(t) \rvert$ | **64.9 µV** (PASS ≥40 µV) |
-| Jaw clench broadband (TP9) | $P_{\text{30-100 Hz}}^{\text{clench}} / P^{\text{open}}$ | **2.62×** (PASS ≥1.5×) |
-| Jaw clench broadband (TP10) | ratio | **3.18×** (PASS) |
-| Contact quality (RMS, healthy channels) | per channel | 10–20 µV (PASS, physiological) |
-| Contact quality (AF7) | RMS | 912 µV (saturated; pad needs repositioning) |
+| Eyes-closed alpha (TP9) | $P_\alpha^{\text{closed}} / P_\alpha^{\text{open}}$ | **2.24×–3.08×** across sessions (PASS ≥1.5×) |
+| Eyes-closed alpha (TP10) | ratio | **3.21×–3.88×** across sessions (PASS) |
+| Eyes-closed alpha (AF8) | ratio | 1.04×–1.31× across sessions (borderline; AF7 saturated) |
+| Eyes-closed alpha (AF7) | ratio | 0.92×–1.03× (saturated pad; ratio not meaningful) |
+| Blink transient (AF8) | $\max \lvert x(t) \rvert$ | **42.5–64.9 µV** (PASS ≥40 µV) |
+| Jaw clench broadband (TP9) | $P_{\text{30-100 Hz}}^{\text{clench}} / P^{\text{open}}$ | 0.86×–2.62× (PASS in 3/4 sessions) |
+| Jaw clench broadband (TP10) | ratio | **3.18×–4.24×** (PASS) |
+| Contact quality (RMS, healthy channels) | per channel | 10–35 µV (PASS, physiological) |
+| Contact quality (AF7) | RMS | 840–914 µV (saturated; this Muse S unit has a hardware defect on AF7) |
 
-This is a **calibration observation**, not a normative threshold. The pipeline (Muse S → BrainFlow → Python bindings → ring buffer) is the validation result; the alpha ratios are properties of the data. Reproducing this on a different participant, a different day, and with all 4 channels in skin contact is required before generalizing.
+This is a **calibration observation**, not a normative threshold. The pipeline (Muse S → BrainFlow → Python bindings → ring buffer) is the validation result; the alpha ratios are properties of the data. Reproducing this on a different Muse S unit (and on a different participant, a different day) is required before generalizing. The 3 healthy channels (TP9, AF8, TP10) are sufficient for 3-class sleep staging (Wake / N1 / N2_N3); REM is unobservable from any 4-channel Muse unit.
 
-The full protocol, raw CSV, and per-signature pass criteria are in `Scripts/validate-muse-physiology.py` and `Recordings/muse_validation_20260710-014223.csv`.
+The full protocol, raw CSV, and per-signature pass criteria are in `Scripts/validate-muse-physiology.py` and `Recordings/muse_validation_20260710-015723.csv` (the 4th session).
 
 ## Repository Layout
 
