@@ -17,10 +17,26 @@ public struct StreamDiagnostics: Sendable, Equatable {
     /// Human-readable transport identifier for display, e.g. "OSC (Mind Monitor)".
     public var transport: String
     public var sampleRate: Double
+    /// Datagrams received off the socket. Since one datagram can carry an
+    /// OSC bundle with zero, one, or several messages (see
+    /// `MuseOSCDecoder.decodePacket(_:)`), this is no longer the same
+    /// count as `samplesYielded` — it's a transport-level receive count,
+    /// not a sample count.
     public var packetsReceived: Int
-    /// Packets received but not turned into an `EEGSample` — malformed OSC,
-    /// or a `/muse/*` address this decoder doesn't map yet (e.g. `/muse/acc`).
+    /// Decoded messages that didn't turn into an `EEGSample` — malformed
+    /// OSC, or a `/muse/*` address this decoder doesn't map yet (e.g.
+    /// `/muse/acc`). Counted per message, not per datagram: a single
+    /// bundle with one `/muse/eeg` and one `/muse/acc` element increments
+    /// this by 1 and `samplesYielded` by 1.
     public var packetsDropped: Int
+    /// `EEGSample`s actually produced and handed to the pipeline.
+    /// `packetsReceived >= samplesYielded` is a cheap health check: a
+    /// receiving-but-not-yielding transport (every datagram bundled but
+    /// nothing decodes) shows up as this falling behind while
+    /// `packetsReceived` keeps climbing — exactly the failure mode found
+    /// during the first live Mind Monitor test, before bundle unwrapping
+    /// was added.
+    public var samplesYielded: Int
     /// Estimated packet loss as a 0...1 fraction, or `nil` if it isn't
     /// computable. `MindMonitorOSCStream` returns `nil` because Mind
     /// Monitor's OSC payload carries no per-packet sequence number to
@@ -58,6 +74,7 @@ public struct StreamDiagnostics: Sendable, Equatable {
         sampleRate: Double = 0,
         packetsReceived: Int = 0,
         packetsDropped: Int = 0,
+        samplesYielded: Int = 0,
         packetLossEstimate: Double? = nil,
         packetJitterMillis: Double? = nil,
         lastInterArrivalMillis: Double? = nil,
@@ -69,6 +86,7 @@ public struct StreamDiagnostics: Sendable, Equatable {
         self.sampleRate = sampleRate
         self.packetsReceived = packetsReceived
         self.packetsDropped = packetsDropped
+        self.samplesYielded = samplesYielded
         self.packetLossEstimate = packetLossEstimate
         self.packetJitterMillis = packetJitterMillis
         self.lastInterArrivalMillis = lastInterArrivalMillis

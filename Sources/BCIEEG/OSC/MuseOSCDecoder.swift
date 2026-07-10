@@ -42,6 +42,12 @@ public enum OSCDecodingError: Error, Sendable, Equatable {
 /// Minimal OSC 1.0 message decoder — supports int32 (`i`), float32 (`f`),
 /// and string (`s`) arguments, which covers everything Mind Monitor's
 /// `/muse/*` addresses actually use.
+///
+/// Mind Monitor wraps every message in an OSC bundle. Use
+/// `decodePacket(_:)` for any payload read off a socket — it unwraps
+/// bundle framing transparently and falls through to the bare-message
+/// path for senders that don't bundle. `decode(_:)` is for known-bare
+/// messages only and will reject any `#bundle\0`-prefixed payload.
 public enum MuseOSCDecoder {
 
     /// Decodes a raw UDP payload into zero or more messages. This is the
@@ -72,12 +78,22 @@ public enum MuseOSCDecoder {
     /// this project only cares about local arrival timing, not the
     /// sender's clock) + a sequence of `[4-byte size][element bytes]`
     /// entries, each element being a message or a nested bundle.
+    ///
+    /// TODO: thread the NTP timetag through to `EEGSample` if/when
+    /// wall-clock alignment (or phone/Mac clock-drift detection) becomes
+    /// a feature. Today `EEGSample.timestamp` is arrival-relative
+    /// (`elapsedSeconds` since the listener started), which is what
+    /// windowing/ordering actually need — the timetag isn't lost data,
+    /// just unused for now.
     private static func decodeBundleElements(_ data: Data) throws -> [OSCMessage] {
         guard data.count >= 16 else { throw OSCDecodingError.tooShort }
         var offset = data.index(data.startIndex, offsetBy: 16)
 
         var messages: [OSCMessage] = []
         while offset < data.endIndex {
+            // Reuses the same big-endian U32 reader as decode(_:)'s
+            // argument parsing — a size-prefix/endianness change needs
+            // both paths updated in lockstep.
             let size = try Int(readBigEndianU32(data, &offset))
             guard data.distance(from: offset, to: data.endIndex) >= size else {
                 throw OSCDecodingError.truncatedArgument(
@@ -97,7 +113,9 @@ public enum MuseOSCDecoder {
     }
 
     /// Decodes a single bare OSC message — no bundle framing. Prefer
-    /// `decodePacket(_:)` for anything read off a socket.
+    /// `decodePacket(_:)` for anything read off a socket — this rejects
+    /// any `#bundle\0`-prefixed payload and is only correct for
+    /// known-bare messages.
     public static func decode(_ data: Data) throws -> OSCMessage {
         var offset = data.startIndex
         let address = try readOSCString(data, &offset)

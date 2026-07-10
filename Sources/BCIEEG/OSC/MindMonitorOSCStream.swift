@@ -51,6 +51,7 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
     private let interArrivalWindow = 64
     private var packetsReceived = 0
     private var packetsDropped = 0
+    private var samplesYielded = 0
     private var lastHeartbeat: Date?
     /// Best-effort — set from the most recent connection's `NWPath`, once
     /// that path resolves. `nil` until the first connection reports a path,
@@ -201,6 +202,7 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
             let messages = try MuseOSCDecoder.decodePacket(data)
             for message in messages {
                 if let sample = MindMonitorDecoder.sample(from: message, timestamp: elapsedSeconds) {
+                    lock.lock(); samplesYielded += 1; lock.unlock()
                     continuation.yield(sample)
                 } else {
                     lock.lock(); packetsDropped += 1; lock.unlock()
@@ -234,6 +236,7 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
             sampleRate: effectiveSampleRate,
             packetsReceived: packetsReceived,
             packetsDropped: packetsDropped,
+            samplesYielded: samplesYielded,
             packetLossEstimate: nil, // no sequence numbers in Mind Monitor's OSC stream to detect gaps against
             packetJitterMillis: jitter,
             lastInterArrivalMillis: interArrivalMillis.last,

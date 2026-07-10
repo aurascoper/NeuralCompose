@@ -109,6 +109,11 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         XCTAssertEqual(diagnostics.transport, "OSC (Mind Monitor)")
         XCTAssertGreaterThanOrEqual(diagnostics.packetsReceived, 2)
         XCTAssertGreaterThanOrEqual(diagnostics.packetsDropped, 1) // the /muse/acc packet
+        XCTAssertGreaterThanOrEqual(diagnostics.samplesYielded, 1) // the /muse/eeg packet
+        // packetsReceived counts datagrams; samplesYielded counts decoded
+        // EEG samples — never the other way around for this fixture (one
+        // datagram maps to at most one message here, no bundling).
+        XCTAssertGreaterThanOrEqual(diagnostics.packetsReceived, diagnostics.samplesYielded)
         XCTAssertNotNil(diagnostics.lastHeartbeat)
         // F2: a heartbeat that just happened should read back as ~0s stale,
         // not nil and not some stale baked-in value.

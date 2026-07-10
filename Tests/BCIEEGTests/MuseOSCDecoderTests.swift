@@ -180,6 +180,23 @@ final class MuseOSCDecoderTests: XCTestCase {
         XCTAssertEqual(messages[0].address, "/muse/eeg")
     }
 
+    /// Exercises the recursive branch and the non-recursive branch of
+    /// decodeBundleElements' `if isBundle(element) { ... } else { ... }`
+    /// within the *same* loop, not just in isolation — a plain message
+    /// and a nested sub-bundle as siblings inside one outer bundle. This
+    /// is the shape a future refactor (e.g. flattening the recursion into
+    /// a single pass) is most likely to regress without noticing, since
+    /// the purely-flat and purely-nested cases alone wouldn't catch it.
+    func testDecodePacketUnwrapsNestedBundleAlongsideSiblingMessage() throws {
+        let batt = makePacket(address: "/muse/batt", floats: [98])
+        let eeg = makePacket(address: "/muse/eeg", floats: [1, 2, 3, 4])
+        let subBundle = makeBundle(elements: [eeg])
+        let outerBundle = makeBundle(elements: [batt, subBundle])
+
+        let messages = try MuseOSCDecoder.decodePacket(outerBundle)
+        XCTAssertEqual(messages.map(\.address), ["/muse/batt", "/muse/eeg"])
+    }
+
     func testDecodePacketThrowsOnTruncatedBundleElement() {
         var bundle = oscString("#bundle")
         bundle.append(contentsOf: [UInt8](repeating: 0, count: 8)) // timetag
