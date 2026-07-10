@@ -31,6 +31,21 @@ final class MuseOSCDecoderTests: XCTestCase {
         return data
     }
 
+    /// Wraps `elements` (each a full, already-framed message or nested
+    /// bundle) in `#bundle\0` + an arbitrary 8-byte timetag + one
+    /// `[4-byte size][bytes]` entry per element — matching what Mind
+    /// Monitor actually sends on the wire (verified via a live capture).
+    private func makeBundle(elements: [Data]) -> Data {
+        var data = oscString("#bundle")
+        data.append(contentsOf: [UInt8](repeating: 0xAB, count: 8)) // arbitrary timetag
+        for element in elements {
+            var sizeBits = UInt32(element.count).bigEndian
+            withUnsafeBytes(of: &sizeBits) { data.append(contentsOf: $0) }
+            data.append(element)
+        }
+        return data
+    }
+
     // MARK: - Valid packets
 
     func testDecodesMuseEEGPacket() throws {
@@ -108,5 +123,74 @@ final class MuseOSCDecoderTests: XCTestCase {
         // No null terminator anywhere in the buffer.
         let data = Data([UInt8(ascii: "/"), UInt8(ascii: "a")])
         XCTAssertThrowsError(try MuseOSCDecoder.decode(data))
+    }
+
+    // MARK: - decodePacket / bundle unwrapping
+    //
+    // Mind Monitor wraps every message in an OSC bundle, even a single
+    // one — decode(_:) alone rejects 100% of its real traffic (found via
+    // live testing over Tailscale: every /muse/* packet on the wire opens
+    // with "#bundle\0", not a bare address string). decodePacket(_:) is
+    // the fix; these tests pin the format down.
+
+    func testDecodePacketUnwrapsRealMindMonitorGyroBundle() throws {
+        // Exact bytes captured from a live Mind Monitor session (Android,
+        // default OSC settings) — one #bundle wrapping a single
+        // /muse/gyro,fff message. Regression test for the real integration
+        // gap, not just the format as documented.
+        let hex = "2362756e646c6500edfbaee5024dd2f1000000202f6d7573652f6779726f00002c666666"
+            + "000000003e822800c0296500bfaa5a00"
+        let bytes = stride(from: 0, to: hex.count, by: 2).map { i -> UInt8 in
+            let start = hex.index(hex.startIndex, offsetBy: i)
+            let end = hex.index(start, offsetBy: 2)
+            return UInt8(hex[start..<end], radix: 16)!
+        }
+        let packet = Data(bytes)
+
+        let messages = try MuseOSCDecoder.decodePacket(packet)
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages[0].address, "/muse/gyro")
+        XCTAssertEqual(messages[0].floatArguments.count, 3)
+    }
+
+    func testDecodePacketReturnsBareMessageUnwrapped() throws {
+        let packet = makePacket(address: "/muse/eeg", floats: [1, 2, 3, 4])
+        let messages = try MuseOSCDecoder.decodePacket(packet)
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages[0].address, "/muse/eeg")
+        XCTAssertEqual(messages[0].floatArguments, [1, 2, 3, 4])
+    }
+
+    func testDecodePacketHandlesMultipleElementsInOneBundle() throws {
+        let eeg = makePacket(address: "/muse/eeg", floats: [1, 2, 3, 4])
+        let gyro = makePacket(address: "/muse/gyro", floats: [0.1, 0.2, 0.3])
+        let bundle = makeBundle(elements: [eeg, gyro])
+
+        let messages = try MuseOSCDecoder.decodePacket(bundle)
+        XCTAssertEqual(messages.map(\.address), ["/muse/eeg", "/muse/gyro"])
+    }
+
+    func testDecodePacketHandlesNestedBundle() throws {
+        let eeg = makePacket(address: "/muse/eeg", floats: [1, 2, 3, 4])
+        let innerBundle = makeBundle(elements: [eeg])
+        let outerBundle = makeBundle(elements: [innerBundle])
+
+        let messages = try MuseOSCDecoder.decodePacket(outerBundle)
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages[0].address, "/muse/eeg")
+    }
+
+    func testDecodePacketThrowsOnTruncatedBundleElement() {
+        var bundle = oscString("#bundle")
+        bundle.append(contentsOf: [UInt8](repeating: 0, count: 8)) // timetag
+        var sizeBits = UInt32(999).bigEndian // claims 999 bytes follow
+        withUnsafeBytes(of: &sizeBits) { bundle.append(contentsOf: $0) }
+        bundle.append(contentsOf: [0, 0]) // only 2 actually follow
+
+        XCTAssertThrowsError(try MuseOSCDecoder.decodePacket(bundle)) { error in
+            guard case .truncatedArgument = error as? OSCDecodingError else {
+                return XCTFail("expected .truncatedArgument, got \(error)")
+            }
+        }
     }
 }

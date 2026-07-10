@@ -26,8 +26,9 @@ import BCICore
 ///
 /// Packet decoding is deliberately *not* this class's job:
 ///
-///     UDP datagram -> MuseOSCDecoder (generic OSC) -> MindMonitorDecoder
-///         (Mind Monitor semantics) -> EEGSample
+///     UDP datagram -> MuseOSCDecoder (generic OSC, incl. bundle
+///         unwrapping) -> MindMonitorDecoder (Mind Monitor semantics)
+///         -> EEGSample
 ///
 /// This class owns exactly the networking (`NWListener`/`NWConnection`)
 /// and the diagnostics bookkeeping (arrival timing, packet counts) — see
@@ -195,11 +196,15 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
         let elapsedSeconds = Double(nowNanos &- start) / 1_000_000_000.0
 
         do {
-            let message = try MuseOSCDecoder.decode(data)
-            if let sample = MindMonitorDecoder.sample(from: message, timestamp: elapsedSeconds) {
-                continuation.yield(sample)
-            } else {
-                lock.lock(); packetsDropped += 1; lock.unlock()
+            // Mind Monitor wraps every message in an OSC bundle, even a
+            // single one — decodePacket() unwraps that transparently.
+            let messages = try MuseOSCDecoder.decodePacket(data)
+            for message in messages {
+                if let sample = MindMonitorDecoder.sample(from: message, timestamp: elapsedSeconds) {
+                    continuation.yield(sample)
+                } else {
+                    lock.lock(); packetsDropped += 1; lock.unlock()
+                }
             }
         } catch {
             BCILog.eeg.error("MindMonitorOSCStream: dropped malformed OSC packet: \(String(describing: error))")
