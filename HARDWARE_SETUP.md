@@ -100,6 +100,43 @@ points at a `/dev/cu.usbmodem*` *serial port*, used by the BLED112 profiles.)
 All wiring is confined to `BrainFlowService.makeParamsJSON()` and opaque to
 the rest of the codebase.
 
+## Remote transport: OSC (Mind Monitor)
+
+`MindMonitorOSCStream` is a fourth `EEGStreaming` conformer, alongside
+BrainFlow, synthetic, and playback — but the only one that touches the
+network at runtime. Use it when the Muse is paired to a phone (running
+[Mind Monitor](https://mind-monitor.com)) instead of directly to this Mac —
+e.g. wearing the headband away from your desk while this Mac does the
+processing at home.
+
+**This must run over a private VPN** (Tailscale, WireGuard, ZeroTier)
+between the phone and this Mac. OSC has no authentication or encryption of
+its own — never port-forward this to the public internet.
+
+1. Install Tailscale (or another VPN) on both the phone and this Mac, and
+   confirm they can reach each other.
+2. Find this Mac's VPN IP (Tailscale: `tailscale ip -4`).
+3. In Mind Monitor's settings: **OSC Host** = this Mac's VPN IP,
+   **OSC Streaming** = on, **OSC Port** = `5000` (or your choice).
+4. On this Mac:
+   ```bash
+   ./Scripts/run-osc-remote.sh              # listens on port 5000
+   ./Scripts/run-osc-remote.sh --port 6000  # or a different port
+   ```
+
+Only `/muse/eeg` is decoded today (`MindMonitorDecoder`) — other Mind
+Monitor addresses (`/muse/acc`, `/muse/gyro`, `/muse/batt`, ...) are
+received and silently ignored, not errors. There's no packet-sequence
+numbering in Mind Monitor's OSC stream, so `StreamDiagnostics.packetLossEstimate`
+stays `nil` rather than reporting a number that isn't really measurable;
+jitter and last-heartbeat are computed from local arrival timing instead.
+
+Binding is to `0.0.0.0` (all interfaces) — that's necessary, not a bug: a
+VPN interface's IP isn't known ahead of time, so the listener has to bind
+broadly to receive on whatever interface Tailscale creates. The actual
+security boundary is "only devices on your VPN can reach this port," which
+is the VPN's job, not the app's — see `MindMonitorOSCStream`'s doc comment.
+
 ## Installing BrainFlow
 
 NeuralCompose links BrainFlow as a system library, not as a SwiftPM package.

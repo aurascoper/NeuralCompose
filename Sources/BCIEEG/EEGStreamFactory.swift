@@ -18,9 +18,25 @@ public enum EEGStreamFactory {
 
     public static func make(
         profile: MuseBoardProfile,
-        playbackPath: String? = nil
+        playbackPath: String? = nil,
+        oscPort: UInt16 = 5000
     ) -> Resolved {
         switch profile {
+        case .oscRemote:
+            // The one profile that touches the network at runtime — see
+            // MindMonitorOSCStream's doc comment. No stub-mode fallback:
+            // unlike BrainFlow (which can transparently degrade to
+            // synthetic when the bridge is unavailable), there's no sense
+            // in which "OSC remote" silently degrading to synthetic would
+            // be anything but confusing — if the user explicitly chose
+            // this profile, they should see it fail loudly if the port is
+            // already in use, not silently get fake data.
+            return Resolved(
+                stream: MindMonitorOSCStream(port: oscPort),
+                source: .oscRemote,
+                profile: .oscRemote
+            )
+
         case .playback:
             if let path = playbackPath {
                 return Resolved(

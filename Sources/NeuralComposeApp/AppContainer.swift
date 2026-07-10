@@ -45,7 +45,9 @@ public struct AppContainer: Sendable {
     public static func makeDefault() async -> AppContainer {
         let profile = profileFromEnvironment()
         let playbackPath = ProcessInfo.processInfo.environment["NEURALCOMPOSE_PLAYBACK_PATH"]
-        let stream = EEGStreamFactory.make(profile: profile, playbackPath: playbackPath)
+        let oscPort = ProcessInfo.processInfo.environment["NEURALCOMPOSE_OSC_PORT"]
+            .flatMap(UInt16.init) ?? 5000
+        let stream = EEGStreamFactory.make(profile: profile, playbackPath: playbackPath, oscPort: oscPort)
         let classifier = ClassifierFactory.live()
         let predictor = await PredictorFactory.live()
         let metrics = MetricsCollector()
@@ -79,6 +81,8 @@ public struct AppContainer: Sendable {
             return .museSAthena
         case "playback":
             return .playback
+        case "osc", "oscremote", "osc-remote", "mindmonitor":
+            return .oscRemote
         default:
             return .synthetic
         }

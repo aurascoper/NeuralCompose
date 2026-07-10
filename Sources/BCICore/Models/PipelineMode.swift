@@ -12,6 +12,11 @@ public struct PipelineMode: Sendable, Hashable {
         case brainflowSynthetic
         case synthetic
         case playback
+        /// Remote Muse over OSC (Mind Monitor, relayed over a private VPN
+        /// such as Tailscale) — see `MindMonitorOSCStream`. The one source
+        /// that touches the network at runtime; see
+        /// `MuseBoardProfile.requiresNetwork`.
+        case oscRemote
     }
     public enum Classifier: String, Sendable, Codable {
         case coreML

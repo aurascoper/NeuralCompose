@@ -38,6 +38,14 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
     case synthetic           // BrainFlow's built-in synthetic generator
     case playback            // CSV-on-disk
 
+    // Remote Muse over OSC (e.g. a phone running Mind Monitor, relayed over
+    // a private VPN such as Tailscale — see MindMonitorOSCStream). This is
+    // the one profile that touches the network at runtime; deliberately a
+    // distinct, explicitly-labeled case rather than folding into an
+    // existing one, so the privacy banner always shows the user which
+    // transport is actually live (see PipelineMode.Source.oscRemote).
+    case oscRemote
+
     // MARK: BrainFlow mapping (single source of truth)
     //
     // Reference values from BrainFlow 5.22 `BoardIds`:
@@ -65,6 +73,7 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
         case .museSAthena:       return 67   // MUSE_S_ATHENA_BOARD
         case .synthetic:         return -1   // SYNTHETIC_BOARD
         case .playback:          return nil
+        case .oscRemote:         return nil  // not a BrainFlow board at all
         }
     }
 
@@ -73,7 +82,8 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
         switch self {
         case .museTwoNativeBLE, .museTwoBLED,
              .museSNativeBLE,   .museSBLED,
-             .museSAthena:
+             .museSAthena,
+             .oscRemote:
             return ["TP9", "AF7", "AF8", "TP10"]
         case .synthetic:
             return ["syn0", "syn1", "syn2", "syn3"]
@@ -87,7 +97,8 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
         case .museTwoNativeBLE, .museTwoBLED,
              .museSNativeBLE,   .museSBLED,
              .museSAthena,
-             .synthetic, .playback:
+             .synthetic, .playback,
+             .oscRemote:
             return 256.0
         }
     }
@@ -101,6 +112,7 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
         case .museSAthena:      return "Muse S Athena"
         case .synthetic:        return "Synthetic"
         case .playback:         return "Playback"
+        case .oscRemote:        return "OSC Remote (network)"
         }
     }
 
@@ -112,7 +124,7 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
              .museSAthena,
              .synthetic:
             return true
-        case .playback:
+        case .playback, .oscRemote:
             return false
         }
     }
@@ -124,9 +136,16 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
              .museSNativeBLE,   .museSBLED,
              .museSAthena:
             return true
-        case .synthetic, .playback:
+        case .synthetic, .playback, .oscRemote:
             return false
         }
+    }
+
+    /// True if this profile reaches the network at runtime — the one
+    /// deliberate exception to the "no network at runtime" default. Drives
+    /// the privacy banner's explicit network callout.
+    public var requiresNetwork: Bool {
+        self == .oscRemote
     }
 
     /// True if this profile uses a BLED112 USB dongle for transport.
