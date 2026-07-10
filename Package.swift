@@ -102,7 +102,7 @@ let package = Package(
         // ── Application ──────────────────────────────────────────────────
         .executableTarget(
             name: "NeuralComposeApp",
-            dependencies: ["BCICore", "BCIEEG", "BCIClassifier", "BCILLM"],
+            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM"],
             path: "Sources/NeuralComposeApp",
             // Info.plist lives in Resources/ for reference / Xcode builds but
             // is intentionally NOT declared as a SwiftPM resource: SwiftPM

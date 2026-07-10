@@ -29,6 +29,27 @@ struct NeuralComposeAppEntry: App {
             }
         }
 
+        // Phase B Sleep Validation Toolkit — debug window. Opened from the
+        // menu below or with Cmd+Shift+D. This is the host for the
+        // EEGScalpPlotterView and the upcoming components (PSD, blink
+        // detector, etc.). Not user-facing in the v1 sleep-cycle flow.
+        Window("Phase B Debug", id: "phase-b-debug") {
+            SleepValidationView()
+        }
+        .defaultSize(width: 1100, height: 720)
+        .keyboardShortcut("d", modifiers: [.command, .shift])
+        .commands {
+            CommandMenu("Debug") {
+                Button("Open Phase B Debug Window") {
+                    NSApp.sendAction(
+                        #selector(NSWindowController.showWindow(_:)),
+                        to: nil,
+                        from: nil
+                    )
+                }.keyboardShortcut("d", modifiers: [.command, .shift])
+            }
+        }
+
         MenuBarExtra("NeuralCompose", systemImage: "brain.head.profile") {
             if let viewModel = loader.viewModel {
                 MenuBarView(viewModel: viewModel)
