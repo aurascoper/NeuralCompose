@@ -61,6 +61,16 @@ public final class AppViewModel: ObservableObject {
     @Published public private(set) var signalQuality: SignalQuality?
     @Published public private(set) var isReconnecting: Bool = false
 
+    // ── Track B (imagined speech) — additive, never touches Track A state ─
+    @Published public private(set) var isImaginedSpeechRecording: Bool = false
+    @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
+        phase: .idle, target: nil, trialIndex: 0, totalTrials: 0,
+        phaseStartTimestamp: 0, phaseDuration: 0, timeRemaining: 0
+    )
+    @Published public private(set) var imaginedActiveSampleCount: Int = 0
+    @Published public private(set) var imaginedDroppedSampleCount: Int = 0
+    @Published public private(set) var imaginedSessionURL: URL?
+
     // ── Immutable wiring (lives for the lifetime of the view model) ──────
     public let container: AppContainer
     private let metrics: MetricsCollector
@@ -73,6 +83,10 @@ public final class AppViewModel: ObservableObject {
     private var composition: TextCompositionController?
     private var windowChannel: BoundedAsyncChannel<EEGWindow>?
     private var calibrationRecorder: CalibrationRecorder?
+    private var trackBRecorder: TrackBRecorder?
+    private var imaginedProtocol: ImaginedSpeechProtocol?
+    private var imaginedProtocolTask: Task<Void, Never>?
+    private var imaginedStatsTask: Task<Void, Never>?
 
     private var streamTask: Task<Void, Never>?
     private var classifyTask: Task<Void, Never>?
@@ -163,8 +177,16 @@ public final class AppViewModel: ObservableObject {
                         if Task.isCancelled { break }
                         samplesThisAttempt += 1
 
-                        // Record sample if in calibration mode
-                        let (isCalibrating, recorder) = await MainActor.run { (self?.isCalibrating ?? false, self?.calibrationRecorder) }
+                        // Record sample if in calibration mode (Track A) or
+                        // in imagined-speech recording (Track B). The two
+                        // recorders are independent sinks — both, neither, or
+                        // either can be active. Track A's path is byte-
+                        // identical to before; Track B is an additive fork.
+                        let (isCalibrating, recorder, trackB) = await MainActor.run {
+                            (self?.isCalibrating ?? false,
+                             self?.calibrationRecorder,
+                             self?.trackBRecorder)
+                        }
                         if isCalibrating, let recorder = recorder {
                             await recorder.recordSample(sample)
                             calibrationSampleCounter += 1
@@ -176,6 +198,9 @@ public final class AppViewModel: ObservableObject {
                                 calibrationSampleCounter = 0
                                 calibrationLastLogTime = now
                             }
+                        }
+                        if let trackB = trackB {
+                            await trackB.recordSample(sample)
                         }
 
                         let started = DispatchTime.now()
@@ -291,6 +316,7 @@ public final class AppViewModel: ObservableObject {
     public func stop() async {
         guard isRunning else { return }
         await stopCalibrationRecording()
+        await stopImaginedSpeechSession()
         streamTask?.cancel();   streamTask = nil
         classifyTask?.cancel(); classifyTask = nil
         carouselTask?.cancel(); carouselTask = nil
@@ -359,6 +385,119 @@ public final class AppViewModel: ObservableObject {
         guard let recorder = calibrationRecorder else { return }
         let now = Date().timeIntervalSince1970   // EEG samples use Unix epoch; events must match
         await recorder.addTimedEvent(label, at: now)
+    }
+
+    // MARK: - Track B (Imagined Speech)
+
+    /// Start a Track B session: open the recorder, start the protocol, and
+    /// spin up two consumer tasks — one that mirrors protocol state into the
+    /// @Published properties (UI), one that forwards the same state to the
+    /// recorder (data). Both consume separate iterations of the same
+    /// AsyncStream so neither blocks the other.
+    public func startImaginedSpeechSession() async {
+        guard isRunning, !isImaginedSpeechRecording else { return }
+        let recorder = TrackBRecorder()
+        let rootURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("NeuralCompose")
+            .appendingPathComponent("Calibration")
+            .appendingPathComponent(TrackBRecorder.directoryName)
+        do {
+            try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        } catch {
+            lastError = "Failed to create Track B directory: \(error.localizedDescription)"
+            return
+        }
+
+        let profile = container.streamResolved.profile
+        let sampleRate = container.streamResolved.stream.effectiveSampleRate
+        let config = ImaginedSpeechProtocol.Config()
+        let proto = ImaginedSpeechProtocol(config: config)
+        let seed = proto.orderSeed
+
+        let url: URL
+        do {
+            url = try await recorder.beginSession(
+                root: rootURL,
+                profile: profile,
+                sampleRate: sampleRate,
+                protocolConfig: config,
+                protocolSeed: seed
+            )
+        } catch {
+            lastError = "Failed to start Track B recorder: \(error.localizedDescription)"
+            return
+        }
+
+        self.trackBRecorder = recorder
+        self.imaginedProtocol = proto
+        self.imaginedSessionURL = url
+        self.imaginedActiveSampleCount = 0
+        self.imaginedDroppedSampleCount = 0
+        self.imaginedSpeechState = ImaginedSpeechProtocolState(
+            phase: .idle, target: nil, trialIndex: 0, totalTrials: config.totalTrials,
+            phaseStartTimestamp: Date().timeIntervalSince1970,
+            phaseDuration: 0, timeRemaining: 0
+        )
+        self.isImaginedSpeechRecording = true
+
+        // Single consumer of the protocol's state stream: updates UI AND
+        // forwards to the recorder. Doing it in one task guarantees the
+        // recorder sees phase changes in the same order the UI does — no
+        // chance of the recorder closing a trial window before the UI knows
+        // about it (or vice versa).
+        let states = proto.states
+        imaginedProtocolTask = Task { [weak self] in
+            for await state in states {
+                let snapshot = state
+                await MainActor.run {
+                    self?.imaginedSpeechState = snapshot
+                }
+                if let recorder = await MainActor.run(body: { self?.trackBRecorder }) {
+                    await recorder.markPhase(snapshot)
+                }
+                if snapshot.phase == .finished {
+                    await self?.stopImaginedSpeechSession()
+                    return
+                }
+            }
+        }
+
+        // 2 Hz poll of recorder counters so the UI's "active samples / dropped"
+        // displays stay alive without the recorder publishing them itself.
+        imaginedStatsTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                if Task.isCancelled { break }
+                guard let recorder = await MainActor.run(body: { self?.trackBRecorder }) else { return }
+                let active = await recorder.activeSampleCount
+                let dropped = await recorder.droppedSampleCount
+                await MainActor.run {
+                    self?.imaginedActiveSampleCount = active
+                    self?.imaginedDroppedSampleCount = dropped
+                }
+            }
+        }
+
+        await proto.start()
+    }
+
+    public func stopImaginedSpeechSession() async {
+        guard isImaginedSpeechRecording else { return }
+        if let proto = imaginedProtocol {
+            await proto.stop()
+        }
+        imaginedProtocolTask?.cancel(); imaginedProtocolTask = nil
+        imaginedStatsTask?.cancel();    imaginedStatsTask = nil
+        if let recorder = trackBRecorder {
+            await recorder.finishSession()
+            let active = await recorder.activeSampleCount
+            let dropped = await recorder.droppedSampleCount
+            self.imaginedActiveSampleCount = active
+            self.imaginedDroppedSampleCount = dropped
+        }
+        self.trackBRecorder = nil
+        self.imaginedProtocol = nil
+        self.isImaginedSpeechRecording = false
     }
 
     // MARK: - Helpers

@@ -1,10 +1,28 @@
 import SwiftUI
 import BCICore
 
+/// Top-level UI mode. `.production` is the existing Track A typing pipeline
+/// (carousel + gesture calibration). `.research` swaps the Track A calibration
+/// panel for the Track B imagined-speech wizard. The EEG stream + classifier
+/// run in both modes — Research mode is purely a UI affordance for collecting
+/// imagined-speech data; it does not change what Track A does internally.
+enum PipelineUIMode: String, CaseIterable, Identifiable {
+    case production
+    case research
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .production: return "Production"
+        case .research:   return "Research (Track B)"
+        }
+    }
+}
+
 struct ContentView: View {
     @ObservedObject var viewModel: AppViewModel
     @State private var showMetrics: Bool = false
     @State private var showCalibration: Bool = false
+    @State private var uiMode: PipelineUIMode = .production
     @State private var keyboardMonitor: Any?
 
     var body: some View {
@@ -45,17 +63,42 @@ struct ContentView: View {
                     .transition(.opacity)
             }
 
-            if showCalibration {
+            if uiMode == .production, showCalibration {
                 Divider()
                 CalibrationView(viewModel: viewModel)
                     .padding(12)
                     .transition(.opacity)
             }
 
+            if uiMode == .research {
+                Divider()
+                ImaginedSpeechCalibrationView(viewModel: viewModel)
+                    .transition(.opacity)
+            }
+
             Divider()
-            ControlsView(viewModel: viewModel, showMetrics: $showMetrics, showCalibration: $showCalibration)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+            ControlsView(
+                viewModel: viewModel,
+                showMetrics: $showMetrics,
+                showCalibration: $showCalibration,
+                uiMode: $uiMode
+            )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+        .onChange(of: uiMode) { _, newMode in
+            // Leaving Research mode mid-session should stop the Track B
+            // recorder cleanly — otherwise the recorder keeps writing to disk
+            // for a session the user can no longer see or stop.
+            if newMode != .research, viewModel.isImaginedSpeechRecording {
+                Task { await viewModel.stopImaginedSpeechSession() }
+            }
+            // Production-mode keyboard monitor only makes sense in Production.
+            if newMode == .research {
+                teardownKeyboardMonitoring()
+            } else if showCalibration {
+                setupKeyboardMonitoring()
+            }
         }
         .onAppear { setupKeyboardMonitoring() }
         .onDisappear { teardownKeyboardMonitoring() }
@@ -117,6 +160,7 @@ private struct ControlsView: View {
     @ObservedObject var viewModel: AppViewModel
     @Binding var showMetrics: Bool
     @Binding var showCalibration: Bool
+    @Binding var uiMode: PipelineUIMode
 
     var body: some View {
         HStack(spacing: 12) {
@@ -126,13 +170,21 @@ private struct ControlsView: View {
                 Label("Reset", systemImage: "arrow.counterclockwise")
             }
 
+            Picker("Mode", selection: $uiMode) {
+                ForEach(PipelineUIMode.allCases) { m in
+                    Text(m.displayName).tag(m)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 260)
+
             Picker("Classifier", selection: $viewModel.computeMode) {
                 ForEach(ClassifierComputeMode.allCases, id: \.self) { m in
                     Text(m.displayName).tag(m)
                 }
             }
             .pickerStyle(.menu)
-            .frame(maxWidth: 260)
+            .frame(maxWidth: 220)
 
             Spacer()
 
@@ -141,10 +193,12 @@ private struct ControlsView: View {
             }
             .toggleStyle(.button)
 
-            Toggle(isOn: $showCalibration) {
-                Label("Calibrate", systemImage: "waveform.circle")
+            if uiMode == .production {
+                Toggle(isOn: $showCalibration) {
+                    Label("Calibrate", systemImage: "waveform.circle")
+                }
+                .toggleStyle(.button)
             }
-            .toggleStyle(.button)
         }
     }
 }
