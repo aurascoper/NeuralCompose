@@ -17,6 +17,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
     public private(set) var channelCount: Int
 
     private let pollIntervalSec: Double
+    private let staleTimeoutSec: Double
     private let serialPort: String?
     private let macAddress: String?
 
@@ -24,14 +25,31 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
     private var handle: bci_session_handle_t?
     private var pollTask: Task<Void, Never>?
 
+    /// - Parameter staleTimeoutSec: If no samples are drained for longer
+    ///   than this, the stream finishes with `.streamFailed` instead of
+    ///   polling forever. `bci_bridge_drain_samples` returning `BCI_OK`
+    ///   with zero samples is BrainFlow's normal "nothing new yet"
+    ///   response — indistinguishable, at the status-code level, from a
+    ///   BLE link that has silently died (device out of range, powered
+    ///   off, or Muse's own ~30s poor-signal auto-shutoff). Without this,
+    ///   a silent disconnect never throws or completes, so
+    ///   `AppViewModel`'s retry/backoff/fallback-to-synthetic supervisor
+    ///   — which only reacts to the stream throwing or finishing — never
+    ///   fires, and the UI's last-known channel health/signal-quality
+    ///   state freezes indefinitely with no indication it's stale. 5s
+    ///   default: long enough that normal per-poll jitter never
+    ///   false-positives, short enough to catch a real stall well before
+    ///   the Muse's own 30s auto-shutoff.
     public init(
         profile: MuseBoardProfile,
         pollIntervalSec: Double = 0.05,
+        staleTimeoutSec: Double = 5.0,
         serialPort: String? = nil,
         macAddress: String? = nil
     ) {
         self.profile = profile
         self.pollIntervalSec = pollIntervalSec
+        self.staleTimeoutSec = staleTimeoutSec
         self.serialPort = serialPort
         self.macAddress = macAddress
         self.effectiveSampleRate = profile.sampleRate
@@ -75,6 +93,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
 
         let cc = channelCount
         let poll = pollIntervalSec
+        let staleTimeout = staleTimeoutSec
 
         return AsyncThrowingStream<EEGSample, any Error> { continuation in
             let task = Task.detached(priority: .userInitiated) { [weak self] in
@@ -88,6 +107,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                 }
                 var sampleCount = 0
                 var lastLogTime = Date()
+                var lastSampleAt = Date()
                 while !Task.isCancelled {
                     guard let self = self,
                           let handle = (self.lock.withLock { self.handle }) else {
@@ -101,6 +121,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                         return
                     }
                     if got > 0 {
+                        lastSampleAt = Date()
                         sampleCount += Int(got)
                         let now = Date()
                         if now.timeIntervalSince(lastLogTime) >= 1.0 {
@@ -115,6 +136,21 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                                 ch.append(samplesBuf[i * cc + c])
                             }
                             continuation.yield(EEGSample(timestamp: tsBuf[i], channels: ch))
+                        }
+                    } else {
+                        // BCI_OK + zero samples is BrainFlow's normal "nothing
+                        // new yet" response, indistinguishable at the status
+                        // level from a silently dead BLE link — see
+                        // staleTimeoutSec's doc comment. Only this watchdog
+                        // catches that case; a real drain error is already
+                        // handled above.
+                        let staleness = Date().timeIntervalSince(lastSampleAt)
+                        if staleness > staleTimeout {
+                            BCILog.eeg.error("BrainFlow: no samples for \(staleness, format: .fixed(precision: 1))s (>\(staleTimeout, format: .fixed(precision: 1))s timeout) — treating as a dead link")
+                            continuation.finish(throwing: BCIError.streamFailed(
+                                reason: "no samples received for \(Int(staleness))s — BLE link likely dead"
+                            ))
+                            return
                         }
                     }
                     try? await Task.sleep(nanoseconds: UInt64(poll * 1_000_000_000))
