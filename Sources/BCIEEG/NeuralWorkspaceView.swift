@@ -123,9 +123,22 @@ public final class NeuralWorkspaceView: NSView {
 
     private var embeddingTask: Task<Void, Never>?
     /// Most recent embedding vector from `TokenEmbeddingProviding`, kept
-    /// for the eventual PCA-projection step. Not yet used for rendering —
-    /// see the doc comment on `subscribeEmbeddings(provider:contextProvider:)`.
+    /// around for inspection/future re-projection.
     public private(set) var latestEmbedding: [Float] = []
+    /// Reduces `latestEmbedding` to a 3D point for `embeddingNode`. Default
+    /// is `RandomProjectionProjector` — see that type's doc comment for why
+    /// its output is a visualization convenience, not a semantically
+    /// meaningful layout. Swappable (e.g. for a future `PCAProjector`)
+    /// without touching anything else in this view.
+    public var embeddingProjector: any EmbeddingProjecting = RandomProjectionProjector()
+    /// Freestanding marker node whose position is
+    /// `embeddingProjector.project(latestEmbedding)`, normalized onto a
+    /// fixed-radius shell so it stays on-screen regardless of the input
+    /// vector's magnitude (raw logits are unbounded). Separate from the 4
+    /// electrode nodes — electrode position already encodes theta
+    /// elevation, so this stays a distinct signal rather than overloading
+    /// electrode placement with unrelated embedding data.
+    private var embeddingNode: SCNNode!
 
     public enum FSMState: String {
         case idle = "Idle"
@@ -233,6 +246,22 @@ public final class NeuralWorkspaceView: NSView {
         headNode.geometry?.firstMaterial?.fillMode = .lines   // wireframe
         headNode.geometry?.firstMaterial?.lightingModel = .constant
         scene.rootNode.addChildNode(headNode)
+
+        // Embedding marker — a distinct small node, separate from the 4
+        // electrode spheres, so embedding-driven position never overloads
+        // electrode placement (which already encodes theta elevation).
+        // Starts at the head center; `recompute()` moves it once an
+        // embedding has actually been ingested.
+        let embeddingGeometry = SCNSphere(radius: 0.008)
+        embeddingGeometry.firstMaterial?.diffuse.contents = NSColor(white: 0.9, alpha: 1.0)
+        embeddingGeometry.firstMaterial?.emission.contents = NSColor(red: 0.7, green: 0.5, blue: 1.0, alpha: 1.0)
+        embeddingGeometry.firstMaterial?.emission.intensity = 0.6
+        embeddingGeometry.firstMaterial?.lightingModel = .constant
+        let embNode = SCNNode(geometry: embeddingGeometry)
+        embNode.position = SCNVector3(0, 0.03, 0)
+        embNode.name = "embedding"
+        scene.rootNode.addChildNode(embNode)
+        embeddingNode = embNode
 
         // The 4 electrode nodes + 4 connecting edges.
         rebuildScene()
@@ -380,12 +409,12 @@ public final class NeuralWorkspaceView: NSView {
     /// main actor — `NeuralWorkspaceView` is `@MainActor`, and the polling
     /// loop below inherits that isolation since it isn't `.detached`.
     ///
-    /// This only stores the vector in `latestEmbedding` for now; nothing
-    /// consumes it for rendering yet. Turning a several-hundred-dimensional
-    /// logit vector into a 3D position needs a projection step (PCA
-    /// planned) — see the type-level doc comment on `TokenEmbeddingProviding`
-    /// for why it's a logit vector rather than a hidden state, and why that
-    /// step is deliberately not bundled into this one.
+    /// Stores the vector in `latestEmbedding`; `recompute()` reduces it via
+    /// `embeddingProjector` to place `embeddingNode` each frame. See
+    /// `RandomProjectionProjector`'s doc comment for why that placement is
+    /// a visualization convenience and not a semantically meaningful
+    /// layout, and `TokenEmbeddingProviding` for why the vector itself is
+    /// currently a logit vector rather than a hidden state.
     public func subscribeEmbeddings(
         provider: any TokenEmbeddingProviding,
         contextProvider: @escaping () -> String,
@@ -519,6 +548,25 @@ public final class NeuralWorkspaceView: NSView {
             cyl.radius = CGFloat(radius)
             mat.emission.contents = Self.fsmColor(fsmState)
             mat.emission.intensity = CGFloat(intensity)
+        }
+
+        // Embedding marker position — projected via `embeddingProjector`,
+        // then normalized onto a fixed-radius shell (raw logits are
+        // unbounded, so a normalized direction is what's actually stable
+        // to look at; magnitude isn't discarded for any principled reason,
+        // just because an unbounded value would send the marker off-screen).
+        if !latestEmbedding.isEmpty {
+            let projected = embeddingProjector.project(latestEmbedding)
+            let norm = simd_length(projected)
+            if norm > 1e-6 {
+                let unit = projected / norm
+                let shellRadius: Float = 0.06
+                embeddingNode.position = SCNVector3(
+                    CGFloat(unit.x * shellRadius),
+                    CGFloat(0.03 + unit.y * shellRadius * 0.5),
+                    CGFloat(unit.z * shellRadius)
+                )
+            }
         }
     }
 

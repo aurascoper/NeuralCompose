@@ -5,6 +5,7 @@ import BCICore
 struct NeuralComposeAppEntry: App {
 
     @StateObject private var loader = AppLoader()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup("NeuralCompose") {
@@ -41,15 +42,10 @@ struct NeuralComposeAppEntry: App {
             SleepValidationView(viewModel: loader.viewModel)
         }
         .defaultSize(width: 1100, height: 720)
-        .keyboardShortcut("d", modifiers: [.command, .shift])
         .commands {
             CommandMenu("Debug") {
                 Button("Open Phase B Debug Window") {
-                    NSApp.sendAction(
-                        #selector(NSWindowController.showWindow(_:)),
-                        to: nil,
-                        from: nil
-                    )
+                    openWindow(id: "phase-b-debug")
                 }.keyboardShortcut("d", modifiers: [.command, .shift])
             }
         }
