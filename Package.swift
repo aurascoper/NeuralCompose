@@ -142,6 +142,11 @@ let package = Package(
             dependencies: ["BCILLM", "BCICore"],
             path: "Tests/BCILLMTests"
         ),
+        .testTarget(
+            name: "NeuralComposeAppTests",
+            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM"],
+            path: "Tests/NeuralComposeAppTests"
+        ),
     ],
     cxxLanguageStandard: .cxx17
 )
