@@ -29,6 +29,16 @@ final class AsyncMulticastChannelTests: XCTestCase {
 
     /// Cancelling one subscriber must not affect the other, and the dropped
     /// subscriber must be de-registered.
+    ///
+    /// This must cancel subscriber A's *task* to terminate it — a plain
+    /// `break` out of `for await` does NOT reliably trigger AsyncStream's
+    /// `onTermination` (verified directly against Foundation: it only fires
+    /// on `continuation.finish()` or actual task cancellation, not merely
+    /// the consumer choosing to stop calling `next()`). Real consumers in
+    /// this codebase terminate via explicit cancellation too — e.g.
+    /// `EEGScalpPlotterView.cancelSubscription()` calls `streamTask?.cancel()`
+    /// — so exercising that same path here is what actually matches
+    /// production behavior, not an artifact of the test.
     func testCancellingOneSubscriberLeavesTheOther() async {
         let ch = AsyncMulticastChannel<Int>(capacity: 16, overflow: .dropOldest)
         // Register both subscribers synchronously, before any send, so there
@@ -37,22 +47,24 @@ final class AsyncMulticastChannelTests: XCTestCase {
         let b = ch.subscribe()
         XCTAssertEqual(ch.subscriberCount, 2)
 
-        // Subscriber A drains a couple of values then stops iterating, which
-        // terminates its stream and should de-register its continuation.
-        let aTask = Task { () -> Int in
-            var count = 0
+        // Subscriber A keeps iterating indefinitely; we cancel its task from
+        // outside once it has seen 2 values, while it's still suspended
+        // awaiting the next one — the condition AsyncStream's onTermination
+        // actually requires.
+        let counter = Counter()
+        let aTask = Task {
             for await _ in aStream {
-                count += 1
-                if count == 2 { break }
+                counter.increment()
             }
-            return count
         }
 
         async let rb: [Int] = collect(b)
 
         _ = ch.send(0)
         _ = ch.send(1)
-        _ = await aTask.value          // A has terminated its stream
+        await waitUntil { counter.value >= 2 }
+        aTask.cancel()
+        _ = await aTask.value
 
         // Its continuation should have been removed; only B remains.
         // (Poll briefly: onTermination runs asynchronously.)
@@ -85,6 +97,15 @@ final class AsyncMulticastChannelTests: XCTestCase {
 // and an instance method would capture the non-Sendable XCTestCase `self`
 // into it — a Swift 6 strict-concurrency error. File-scope functions capture
 // only their Sendable arguments.
+
+/// Lock-protected counter, `Sendable` so it can cross into a detached
+/// `Task` and be polled synchronously from `waitUntil`'s closure.
+private final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value = 0
+    func increment() { lock.lock(); _value += 1; lock.unlock() }
+    var value: Int { lock.lock(); defer { lock.unlock() }; return _value }
+}
 
 private func collect<S: AsyncSequence>(_ seq: S) async -> [S.Element] where S.Element: Sendable {
     var out: [S.Element] = []
