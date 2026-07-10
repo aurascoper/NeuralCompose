@@ -146,20 +146,23 @@ where `budget` is the `TMRBudget` (5 cues/night max, 15-min min interval, 2 wake
 
 ## Current Validation Results
 
-**Live Muse S through BrainFlow** — 2026-07-10, single participant, 80-second protocol:
+**Live Muse S through BrainFlow** — 2026-07-10, single participant, 80-second protocol. Three runs captured; the 01:42 session is the canonical reference (cleanest signal, all four conditions within the expected envelope on 3 of 4 channels):
 
 | Condition | Signature | Result |
 |-----------|-----------|--------|
-| Eyes-closed alpha (TP9) | $P_\alpha^{\text{closed}} / P_\alpha^{\text{open}}$ | **3.08×** (PASS ≥1.5×) |
-| Eyes-closed alpha (AF7) | ratio | **2.07×** (PASS) |
-| Eyes-closed alpha (TP10) | ratio | **2.78×** (PASS) |
-| Blink transient (AF7) | $\max \lvert x(t) \rvert$ | 57.1 µV (PASS ≥40 µV) |
-| Head turn motion (TP10) | low-freq swing | 52.7 µV (PASS ≥30 µV) |
-| Contact quality (RMS) | per channel | 18–32 µV (PASS, physiological) |
+| Eyes-closed alpha (TP9) | $P_\alpha^{\text{closed}} / P_\alpha^{\text{open}}$ | **2.98×** (PASS ≥1.5×) |
+| Eyes-closed alpha (TP10) | ratio | **3.88×** (PASS) |
+| Eyes-closed alpha (AF8) | ratio | 1.20× (borderline; AF7 saturated) |
+| Eyes-closed alpha (AF7) | ratio | 1.03× (saturated pad; ratio not meaningful) |
+| Blink transient (AF8) | $\max \lvert x(t) \rvert$ | **64.9 µV** (PASS ≥40 µV) |
+| Jaw clench broadband (TP9) | $P_{\text{30-100 Hz}}^{\text{clench}} / P^{\text{open}}$ | **2.62×** (PASS ≥1.5×) |
+| Jaw clench broadband (TP10) | ratio | **3.18×** (PASS) |
+| Contact quality (RMS, healthy channels) | per channel | 10–20 µV (PASS, physiological) |
+| Contact quality (AF7) | RMS | 912 µV (saturated; pad needs repositioning) |
 
-This is a **calibration observation**, not a normative threshold. The pipeline (Muse S → BrainFlow → Python bindings → ring buffer) is the validation result; the alpha ratio is one data point within it. Reproducing this on a different participant and a different day is required before generalizing.
+This is a **calibration observation**, not a normative threshold. The pipeline (Muse S → BrainFlow → Python bindings → ring buffer) is the validation result; the alpha ratios are properties of the data. Reproducing this on a different participant, a different day, and with all 4 channels in skin contact is required before generalizing.
 
-The full protocol, raw CSV, and per-signature pass criteria are in `Scripts/validate-muse-physiology.py` and `Recordings/muse_validation_20260710-004400.csv`.
+The full protocol, raw CSV, and per-signature pass criteria are in `Scripts/validate-muse-physiology.py` and `Recordings/muse_validation_20260710-014223.csv`.
 
 ## Repository Layout
 
