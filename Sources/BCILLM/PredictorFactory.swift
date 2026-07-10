@@ -13,6 +13,13 @@ public enum PredictorFactory {
 
     public struct Resolved: Sendable {
         public let predictor: any NextWordPredicting
+        /// Same underlying instance as `predictor`, exposed through the
+        /// separate `TokenEmbeddingProviding` protocol — see that protocol's
+        /// doc comment for why this is a distinct, diagnostics-only seam
+        /// rather than a method on `NextWordPredicting` itself. Both
+        /// `MLXNextWordPredictor` and `StubNextWordPredictor` conform, so
+        /// this is never nil.
+        public let embeddingProvider: any TokenEmbeddingProviding
         public let tokenizer: any TokenizerProviding
         public let kind: PipelineMode.Predictor
         public let warning: String?
@@ -26,8 +33,10 @@ public enum PredictorFactory {
         let tokenizer = TokenizerService(modelDirectory: chosenDir)
 
         guard let dir = chosenDir, FileManager.default.fileExists(atPath: dir.path) else {
+            let stub = StubNextWordPredictor()
             return Resolved(
-                predictor: StubNextWordPredictor(),
+                predictor: stub,
+                embeddingProvider: stub,
                 tokenizer: tokenizer,
                 kind: .stub,
                 warning: nil
@@ -38,6 +47,7 @@ public enum PredictorFactory {
             let mlx = try await MLXNextWordPredictor(modelDirectory: dir)
             return Resolved(
                 predictor: mlx,
+                embeddingProvider: mlx,
                 tokenizer: tokenizer,
                 kind: .mlx,
                 warning: nil
@@ -45,8 +55,10 @@ public enum PredictorFactory {
         } catch {
             let reason = (error as? BCIError)?.description ?? error.localizedDescription
             BCILog.predictor.notice("MLX init failed (\(reason, privacy: .public)); using stub")
+            let stub = StubNextWordPredictor()
             return Resolved(
-                predictor: StubNextWordPredictor(),
+                predictor: stub,
+                embeddingProvider: stub,
                 tokenizer: tokenizer,
                 kind: .stub,
                 warning: "MLX present but failed to load: \(reason)"

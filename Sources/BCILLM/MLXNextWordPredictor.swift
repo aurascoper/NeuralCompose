@@ -17,7 +17,7 @@ import Tokenizers
 ///
 /// Threading: actor. Forward passes are serialized by the underlying
 /// `ModelContainer` — running two on the Apple GPU at once just thrashes.
-public actor MLXNextWordPredictor: NextWordPredicting {
+public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding {
 
     public nonisolated let isLive: Bool = true
     public nonisolated let modelIdentifier: String
@@ -89,6 +89,32 @@ public actor MLXNextWordPredictor: NextWordPredicting {
                 if results.count >= cap { break }
             }
             return results
+        }
+        #else
+        throw BCIError.predictorInferenceFailed(reason: "MLX modules not importable")
+        #endif
+    }
+
+    /// Returns the last-token logits from a forward pass over `text` as a
+    /// plain `[Float]` — see `TokenEmbeddingProviding` for why this is a
+    /// logit vector rather than a pre-projection hidden state. Diagnostic
+    /// use only (e.g. the 3D workspace visualizer); not part of the
+    /// carousel/prediction path.
+    public func embedding(for text: String) async throws -> [Float] {
+        try Task.checkCancellation()
+
+        #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
+        let prompt = text.isEmpty ? " " : text
+
+        return await container.perform { (ctx: ModelContext) -> [Float] in
+            let tokenIds = ctx.tokenizer.encode(text: prompt)
+            guard !tokenIds.isEmpty else { return [] }
+
+            let inputs = MLXArray(tokenIds.map { Int32($0) })[.newAxis]
+            let logits = ctx.model(inputs, cache: nil)
+            let lastLogits = logits[0..., -1, 0...].squeezed()
+            eval(lastLogits)
+            return lastLogits.asArray(Float.self)
         }
         #else
         throw BCIError.predictorInferenceFailed(reason: "MLX modules not importable")

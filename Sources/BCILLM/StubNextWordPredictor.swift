@@ -14,10 +14,16 @@ import BCICore
 ///
 /// Quality is intentionally modest — this is a stand-in so the app demos
 /// end-to-end without a model. Switch on real MLX for actual fluency.
-public final class StubNextWordPredictor: NextWordPredicting, @unchecked Sendable {
+public final class StubNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, @unchecked Sendable {
 
     public let isLive: Bool = false
     public let modelIdentifier: String = "stub-unigram"
+
+    /// Dimensionality of the stub's fabricated embedding. Arbitrary — this
+    /// vector has no semantic meaning, it just needs to exist and be stable
+    /// so downstream PCA/visualization code has something to run against in
+    /// synthetic mode without special-casing "no real predictor."
+    private static let stubEmbeddingDimension = 16
 
     public init() {}
 
@@ -32,6 +38,24 @@ public final class StubNextWordPredictor: NextWordPredicting, @unchecked Sendabl
         let suggestions = candidates(for: context, count: maxCandidates)
         return suggestions.map {
             PredictedWord(text: " " + $0.text, probability: $0.prob)
+        }
+    }
+
+    /// A deterministic, non-semantic stand-in vector derived from `text`'s
+    /// content via FNV-1a (not `String.hashValue`, which is randomized per
+    /// process and would make this non-reproducible). Exists purely so the
+    /// 3D workspace visualizer has stable input in stub/synthetic mode; it
+    /// carries no linguistic meaning the way `MLXNextWordPredictor`'s
+    /// logit-vector embedding does.
+    public func embedding(for text: String) async throws -> [Float] {
+        var hash: UInt64 = 0xcbf29ce484222325 // FNV offset basis
+        for byte in text.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3 // FNV prime
+        }
+        var generator = SplitMix64(seed: hash)
+        return (0..<Self.stubEmbeddingDimension).map { _ in
+            Float(generator.next() % 2000) / 1000.0 - 1.0 // uniform in [-1, 1)
         }
     }
 
@@ -127,4 +151,18 @@ public final class StubNextWordPredictor: NextWordPredicting, @unchecked Sendabl
 
 private extension String {
     var nonEmpty: String? { isEmpty ? nil : self }
+}
+
+/// Minimal deterministic PRNG (SplitMix64) used only to expand a hash seed
+/// into a sequence of values for the stub embedding. Not cryptographic.
+private struct SplitMix64 {
+    private var state: UInt64
+    init(seed: UInt64) { self.state = seed }
+    mutating func next() -> UInt64 {
+        state = state &+ 0x9E3779B97F4A7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
+    }
 }

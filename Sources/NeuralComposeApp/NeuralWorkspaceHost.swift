@@ -3,6 +3,7 @@ import AppKit
 import BCICore
 import BCIBridge
 import BCIEEG
+import BCILLM
 
 /// SwiftUI host for the live 3D neural workspace.
 ///
@@ -29,7 +30,10 @@ struct NeuralWorkspaceHost: View {
             Divider()
             NeuralWorkspaceRepresentable(
                 cameraDistance: $cameraDistance,
-                makeStream: { viewModel?.liveSampleStream() }
+                makeStream: { viewModel?.liveSampleStream() },
+                makeClassifierStream: { viewModel?.liveClassifierStream() },
+                embeddingProvider: { viewModel?.container.predictorResolved.embeddingProvider },
+                embeddingContextProvider: { viewModel?.composedText ?? "" }
             )
                 .background(Color(white: 0.05))
             Divider()
@@ -112,12 +116,17 @@ struct NeuralWorkspaceHost: View {
 struct NeuralWorkspaceRepresentable: NSViewRepresentable {
     @Binding var cameraDistance: Float
     let makeStream: () -> AsyncStream<EEGSample>?
+    let makeClassifierStream: () -> AsyncStream<IntentPrediction>?
+    let embeddingProvider: () -> (any TokenEmbeddingProviding)?
+    let embeddingContextProvider: () -> String
 
     /// Tracks whether the workspace has already been subscribed, matching
     /// `EEGScalpPlotterRepresentable`'s pattern in `SleepValidationView`:
     /// the debug window is normally created before the pipeline is ready,
     /// so subscribing only in `makeNSView` would leave the scene
-    /// permanently idle even after samples start flowing.
+    /// permanently idle even after samples start flowing. One flag covers
+    /// all three subscriptions since they all become available at the same
+    /// moment — when `viewModel` binds.
     final class Coordinator {
         var didSubscribe = false
     }
@@ -142,19 +151,25 @@ struct NeuralWorkspaceRepresentable: NSViewRepresentable {
         guard !coordinator.didSubscribe, let stream = makeStream() else { return }
         coordinator.didSubscribe = true
         v.subscribe(to: Self.throwingStream(from: stream))
+        if let classifierStream = makeClassifierStream() {
+            v.subscribeClassifier(to: Self.throwingStream(from: classifierStream))
+        }
+        if let provider = embeddingProvider() {
+            v.subscribeEmbeddings(provider: provider, contextProvider: embeddingContextProvider)
+        }
     }
 
-    /// Wrap an `AsyncStream<EEGSample>` in an
-    /// `AsyncThrowingStream<EEGSample, any Error>` — see the identical
+    /// Wrap an `AsyncStream<Element>` in an
+    /// `AsyncThrowingStream<Element, any Error>` — see the identical
     /// helper on `EEGScalpPlotterRepresentable` in `SleepValidationView.swift`
     /// for why the throwing wrapper is needed even though this never throws.
-    private static func throwingStream(
-        from stream: AsyncStream<EEGSample>
-    ) -> AsyncThrowingStream<EEGSample, any Error> {
-        AsyncThrowingStream<EEGSample, any Error> { continuation in
+    private static func throwingStream<Element: Sendable>(
+        from stream: AsyncStream<Element>
+    ) -> AsyncThrowingStream<Element, any Error> {
+        AsyncThrowingStream<Element, any Error> { continuation in
             let task = Task {
-                for await sample in stream {
-                    continuation.yield(sample)
+                for await element in stream {
+                    continuation.yield(element)
                 }
                 continuation.finish()
             }

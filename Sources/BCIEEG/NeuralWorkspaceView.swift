@@ -106,6 +106,27 @@ public final class NeuralWorkspaceView: NSView {
     private var fsmState: FSMState = .idle
     private var consumed: UInt64 = 0
 
+    // MARK: - Classifier + embedding diagnostic state
+    //
+    // Both are additive to the EEG-sample-driven visualization above: the
+    // view renders fine with neither bound. See `subscribeClassifier(to:)`
+    // and `subscribeEmbeddings(provider:contextProvider:)`.
+
+    private var classifierStreamTask: Task<Void, Never>?
+    /// Most recent classifier confidence (0...1), or nil if never bound.
+    /// Modulates overall edge-pulse intensity in `recompute()`. This is a
+    /// *global* modulation, not per-edge: `IntentClass` (jaw clench / blink
+    /// / rest / select) isn't localized to a specific electrode pair in a
+    /// 4-channel Muse montage, so there's no honest "highest-confidence
+    /// neighbor" to single out.
+    private var latestClassifierConfidence: Float?
+
+    private var embeddingTask: Task<Void, Never>?
+    /// Most recent embedding vector from `TokenEmbeddingProviding`, kept
+    /// for the eventual PCA-projection step. Not yet used for rendering —
+    /// see the doc comment on `subscribeEmbeddings(provider:contextProvider:)`.
+    public private(set) var latestEmbedding: [Float] = []
+
     public enum FSMState: String {
         case idle = "Idle"
         case wake = "Wake"
@@ -142,6 +163,8 @@ public final class NeuralWorkspaceView: NSView {
 
     deinit {
         streamTask?.cancel()
+        classifierStreamTask?.cancel()
+        embeddingTask?.cancel()
         // CVDisplayLink cleanup happens implicitly.
     }
 
@@ -328,6 +351,64 @@ public final class NeuralWorkspaceView: NSView {
         streamTask = nil
     }
 
+    /// Subscribe to raw classifier output, e.g. `AppViewModel.liveClassifierStream()`
+    /// wrapped in the same throwing-stream adapter used for EEG samples.
+    /// Diagnostic only — independent of the FSM/carousel path, so nothing
+    /// here can affect composition.
+    public func subscribeClassifier<Failure: Error>(to stream: AsyncThrowingStream<IntentPrediction, Failure>) {
+        classifierStreamTask?.cancel()
+        classifierStreamTask = Task { [weak self] in
+            do {
+                for try await prediction in stream {
+                    guard let self else { return }
+                    self.latestClassifierConfidence = prediction.confidence
+                }
+            } catch {
+                BCILog.eeg.error("NeuralWorkspace classifier stream error: \(error)")
+            }
+        }
+    }
+
+    public func cancelClassifierSubscription() {
+        classifierStreamTask?.cancel()
+        classifierStreamTask = nil
+    }
+
+    /// Periodically pull a contextual embedding from `provider` for whatever
+    /// `contextProvider()` returns at call time (e.g. the live composed
+    /// text). `contextProvider` and this method must only be called on the
+    /// main actor — `NeuralWorkspaceView` is `@MainActor`, and the polling
+    /// loop below inherits that isolation since it isn't `.detached`.
+    ///
+    /// This only stores the vector in `latestEmbedding` for now; nothing
+    /// consumes it for rendering yet. Turning a several-hundred-dimensional
+    /// logit vector into a 3D position needs a projection step (PCA
+    /// planned) — see the type-level doc comment on `TokenEmbeddingProviding`
+    /// for why it's a logit vector rather than a hidden state, and why that
+    /// step is deliberately not bundled into this one.
+    public func subscribeEmbeddings(
+        provider: any TokenEmbeddingProviding,
+        contextProvider: @escaping () -> String,
+        interval: TimeInterval = 1.0
+    ) {
+        embeddingTask?.cancel()
+        embeddingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                let text = contextProvider()
+                if let vector = try? await provider.embedding(for: text) {
+                    self.latestEmbedding = vector
+                }
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+            }
+        }
+    }
+
+    public func cancelEmbeddingSubscription() {
+        embeddingTask?.cancel()
+        embeddingTask = nil
+    }
+
     /// Ingest a single sample. Thread-safe only on the main actor.
     public func ingest(_ sample: EEGSample) {
         // Map EEGSample.channels to the 4 electrodes in our known order:
@@ -422,15 +503,22 @@ public final class NeuralWorkspaceView: NSView {
         }
         // Edge "pulse" — slow oscillation by FSM state, so the user
         // can see the state visually even without looking at any UI.
-        let edgePulse = edgePulseForFSM()
+        // Classifier confidence (if bound) scales the pulse amplitude
+        // globally: higher confidence = a more pronounced pulse. This is
+        // deliberately not per-edge — see `latestClassifierConfidence`'s
+        // doc comment for why there's no honest per-electrode mapping.
+        let edgePulse: Float = edgePulseForFSM()
+        let clampedConfidence: Float = (latestClassifierConfidence ?? 1.0).clamped(to: 0...1)
+        let confidenceScale: Float = 0.5 + 0.5 * clampedConfidence
+        let radius: Float = 0.0015 + 0.0008 * edgePulse * confidenceScale
+        let intensity: Float = (0.3 + 0.4 * edgePulse) * confidenceScale
         for (_, edge) in edgeMap {
             guard let cyl = edge.geometry as? SCNCylinder,
                   let mat = cyl.firstMaterial
             else { continue }
-            let radius = 0.0015 + 0.0008 * Float(edgePulse)
             cyl.radius = CGFloat(radius)
             mat.emission.contents = Self.fsmColor(fsmState)
-            mat.emission.intensity = CGFloat(0.3 + 0.4 * edgePulse)
+            mat.emission.intensity = CGFloat(intensity)
         }
     }
 

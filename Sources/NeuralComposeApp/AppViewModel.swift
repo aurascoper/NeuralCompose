@@ -89,6 +89,12 @@ public final class AppViewModel: ObservableObject {
     /// See the doc comment on `liveSampleStream()` for the single-owner
     /// invariant this field enforces.
     private var sampleChannel: AsyncMulticastChannel<EEGSample>?
+    /// Broadcast fan-out of raw classifier output, independent of the
+    /// FSM/carousel path. Diagnostic consumers (e.g. the 3D workspace
+    /// visualizer) subscribe here instead of threading through
+    /// `IntentSmoother`/`TextCompositionController`, so a debug view never
+    /// becomes coupled to composition internals. See `liveClassifierStream()`.
+    private var classifierChannel: AsyncMulticastChannel<IntentPrediction>?
     private var calibrationRecorder: CalibrationRecorder?
     private var trackBRecorder: TrackBRecorder?
     private var imaginedProtocol: ImaginedSpeechProtocol?
@@ -133,9 +139,14 @@ public final class AppViewModel: ObservableObject {
         // visualization consumer gets its own stream via `subscribe()`. The
         // production classifier reads from `channel` (windows), not from here.
         let samples = AsyncMulticastChannel<EEGSample>(capacity: 8, overflow: .dropOldest)
+        // Same pattern as `samples`: a broadcast fan-out separate from the
+        // channel that actually drives composition, so diagnostic consumers
+        // never depend on FSM/carousel internals.
+        let classifications = AsyncMulticastChannel<IntentPrediction>(capacity: 8, overflow: .dropOldest)
         let composition = TextCompositionController(predictor: predictor, metrics: metrics)
         self.windowChannel = channel
         self.sampleChannel = samples
+        self.classifierChannel = classifications
         self.composition = composition
         await composition.start()
 
@@ -301,7 +312,7 @@ public final class AppViewModel: ObservableObject {
         let classifierRef = self.classifier
         let smootherRef = self.smoother
         classifyTask = Task.detached(priority: .userInitiated) {
-            [weak self, metrics = metricsRef, channel, composition] in
+            [weak self, metrics = metricsRef, channel, composition, classifications] in
             for await window in channel.stream {
                 if Task.isCancelled { break }
                 let cStart = DispatchTime.now()
@@ -322,6 +333,9 @@ public final class AppViewModel: ObservableObject {
                     await MainActor.run { self?.lastError = bci.description }
                     continue
                 }
+                // Broadcast the raw (pre-smoothing) prediction to diagnostic
+                // subscribers before it enters the FSM/carousel path.
+                classifications.send(prediction)
                 let smoothed = await smootherRef.ingest(prediction)
                 await composition.applyIntent(smoothed)
             }
@@ -343,6 +357,8 @@ public final class AppViewModel: ObservableObject {
         windowChannel = nil
         sampleChannel?.finish()
         sampleChannel = nil
+        classifierChannel?.finish()
+        classifierChannel = nil
         if let c = composition { await c.finish() }
         composition = nil
 
@@ -374,6 +390,14 @@ public final class AppViewModel: ObservableObject {
     ///   (e.g. the debug window is opened before the pipeline is up).
     public func liveSampleStream() -> AsyncStream<EEGSample> {
         sampleChannel?.subscribe() ?? AsyncStream<EEGSample> { $0.finish() }
+    }
+
+    /// Raw (pre-smoothing) classifier output, broadcast independently of the
+    /// FSM/carousel path — see `classifierChannel`. Diagnostic use only
+    /// (e.g. the 3D workspace visualizer); the production intent pipeline
+    /// does not read from this.
+    public func liveClassifierStream() -> AsyncStream<IntentPrediction> {
+        classifierChannel?.subscribe() ?? AsyncStream<IntentPrediction> { $0.finish() }
     }
 
     public func resetComposition(seed: String = "") async {
