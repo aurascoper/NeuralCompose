@@ -126,6 +126,56 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         XCTAssertEqual(diagnostics.boundPort, testPort + 1)
     }
 
+    /// Pins the "Sample timestamps monotonic (no out-of-order, no
+    /// duplicates)" row of docs/testing/deployment-checklist.md — that row
+    /// has no live/external check (EEGSample.timestamp is internal state,
+    /// not observable from outside the process), so this test is the
+    /// actual verification; Scripts/deployment-check.sh points here rather
+    /// than attempting to fake an external check for it.
+    ///
+    /// Holds by construction today: `elapsedSeconds` is computed from
+    /// `DispatchTime.now()` (monotonic) at the moment each datagram is
+    /// processed, not from anything in the packet itself — so timestamps
+    /// are ordered by processing order, not by network arrival order or
+    /// any sender-side sequence number. This test exists so a future
+    /// change (e.g. deriving timestamps from the OSC bundle's NTP timetag
+    /// instead — see the TODO in MuseOSCDecoder.decodeBundleElements)
+    /// can't silently break that guarantee.
+    func testSampleTimestampsAreStrictlyMonotonic() async throws {
+        let port = testPort + 3
+        let stream = MindMonitorOSCStream(port: port)
+        let eegStream = try await stream.start()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        let sampleCount = 6
+        let collectTask = Task { () -> [EEGSample] in
+            var out: [EEGSample] = []
+            for try await sample in eegStream {
+                out.append(sample)
+                if out.count == sampleCount { break }
+            }
+            return out
+        }
+
+        for i in 0..<sampleCount {
+            await sendUDP(makeEEGPacket([Float(i), Float(i), Float(i), Float(i)]), port: port)
+        }
+
+        let received = try await collectTask.value
+        await stream.stop()
+
+        XCTAssertEqual(received.count, sampleCount)
+        for i in 1..<received.count {
+            XCTAssertGreaterThan(
+                received[i].timestamp, received[i - 1].timestamp,
+                "timestamp did not strictly increase at index \(i)"
+            )
+        }
+        // No duplicates: strictly increasing already implies this, but
+        // assert it directly since that's the literal checklist wording.
+        XCTAssertEqual(Set(received.map(\.timestamp)).count, received.count)
+    }
+
     func testStartingTwiceThrows() async throws {
         let stream = MindMonitorOSCStream(port: testPort + 2)
         _ = try await stream.start()
