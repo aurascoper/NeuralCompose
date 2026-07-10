@@ -68,7 +68,7 @@ struct SleepValidationView: View {
                 Divider()
                 statusBar
             } else {
-                NeuralWorkspaceHost()
+                NeuralWorkspaceHost(viewModel: viewModel)
             }
         }
         .frame(minWidth: 900, minHeight: 600)

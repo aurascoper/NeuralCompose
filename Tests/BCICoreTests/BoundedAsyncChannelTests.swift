@@ -27,8 +27,9 @@ final class BoundedAsyncChannelTests: XCTestCase {
         let ch = BoundedAsyncChannel<Int>(capacity: 4)
         ch.finish()
         // The yield may report `terminated` — we treat that as not enqueued.
-        let ok = ch.send(99)
-        XCTAssertFalse(ok)
+        let result = ch.send(99)
+        XCTAssertFalse(result.accepted)
+        XCTAssertTrue(result.terminated)
     }
 
     /// Documents `BoundedAsyncChannel`'s single-consumer semantics.

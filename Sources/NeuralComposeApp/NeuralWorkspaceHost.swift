@@ -14,6 +14,10 @@ import BCIEEG
 /// `SLEEP_CYCLE_DESIGN.md`). It is opened in the same Phase B Debug window
 /// as the existing 2D `EEGScalpPlotterView`, in a separate tab.
 struct NeuralWorkspaceHost: View {
+    /// The running pipeline, or `nil` during the brief loading window
+    /// before it is up — same nil-tolerant contract as `SleepValidationView`.
+    let viewModel: AppViewModel?
+
     @State private var fsmState: NeuralWorkspaceView.FSMState = .idle
     @State private var samplesIngested: UInt64 = 0
     @State private var streamStatus: String = "Idle"
@@ -23,7 +27,10 @@ struct NeuralWorkspaceHost: View {
         VStack(spacing: 0) {
             headerBar
             Divider()
-            NeuralWorkspaceRepresentable(cameraDistance: $cameraDistance)
+            NeuralWorkspaceRepresentable(
+                cameraDistance: $cameraDistance,
+                makeStream: { viewModel?.liveSampleStream() }
+            )
                 .background(Color(white: 0.05))
             Divider()
             controlsPanel
@@ -104,16 +111,54 @@ struct NeuralWorkspaceHost: View {
 /// through the bindings.
 struct NeuralWorkspaceRepresentable: NSViewRepresentable {
     @Binding var cameraDistance: Float
+    let makeStream: () -> AsyncStream<EEGSample>?
+
+    /// Tracks whether the workspace has already been subscribed, matching
+    /// `EEGScalpPlotterRepresentable`'s pattern in `SleepValidationView`:
+    /// the debug window is normally created before the pipeline is ready,
+    /// so subscribing only in `makeNSView` would leave the scene
+    /// permanently idle even after samples start flowing.
+    final class Coordinator {
+        var didSubscribe = false
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NeuralWorkspaceView {
         let v = NeuralWorkspaceView(frame: .zero)
         v.cameraDistance = cameraDistance
+        subscribeIfNeeded(v, context.coordinator)
         return v
     }
 
     func updateNSView(_ nsView: NeuralWorkspaceView, context: Context) {
         if abs(nsView.cameraDistance - cameraDistance) > 0.001 {
             nsView.cameraDistance = cameraDistance
+        }
+        subscribeIfNeeded(nsView, context.coordinator)
+    }
+
+    private func subscribeIfNeeded(_ v: NeuralWorkspaceView, _ coordinator: Coordinator) {
+        guard !coordinator.didSubscribe, let stream = makeStream() else { return }
+        coordinator.didSubscribe = true
+        v.subscribe(to: Self.throwingStream(from: stream))
+    }
+
+    /// Wrap an `AsyncStream<EEGSample>` in an
+    /// `AsyncThrowingStream<EEGSample, any Error>` — see the identical
+    /// helper on `EEGScalpPlotterRepresentable` in `SleepValidationView.swift`
+    /// for why the throwing wrapper is needed even though this never throws.
+    private static func throwingStream(
+        from stream: AsyncStream<EEGSample>
+    ) -> AsyncThrowingStream<EEGSample, any Error> {
+        AsyncThrowingStream<EEGSample, any Error> { continuation in
+            let task = Task {
+                for await sample in stream {
+                    continuation.yield(sample)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 }

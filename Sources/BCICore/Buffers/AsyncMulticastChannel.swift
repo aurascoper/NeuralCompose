@@ -38,9 +38,12 @@ public final class AsyncMulticastChannel<Element: Sendable>: @unchecked Sendable
         precondition(capacity > 0, "channel capacity must be > 0")
         switch overflow {
         case .dropOldest:
-            self.bufferingPolicy = .bufferingOldest(capacity)
-        case .dropNewest:
+            // Keep the newest `capacity` elements, discarding old ones as
+            // new ones arrive — `.bufferingNewest` is the policy whose name
+            // describes what it *retains*, not what it drops.
             self.bufferingPolicy = .bufferingNewest(capacity)
+        case .dropNewest:
+            self.bufferingPolicy = .bufferingOldest(capacity)
         }
     }
 

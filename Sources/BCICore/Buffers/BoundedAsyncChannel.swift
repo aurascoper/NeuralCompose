@@ -33,9 +33,12 @@ public struct BoundedAsyncChannel<Element: Sendable>: Sendable {
         let bufferingPolicy: AsyncStream<Element>.Continuation.BufferingPolicy
         switch overflow {
         case .dropOldest:
-            bufferingPolicy = .bufferingOldest(capacity)
-        case .dropNewest:
+            // Keep the newest `capacity` elements, discarding old ones as
+            // new ones arrive — `.bufferingNewest` is the policy whose name
+            // describes what it *retains*, not what it drops.
             bufferingPolicy = .bufferingNewest(capacity)
+        case .dropNewest:
+            bufferingPolicy = .bufferingOldest(capacity)
         }
         let (s, c) = AsyncStream.makeStream(of: Element.self, bufferingPolicy: bufferingPolicy)
         self.stream = s
