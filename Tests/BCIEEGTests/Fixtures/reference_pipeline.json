@@ -33,6 +33,52 @@
   "meanConfidence" : 0.9216933,
   "sampleCount" : 77966,
   "sampleRate" : 256,
+  "sceneCheckpoints" : [
+    {
+      "edgeIntensity" : 0.25125003,
+      "edgeTintDescription" : "1.00,0.55,0.25",
+      "label" : "25%",
+      "nodeBrightness" : {
+        "AF7" : 1,
+        "AF8" : 0.5345992,
+        "TP10" : 0.7435553,
+        "TP9" : 0.63629186
+      }
+    },
+    {
+      "edgeIntensity" : 0.41609064,
+      "edgeTintDescription" : "1.00,0.85,0.20",
+      "label" : "50%",
+      "nodeBrightness" : {
+        "AF7" : 1,
+        "AF8" : 0.66490394,
+        "TP10" : 1,
+        "TP9" : 1
+      }
+    },
+    {
+      "edgeIntensity" : 0.5399692,
+      "edgeTintDescription" : "1.00,0.85,0.20",
+      "label" : "75%",
+      "nodeBrightness" : {
+        "AF7" : 1,
+        "AF8" : 1,
+        "TP10" : 1,
+        "TP9" : 1
+      }
+    },
+    {
+      "edgeIntensity" : 0.62947154,
+      "edgeTintDescription" : "1.00,0.85,0.20",
+      "label" : "100%",
+      "nodeBrightness" : {
+        "AF7" : 1,
+        "AF8" : 0.6170336,
+        "TP10" : 1,
+        "TP9" : 1
+      }
+    }
+  ],
   "windowCount" : 303,
   "windowSpotChecks" : [
     {

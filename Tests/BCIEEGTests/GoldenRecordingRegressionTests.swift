@@ -29,6 +29,7 @@ import XCTest
 ///
 /// then inspect the diff on Tests/BCIEEGTests/Fixtures/reference_pipeline.json
 /// and commit it if the change is expected.
+@MainActor
 final class GoldenRecordingRegressionTests: XCTestCase {
 
     // MARK: - Reference schema
@@ -50,6 +51,18 @@ final class GoldenRecordingRegressionTests: XCTestCase {
         let emgEnergy: Float
     }
 
+    /// Numeric 3D-workspace scene state at a fraction of the way through the
+    /// recording — the Phase 3 "compare scene state, not screenshots" check.
+    /// Node brightness/edge intensity are pure functions of the sample
+    /// sequence and the most recent classifier prediction as of that point,
+    /// both of which are themselves deterministic — see the class doc.
+    struct SceneCheckpoint: Codable, Equatable {
+        let label: String   // "25%" / "50%" / "75%" / "100%"
+        let nodeBrightness: [String: Float]  // electrode id -> emission intensity
+        let edgeIntensity: Float
+        let edgeTintDescription: String      // quantized "r,g,b", stable for JSON diffing
+    }
+
     struct PipelineReference: Codable, Equatable {
         let sampleRate: Double
         let sampleCount: Int
@@ -59,6 +72,7 @@ final class GoldenRecordingRegressionTests: XCTestCase {
         let intentCounts: [String: Int]
         let meanConfidence: Float
         let windowSpotChecks: [WindowSpotCheck]
+        let sceneCheckpoints: [SceneCheckpoint]
     }
 
     // MARK: - Paths
@@ -73,6 +87,23 @@ final class GoldenRecordingRegressionTests: XCTestCase {
 
     private var referenceFileURL: URL {
         repoRoot.appendingPathComponent("Tests/BCIEEGTests/Fixtures/reference_pipeline.json")
+    }
+
+    /// Wrap an `AsyncStream<Element>` in an `AsyncThrowingStream`, matching
+    /// the identical helper in `NeuralWorkspaceViewTests` / the production
+    /// `NeuralWorkspaceRepresentable` adapter.
+    private static func throwingStream<Element: Sendable>(
+        from stream: AsyncStream<Element>
+    ) -> AsyncThrowingStream<Element, any Error> {
+        AsyncThrowingStream<Element, any Error> { continuation in
+            let task = Task {
+                for await element in stream {
+                    continuation.yield(element)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 
     /// The golden recording is intentionally not committed (see class doc).
@@ -99,7 +130,18 @@ final class GoldenRecordingRegressionTests: XCTestCase {
 
         let regenerate = ProcessInfo.processInfo.environment["NEURALCOMPOSE_REGENERATE_REFERENCE"] == "1"
 
+        // Timing tolerance: the whole point of .instant pacing is that this
+        // shouldn't take anywhere near the recording's real duration (~5min
+        // for the golden recording). A generous ceiling catches a pacing
+        // regression (e.g. someone flips .instant back to .realtime) without
+        // being a flaky wall-clock-sensitive assertion on CI hardware.
+        let start = DispatchTime.now()
         let reference = try await computePipelineReference(csvPath: goldenPath.path)
+        let elapsedSeconds = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1e9
+        XCTAssertLessThan(
+            elapsedSeconds, 30.0,
+            "pipeline replay took \(elapsedSeconds)s — instant pacing should keep this well under real-time"
+        )
 
         if regenerate {
             let encoder = JSONEncoder()
@@ -145,6 +187,17 @@ final class GoldenRecordingRegressionTests: XCTestCase {
             XCTAssertEqual(r.alphaEnergy, e.alphaEnergy, accuracy: max(0.1, e.alphaEnergy * 0.05), "\(r.label) alpha drifted")
             XCTAssertEqual(r.betaEnergy, e.betaEnergy, accuracy: max(0.1, e.betaEnergy * 0.05), "\(r.label) beta drifted")
         }
+
+        XCTAssertEqual(reference.sceneCheckpoints.count, expected.sceneCheckpoints.count)
+        for (r, e) in zip(reference.sceneCheckpoints, expected.sceneCheckpoints) {
+            XCTAssertEqual(r.label, e.label)
+            XCTAssertEqual(r.edgeTintDescription, e.edgeTintDescription, "\(r.label) edge tint changed")
+            XCTAssertEqual(r.edgeIntensity, e.edgeIntensity, accuracy: 0.05, "\(r.label) edge intensity drifted")
+            for (id, expectedBrightness) in e.nodeBrightness {
+                let actual = r.nodeBrightness[id] ?? -1
+                XCTAssertEqual(actual, expectedBrightness, accuracy: 0.05, "\(r.label) \(id) brightness drifted")
+            }
+        }
     }
 
     // MARK: - Pipeline
@@ -177,8 +230,12 @@ final class GoldenRecordingRegressionTests: XCTestCase {
         var confidenceSum: Float = 0
         var windowCount = 0
         var spotChecks: [(sequence: UInt64, prediction: IntentPrediction, features: EEGFeatures)] = []
+        // Sample index (into `samples`) each window was produced at, paired
+        // with its prediction — the "most recent prediction as of sample N"
+        // lookup the 3D-workspace replay below needs.
+        var windowRecords: [(sampleIndex: Int, prediction: IntentPrediction)] = []
 
-        for sample in samples {
+        for (i, sample) in samples.enumerated() {
             guard let window = try await windowing.ingest(sample) else { continue }
             let features = FeatureExtractor.features(for: window)
             let prediction = try await classifier.classify(window: window)
@@ -186,6 +243,7 @@ final class GoldenRecordingRegressionTests: XCTestCase {
             confidenceSum += prediction.confidence
             intentCounts[String(describing: prediction.intent), default: 0] += 1
             spotChecks.append((window.sequence, prediction, features))
+            windowRecords.append((sampleIndex: i, prediction: prediction))
         }
         XCTAssertFalse(spotChecks.isEmpty, "no windows were produced from the golden recording")
 
@@ -248,6 +306,8 @@ final class GoldenRecordingRegressionTests: XCTestCase {
             spotCheck("last", spotChecks.last!),
         ]
 
+        let sceneCheckpoints = try await computeSceneCheckpoints(samples: samples, windowRecords: windowRecords)
+
         return PipelineReference(
             sampleRate: normalizedRate,
             sampleCount: samples.count,
@@ -256,7 +316,68 @@ final class GoldenRecordingRegressionTests: XCTestCase {
             windowCount: windowCount,
             intentCounts: intentCounts,
             meanConfidence: windowCount > 0 ? confidenceSum / Float(windowCount) : 0,
-            windowSpotChecks: windowSpotChecks
+            windowSpotChecks: windowSpotChecks,
+            sceneCheckpoints: sceneCheckpoints
         )
+    }
+
+    /// Replay `samples` through a real `NeuralWorkspaceView` and snapshot its
+    /// node/edge material state at four points through the recording — the
+    /// Phase 3 "compare numeric scene state, not screenshots" check. At each
+    /// checkpoint, the workspace has ingested every sample up to that point
+    /// (so its ring buffers reflect "as of here in the recording") and has
+    /// been given the single most recent classifier prediction available by
+    /// that point (matching what a live viewer would see).
+    private func computeSceneCheckpoints(
+        samples: [EEGSample],
+        windowRecords: [(sampleIndex: Int, prediction: IntentPrediction)]
+    ) async throws -> [GoldenRecordingRegressionTests.SceneCheckpoint] {
+        let workspace = NeuralWorkspaceView(frame: NSRect(x: 0, y: 0, width: 400, height: 400))
+        let checkpoints: [(label: String, fraction: Double)] = [
+            ("25%", 0.25), ("50%", 0.50), ("75%", 0.75), ("100%", 1.0),
+        ]
+
+        var results: [SceneCheckpoint] = []
+        var sampleCursor = 0
+        var windowCursor = 0
+        for (label, fraction) in checkpoints {
+            let targetIndex = min(samples.count - 1, Int(Double(samples.count - 1) * fraction))
+            while sampleCursor <= targetIndex {
+                workspace.ingest(samples[sampleCursor])
+                sampleCursor += 1
+            }
+            // Advance to the last window record at or before targetIndex,
+            // and feed exactly that one prediction if it's new since the
+            // last checkpoint.
+            var latestForCheckpoint: IntentPrediction?
+            while windowCursor < windowRecords.count, windowRecords[windowCursor].sampleIndex <= targetIndex {
+                latestForCheckpoint = windowRecords[windowCursor].prediction
+                windowCursor += 1
+            }
+            if let prediction = latestForCheckpoint {
+                let (stream, continuation) = AsyncStream<IntentPrediction>.makeStream()
+                workspace.subscribeClassifier(to: Self.throwingStream(from: stream))
+                continuation.yield(prediction)
+                continuation.finish()
+                try? await Task.sleep(nanoseconds: 20_000_000) // let the drain task consume it
+            }
+            workspace.testableTriggerRecompute()
+
+            var brightness: [String: Float] = [:]
+            for id in ["TP9", "AF7", "AF8", "TP10"] {
+                brightness[id] = workspace.testableEmissionIntensity(for: id) ?? -1
+            }
+            let edgeIntensity = workspace.testableEdgeEmissionIntensity() ?? -1
+            let tint = workspace.testableEdgeTintColor()?.usingColorSpace(.deviceRGB)
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            tint?.getRed(&r, green: &g, blue: &b, alpha: &a)
+            let tintDescription = String(format: "%.2f,%.2f,%.2f", r, g, b)
+
+            results.append(SceneCheckpoint(
+                label: label, nodeBrightness: brightness,
+                edgeIntensity: edgeIntensity, edgeTintDescription: tintDescription
+            ))
+        }
+        return results
     }
 }
