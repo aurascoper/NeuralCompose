@@ -1,46 +1,64 @@
 # NeuralCompose
 
 A privacy-first, fully on-device macOS prototype for **EEG-driven communication**
-and **sleep-cycle EEG research**. A Muse headband streams brain signals through
+and **sleep-cycle research**. A Muse headband streams brain signals through
 BrainFlow, a Core ML classifier on the Apple Neural Engine detects intent
 (jaw clench / blink / rest / select), and a local MLX LLM suggests the next
-word. The same acquisition stack is being extended for sleep-stage estimation
-and AI-assisted dream-incubation experiments. **No cloud APIs. No telemetry. No
-network at runtime.**
+word. **No cloud APIs. No telemetry. No network at runtime.**
 
-## Project Status (July 2026)
+## Live signal
+
+<p align="center">
+  <img src="Recordings/golden/report/raw_traces.png" width="49%" alt="2D depth-stacked EEG plotter, 4 channels over ~305s">
+  <img src="Recordings/golden/report/3d-workspace.png" width="49%" alt="3D SceneKit workspace, 4 electrode nodes driven by live RMS/band-power/classifier data">
+</p>
+
+Left: `EEGScalpPlotterView`, the 2D depth-stacked plotter, replaying the
+project's first **golden recording** — TP9/AF7/AF8/TP10 live from a Muse S.
+Right: `NeuralWorkspaceView`, the same session in 3D — node brightness tracks
+broadband RMS, elevation tracks theta-band power, edge tint and pulse track
+the live intent classifier's output.
+
+| Channel | Contact | Clipping | RMS | Overall |
+|---|---|---|---|---|
+| TP9 | Excellent | 0.65% | 162.5 µV | Good |
+| AF7 | Excellent | 0.85% | 176.6 µV | Good |
+| AF8 | Excellent | 0.94% | 175.7 µV | Good |
+| TP10 | Excellent | 0.34% | 146.4 µV | Good |
+
+98 blink-like transients and 19 EMG bursts detected across the narrated
+protocol (eyes open/closed, blinks, jaw clenches, and a deliberate
+electrode-lift on each channel in turn). Full report — [PSD](Recordings/golden/report/psd.png),
+[spectrogram](Recordings/golden/report/spectrogram.png),
+[rolling band power](Recordings/golden/report/band_power.png),
+[RMS timeline](Recordings/golden/report/rms_timeline.png) — and the raw
+recording's provenance: [`Recordings/golden/README.md`](Recordings/golden/README.md).
+
+This recording also backs `Tests/BCIEEGTests/GoldenRecordingRegressionTests.swift`:
+every test run replays it deterministically (see [Playback & synchronization](#playback--synchronization-math)
+below) through the real windowing → feature-extraction → classifier →
+channel-health pipeline and checks the output against a committed reference.
+
+> **On AF7:** an earlier validation session (`validate-muse-physiology.py`)
+> found AF7 saturated (~900 µV RMS) across 4 consecutive runs and read that
+> as a hardware defect. It wasn't — headband tautness was the actual cause;
+> once corrected, AF7 recorded as cleanly as the other three channels. Worth
+> remembering before writing off a "bad" channel as broken hardware.
+
+## Project status (July 2026)
 
 | Status | Component |
 |--------|-----------|
 | ✅ | Native BrainFlow integration (BLE + BCIBridge) |
 | ✅ | Live Muse S acquisition (256 Hz, 4 channels) |
-| ✅ | Physiological validation (eyes-open/eyes-closed alpha response, 2026-07-10) |
-| ✅ | Communication-mode architecture (intent → carousel → MLX LLM) |
-| ✅ | Phase B Sleep Validation Toolkit — `EEGScalpPlotterView` (3D depth-stacked) |
-| ✅ | Phase B Sleep Validation Toolkit — `NeuralWorkspaceView` (SceneKit 3D live topography) |
+| ✅ | Communication mode (intent → carousel → MLX LLM) |
+| ✅ | Phase B Sleep Validation Toolkit — 2D plotter + 3D live topography |
+| ✅ | Deterministic playback (`PlaybackEEGStream.normalized`) + CI regression against a golden recording |
+| ✅ | 3D workspace driven entirely by live classifier output (no manual controls) |
 | 🚧 | Sleep-stage classifier (4-class: Wake / N1 / N2_N3 / Uncertain_REM) |
 | 🚧 | Dream-session controller + session FSM |
 | 🚧 | LLM primer generation + dream-report analogy extraction |
-| 🧪 | Cognitive-incubation experiments (planned, pre-registration pending) |
-| 🧪 | D8 within-subject crossover pilot (planned, OSF pre-registration pending) |
-
-## Current Features
-
-**Communication mode (Phase 3, complete):**
-- Live Muse S EEG acquisition through BrainFlow over native BLE on macOS.
-- 4-channel recording at 256 Hz, channel order `[package_num, TP9, AF7, AF8, TP10, AUX, timestamp, aux_marker]`.
-- 5-class intent classifier (rest, jawClench, singleBlink, doubleBlink, select) on the Apple Neural Engine via Core ML.
-- Intent smoother (5-window ring buffer, activation thresholds, refractory period).
-- Carousel of next-word candidates, MLX-LLM generated, locally inferred.
-- Privacy indicator showing live source / classifier mode / predictor mode at all times.
-- Synthetic, BrainFlow, and playback EEG stream paths selectable from a single env var.
-
-**Sleep validation (Phase 4, in progress):**
-- `EEGScalpPlotterView` — 3D depth-stacked time-series plotter with adjustable µV/px scale and z-depth spacing, 60 Hz display-link refresh.
-- `NeuralWorkspaceView` — SceneKit-based 3D live topography. 4 Muse electrodes rendered as nodes in head-space; alpha-band power drives emissive intensity, theta-band power drives Y-elevation, FSM state drives edge color and pulse phase. Per-electrode 2nd-order Butterworth biquads for the bandpass. Mouse pan/zoom via `SCNView.allowsCameraControl`.
-- Phase B debug window (`Cmd+Shift+D`) with a tabbed SwiftUI host: 2D Plotter / 3D Workspace.
-- `validate-muse-physiology.py` — automated 5-condition protocol (eyes-open, eyes-closed, blinks, jaw clench, head turn) with pass/fail per signature.
-- `SLEEP_CYCLE_DESIGN.md` — full architectural specification (D1–D8, hypothesis registry, risk register, safety requirements, integration checklist).
+| 🧪 | Cognitive-incubation experiments (pre-registration pending) |
 
 ## Architecture
 
@@ -53,205 +71,163 @@ network at runtime.**
                           ▼                          ▼
                 ┌──────────────────┐        ┌─────────────────────────┐
                 │ TextComposition  │        │  SleepValidationView    │
-                │ Controller       │        │  (Phase B debug)        │
-                └────────┬─────────┘        │  → EEGScalpPlotterView  │
-                         │                  └─────────────────────────┘
-                         ▼
-                ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-                │ IntentSmoother   │    │ SleepStageSmoother│    │ DreamAnalysis    │
-                │ (BCICore actor)  │    │ (BCICore actor)  │    │ Predicting (LLM) │
-                └────────┬─────────┘    └────────┬─────────┘    └────────┬─────────┘
-                         ▼                       ▼                       ▼
-                ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-                │ IntentState      │    │ SleepSessionFSM  │    │  MLX adapter     │
-                │ Machine          │    │                  │    │  (BCILLM)        │
-                └────────┬─────────┘    └──────────────────┘    └──────────────────┘
-                         │
+                │ Controller       │        │  (2D plotter, 3D scene) │
+                └────────┬─────────┘        └─────────────────────────┘
                          ▼
                 ┌──────────────────┐    ┌──────────────────┐
-                │ Core ML on ANE   │    │ EEGWindowing     │  (2s comms / 30s sleep)
-                │ (BCIClassifier)  │    │ (BCICore actor)  │
+                │ IntentSmoother   │    │ EEGWindowing     │  (2s comms / 30s sleep)
+                │ (BCICore actor)  │    │ (BCICore actor)  │
                 └────────┬─────────┘    └────────┬─────────┘
-                         │                       │
-                         └──────────┬────────────┘
-                                    ▼
-                          ┌──────────────────┐
-                          │ EEGStreaming     │ ← BrainFlow / synthetic / playback
-                          │  (BCIEEG)        │
-                          └──────────────────┘
+                         ▼                       │
+                ┌──────────────────┐             │
+                │ Core ML on ANE   │◄────────────┘
+                │ (BCIClassifier)  │
+                └────────┬─────────┘
+                         ▼
+                ┌──────────────────┐
+                │ EEGStreaming     │ ← BrainFlow / synthetic / playback
+                │  (BCIEEG)        │
+                └──────────────────┘
 ```
 
 **Module boundaries** (MLX isolation is load-bearing):
 
 - `BCICore` — pure-Swift models, protocols, FSMs, buffers. **No third-party deps.**
-- `BCIBridge` — Obj-C++ shim for BrainFlow (stub by default, real BrainFlow gated by `BCI_BRAINFLOW_AVAILABLE`).
-- `BCIEEG` — `BrainFlowService`, `SyntheticEEGStream`, `PlaybackEEGStream`, `EEGScalpPlotterView`.
-- `BCIClassifier` — Core ML wrapper + mock.
+- `BCIBridge` — Obj-C++ shim for BrainFlow (stub by default, gated by `BCI_BRAINFLOW_AVAILABLE`).
+- `BCIEEG` — `BrainFlowService`, `SyntheticEEGStream`, `PlaybackEEGStream`, `EEGScalpPlotterView`, `NeuralWorkspaceView`.
+- `BCIClassifier` — Core ML wrapper + deterministic mock (also the CI classifier).
 - `BCILLM` — **MLX-Swift linked only here.** Adapter + stub + tokenizer.
-- `NeuralComposeApp` — SwiftUI views, the Phase B debug window, the menu-bar UI.
+- `NeuralComposeApp` — SwiftUI views, Phase B debug window, menu-bar UI.
 
-The app talks to `BCILLM` through `NextWordPredicting`, so there is exactly **one** MLX runtime copy in the linked binary. No duplicate-symbol risk. New sleep-cycle code follows the same isolation: types in `BCICore`, audio in a future `BCIAudio` target, MLX stays in `BCILLM`.
+The app talks to `BCILLM` through `NextWordPredicting`, so there's exactly
+**one** MLX runtime copy in the linked binary.
 
-## Scientific Motivation
+## Playback & synchronization math
+
+Live BLE acquisition is a noisy clock — inter-sample gaps jitter with radio
+conditions. `PlaybackEEGStream.normalized` resamples a recording onto an
+exact uniform grid before replay, via linear interpolation between the two
+nearest recorded samples $(t_a, x_a)$, $(t_b, x_b)$:
+
+$$x(t) = x_a + (x_b - x_a)\cdot\frac{t - t_a}{t_b - t_a}, \qquad t_a \le t \le t_b$$
+
+Two replays of the same file at the same target rate then produce
+byte-identical sample sequences, independent of the original jitter — the
+property the CI regression test depends on.
+
+Classifier confidence driving the 3D workspace's edge pulse is EMA-smoothed
+so an async prediction arrival doesn't visibly pop:
+
+$$\hat c_n = \hat c_{n-1} + \alpha\,(c_n - \hat c_{n-1}), \qquad \alpha = 0.15$$
+
+and node brightness is broadband RMS under a log compression so small
+changes stay visible without large ones saturating:
+
+$$I = \operatorname{clamp}\big(\log(1 + 0.05\cdot\mathrm{RMS}),\ 0,\ 1\big)$$
+
+Predictions and samples arrive on independent streams; if a prediction goes
+stale (no update for `classifierStaleThreshold` while samples keep
+flowing), intent-driven color/pulse dim rather than keep showing a
+confidently-colored but outdated classification.
+
+## Scientific motivation
 
 This is a platform, not a clinical or productivity tool. The aim is to build
 the on-device infrastructure that lets a small research team:
 
-1. **Validate consumer-grade EEG against physiological expectations** (alpha rise on eyes-closed, blink transients, jaw-clench EMG contamination, motion artifacts).
-2. **Estimate sleep stage from 4 frontal channels** (Muse S provides TP9, AF7, AF8, TP10 — no chin EMG, no EOG). A 4-class output is the honest upper bound: `Wake / N1 / N2_N3 / Uncertain_REM`.
-3. **Test whether TMR cues during N2/SWS paired with LLM-generated dream analysis improve creative problem solving.** Pre-registration required before claiming any effect.
-4. **Ship the platform regardless of (3) — the validation toolkit, the architectural specification, and the open-source codebase are independently useful contributions.**
+1. Validate consumer-grade EEG against physiological expectations (alpha
+   rise on eyes-closed, blink transients, jaw-clench EMG contamination).
+2. Estimate sleep stage from 4 frontal channels (Muse S: TP9, AF7, AF8,
+   TP10 — no chin EMG, no EOG). A 4-class output is the honest upper bound.
+3. Test whether TMR cues during N2/SWS paired with LLM-generated dream
+   analysis improve creative problem solving — pre-registration required
+   before claiming any effect.
+4. Ship the platform regardless of (3): the validation toolkit and codebase
+   are useful contributions on their own.
 
-The established neuroscience in this stack (alpha dropout, AASM staging, TMR for declarative memory) is treated as established. The novel claims (LLM analogy extraction, engineering-insight improvement) are treated as unproven. Every claim is annotated with a confidence rating in `SLEEP_CYCLE_DESIGN.md`.
+Established neuroscience (alpha dropout, AASM staging, TMR for declarative
+memory) is treated as established. Novel claims (LLM analogy extraction,
+insight improvement) are treated as unproven. Every claim in
+`SLEEP_CYCLE_DESIGN.md` carries a confidence rating.
 
-## Engineering & Mathematical Foundations
+**Core signal-processing definitions** (full derivations in [`docs/Math.md`](docs/Math.md)):
 
-This section summarizes the math that motivates the pipeline. Detailed derivations are in [`docs/Math.md`](docs/Math.md).
+$$X(t) \in \mathbb{R}^{4 \times N}, \qquad P_b = \sum_{f \in \text{band}_b} |\mathcal{F}\{x\}_f|^2 \cdot \frac{1}{N_{\text{bin}}}, \qquad r_\alpha(t) = \frac{P_\alpha^{\text{baseline}}}{P_\alpha(t)}$$
 
-**Multichannel EEG as discrete time series:**
+$P_b$ is Welch-style band power; $r_\alpha > 1$ means current alpha is
+*lower* than baseline — the canonical N1-onset signature.
 
-$$X(t) \in \mathbb{R}^{4 \times N}, \quad X(t) = \begin{bmatrix} x_{\text{TP9}}(t) \\ x_{\text{AF7}}(t) \\ x_{\text{AF8}}(t) \\ x_{\text{TP10}}(t) \end{bmatrix}$$
-
-**Windowed epoch** (sleep staging uses 30s windows with 5s stride; comms uses 2s windows with 1s stride):
-
-$$W_i = X[t_i : t_i + T_{\text{epoch}}]$$
-
-**Band power** (Welch-style periodogram, summed within band):
-
-$$P_b = \sum_{f \in \text{band}_b} |\mathcal{F}\{x\}_{f}|^2 \cdot \frac{1}{N_{\text{bin}}}$$
-
-**Alpha-dropout ratio** (per-epoch, relative to a per-user eyes-closed baseline):
-
-$$r_\alpha(t) = \frac{P_\alpha^{\text{baseline}}}{P_\alpha(t)}$$
-
-A value $r_\alpha > 1$ means the current alpha is *lower* than the baseline — the canonical N1 onset signature.
-
-**Theta/alpha ratio** (REM proxy; weak without chin EMG):
-
-$$\rho_{\theta\alpha}(t) = \frac{P_\theta(t)}{P_\alpha(t)}$$
-
-**Softmax classifier** (Core ML on ANE):
-
-$$p(c \mid W_i) = \frac{\exp(z_c(W_i))}{\sum_{c'} \exp(z_{c'}(W_i))}, \quad c \in \{\text{Wake}, \text{N1}, \text{N2\_N3}, \text{Uncertain\_REM}\}$$
-
-**Temporal smoother** (AASM-aware, value-typed):
-
-$$S_t = f\big(\{p(\cdot \mid W_{t-k}), \ldots, p(\cdot \mid W_t)\}\big), \quad k = 60 \text{ epochs default}$$
-
-The smoother enforces AASM transition rules (no `Wake → N2_N3` skip) with a confidence-based override at $p > 0.9$ for 3+ consecutive epochs.
-
-**State-transition function** (session FSM, §10 of `SLEEP_CYCLE_DESIGN.md`):
-
-$$\text{phase}_{t+1} = g(\text{phase}_t, S_t, \text{budget})$$
-
-where `budget` is the `TMRBudget` (5 cues/night max, 15-min min interval, 2 wake attempts). Budget exhaustion is enforced in code, not documentation.
-
-## Current Validation Results
-
-**Live Muse S through BrainFlow** — 2026-07-10, single participant, 80-second protocol. Four sessions captured; the AF7 channel has been saturated (~900 µV RMS) across all four runs, indicating a hardware issue with this specific Muse S unit (multiple position adjustments did not resolve it). TP9, AF8, and TP10 are healthy and produce physiological EEG. The 01:42 session is the canonical reference:
-
-| Condition | Signature | Result |
-|-----------|-----------|--------|
-| Eyes-closed alpha (TP9) | $P_\alpha^{\text{closed}} / P_\alpha^{\text{open}}$ | **2.24×–3.08×** across sessions (PASS ≥1.5×) |
-| Eyes-closed alpha (TP10) | ratio | **3.21×–3.88×** across sessions (PASS) |
-| Eyes-closed alpha (AF8) | ratio | 1.04×–1.31× across sessions (borderline; AF7 saturated) |
-| Eyes-closed alpha (AF7) | ratio | 0.92×–1.03× (saturated pad; ratio not meaningful) |
-| Blink transient (AF8) | $\max \lvert x(t) \rvert$ | **42.5–64.9 µV** (PASS ≥40 µV) |
-| Jaw clench broadband (TP9) | $P_{\text{30-100 Hz}}^{\text{clench}} / P^{\text{open}}$ | 0.86×–2.62× (PASS in 3/4 sessions) |
-| Jaw clench broadband (TP10) | ratio | **3.18×–4.24×** (PASS) |
-| Contact quality (RMS, healthy channels) | per channel | 10–35 µV (PASS, physiological) |
-| Contact quality (AF7) | RMS | 840–914 µV (saturated; this Muse S unit has a hardware defect on AF7) |
-
-This is a **calibration observation**, not a normative threshold. The pipeline (Muse S → BrainFlow → Python bindings → ring buffer) is the validation result; the alpha ratios are properties of the data. Reproducing this on a different Muse S unit (and on a different participant, a different day) is required before generalizing. The 3 healthy channels (TP9, AF8, TP10) are sufficient for 3-class sleep staging (Wake / N1 / N2_N3); REM is unobservable from any 4-channel Muse unit.
-
-The full protocol, raw CSV, and per-signature pass criteria are in `Scripts/validate-muse-physiology.py` and `Recordings/muse_validation_20260710-015723.csv` (the 4th session).
-
-## Repository Layout
+## Repository layout
 
 ```
 NeuralCompose/
 ├── Sources/
 │   ├── BCIBridge/        Obj-C++ shim for BrainFlow (stub by default)
 │   ├── BCICore/          pure-Swift models, protocols, FSMs, buffers
-│   ├── BCIEEG/           EEG streams + EEGScalpPlotterView (Phase B)
-│   ├── BCIClassifier/    Core ML wrapper + mock
+│   ├── BCIEEG/           EEG streams, 2D plotter, 3D workspace (Phase B)
+│   ├── BCIClassifier/    Core ML wrapper + deterministic mock
 │   ├── BCILLM/           MLX adapter + stub + tokenizer  ← only MLX target
 │   └── NeuralComposeApp/ SwiftUI views, Phase B debug window
-├── Tests/                unit tests, runnable in synthetic mode
-├── Scripts/              build / run / validate / train helpers
-│   ├── build.sh
-│   ├── run-synthetic.sh
-│   ├── run-muse-s.sh
-│   ├── run-calibration.sh
-│   ├── train-intent-classifier.py
-│   └── validate-muse-physiology.py    # Phase B physiological validation
-├── Recordings/           per-session EEG + events (gitignored)
-├── docs/                 long-form documentation (see below)
-├── paper/                LaTeX manuscript (planned)
+├── Tests/                unit + golden-recording regression tests
+├── Scripts/
+│   ├── build.sh / run-synthetic.sh / run-muse-s.sh
+│   ├── record-golden.sh              # capture a new golden reference recording
+│   ├── analyze-eeg-session.py        # PSD/band-power/spectrogram/quality report for any recording
+│   └── validate-muse-physiology.py   # live 5-condition acquisition sanity check
+├── Recordings/           per-session EEG (gitignored) + golden/ (committed reference + report)
+├── docs/                 long-form documentation
 ├── SLEEP_CYCLE_DESIGN.md full D1–D8 sleep architecture spec
-├── HARDWARE_SETUP.md     Muse + BrainFlow + BLE transport
-├── MODEL_SETUP.md        Core ML and MLX model files
-├── CALIBRATION.md        recording labeled EEG for classifier training
-└── TROUBLESHOOTING.md    common build / runtime issues
+└── HARDWARE_SETUP.md / MODEL_SETUP.md / CALIBRATION.md / TROUBLESHOOTING.md
 ```
 
-## Quick Start
+## Quick start
 
 **Synthetic mode — no hardware, no models:**
 
 ```bash
 git clone https://github.com/aurascoper/NeuralCompose.git
 cd NeuralCompose
-./Scripts/build.sh        # swift build
+./Scripts/build.sh
 ./Scripts/run-synthetic.sh
 ```
 
-The app launches, generates a synthetic EEG stream, exercises the full pipeline through the mock Core ML classifier and the stub next-word predictor. Carousel cycles and commits work out of the box.
-
-**Live Muse S (after BrainFlow is installed at `~/Developer/brainflow/`):**
+**Live Muse S** (after BrainFlow is installed at `~/Developer/brainflow/`):
 
 ```bash
 ./Scripts/build.sh --with-brainflow
 ./Scripts/run-muse-s.sh
 ```
 
-**Phase B Sleep Validation Toolkit** (live signal debugger):
+**Phase B debug window** (`Cmd+Shift+D` in the running app) — live
+`EEGScalpPlotterView` (2D) and `NeuralWorkspaceView` (3D) tabs.
+
+**Replay the golden recording:**
 
 ```bash
-./Scripts/build.sh --with-brainflow
-DYLD_LIBRARY_PATH=~/Developer/NeuralCompose/.build/debug \
-    ~/Developer/brainflow/compiled \
-  /tmp/nc-bf-py/bin/python3 \
-  Scripts/validate-muse-physiology.py
+python3 Scripts/analyze-eeg-session.py Recordings/golden/golden_20260710-141352.eeg.csv
+swift test --filter GoldenRecordingRegressionTests
 ```
 
-Or open the Phase B debug window in the running app with `Cmd+Shift+D`. The window has the live `EEGScalpPlotterView` with adjustable Y-scale and 3D depth-spacing sliders.
+## Experimental status & limitations
 
-## Experimental Status & Limitations
+| Claim | Status |
+|-------|--------|
+| Live Muse S EEG acquisition through BrainFlow is reproducible on macOS | **Established** |
+| Per-channel RMS, alpha power, and blink detection are observable on consumer Muse hardware | **Established** |
+| Deterministic playback + CI regression against real hardware data | **Established** |
+| 4-class sleep staging from Muse S is achievable at research accuracy | **Plausible** — domain shift from PSG is the largest expected error source |
+| TMR cues + LLM dream analysis improves engineering insight | **Unproven** — D8 crossover, pre-registration pending |
+| 5-class AASM sleep staging on Muse S | **Hardware-limited** — no chin EMG, atonia is the defining REM criterion |
 
-| Claim | Status | Evidence |
-|-------|--------|----------|
-| Live Muse S EEG acquisition through BrainFlow is reproducible on macOS | **Established** | 2026-07-10 validation session; see `Recordings/muse_validation_20260710-004400.csv`. |
-| Per-channel RMS, alpha power, and blink detection are observable on consumer Muse hardware | **Established** | Toolkit §21.4 acceptance criteria; multiple sessions. |
-| 4-class sleep staging from Muse S is achievable at clinical-research accuracy | **Plausible** | Domain shift from PSG to Muse S is the largest expected error source. Per-user fine-tuning required. |
-| TMR cues during N2/SWS paired with LLM dream analysis improves engineering insight | **Unproven** | D8 within-subject crossover, OSF pre-registration pending. |
-| LLM analogy extraction from dream reports agrees with human raters (Cohen's κ > 0.4) | **Unproven** | Novel; D8 evaluates. |
-| 5-class AASM sleep staging on Muse S | **Hardware-limited** | Muse S has no chin EMG; atonia is the defining REM criterion. |
-
-The platform ships regardless of the unproven claims. The validation toolkit, the architectural spec, and the open-source codebase are useful contributions on their own.
+The platform ships regardless of the unproven claims — the validation
+toolkit, architectural spec, and codebase are useful on their own.
 
 ## Documentation
 
-- [`HARDWARE_SETUP.md`](HARDWARE_SETUP.md) — Muse + BrainFlow + BLE transport details.
-- [`MODEL_SETUP.md`](MODEL_SETUP.md) — Core ML and MLX model setup.
-- [`CALIBRATION.md`](CALIBRATION.md) — recording labeled EEG for classifier training.
-- [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — common build / runtime issues.
-- [`SLEEP_CYCLE_DESIGN.md`](SLEEP_CYCLE_DESIGN.md) — full D1–D8 sleep architecture spec (1,500 lines).
-- [`docs/Architecture.md`](docs/Architecture.md) — module structure and design rationale.
-- [`docs/Math.md`](docs/Math.md) — derivations of the equations in this README.
-- [`docs/Validation.md`](docs/Validation.md) — physiological validation protocol and results.
-- [`docs/Research.md`](docs/Research.md) — research methodology and D8 pre-registration plan.
-- [`docs/SleepCycleDesign.md`](docs/SleepCycleDesign.md) — reader-friendly summary of `SLEEP_CYCLE_DESIGN.md`.
+- [`Recordings/golden/README.md`](Recordings/golden/README.md) — golden recording provenance, full report, plots.
+- [`HARDWARE_SETUP.md`](HARDWARE_SETUP.md) · [`MODEL_SETUP.md`](MODEL_SETUP.md) · [`CALIBRATION.md`](CALIBRATION.md) · [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
+- [`SLEEP_CYCLE_DESIGN.md`](SLEEP_CYCLE_DESIGN.md) — full D1–D8 sleep architecture spec.
+- [`docs/Architecture.md`](docs/Architecture.md) · [`docs/Math.md`](docs/Math.md) · [`docs/Validation.md`](docs/Validation.md) · [`docs/Research.md`](docs/Research.md)
 
 ## Citation
 
@@ -263,8 +239,8 @@ A paper draft is in `paper/`. Suggested citation when published:
 
 ## License
 
-This is research prototype code. **Do not use NeuralCompose to make clinical
-or safety-critical decisions.** License terms: see `LICENSE`.
+Research prototype code. **Do not use NeuralCompose to make clinical or
+safety-critical decisions.** License terms: see [`LICENSE`](LICENSE) (MIT).
 
 ## Acknowledgements
 
