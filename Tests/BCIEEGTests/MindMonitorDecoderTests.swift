@@ -27,14 +27,44 @@ final class MindMonitorDecoderTests: XCTestCase {
         }
     }
 
-    func testIgnoresEEGAddressWithWrongArgumentCount() {
+    func testIgnoresEEGAddressWithFewerThanFourArguments() {
         let tooFew = OSCMessage(address: "/muse/eeg", arguments: [.float(1), .float(2), .float(3)])
         XCTAssertNil(MindMonitorDecoder.sample(from: tooFew, timestamp: 0))
+    }
 
-        let tooMany = OSCMessage(address: "/muse/eeg", arguments: [
-            .float(1), .float(2), .float(3), .float(4), .float(5),
+    /// Real Mind Monitor sends 6 floats per `/muse/eeg` message, not 4 —
+    /// found via a live capture against a real device (every real EEG
+    /// packet was being silently dropped as "wrong argument count" before
+    /// this was fixed). Extra trailing floats beyond the first 4 are
+    /// accepted and dropped, not rejected.
+    func testAcceptsEEGAddressWithMoreThanFourArgumentsUsingFirstFour() {
+        let sixFloats = OSCMessage(address: "/muse/eeg", arguments: [
+            .float(1), .float(2), .float(3), .float(4), .float(5), .float(6),
         ])
-        XCTAssertNil(MindMonitorDecoder.sample(from: tooMany, timestamp: 0))
+        let sample = MindMonitorDecoder.sample(from: sixFloats, timestamp: 0)
+        XCTAssertEqual(sample?.channels, [1, 2, 3, 4], "should use only the first 4 floats, dropping the rest")
+    }
+
+    /// Byte-for-byte from a live Mind Monitor capture (see
+    /// MindMonitorOSCStream's doc comment and commit history around the
+    /// bundle-unwrap fix) — a real `/muse/eeg` OSC message with 6 floats,
+    /// decoded through the real `MuseOSCDecoder` first so this test also
+    /// pins the two decoders composing correctly on real bytes, not just
+    /// on a hand-built `OSCMessage`.
+    func testDecodesRealCapturedSixFloatEEGMessage() throws {
+        let hex = "2f6d7573652f6565670000002c6666666666660044533c7c00000000444fe97f444d1771442f601e440a4e4d"
+        let bytes = stride(from: 0, to: hex.count, by: 2).map { i -> UInt8 in
+            let start = hex.index(hex.startIndex, offsetBy: i)
+            let end = hex.index(start, offsetBy: 2)
+            return UInt8(hex[start..<end], radix: 16)!
+        }
+        let message = try MuseOSCDecoder.decode(Data(bytes))
+        XCTAssertEqual(message.address, "/muse/eeg")
+        XCTAssertEqual(message.floatArguments.count, 6)
+
+        let sample = MindMonitorDecoder.sample(from: message, timestamp: 2.0)
+        XCTAssertNotNil(sample, "a real captured 6-float /muse/eeg message must decode to a sample")
+        XCTAssertEqual(sample?.channels.count, 4)
     }
 
     func testIgnoresEEGAddressWithNonFloatArguments() {
