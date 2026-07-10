@@ -21,16 +21,29 @@ struct SleepValidationView: View {
     @State private var samplesIngested: UInt64 = 0
     @State private var streamStatus: String = "Idle — open Muse stream to begin"
     @State private var bridgeAvailable: Bool = false
+    @State private var selectedTab: Int = 0
 
     var body: some View {
         VStack(spacing: 0) {
             headerBar
             Divider()
-            plotterContainer
+            Picker("", selection: $selectedTab) {
+                Text("2D Plotter").tag(0)
+                Text("3D Workspace").tag(1)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             Divider()
-            controlsPanel
-            Divider()
-            statusBar
+            if selectedTab == 0 {
+                plotterContainer
+                Divider()
+                controlsPanel
+                Divider()
+                statusBar
+            } else {
+                NeuralWorkspaceHost()
+            }
         }
         .frame(minWidth: 900, minHeight: 600)
         .onAppear {

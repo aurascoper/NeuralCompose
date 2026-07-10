@@ -17,6 +17,7 @@ network at runtime.**
 | ✅ | Physiological validation (eyes-open/eyes-closed alpha response, 2026-07-10) |
 | ✅ | Communication-mode architecture (intent → carousel → MLX LLM) |
 | ✅ | Phase B Sleep Validation Toolkit — `EEGScalpPlotterView` (3D depth-stacked) |
+| ✅ | Phase B Sleep Validation Toolkit — `NeuralWorkspaceView` (SceneKit 3D live topography) |
 | 🚧 | Sleep-stage classifier (4-class: Wake / N1 / N2_N3 / Uncertain_REM) |
 | 🚧 | Dream-session controller + session FSM |
 | 🚧 | LLM primer generation + dream-report analogy extraction |
@@ -36,7 +37,8 @@ network at runtime.**
 
 **Sleep validation (Phase 4, in progress):**
 - `EEGScalpPlotterView` — 3D depth-stacked time-series plotter with adjustable µV/px scale and z-depth spacing, 60 Hz display-link refresh.
-- Phase B debug window (`Cmd+Shift+D`) with SwiftUI host.
+- `NeuralWorkspaceView` — SceneKit-based 3D live topography. 4 Muse electrodes rendered as nodes in head-space; alpha-band power drives emissive intensity, theta-band power drives Y-elevation, FSM state drives edge color and pulse phase. Per-electrode 2nd-order Butterworth biquads for the bandpass. Mouse pan/zoom via `SCNView.allowsCameraControl`.
+- Phase B debug window (`Cmd+Shift+D`) with a tabbed SwiftUI host: 2D Plotter / 3D Workspace.
 - `validate-muse-physiology.py` — automated 5-condition protocol (eyes-open, eyes-closed, blinks, jaw clench, head turn) with pass/fail per signature.
 - `SLEEP_CYCLE_DESIGN.md` — full architectural specification (D1–D8, hypothesis registry, risk register, safety requirements, integration checklist).
 

@@ -31,7 +31,8 @@ Before the sleep-mode architecture is built, the platform needs a debugging surf
 | # | Component | What it does | Why it matters |
 |---|-----------|--------------|----------------|
 | 1 | Continuous EEG plotter | 4-channel time-series display | "Is the signal alive?" |
-| 2 | PSD heatmap | Per-channel spectrogram 0.5–40 Hz | "Are we seeing alpha in eyes-closed?" |
+| 2 | 3D live neural workspace | SceneKit topography of 4 electrodes, alpha→emissive, theta→elevation, FSM→color | "Is the signal behaving as expected across channels?" |
+| 3 | PSD heatmap | Per-channel spectrogram 0.5–40 Hz | "Are we seeing alpha in eyes-closed?" |
 | 3 | Alpha/theta ratio tracker | 30s epoch, per-channel | A feature the classifier will use |
 | 4 | Blink detector | Frontal transient | "Can we detect events?" |
 | 5 | Jaw-clench detector | Broadband >20 Hz | "Is EMG contamination observable?" |
@@ -114,13 +115,14 @@ before EEG acquisition is proven:
 
 **Phase B — Sleep Validation Toolkit (gate before any classifier work)**
 4. ✅ EEGScalpPlotterView (3D depth-stacked)
-5. ⏳ PSD heatmap
-6. ⏳ Alpha/theta ratio tracker
-7. ⏳ Blink detector
-8. ⏳ Jaw-clench detector
-9. ⏳ Electrode-quality monitor
-10. ⏳ Line-noise monitor
-11. ⏳ Signal-dropout detector
+5. ✅ NeuralWorkspaceView (SceneKit 3D live topography)
+6. ⏳ PSD heatmap
+7. ⏳ Alpha/theta ratio tracker
+8. ⏳ Blink detector
+9. ⏳ Jaw-clench detector
+10. ⏳ Electrode-quality monitor
+11. ⏳ Line-noise monitor
+12. ⏳ Signal-dropout detector
 
 **Phase C — Sleep staging and FSM (D1–D5)**
 12–25. EEGWindowingConfig preset, SleepFeatures, SleepStage types, MockSleepStageClassifier, SleepStageSmoother, SleepSessionFSM, TMRBudget, BCIAudio, DreamSessionController, AudioFeedbackProtocol mock, DreamAnalysisPredicting, session wizard UI, recall UI, SessionAnalyzer.
