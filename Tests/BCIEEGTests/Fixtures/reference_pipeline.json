@@ -1,0 +1,66 @@
+{
+  "channels" : [
+    {
+      "clipPercent" : 0.63873994,
+      "healthStatus" : "healthy",
+      "name" : "TP9",
+      "rms" : 161.66574
+    },
+    {
+      "clipPercent" : 0.22573942,
+      "healthStatus" : "healthy",
+      "name" : "AF7",
+      "rms" : 159.7188
+    },
+    {
+      "clipPercent" : 0.6951748,
+      "healthStatus" : "healthy",
+      "name" : "AF8",
+      "rms" : 172.9586
+    },
+    {
+      "clipPercent" : 0.3232178,
+      "healthStatus" : "healthy",
+      "name" : "TP10",
+      "rms" : 145.42465
+    }
+  ],
+  "durationSeconds" : 304.55078125,
+  "intentCounts" : {
+    "jawClench" : 79,
+    "select" : 224
+  },
+  "meanConfidence" : 0.9216933,
+  "sampleCount" : 77966,
+  "sampleRate" : 256,
+  "windowCount" : 303,
+  "windowSpotChecks" : [
+    {
+      "alphaEnergy" : 91.95111,
+      "betaEnergy" : 126.5208,
+      "confidence" : 0.95,
+      "emgEnergy" : 116.11292,
+      "intent" : "select",
+      "label" : "first",
+      "sequence" : 0
+    },
+    {
+      "alphaEnergy" : 64.0207,
+      "betaEnergy" : 61.760338,
+      "confidence" : 0.95,
+      "emgEnergy" : 62.549343,
+      "intent" : "select",
+      "label" : "middle",
+      "sequence" : 151
+    },
+    {
+      "alphaEnergy" : 454.79648,
+      "betaEnergy" : 543.3259,
+      "confidence" : 0.95,
+      "emgEnergy" : 537.9312,
+      "intent" : "select",
+      "label" : "last",
+      "sequence" : 302
+    }
+  ]
+}

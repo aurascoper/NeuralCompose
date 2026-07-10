@@ -24,6 +24,13 @@ Models/*
 Recordings/*
 !Recordings/.gitkeep
 !Recordings/README.md
+# Raw EEG (Recordings/golden/*.csv etc.) still never leaves the machine —
+# only the golden recording's own README and its derived report images
+# (plots, not raw waveform data export) are deliberately committed.
+!Recordings/golden/
+Recordings/golden/*
+!Recordings/golden/README.md
+!Recordings/golden/report/
 
 ## Editors
 .vscode/

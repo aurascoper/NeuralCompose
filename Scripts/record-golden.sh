@@ -26,7 +26,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 EXECUTABLE=".build/debug/NeuralCompose"
-RECORDINGS_DIR="${HOME}/NeuralCompose/Recordings"
+RECORDINGS_DIR="${HOME}/Documents/NeuralCompose/Recordings"
 GOLDEN_DIR="${REPO_ROOT}/Recordings/golden"
 
 # ── Preflight ────────────────────────────────────────────────────────────
@@ -57,24 +57,37 @@ announce() {
 SEGMENTS=(
     "eyes_open_rest:30"
     "eyes_closed_rest:30"
-    "blinks:30"
-    "jaw_clenches:30"
-    "tp9_electrode_lift:20"
-    "reseat_and_settle:15"
-    "imagined_speech:60"
+    "blinks_20:30"
+    "jaw_clenches_10:20"
+    "tp9_lift:10"
+    "reseat_1:5"
+    "af7_lift:10"
+    "reseat_2:5"
+    "af8_lift:10"
+    "reseat_3:5"
+    "tp10_lift:10"
+    "reseat_4:5"
     "eyes_open_baseline:15"
 )
+# Per-channel electrode-lift segments (tp9_lift/af7_lift/af8_lift/tp10_lift)
+# give analyze-eeg-session.py's per-channel quality table known-bad windows
+# for every sensor, not just TP9 — validates the artifact/clipping detector
+# against a deliberate disruption on each channel in turn, with a short
+# reseat pause after each so the next lift starts from settled contact.
 
 # Human cue shown/spoken at the start of each segment.
 cue_for() {
     case "$1" in
         eyes_open_rest)      echo "Eyes open, relax, look at a fixed point." ;;
         eyes_closed_rest)    echo "Close your eyes and relax. Alpha should rise." ;;
-        blinks)              echo "Eyes open. Blink deliberately about every three seconds. Optional: press b each blink." ;;
-        jaw_clenches)        echo "Clench your jaw for two seconds, then relax. Repeat. Optional: press j." ;;
-        tp9_electrode_lift)  echo "Lift the left ear sensor, T P 9, off your skin and hold it away." ;;
-        reseat_and_settle)   echo "Reseat T P 9 and hold still while the signal settles." ;;
-        imagined_speech)     echo "Silently imagine saying the word yes, once per second, without moving." ;;
+        blinks_20)           echo "Eyes open. Blink deliberately, aiming for about twenty blinks total. Optional: press b each blink." ;;
+        jaw_clenches_10)     echo "Clench your jaw firmly then relax, aiming for about ten clenches. Optional: press j." ;;
+        tp9_lift)            echo "Lift the left ear sensor, T P 9, off your skin and hold it away." ;;
+        af7_lift)            echo "Lift the left forehead sensor, A F 7, off your skin and hold it away." ;;
+        af8_lift)            echo "Lift the right forehead sensor, A F 8, off your skin and hold it away." ;;
+        tp10_lift)           echo "Lift the right ear sensor, T P 10, off your skin and hold it away." ;;
+        reseat_1|reseat_2|reseat_3|reseat_4)
+                              echo "Reseat the sensor and hold still while the signal settles." ;;
         eyes_open_baseline)  echo "Eyes open, relax. Final baseline." ;;
         *)                   echo "$1" ;;
     esac

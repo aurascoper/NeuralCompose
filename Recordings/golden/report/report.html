@@ -1,0 +1,66 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>EEG session report — calibration_2026-07-10T141352_muses</title>
+<style>
+body { font-family: -apple-system, sans-serif; max-width: 980px; margin: 2rem auto; color: #222; }
+h1, h2 { border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+table { border-collapse: collapse; margin: 0.5rem 0 1.5rem; }
+td, th { border: 1px solid #ccc; padding: 4px 10px; text-align: right; }
+th { background: #f0f0f0; }
+img { max-width: 100%; margin: 0.5rem 0 1.5rem; border: 1px solid #ddd; }
+.verdict { font-size: 1.3rem; font-weight: bold; padding: 8px 14px; border-radius: 6px; display: inline-block; }
+.healthy { background: #d4f4dd; color: #1a7a3a; }
+.marginal { background: #fdf0c8; color: #8a6300; }
+.poor { background: #fbdada; color: #a3231b; }
+.rating-good { background: #d4f4dd; color: #1a7a3a; font-weight: bold; }
+.rating-marginal { background: #fdf0c8; color: #8a6300; font-weight: bold; }
+.rating-poor { background: #fbdada; color: #a3231b; font-weight: bold; }
+</style></head><body>
+<h1>EEG session report — calibration_2026-07-10T141352_muses</h1>
+<p class="verdict healthy">HEALTHY</p>
+<ul><li>98 blink-like transient(s) detected on the frontal channel used for detection.</li><li>19 EMG-like burst(s) detected.</li></ul>
+
+<h2>Per-channel quality</h2>
+<table><tr><th>Channel</th><th>Contact</th><th>Clipping</th><th>RMS</th><th>Overall</th></tr>
+<tr><td>TP9</td><td>Excellent</td><td>0.65%</td><td>162.5 uV</td><td class="rating-good">Good</td></tr><tr><td>AF7</td><td>Excellent</td><td>0.85%</td><td>176.6 uV</td><td class="rating-good">Good</td></tr><tr><td>AF8</td><td>Excellent</td><td>0.94%</td><td>175.7 uV</td><td class="rating-good">Good</td></tr><tr><td>TP10</td><td>Excellent</td><td>0.34%</td><td>146.4 uV</td><td class="rating-good">Good</td></tr></table>
+
+<h2>Recording summary</h2>
+<table>
+<tr><th>Duration</th><td>304.6 s</td></tr>
+<tr><th>Sample rate</th><td>265.68 Hz</td></tr>
+<tr><th>Samples</th><td>77973</td></tr>
+<tr><th>Channels</th><td>TP9, AF7, AF8, TP10</td></tr>
+</table>
+
+<h2>Raw traces</h2>
+<img src="raw_traces.png">
+
+<h2>Power spectral density</h2>
+<img src="psd.png">
+<h3>Overall band power by channel</h3>
+<table><tr><th>Channel</th><th>delta</th><th>theta</th><th>alpha</th><th>beta</th></tr><tr><td>TP9</td><td>11097.51</td><td>2331.33</td><td>836.26</td><td>668.41</td></tr><tr><td>AF7</td><td>6602.79</td><td>2011.07</td><td>497.32</td><td>1118.65</td></tr><tr><td>AF8</td><td>15628.56</td><td>3709.37</td><td>653.68</td><td>788.58</td></tr><tr><td>TP10</td><td>10491.39</td><td>1316.36</td><td>338.61</td><td>272.42</td></tr></table>
+
+<h2>Rolling band power</h2>
+<img src="band_power.png">
+
+<h2>RMS timeline</h2>
+<img src="rms_timeline.png">
+<table><tr><th>Channel</th><th>Mean RMS</th></tr>
+<tr><td>TP9</td><td>162.46 uV</td></tr><tr><td>AF7</td><td>176.60 uV</td></tr><tr><td>AF8</td><td>175.71 uV</td></tr><tr><td>TP10</td><td>146.43 uV</td></tr>
+</table>
+
+<h2>Spectrogram</h2>
+<img src="spectrogram.png">
+
+<h2>Clipping</h2>
+<table><tr><th>Channel</th><th>% samples clipped</th></tr><tr><td>TP9</td><td>0.65%</td></tr><tr><td>AF7</td><td>0.85%</td></tr><tr><td>AF8</td><td>0.94%</td></tr><tr><td>TP10</td><td>0.34%</td></tr></table>
+
+<h2>Estimated blink events (frontal channel, heuristic)</h2>
+<table><tr><th>Start</th><th>End</th><th>Channel</th></tr><tr><td>9.3s</td><td>9.4s</td><td>AF7</td></tr><tr><td>9.5s</td><td>9.6s</td><td>AF7</td></tr><tr><td>48.2s</td><td>48.2s</td><td>AF7</td></tr><tr><td>59.4s</td><td>59.5s</td><td>AF7</td></tr><tr><td>66.8s</td><td>66.9s</td><td>AF7</td></tr><tr><td>120.9s</td><td>120.9s</td><td>AF7</td></tr><tr><td>122.9s</td><td>122.9s</td><td>AF7</td></tr><tr><td>124.3s</td><td>124.4s</td><td>AF7</td></tr><tr><td>124.6s</td><td>124.7s</td><td>AF7</td></tr><tr><td>125.3s</td><td>125.4s</td><td>AF7</td></tr><tr><td>126.9s</td><td>127.0s</td><td>AF7</td></tr><tr><td>129.2s</td><td>129.2s</td><td>AF7</td></tr><tr><td>129.2s</td><td>129.4s</td><td>AF7</td></tr><tr><td>129.6s</td><td>129.7s</td><td>AF7</td></tr><tr><td>132.0s</td><td>132.0s</td><td>AF7</td></tr><tr><td>132.1s</td><td>132.1s</td><td>AF7</td></tr><tr><td>132.7s</td><td>132.8s</td><td>AF7</td></tr><tr><td>132.9s</td><td>132.9s</td><td>AF7</td></tr><tr><td>134.1s</td><td>134.2s</td><td>AF7</td></tr><tr><td>135.1s</td><td>135.1s</td><td>AF7</td></tr><tr><td>138.1s</td><td>138.2s</td><td>AF7</td></tr><tr><td>146.6s</td><td>146.6s</td><td>AF7</td></tr><tr><td>146.7s</td><td>146.8s</td><td>AF7</td></tr><tr><td>147.0s</td><td>147.1s</td><td>AF7</td></tr><tr><td>147.3s</td><td>147.3s</td><td>AF7</td></tr><tr><td>149.2s</td><td>149.2s</td><td>AF7</td></tr><tr><td>149.3s</td><td>149.4s</td><td>AF7</td></tr><tr><td>154.7s</td><td>154.8s</td><td>AF7</td></tr><tr><td>154.8s</td><td>154.9s</td><td>AF7</td></tr><tr><td>157.3s</td><td>157.5s</td><td>AF7</td></tr><tr><td>157.6s</td><td>157.8s</td><td>AF7</td></tr><tr><td>157.9s</td><td>158.0s</td><td>AF7</td></tr><tr><td>158.4s</td><td>158.5s</td><td>AF7</td></tr><tr><td>158.6s</td><td>158.7s</td><td>AF7</td></tr><tr><td>165.2s</td><td>165.2s</td><td>AF7</td></tr><tr><td>185.4s</td><td>185.6s</td><td>AF7</td></tr><tr><td>185.7s</td><td>185.8s</td><td>AF7</td></tr><tr><td>185.8s</td><td>186.1s</td><td>AF7</td></tr><tr><td>186.1s</td><td>186.4s</td><td>AF7</td></tr><tr><td>186.4s</td><td>186.5s</td><td>AF7</td></tr><tr><td>186.5s</td><td>186.6s</td><td>AF7</td></tr><tr><td>186.6s</td><td>186.7s</td><td>AF7</td></tr><tr><td>186.7s</td><td>186.9s</td><td>AF7</td></tr><tr><td>186.9s</td><td>187.0s</td><td>AF7</td></tr><tr><td>187.0s</td><td>187.1s</td><td>AF7</td></tr><tr><td>187.1s</td><td>187.3s</td><td>AF7</td></tr><tr><td>187.4s</td><td>187.4s</td><td>AF7</td></tr><tr><td>187.6s</td><td>187.7s</td><td>AF7</td></tr><tr><td>187.8s</td><td>188.1s</td><td>AF7</td></tr><tr><td>188.1s</td><td>188.2s</td><td>AF7</td></tr></table><p><em>...and 48 more</em></p>
+
+<h2>Estimated EMG / jaw-clench bursts (heuristic)</h2>
+<table><tr><th>Start</th><th>End</th><th>Channel</th></tr><tr><td>151.3s</td><td>151.5s</td><td>TP9</td></tr><tr><td>166.2s</td><td>166.4s</td><td>TP9</td></tr><tr><td>195.5s</td><td>195.8s</td><td>TP9</td></tr><tr><td>208.4s</td><td>208.7s</td><td>TP9</td></tr><tr><td>224.6s</td><td>224.8s</td><td>TP9</td></tr><tr><td>237.0s</td><td>237.5s</td><td>TP9</td></tr><tr><td>194.5s</td><td>194.8s</td><td>AF7</td></tr><tr><td>195.8s</td><td>196.3s</td><td>AF7</td></tr><tr><td>288.7s</td><td>292.9s</td><td>AF7</td></tr><tr><td>211.2s</td><td>211.4s</td><td>AF8</td></tr><tr><td>212.1s</td><td>214.4s</td><td>AF8</td></tr><tr><td>215.1s</td><td>215.4s</td><td>AF8</td></tr><tr><td>215.9s</td><td>216.1s</td><td>AF8</td></tr><tr><td>216.9s</td><td>221.8s</td><td>AF8</td></tr><tr><td>224.3s</td><td>224.6s</td><td>AF8</td></tr><tr><td>147.6s</td><td>147.8s</td><td>TP10</td></tr><tr><td>180.6s</td><td>180.8s</td><td>TP10</td></tr><tr><td>209.9s</td><td>210.2s</td><td>TP10</td></tr><tr><td>238.2s</td><td>238.5s</td><td>TP10</td></tr></table>
+
+<h2>Estimated low-amplitude rest periods (heuristic)</h2>
+<table><tr><th>Start</th><th>End</th><th>Channel</th></tr><tr><td>43.2s</td><td>57.1s</td><td></td></tr><tr><td>58.6s</td><td>78.0s</td><td></td></tr><tr><td>94.9s</td><td>103.8s</td><td></td></tr></table>
+
+</body></html>

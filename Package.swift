@@ -120,8 +120,17 @@ let package = Package(
         ),
         .testTarget(
             name: "BCIEEGTests",
-            dependencies: ["BCIEEG", "BCICore"],
-            path: "Tests/BCIEEGTests"
+            // BCIClassifier is pulled in for GoldenRecordingRegressionTests,
+            // which exercises the full playback -> windowing -> features ->
+            // classifier pipeline against a real recording. A dedicated
+            // cross-module test target felt like overkill for one suite.
+            dependencies: ["BCIEEG", "BCICore", "BCIClassifier"],
+            path: "Tests/BCIEEGTests",
+            // Fixtures/reference_pipeline.json is read directly by file path
+            // (relative to #filePath) rather than through Bundle.module, so
+            // it doesn't need SwiftPM resource bundling — just excluded so
+            // the build doesn't warn about an unhandled file.
+            exclude: ["Fixtures/reference_pipeline.json"]
         ),
         .testTarget(
             name: "BCIClassifierTests",

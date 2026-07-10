@@ -106,6 +106,12 @@ public final class EEGScalpPlotterView: NSView {
 
     public override func layout() {
         super.layout()
+        // `containerLayer.frame` is only set from `rebuildLayers()`, which
+        // runs at init time when the view's frame is still `.zero` (SwiftUI
+        // constructs the NSView with `.zero` and resizes it after). Without
+        // re-syncing here, `container.bounds` stays zero forever and
+        // `redraw()`'s size guard silently no-ops on every display-link tick.
+        containerLayer?.frame = bounds
         applyTransforms()
     }
 
