@@ -1,0 +1,91 @@
+\section{Methods}
+\label{sec:methods}
+
+% TODO: full methods. Sections to cover:
+%   3.1 Hardware
+%   3.2 Software architecture
+%   3.3 EEG acquisition (Muse S + BrainFlow + Core Bluetooth)
+%   3.4 Signal processing pipeline (windowing, features, classification)
+%   3.5 Sleep staging model (4-class)
+%   3.6 Session state machine
+%   3.7 LLM primer and analysis
+%   3.8 Safety constraints
+%   3.9 Physiological validation protocol
+%   3.10 D8 pre-registered study design
+
+\subsection{Architecture and Module Boundaries}
+
+The platform is organized into six Swift targets, each with explicit
+isolation rules:
+
+\begin{itemize}
+\item \texttt{BCIBridge}: A thin Obj-C++ shim around the BrainFlow C API. In stub mode (default) it compiles without BrainFlow installed. With \texttt{BCI\_BRAINFLOW\_AVAILABLE=1} at build time, it links the real library.
+\item \texttt{BCICore}: All pure-Swift models, protocols, finite-state machines, and ring buffers. No third-party dependencies. This target owns the \texttt{EEGStreaming}, \texttt{IntentClassifying}, \texttt{NextWordPredicting}, \texttt{SleepStaging}, and \texttt{DreamAnalysisPredicting} protocols.
+\item \texttt{BCIEEG}: Concrete EEG stream implementations (\texttt{BrainFlowService}, \texttt{SyntheticEEGStream}, \texttt{PlaybackEEGStream}) and the Phase B \texttt{EEGScalpPlotterView}.
+\item \texttt{BCIClassifier}: Core ML wrapper for the intent classifier and a mock fallback.
+\item \texttt{BCILLM}: MLX-Swift adapter for the local LLM. \textbf{The only target that links MLX.}
+\item \texttt{NeuralComposeApp}: SwiftUI views, the AppViewModel, the Phase B debug window, and the menu-bar UI.
+\end{itemize}
+
+The app target talks to \texttt{BCILLM} through the \texttt{NextWordPredicting} protocol defined in \texttt{BCICore}. There is exactly one MLX runtime copy in the linked binary.
+
+\subsection{EEG Acquisition}
+
+The Muse S headband is a 4-channel wireless EEG device with TP9, AF7, AF8, and TP10 unipolar electrodes referenced to a CMS/DRL at Fpz. Sample rate is 256 Hz; ADC resolution is 12 bit, giving $\pm 1000\,\mu$V full-scale at $\approx 0.49\,\mu$V/LSB.
+
+Discovery and connection use macOS Core Bluetooth through BrainFlow's \texttt{MUSE\_S\_BOARD} profile (board id 39). The Muse S broadcasts a custom GATT service (\texttt{0000fe8d-0000-1000-8000-00805f9b34fb}) with 16 characteristics in the \texttt{273e0001-0010} range, including a control characteristic and 5 EEG data characteristics. BrainFlow enumerates the service, subscribes to the data characteristics, and decodes the proprietary Muse S packet format into a per-sample channel-major buffer.
+
+The \texttt{BCIBridge} C interface exposes \texttt{bci\_bridge\_create\_session}, \texttt{bci\_bridge\_start\_stream}, \texttt{bci\_bridge\_drain\_samples}, and related functions. The Swift \texttt{BrainFlowService} actor (50 ms poll, 1024-sample batch) drains the bridge buffer and yields \texttt{EEGSample} values on an \texttt{AsyncThrowingStream}.
+
+\subsection{Validation Protocol}
+
+The physiological validation is a 5-condition protocol, automated by
+\texttt{Scripts/validate-muse-physiology.py}:
+
+\begin{enumerate}
+\item Eyes open (30 s) — relax, look at a fixed point.
+\item Eyes closed (30 s) — close eyes gently, same relaxation.
+\item Blinks (5 s) — blink deliberately, $\sim 5$ in 5 s.
+\item Jaw clench (5 s) — clench hard, release, 3 cycles.
+\item Head turn (10 s) — slowly turn head left/right.
+\end{enumerate}
+
+Each segment is event-tagged in the recorded CSV. The script computes
+per-channel statistics and produces a pass/fail verdict. The pass criteria
+are listed in Table \ref{tab:pass-criteria}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Check & Pass criterion \\
+\midrule
+Contact quality (RMS) & all 4 channels in 2--200\,$\mu$V \\
+Alpha rise eyes-closed & best channel $\geq 1.5\times$ \\
+Blink transient & AF7 or AF8 max $\geq 40\,\mu$V \\
+Jaw clench broadband & best channel $\geq 2\times$ baseline \\
+Head turn motion & best channel $\geq 30\,\mu$V swing \\
+\bottomrule
+\end{tabular}
+\caption{Pass criteria for the physiological validation protocol.}
+\label{tab:pass-criteria}
+\end{table}
+
+\subsection{D8 Pre-Registered Study}
+
+% TODO: the full D8 plan is in docs/Research.md. The published paper will
+% include the pre-registered protocol. The OSF link is TBD.
+
+The D8 study is a within-subject crossover with three conditions (Active,
+Sham, Control), $N = 30$ target enrollment, 48-hour washout between
+conditions, and pre-rated engineering problems assigned via Latin square.
+Primary outcome: novelty of post-sleep solution, rated blind by 3
+independent domain experts. Statistical analysis: repeated-measures ANOVA
+with Greenhouse-Geisser correction, paired t-tests with Bonferroni, Cohen's
+$d$ with 95\% CI, Bayes factors. Pre-registration on OSF
+\citep{osf2024} is required before data collection begins.
+
+The D8 protocol is described in detail in \texttt{docs/Research.md} and
+\texttt{SLEEP\_CYCLE\_DESIGN.md} §14. This paper does not report D8 results;
+the study is pre-data-collection.

@@ -1,0 +1,62 @@
+\section{Results}
+\label{sec:results}
+
+% TODO: full results. Currently only the 2026-07-10 validation is complete.
+% The D8 results section is a stub (the study is pre-data-collection).
+
+\subsection{Physiological Validation, 2026-07-10}
+
+A single Muse S unit was used by a single participant to validate the
+end-to-end acquisition and analysis pipeline. The 5-condition protocol
+produced the following per-channel statistics (raw data:
+\texttt{Recordings/muse\_validation\_20260710-004400.csv}):
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Channel & RMS ($\mu$V) & $\alpha$-ratio (closed/open) & Blink max ($\mu$V) & Head turn ($\mu$V) \\
+\midrule
+TP9  & 31.1 & 3.08 & ---  & 36.6 \\
+AF7  & 28.8 & 2.07 & 57.1 & 9.5 \\
+AF8  & 17.9 & 1.31 & 56.2 & 7.2 \\
+TP10 & 31.6 & 2.78 & ---  & 52.7 \\
+\bottomrule
+\end{tabular}
+\caption{Per-channel physiological statistics from the 2026-07-10 validation session.}
+\label{tab:validation-stats}
+\end{table}
+
+\begin{itemize}
+\item \textbf{Contact quality (RMS):} All 4 channels in the 18--32\,$\mu$V range, well within the 2--200\,$\mu$V physiological band. \textbf{Pass.}
+\item \textbf{Eyes-closed alpha rise:} 3.08$\times$ on TP9, 2.07$\times$ on AF7, 2.78$\times$ on TP10. AF8 at 1.31$\times$ is below the 1.5$\times$ threshold but the 3/4 channels that pass are sufficient. \textbf{Pass.}
+\item \textbf{Blink transient:} 57.1\,$\mu$V on AF7, 56.2\,$\mu$V on AF8. Both above the 40\,$\mu$V threshold for normal-blink amplitude. \textbf{Pass.}
+\item \textbf{Head turn motion:} 36--53\,$\mu$V swing in TP9/TP10. Above the 30\,$\mu$V threshold. \textbf{Pass.}
+\item \textbf{Jaw clench:} Beta-band power 0.77$\times$ baseline, below the 2$\times$ threshold. The clench window (5 s with intermittent cycles) was too short to register a sustained EMG burst. \textbf{Fail.}
+\end{itemize}
+
+\noindent\textbf{Verdict:} 4 of 5 pass. The Muse S + BrainFlow + Core Bluetooth
+pipeline produces physiological EEG on the participant. The eyes-closed
+alpha rise is the cardinal signature; the 3$\times$ rise on TP9 is
+consistent with the literature consensus of 2--3$\times$ on frontal
+derivations.
+
+This is a \textbf{calibration observation} on a single participant, not a
+normative threshold. The pipeline is the result; the ratio is a property
+of the data.
+
+\subsection{D8 Pilot Feasibility Study}
+
+% TODO: D8 is pre-data-collection. The published paper will report:
+%   - Per-condition descriptive statistics (mean novelty score, SD, n)
+%   - Repeated-measures ANOVA results (F statistic, df, p, effect size)
+%   - Bayes factors for H1
+%   - LLM-human rater agreement (Cohen's kappa with CI)
+%   - Blinding check compliance
+%
+% Until the data exists, this section is a stub.
+
+\textbf{This study is pre-data-collection.} The full protocol is described
+in \texttt{docs/Research.md}. Pre-registration on OSF is required before
+data collection begins.

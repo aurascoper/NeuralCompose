@@ -1,0 +1,59 @@
+\section{Introduction}
+\label{sec:intro}
+
+% TODO: full intro. Sketch:
+%
+% - BCI as a research field has shifted from clinical EEG (PSG, multi-thousand
+%   dollar systems) to consumer-grade hardware (Muse, OpenBCI, etc.). This
+%   democratizes the field but introduces a new engineering challenge: the
+%   acquired signal is noisier, the channel count is smaller, and the
+%   scientific claims that hold for clinical PSG do not always transfer.
+%
+% - Consumer-grade EEG has been used in three application areas: (a) BCI for
+%   accessibility and communication (the work of the present platform); (b)
+%   meditation and wellness; (c) sleep tracking. This work is in (a) and
+%   aims to extend to (c) with the same hardware.
+%
+% - Sleep-stage estimation from consumer-grade hardware is a known challenge.
+%   Recent work (cite) has shown that 4-channel frontal EEG can estimate
+%   sleep stage with moderate accuracy. The present work builds on this
+%   literature.
+%
+% - AI-assisted dream incubation is a recent research direction. The Dormio
+%   system \citep{maes2020dormio} demonstrated that hypnagogic-state audio
+%   cues can incubate dream content. The present work extends this to a
+%   fully automated, on-device pipeline.
+%
+% - The contribution of this paper is the platform, not the empirical
+%   question. We describe the architecture (§\ref{sec:methods}), the
+%   validation (§\ref{sec:results}), and the planned study (§\ref{sec:methods}-D8).
+%   We do not claim that the platform improves creative problem solving.
+%   That is a pre-registered empirical question to be tested in future work.
+
+The NeuralCompose platform is a privacy-first, fully on-device macOS
+research artifact for EEG-driven communication and sleep-cycle research.
+This paper describes the platform, the validation that the
+hardware-and-software pipeline is operational, and the pre-registered
+research program that will test whether AI-assisted dream incubation
+improves creative problem solving.
+
+The platform is implemented in Swift 6 with strict concurrency. EEG
+acquisition uses BrainFlow \citep{brainflow2022} over native Bluetooth Low
+Energy on the macOS host's Core Bluetooth stack. Sleep-stage classification
+runs as a small convolutional neural network on the Apple Neural Engine
+(ANE) via Core ML. The local large language model (LLM) uses the MLX-Swift
+runtime. No network calls occur at any point during a session.
+
+The platform is open source at \url{https://github.com/aurascoper/NeuralCompose}.
+The repository contains the full type-level design
+(\texttt{SLEEP\_CYCLE\_DESIGN.md}, $\sim 1{,}500$ lines), the validation
+toolkit (\texttt{Sources/BCIEEG/EEGScalpPlotterView.swift},
+\texttt{Scripts/validate-muse-physiology.py}), and a draft manuscript
+(\texttt{paper/}). The platform is useful independently of the empirical
+question.
+
+The remainder of the paper is organized as follows. Section
+\ref{sec:methods} describes the architecture, the validation protocol, and
+the planned experimental study. Section \ref{sec:results} reports the
+current validation results. Section \ref{sec:discussion} discusses the
+implications, the limitations, and the open research questions.

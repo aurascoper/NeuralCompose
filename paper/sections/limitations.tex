@@ -1,0 +1,16 @@
+\section{Limitations}
+\label{sec:limitations}
+
+The present work has several limitations that the reader should keep in mind.
+
+\paragraph{Single-participant validation.} The 2026-07-10 physiological validation was conducted on a single participant. The 3$\times$ eyes-closed alpha rise is a calibration observation, not a normative threshold. Multi-participant validation is required before generalizing the result.
+
+\paragraph{Single Muse S unit.} The Muse S device is a consumer-grade EEG headband with 12-bit ADC and 256 Hz sample rate. The 0.5--2 Hz delta band is near the noise floor, limiting slow-wave detection in N3. Different Muse S units may have slightly different signal characteristics.
+
+\paragraph{No chin EMG or EOG.} The Muse S does not measure chin EMG (electromyography) or EOG (electrooculography). REM detection without atonia is unreliable; the 4-class output labels REM as \texttt{Uncertain\_REM} precisely because we cannot measure the defining REM criterion.
+
+\paragraph{D8 is pre-data-collection.} The empirical claim that AI-assisted cognitive incubation improves creative problem solving is not a result of this paper. The D8 within-subject crossover study is pre-registration, not pre-conclusion. The pre-registration on OSF is required before data collection begins.
+
+\paragraph{Channel mapping from PSG to Muse S is lossy.} The public Sleep-EDFx and SHHS datasets use central and occipital derivations. Mapping these to the Muse S's frontal derivations is not exact; the platform's classifier accuracy on per-user Muse S data is expected to be lower than published PSG accuracy. Per-user fine-tuning is the planned mitigation.
+
+\paragraph{The LLM in the loop is a moving target.} The platform specifies the protocol and prompt templates; the underlying model is swappable. Analyses are not directly comparable across model versions. We document the model version per session.

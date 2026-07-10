@@ -1,0 +1,39 @@
+\section{Discussion}
+\label{sec:discussion}
+
+% TODO: full discussion. The published paper will discuss:
+%   - The platform vs. the empirical question (separation of concerns)
+%   - Domain shift from PSG to Muse S
+%   - The 4-class sleep staging limit
+%   - LLM as a moving target
+%   - Privacy posture (on-device, no telemetry)
+%   - Open-source contribution vs. closed-system research
+
+The NeuralCompose platform is useful independently of whether the D8
+hypotheses are supported. If the active condition produces a significant
+increase in novelty, the platform is a validated research instrument. If
+it does not, the platform is a documented open-source failure mode with
+well-instrumented data and a pre-registered design --- itself a
+contribution, since pre-registered negative results are publishable when
+they are well-instrumented.
+
+The largest expected source of model error is the channel mapping from
+public PSG datasets (central and occipital derivations) to Muse S (4
+unipolar frontal channels). We expect a model trained on Sleep-EDFx to
+underperform on per-user Muse S data, and we plan per-user fine-tuning
+as the path to acceptable accuracy. The validation toolkit provides the
+debugging surface for this iteration.
+
+The 4-class output is the honest upper bound for sleep staging from Muse
+S alone. We do not claim 5-class AASM scoring. The \texttt{Uncertain\_REM}
+flag is a weak REM proxy and is labeled accordingly.
+
+The local LLM is a moving target. The platform specifies the protocol
+(\texttt{DreamAnalysisPredicting}) and the prompt templates; the
+underlying model is swappable. We document the model version per session
+to make the analyses reproducible.
+
+The privacy posture is structural: no network calls at runtime, no
+telemetry, no cloud sync. All session data, EEG, dream reports, and
+analyses stay on the user's machine. A single action deletes everything.
+This is not a feature; it is a constraint that the codebase enforces.

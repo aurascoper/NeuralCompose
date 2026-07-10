@@ -1,0 +1,84 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8
+
+% ============================================================================
+%  NeuralCompose: An open-source, privacy-preserving platform for EEG-guided
+%  cognitive incubation and dream-report analysis using consumer-grade hardware
+%
+%  Author: Hunter Kinder (hkinder@stlteach.org)
+%  Date: 2026-07-10 (draft, in preparation)
+%
+%  This is a manuscript skeleton. Sections marked TODO need real content;
+%  sections marked "draft" have placeholder text. The full design specification
+%  is in SLEEP_CYCLE_DESIGN.md at the repository root.
+% ============================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% --- packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{natbib}
+
+% --- hyperref colors ---
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black,
+}
+
+% --- title metadata ---
+\title{NeuralCompose: An Open-Source, Privacy-Preserving Platform for EEG-Guided
+Cognitive Incubation and Dream-Report Analysis Using Consumer-Grade Hardware}
+
+\author{
+  Hunter Kinder \\
+  \href{mailto:hkinder@stlteach.org}{hkinder@stlteach.org} \\
+  \\[1em]
+  \textit{Draft co-authors TBD}
+}
+
+\date{\today \\ \small Draft, in preparation. Not for distribution.}
+
+\begin{document}
+\maketitle
+
+% Abstract: short, factual, no claims about creative problem solving.
+\input{sections/abstract}
+
+% Introduction: the platform and its motivation.
+\input{sections/introduction}
+
+% Methods: the architecture, the validation, the planned study.
+\input{sections/methods}
+
+% Results: only the validation we have. The D8 results section is a stub.
+\input{sections/results}
+
+% Discussion: what we know, what we don't, and what the platform enables.
+\input{sections/discussion}
+
+% Related work
+\input{sections/related}
+
+% Limitations
+\input{sections/limitations}
+
+% Conclusion
+\input{sections/conclusion}
+
+% Bibliography
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

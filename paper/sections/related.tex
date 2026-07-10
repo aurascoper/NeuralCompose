@@ -1,0 +1,41 @@
+\section{Related Work}
+\label{sec:related}
+
+% TODO: full related work. Key references:
+%   - BrainFlow: brainflow.readthedocs.io (cite)
+%   - Muse SDK / Muse LSL: muselsl, muse-js
+%   - AASM scoring: berry2017
+%   - Dormio / dream incubation: maes2020dormio
+%   - TMR for declarative memory: rasch2013
+%   - TMR for creative insight: schreiner2024sleep
+%   - Sleep staging with consumer EEG: kothe2019
+%   - On-device LLM for EEG: relevant works TBD
+
+The Muse family of consumer EEG devices has been used in a wide range of
+research applications \citep{brainflow2022}. The Muse S, the device used
+in the present work, has 4 unipolar frontal channels at 256 Hz. The
+Muse-LSL and muse-js open-source projects provide Linux and browser-based
+streaming for the Muse family.
+
+The American Academy of Sleep Medicine (AASM) scoring standard
+\citep{berry2017} defines 5 sleep stages (Wake, N1, N2, N3, REM) using
+central and occipital EEG, EOG, and chin EMG. The Muse S's 4-channel
+frontal configuration is insufficient for full AASM scoring; the
+present work outputs a 4-class model that collapses N2/N3 and labels REM
+as uncertain.
+
+Dream incubation has been studied at the MIT Media Lab, with the Dormio
+system \citep{maes2020dormio} demonstrating that hypnagogic-state audio
+cues can incubate dream content. The present work extends this paradigm
+to a fully automated, on-device pipeline with local LLM-based primer
+generation and dream-report analysis.
+
+Targeted Memory Reactivation (TMR) for declarative memory consolidation
+is well-established \citep{rasch2013}. TMR for creative insight is
+plausible but unproven; recent reviews \citep{schreiner2024sleep} note
+the limited evidence base.
+
+The 4-class sleep staging problem from consumer-grade EEG has been
+addressed by several groups \citep{kothe2019}. The present work builds on
+this literature with a Muse-S-specific adaptation that includes a
+per-user alpha baseline calibration.

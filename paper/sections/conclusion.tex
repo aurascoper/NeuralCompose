@@ -1,0 +1,32 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+The NeuralCompose platform is an open-source, privacy-preserving macOS
+artifact for EEG-driven communication and sleep-cycle research. The
+hardware-and-software pipeline --- Muse S headband, BrainFlow, Core
+Bluetooth, the Swift acquisition stack --- has been validated end-to-end
+on consumer hardware. The physiological validation protocol confirms
+that the pipeline produces classifiable EEG: a single-participant session
+on 2026-07-10 showed an eyes-closed alpha rise of approximately
+3$\times$ on TP9, 2$\times$ on AF7, and 3$\times$ on TP10, consistent
+with the literature consensus for frontal derivations.
+
+The platform includes a Sleep Validation Toolkit, anchored by the
+3D depth-stacked \texttt{EEGScalpPlotterView}, that provides a debugging
+surface for multi-session experimentation. The architectural
+specification (\texttt{SLEEP\_CYCLE\_DESIGN.md}, $\sim 1{,}500$ lines)
+documents the full D1--D8 design with type signatures, hypothesis
+registry, risk register, safety requirements, and integration
+checklist.
+
+The empirical question --- whether AI-assisted cognitive incubation
+during sleep improves creative problem solving --- is presented as a
+pre-registered research program (D8, within-subject crossover, $N=30$
+target). The D8 study is pre-data-collection. The platform ships
+regardless of the outcome; the empirical question is separate.
+
+The repository, the architectural specification, the validation toolkit,
+and this draft manuscript are open source at
+\url{https://github.com/aurascoper/NeuralCompose}. The platform is
+useful independently of the empirical question, and the empirical
+question is open.
