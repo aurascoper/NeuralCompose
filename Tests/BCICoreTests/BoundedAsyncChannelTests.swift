@@ -31,17 +31,18 @@ final class BoundedAsyncChannelTests: XCTestCase {
         XCTAssertFalse(ok)
     }
 
-    /// Validates the pattern `AppViewModel` uses to fan raw samples out
-    /// to visualization consumers: a single `BoundedAsyncChannel<EEGSample>`
-    /// whose `stream` is handed to multiple consumers. Each consumer must
-    /// see every sample in order, and a single `finish()` must terminate
-    /// every consumer.
-    func testEEGSampleFanOut() async {
-        let ch = BoundedAsyncChannel<EEGSample>(capacity: 8, overflow: .dropOldest)
+    /// Documents `BoundedAsyncChannel`'s single-consumer semantics.
+    ///
+    /// `BoundedAsyncChannel` is a queue, NOT a broadcast channel: its one
+    /// `AsyncStream` delivers each element to exactly one iterator. Two
+    /// concurrent consumers of the same `stream` therefore *split* the
+    /// elements — together they see the full set with no duplication, but
+    /// neither sees all of it. The raw-`EEGSample` fan-out that needs every
+    /// consumer to see every sample uses `AsyncMulticastChannel` instead
+    /// (see `AsyncMulticastChannelTests`).
+    func testTwoConsumersSplitTheStream() async {
+        let ch = BoundedAsyncChannel<EEGSample>(capacity: 16, overflow: .dropOldest)
 
-        // Two consumers reading from the same channel. AsyncStream values
-        // are single-iteration, so we capture the streams first and then
-        // iterate each in its own task.
         let s1 = ch.stream
         let s2 = ch.stream
 
@@ -56,16 +57,17 @@ final class BoundedAsyncChannelTests: XCTestCase {
             return out
         }()
 
-        // Yield a handful of samples. The order must be preserved on both
-        // consumers.
-        let produced: [EEGSample] = (0..<5).map { i in
+        let produced: [EEGSample] = (0..<10).map { i in
             EEGSample(timestamp: TimeInterval(i), channels: [Float(i), Float(-i)])
         }
         for s in produced { _ = ch.send(s) }
         ch.finish()
 
         let (r1, r2) = await (received1, received2)
-        XCTAssertEqual(r1, produced)
-        XCTAssertEqual(r2, produced)
+        // Each element is delivered exactly once, to exactly one consumer:
+        // the union is the produced set and the counts sum without overlap.
+        XCTAssertEqual(r1.count + r2.count, produced.count)
+        XCTAssertEqual(Set(r1 + r2), Set(produced))
+        XCTAssertTrue(Set(r1).isDisjoint(with: Set(r2)))
     }
 }
