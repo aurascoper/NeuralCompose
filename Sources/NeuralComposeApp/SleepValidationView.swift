@@ -81,7 +81,7 @@ struct SleepValidationView: View {
         // pipeline load, then the running `AppViewModel`). We key on
         // `ObjectIdentifier` because `AppViewModel` is a reference type
         // and `.task(id:)` requires an `Equatable` id.
-        .task(id: viewModel.map(ObjectIdentifier.init)) {
+        .task(id: viewModel.map { ObjectIdentifier($0) }) {
             await runHealthPolling()
         }
     }
@@ -293,14 +293,17 @@ struct EEGScalpPlotterRepresentable: NSViewRepresentable {
     }
 
     /// Wrap an `AsyncStream<EEGSample>` in an
-    /// `AsyncThrowingStream<EEGSample, Never>` so the plotter's
-    /// existing subscribe signature can be used without change.
-    /// Cancellation of the wrapper's source propagates to the
-    /// inner stream's drain task.
+    /// `AsyncThrowingStream<EEGSample, any Error>` so the plotter's
+    /// generic `subscribe<Failure: Error>(to:)` can be used without
+    /// change. The failure type is `any Error` (not `Never`) because
+    /// the `AsyncThrowingStream` closure initializer only exists when
+    /// `Failure == any Error`; this stream never actually throws — it
+    /// only yields and finishes. Cancellation of the wrapper's source
+    /// propagates to the inner stream's drain task.
     private static func throwingStream(
         from stream: AsyncStream<EEGSample>
-    ) -> AsyncThrowingStream<EEGSample, Never> {
-        AsyncThrowingStream<EEGSample, Never> { continuation in
+    ) -> AsyncThrowingStream<EEGSample, any Error> {
+        AsyncThrowingStream<EEGSample, any Error> { continuation in
             let task = Task {
                 for await sample in stream {
                     continuation.yield(sample)
