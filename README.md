@@ -102,6 +102,72 @@ channel-health pipeline and checks the output against a committed reference.
 The app talks to `BCILLM` through `NextWordPredicting`, so there's exactly
 **one** MLX runtime copy in the linked binary.
 
+### Four-layer model
+
+The codebase is organized into four layers, named for *role* (not
+current contents) so they remain meaningful as the platform grows:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                      Interface                      │
+│  SwiftUI · SceneKit · Plotters · Channel-health UI  │
+└────────────────────────▲────────────────────────────┘
+                         │ depends on
+┌────────────────────────┴────────────────────────────┐
+│                     Intelligence                    │
+│  DSP · Features · Classifier · Embeddings · Project │
+└────────────────────────▲────────────────────────────┘
+                         │ depends on
+┌────────────────────────┴────────────────────────────┐
+│                      Runtime                        │
+│  EEGStreaming · AsyncMulticastChannel · Supervisors │
+│  Recording · Diagnostics                            │
+└────────────────────────▲────────────────────────────┘
+                         │ depends on
+┌────────────────────────┴────────────────────────────┐
+│                  External Systems                   │
+│   Muse · BrainFlow · OSC · Playback · Synthetic     │
+└─────────────────────────────────────────────────────┘
+
+  ▼ data flows downward
+```
+
+**External Systems** is whatever produces samples — the Muse over
+BrainFlow, a remote Muse over OSC, a recorded file in playback, a
+deterministic synthetic stream. The layer is named "External" rather
+than "Hardware" because playback and synthetic are not hardware; the
+shared property is "outside the process boundary of the analysis
+pipeline."
+
+**Runtime** owns the streaming substrate: the single-owner
+`EEGStreaming` (see ADR-001), the `AsyncMulticastChannel` that
+distributes samples to multiple consumers, the supervisors that handle
+stalls and reconnects, the recording subsystem, and the transport
+diagnostics.
+
+**Intelligence** is the analysis layer: feature extraction, the
+intent classifier, the (future) sentence embedder, the projection
+that turns a high-dimensional embedding into a 3D point. It does not
+know what produced the samples or what will render the output.
+
+**Interface** is everything the user sees: SwiftUI windows, the
+SceneKit 3D workspace, the 2D plotter, the privacy indicator, the
+channel-health badge. It consumes Intelligence outputs and never
+imports Core ML or MLX directly.
+
+The dependency direction is strictly downward: Interface depends on
+Intelligence, Intelligence depends on Runtime, Runtime depends on
+External Systems. A component that needs to know about a
+non-adjacent layer is a sign that either the data flow should be
+redesigned, or the missing protocol should be added at the layer
+boundary where the knowledge should live.
+
+See [`docs/architecture/PRINCIPLES.md`](docs/architecture/PRINCIPLES.md)
+for the engineering values these layers implement, and
+[`docs/architecture/decision-log/`](docs/architecture/decision-log/)
+for the specific architectural decisions recorded under those
+principles.
+
 ## Playback & synchronization math
 
 Live BLE acquisition is a noisy clock — inter-sample gaps jitter with radio
