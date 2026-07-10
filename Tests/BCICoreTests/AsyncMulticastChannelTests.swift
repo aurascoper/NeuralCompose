@@ -77,24 +77,30 @@ final class AsyncMulticastChannelTests: XCTestCase {
         XCTAssertEqual(ch.subscriberCount, 0)
     }
 
-    // MARK: - Helpers
+}
 
-    private func collect<S: AsyncSequence>(_ seq: S) async -> [S.Element] where S.Element: Sendable {
-        var out: [S.Element] = []
-        do {
-            for try await v in seq { out.append(v) }
-        } catch {
-            // AsyncStream<Element> never throws; ignore for the generic path.
-        }
-        return out
+// MARK: - Helpers
+//
+// Free functions, not methods: `async let collect(...)` spawns a child task,
+// and an instance method would capture the non-Sendable XCTestCase `self`
+// into it — a Swift 6 strict-concurrency error. File-scope functions capture
+// only their Sendable arguments.
+
+private func collect<S: AsyncSequence>(_ seq: S) async -> [S.Element] where S.Element: Sendable {
+    var out: [S.Element] = []
+    do {
+        for try await v in seq { out.append(v) }
+    } catch {
+        // AsyncStream<Element> never throws; ignore for the generic path.
     }
+    return out
+}
 
-    /// Spin briefly until `condition` holds or a short deadline passes.
-    private func waitUntil(_ condition: @Sendable () -> Bool) async {
-        for _ in 0..<100 {
-            if condition() { return }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: 1_000_000)  // 1 ms
-        }
+/// Spin briefly until `condition` holds or a short deadline passes.
+private func waitUntil(_ condition: @Sendable () -> Bool) async {
+    for _ in 0..<100 {
+        if condition() { return }
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 1_000_000)  // 1 ms
     }
 }

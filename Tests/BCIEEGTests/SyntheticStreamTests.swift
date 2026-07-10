@@ -13,19 +13,23 @@ final class SyntheticStreamTests: XCTestCase {
             enableDemoBursts: false
         ))
         let stream = try await s.start()
-        var count = 0
-        var firstChannelCount: Int = 0
-        let collectTask = Task {
+        // Collect inside the task and return the results, rather than
+        // mutating captured `var`s from a concurrently-executing closure
+        // (a Swift 6 strict-concurrency data race).
+        let collectTask = Task { () -> (count: Int, firstChannelCount: Int) in
+            var count = 0
+            var firstChannelCount = 0
             for try await sample in stream {
                 if firstChannelCount == 0 { firstChannelCount = sample.channels.count }
                 count += 1
                 if count >= 50 { break }
             }
+            return (count, firstChannelCount)
         }
-        _ = try? await collectTask.value
+        let result = (try? await collectTask.value) ?? (count: 0, firstChannelCount: 0)
         await s.stop()
-        XCTAssertEqual(firstChannelCount, 4)
-        XCTAssertGreaterThanOrEqual(count, 50)
+        XCTAssertEqual(result.firstChannelCount, 4)
+        XCTAssertGreaterThanOrEqual(result.count, 50)
     }
 
     func testFactoryFallsBackForMuseWhenBridgeUnavailable() {

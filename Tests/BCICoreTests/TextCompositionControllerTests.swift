@@ -31,18 +31,22 @@ final class TextCompositionControllerTests: XCTestCase {
         )
         await c.start()
 
-        // Drain a few snapshots to let predictions settle.
-        var seenCandidates = false
-        let task = Task<Void, Never> {
+        // Drain a few snapshots to let predictions settle. The task returns
+        // whether it observed settled candidates rather than mutating a
+        // captured `var` (a Swift 6 strict-concurrency data race). Cancelling
+        // the task ends the `AsyncStream` iteration, so awaiting the value
+        // resolves promptly with whatever was seen inside the window.
+        let task = Task<Bool, Never> {
             for await s in await c.snapshots {
                 if !s.isPredicting, !s.candidates.isEmpty {
-                    seenCandidates = true
-                    break
+                    return true
                 }
             }
+            return false
         }
         try? await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
+        let seenCandidates = await task.value
         XCTAssertTrue(seenCandidates)
 
         // Tick once → highlight moves to index 1.
