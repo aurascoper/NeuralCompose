@@ -13,6 +13,13 @@ import Foundation
 /// executor. Implementations may return `.unknown` for some or all
 /// channels when they have not yet accumulated enough samples to
 /// form a stable estimate.
+/// ## API stability (frozen as of v0.3.0-foundation)
+///
+/// One method, one return type. `SleepValidationView`'s channel-health
+/// badges and the regression suite's channel-summary comparison both read
+/// through this exact surface. Extending it (e.g. exposing raw band power
+/// alongside RMS-derived status) should be additive — a new method or a new
+/// field on `ChannelHealthState` — rather than changing this signature.
 public protocol ChannelHealthProviding: Sendable {
     /// Return one `ChannelHealthState` per channel known to this
     /// provider, computed over the most recent `windowSeconds` of

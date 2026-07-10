@@ -71,6 +71,20 @@ import QuartzCore
 /// components. The 3D workspace is component #2 (the plotter is #1).
 /// The workspace consumes the same `EEGStream` as the plotter; both
 /// can be open simultaneously without contention.
+///
+/// ## API stability (frozen as of v0.3.0-foundation)
+///
+/// `subscribe(to:)`, `subscribeClassifier(to:)`, `subscribeEmbeddings(provider:contextProvider:interval:)`,
+/// `ingest(_:)`, and `setFSMState(_:)` are the public surface other code
+/// depends on — `NeuralWorkspaceHost`'s SwiftUI wrapper and
+/// `GoldenRecordingRegressionTests`'s scene-checkpoint replay both drive
+/// the view through exactly these. There is currently no dedicated public
+/// "scene snapshot" type: the regression suite reads scene state through
+/// package-internal `testable*` accessors (`testableEmissionIntensity`,
+/// `testableEdgeEmissionIntensity`, `testableEdgeTintColor`), not a stable
+/// public API. Promoting those to a real public `SceneSnapshot` type is
+/// worth doing before anything outside this package/test target needs to
+/// read scene state — not done yet since nothing does.
 @MainActor
 public final class NeuralWorkspaceView: NSView {
 

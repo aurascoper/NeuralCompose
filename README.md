@@ -130,6 +130,15 @@ stale (no update for `classifierStaleThreshold` while samples keep
 flowing), intent-driven color/pulse dim rather than keep showing a
 confidently-colored but outdated classification.
 
+**Measured performance** (Apple Silicon, debug build): replaying the golden
+recording (77,966 samples / 305s) through the full windowing → features →
+classifier → channel-health → 3D-scene-checkpoint pipeline takes ~6.9s
+wall-clock — about 44× faster than real time, consistent with `.instant`
+pacing bypassing per-sample sleeps entirely. `NeuralWorkspaceView.recompute()`
+(the per-frame node/edge material update) costs ~0.42ms/call — at the
+view's 30Hz target refresh, that's ~1.3% of the frame budget, leaving
+headroom for a future embedding-projection node without a redesign.
+
 ## Scientific motivation
 
 This is a platform, not a clinical or productivity tool. The aim is to build

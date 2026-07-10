@@ -47,6 +47,17 @@ public enum PlaybackPacing: Sendable, Equatable {
 /// as-is or resamples onto a deterministic uniform grid first (see
 /// `PlaybackTiming`); `pacing` controls whether the returned stream sleeps
 /// between samples or emits instantly (see `PlaybackPacing`).
+///
+/// ## API stability (frozen as of v0.3.0-foundation)
+///
+/// `GoldenRecordingRegressionTests` depends on `.normalized` + `.instant`
+/// producing byte-identical sample sequences across runs — that guarantee
+/// (see `resample`'s doc comment) is the property CI correctness rests on.
+/// Changing the resampling algorithm, the CSV format, or the two enums'
+/// cases is a breaking change for the committed reference fixture, not just
+/// for callers: it invalidates `Tests/BCIEEGTests/Fixtures/reference_pipeline.json`
+/// and requires regenerating it (`NEURALCOMPOSE_REGENERATE_REFERENCE=1`)
+/// with a deliberate, reviewed diff — never silently.
 public final class PlaybackEEGStream: EEGStreaming, @unchecked Sendable {
 
     public let profile: MuseBoardProfile = .playback
