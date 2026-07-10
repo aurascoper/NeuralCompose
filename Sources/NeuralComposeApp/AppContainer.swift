@@ -17,7 +17,8 @@ public struct AppContainer: Sendable {
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
-            source: streamResolved.source,
+            acquisition: streamResolved.acquisition,
+            transport: streamResolved.transport,
             sourceProfile: streamResolved.profile,
             classifier: classifierResolved.kind,
             predictor: predictorResolved.kind,
@@ -29,7 +30,12 @@ public struct AppContainer: Sendable {
     /// — currently just the OSC bound port/interface, since that's the one
     /// transport where "which port, which interface" is actually useful to
     /// see without grepping logs. `nil` for every other transport.
-    private static func transportDetail(for stream: any EEGStreaming) -> String? {
+    ///
+    /// Internal, not `private`: `AppViewModel.publishMode` needs this too —
+    /// see that function's doc comment for why the initial `pipelineMode`
+    /// (built from this computed property, here) and the one it publishes
+    /// on every supervisor loop iteration have to compute this the same way.
+    static func transportDetail(for stream: any EEGStreaming) -> String? {
         guard let oscStream = stream as? MindMonitorOSCStream else { return nil }
         let diagnostics = oscStream.currentDiagnostics()
         guard let boundPort = diagnostics.boundPort else { return nil }

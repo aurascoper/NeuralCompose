@@ -8,7 +8,7 @@ import BCICore
 ///
 /// This is the one `EEGStreaming` conformer that touches the network at
 /// runtime — see `MuseBoardProfile.requiresNetwork` and
-/// `PipelineMode.Source.oscRemote`. It is meant to be reached only over a
+/// `PipelineMode.Acquisition.remotePhone`. It is meant to be reached only over a
 /// private VPN interface (e.g. Tailscale) between the phone and this Mac,
 /// never over the public internet: OSC has no authentication or encryption
 /// of its own, so exposing this port publicly would let anyone on the

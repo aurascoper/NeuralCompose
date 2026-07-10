@@ -65,7 +65,9 @@ final class AppViewModelOSCSmokeTests: XCTestCase {
 
     func testCalibrationRecorderReceivesSamplesFromLiveOSCStream() async throws {
         let stream = MindMonitorOSCStream(port: testPort)
-        let resolved = EEGStreamFactory.Resolved(stream: stream, source: .oscRemote, profile: .oscRemote)
+        let resolved = EEGStreamFactory.Resolved(
+            stream: stream, acquisition: .remotePhone, transport: .oscUDP, profile: .oscRemote
+        )
         let classifierResolved = ClassifierFactory.live()
         let predictorResolved = await PredictorFactory.live()
         let windowingConfig = EEGWindowingConfig(

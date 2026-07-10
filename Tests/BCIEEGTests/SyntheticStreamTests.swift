@@ -39,7 +39,8 @@ final class SyntheticStreamTests: XCTestCase {
             let r = EEGStreamFactory.make(profile: profile)
             // With BCI_BRIDGE_STUB (default), we should *not* get the
             // BrainFlow service — we should fall back to synthetic.
-            XCTAssertEqual(r.source, .synthetic, "profile \(profile)")
+            XCTAssertEqual(r.acquisition, .synthetic, "profile \(profile)")
+            XCTAssertEqual(r.transport, .none, "profile \(profile)")
             XCTAssertEqual(r.profile, .synthetic, "profile \(profile)")
         }
     }

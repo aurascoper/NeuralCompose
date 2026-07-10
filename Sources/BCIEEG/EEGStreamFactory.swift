@@ -3,7 +3,7 @@ import BCICore
 import BCIBridge
 
 /// Picks the right `EEGStreaming` implementation for a profile, and yields
-/// the actual `PipelineMode.Source` for the privacy banner.
+/// the actual `PipelineMode.Acquisition`/`Transport` for the privacy banner.
 ///
 /// The single place that decides "is the user actually getting BrainFlow,
 /// or did we just transparently fall back to synthetic because the bridge
@@ -12,7 +12,8 @@ public enum EEGStreamFactory {
 
     public struct Resolved: Sendable {
         public let stream: any EEGStreaming
-        public let source: PipelineMode.Source
+        public let acquisition: PipelineMode.Acquisition
+        public let transport: PipelineMode.Transport
         public let profile: MuseBoardProfile
     }
 
@@ -33,7 +34,8 @@ public enum EEGStreamFactory {
             // already in use, not silently get fake data.
             return Resolved(
                 stream: MindMonitorOSCStream(port: oscPort),
-                source: .oscRemote,
+                acquisition: .remotePhone,
+                transport: .oscUDP,
                 profile: .oscRemote
             )
 
@@ -41,18 +43,23 @@ public enum EEGStreamFactory {
             if let path = playbackPath {
                 return Resolved(
                     stream: PlaybackEEGStream(path: path),
-                    source: .playback,
+                    acquisition: .playback,
+                    transport: .replay,
                     profile: .playback
                 )
             }
             BCILog.eeg.notice("Playback profile selected without path; falling back to synthetic")
-            return Resolved(stream: SyntheticEEGStream(), source: .synthetic, profile: .synthetic)
+            return Resolved(
+                stream: SyntheticEEGStream(), acquisition: .synthetic, transport: .none, profile: .synthetic
+            )
 
         case .synthetic:
             // The pure-Swift synthetic stream is fully self-contained and
             // friendlier for tests and offline runs than going through the
             // BrainFlow synthetic generator. Prefer it.
-            return Resolved(stream: SyntheticEEGStream(), source: .synthetic, profile: .synthetic)
+            return Resolved(
+                stream: SyntheticEEGStream(), acquisition: .synthetic, transport: .none, profile: .synthetic
+            )
 
         case .museTwoNativeBLE, .museTwoBLED,
              .museSNativeBLE,   .museSBLED,
@@ -60,14 +67,17 @@ public enum EEGStreamFactory {
             if bci_bridge_is_available() {
                 return Resolved(
                     stream: BrainFlowService(profile: profile),
-                    source: .brainflowMuse,
+                    acquisition: .localMuse,
+                    transport: .ble,
                     profile: profile
                 )
             }
             BCILog.eeg.notice(
                 "Bridge unavailable (BCI_BRAINFLOW_AVAILABLE not set); falling back to synthetic"
             )
-            return Resolved(stream: SyntheticEEGStream(), source: .synthetic, profile: .synthetic)
+            return Resolved(
+                stream: SyntheticEEGStream(), acquisition: .synthetic, transport: .none, profile: .synthetic
+            )
         }
     }
 
@@ -75,6 +85,6 @@ public enum EEGStreamFactory {
     /// runtime supervisor when a live stream throws and we want to keep the
     /// session alive in degraded mode.
     public static func makeSynthetic() -> Resolved {
-        Resolved(stream: SyntheticEEGStream(), source: .synthetic, profile: .synthetic)
+        Resolved(stream: SyntheticEEGStream(), acquisition: .synthetic, transport: .none, profile: .synthetic)
     }
 }

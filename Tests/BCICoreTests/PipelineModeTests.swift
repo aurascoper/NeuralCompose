@@ -1,14 +1,18 @@
 import XCTest
 @testable import BCICore
 
-/// Covers the F1 privacy-banner follow-up: `PipelineMode.transportDetail`
-/// (e.g. OSC's bound port/interface) needs to actually show up in
-/// `substitutionSummary`, not just exist as an unused field.
+/// Covers `PipelineMode`'s decomposed Acquisition/Transport facets (a
+/// refactor of the old combined `Source` enum — see the type's own doc
+/// comment for why) and the F1 privacy-banner follow-up:
+/// `PipelineMode.transportDetail` (e.g. OSC's bound port/interface) needs
+/// to actually show up in `substitutionSummary`, not just exist as an
+/// unused field.
 final class PipelineModeTests: XCTestCase {
 
     func testSubstitutionSummaryAppendsTransportDetailWhenPresent() {
         let mode = PipelineMode(
-            source: .oscRemote,
+            acquisition: .remotePhone,
+            transport: .oscUDP,
             sourceProfile: .oscRemote,
             classifier: .coreML,
             predictor: .mlx,
@@ -19,7 +23,8 @@ final class PipelineModeTests: XCTestCase {
 
     func testSubstitutionSummaryOmitsParenthesesWithoutTransportDetail() {
         let mode = PipelineMode(
-            source: .oscRemote,
+            acquisition: .remotePhone,
+            transport: .oscUDP,
             sourceProfile: .oscRemote,
             classifier: .coreML,
             predictor: .mlx
@@ -28,15 +33,51 @@ final class PipelineModeTests: XCTestCase {
     }
 
     func testFullyLiveSourceIgnoresTransportDetail() {
-        // transportDetail is only ever meaningful for non-brainflowMuse
-        // sources — substitutionSummary shouldn't surface it otherwise.
+        // transportDetail is only ever meaningful for non-localMuse
+        // acquisitions — substitutionSummary shouldn't surface it otherwise.
         let mode = PipelineMode(
-            source: .brainflowMuse,
+            acquisition: .localMuse,
+            transport: .ble,
             sourceProfile: .museSNativeBLE,
             classifier: .coreML,
             predictor: .mlx,
             transportDetail: "should not appear"
         )
         XCTAssertEqual(mode.substitutionSummary, "All systems live")
+    }
+
+    func testIsFullyLiveRequiresLocalMuseOverBLE() {
+        let liveMode = PipelineMode(
+            acquisition: .localMuse, transport: .ble, sourceProfile: .museSNativeBLE,
+            classifier: .coreML, predictor: .mlx
+        )
+        XCTAssertTrue(liveMode.isFullyLive)
+
+        // Same acquisition, but the remote-phone/OSC path — must not read
+        // as "fully live" just because the classifier/predictor are real.
+        let remoteMode = PipelineMode(
+            acquisition: .remotePhone, transport: .oscUDP, sourceProfile: .oscRemote,
+            classifier: .coreML, predictor: .mlx
+        )
+        XCTAssertFalse(remoteMode.isFullyLive)
+    }
+
+    func testAcquisitionBadgesStackAcquisitionAndTransport() {
+        let mode = PipelineMode(
+            acquisition: .remotePhone, transport: .oscUDP, sourceProfile: .oscRemote,
+            classifier: .mock, predictor: .stub
+        )
+        XCTAssertEqual(mode.acquisitionBadges, ["Remote Phone", "OSC/UDP"])
+    }
+
+    func testAcquisitionBadgesOmitTransportWhenNone() {
+        // Synthetic has no wire protocol — nothing meaningful to show as a
+        // second badge, so acquisitionBadges should be a single entry, not
+        // ["Synthetic", "—"].
+        let mode = PipelineMode(
+            acquisition: .synthetic, transport: .none, sourceProfile: .synthetic,
+            classifier: .mock, predictor: .stub
+        )
+        XCTAssertEqual(mode.acquisitionBadges, ["Synthetic"])
     }
 }

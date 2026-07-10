@@ -43,7 +43,7 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
     // the one profile that touches the network at runtime; deliberately a
     // distinct, explicitly-labeled case rather than folding into an
     // existing one, so the privacy banner always shows the user which
-    // transport is actually live (see PipelineMode.Source.oscRemote).
+    // transport is actually live (see PipelineMode.Acquisition.remotePhone).
     case oscRemote
 
     // MARK: BrainFlow mapping (single source of truth)

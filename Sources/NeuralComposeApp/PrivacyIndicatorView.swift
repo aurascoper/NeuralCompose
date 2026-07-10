@@ -29,7 +29,16 @@ struct PrivacyIndicatorView: View {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
                     GridRow {
                         Text("EEG").bold()
-                        Text("\(mode.sourceProfile.displayName) (\(mode.source.rawValue))")
+                        HStack(spacing: 6) {
+                            Text(mode.sourceProfile.displayName)
+                            ForEach(mode.acquisitionBadges, id: \.self) { badge in
+                                Text(badge)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 1)
+                                    .background(Color.secondary.opacity(0.15))
+                                    .cornerRadius(3)
+                            }
+                        }
                     }
                     GridRow {
                         Text("Classifier").bold()
@@ -75,7 +84,7 @@ struct PrivacyIndicatorView: View {
 
     @ViewBuilder
     private var signalBadge: some View {
-        if let q = signalQuality, mode.source != .synthetic {
+        if let q = signalQuality, mode.acquisition != .synthetic {
             HStack(spacing: 4) {
                 Image(systemName: signalIcon(q))
                     .foregroundStyle(signalColor(q))

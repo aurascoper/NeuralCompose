@@ -279,7 +279,7 @@ public final class AppViewModel: ObservableObject {
                 }
                 await current.stream.stop()
                 if Task.isCancelled { break }
-                if current.source == .synthetic { break }   // already at last resort
+                if current.acquisition == .synthetic { break }   // already at last resort
 
                 // Live stream stopped (error or clean completion). Retry the
                 // live source a few times — Muse S powers itself off after
@@ -616,16 +616,26 @@ public final class AppViewModel: ObservableObject {
         }
     }
 
+    /// Publishes `viewModel.pipelineMode`, called at the top of every
+    /// supervisor loop iteration (initial start and every retry). Must
+    /// compute `transportDetail` the same way `AppContainer.pipelineMode`
+    /// does — this is the value that's actually displayed once the app is
+    /// running, so if this doesn't compute it, nothing does: the initial
+    /// `viewModel.pipelineMode` set from `container.pipelineMode` gets
+    /// overwritten by this on the very first loop iteration, before OSC's
+    /// diagnostics (bound port, interface) even have a chance to populate.
     private nonisolated static func publishMode(
         current: EEGStreamFactory.Resolved,
         container: AppContainer,
         on viewModel: AppViewModel?
     ) async {
         let mode = PipelineMode(
-            source: current.source,
+            acquisition: current.acquisition,
+            transport: current.transport,
             sourceProfile: current.profile,
             classifier: container.classifierResolved.kind,
-            predictor: container.predictorResolved.kind
+            predictor: container.predictorResolved.kind,
+            transportDetail: AppContainer.transportDetail(for: current.stream)
         )
         await MainActor.run { viewModel?.pipelineMode = mode }
     }
