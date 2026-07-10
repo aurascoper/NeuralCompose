@@ -169,16 +169,19 @@ struct SleepValidationView: View {
     }
 
     private var plotterContainer: some View {
-        // The representable creates the plotter NSView and
-        // subscribes it to the live sample stream at construction
-        // time. When `viewModel` is nil, the stream parameter is
-        // nil and the plotter renders against an empty buffer
-        // (the same behavior as before the fan-out was wired).
+        // The representable subscribes the plotter to the live sample
+        // stream the first time one is available. `makeStream` is a
+        // closure (not a pre-built stream) so that if `viewModel` is
+        // nil when the window first renders — which it usually is, the
+        // debug window opens before the pipeline is up — the plotter
+        // still picks up the stream on a later update once the view
+        // model binds, instead of rendering forever against an empty
+        // buffer.
         EEGScalpPlotterRepresentable(
             scaleMicrovoltsPerPixel: $scaleMicrovoltsPerPixel,
             layerDepthSpacing: $layerDepthSpacing,
             timeWindowSeconds: $timeWindowSeconds,
-            liveSampleStream: viewModel?.liveSampleStream()
+            makeStream: { viewModel?.liveSampleStream() }
         )
         .background(Color.black)
     }
@@ -258,25 +261,35 @@ struct SleepValidationView: View {
 ///
 /// The wrapper is bidirectional in scale: changes to the SwiftUI
 /// bindings update the plotter, and the plotter's actual sample
-/// consumption is internal. When a `liveSampleStream` is supplied
-/// the wrapper subscribes the plotter to it on `makeNSView`. If
-/// the stream is nil (pipeline still loading) the plotter renders
-/// against an empty buffer, which is the same behavior as before
-/// the fan-out was wired.
+/// consumption is internal. `makeStream` is called to obtain the live
+/// sample stream; it returns nil while the pipeline is still loading.
+/// The plotter subscribes exactly once, the first time `makeStream`
+/// yields a non-nil stream — at `makeNSView` if the pipeline is already
+/// up, otherwise on the first `updateNSView` after the view model binds.
+/// This matters because the debug window is normally created before the
+/// pipeline is ready, so subscribing only in `makeNSView` would leave
+/// the plotter permanently blank even after samples start flowing.
 struct EEGScalpPlotterRepresentable: NSViewRepresentable {
     @Binding var scaleMicrovoltsPerPixel: Double
     @Binding var layerDepthSpacing: Double
     @Binding var timeWindowSeconds: Double
-    let liveSampleStream: AsyncStream<EEGSample>?
+    let makeStream: () -> AsyncStream<EEGSample>?
+
+    /// Tracks whether the plotter has already been subscribed, so we do
+    /// it once across the view's lifetime rather than on every update
+    /// (each `makeStream()` call would otherwise open a new subscription).
+    final class Coordinator {
+        var didSubscribe = false
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> EEGScalpPlotterView {
         let v = EEGScalpPlotterView(frame: .zero)
         v.scaleMicrovoltsPerPixel = scaleMicrovoltsPerPixel
         v.layerDepthSpacing = layerDepthSpacing
         v.timeWindowSeconds = timeWindowSeconds
-        if let stream = liveSampleStream {
-            v.subscribe(to: Self.throwingStream(from: stream))
-        }
+        subscribeIfNeeded(v, context.coordinator)
         return v
     }
 
@@ -290,6 +303,15 @@ struct EEGScalpPlotterRepresentable: NSViewRepresentable {
         if nsView.timeWindowSeconds != timeWindowSeconds {
             nsView.timeWindowSeconds = timeWindowSeconds
         }
+        subscribeIfNeeded(nsView, context.coordinator)
+    }
+
+    /// Subscribe the plotter to the live stream the first time one is
+    /// available. No-op once subscribed, or while `makeStream()` is nil.
+    private func subscribeIfNeeded(_ v: EEGScalpPlotterView, _ coordinator: Coordinator) {
+        guard !coordinator.didSubscribe, let stream = makeStream() else { return }
+        coordinator.didSubscribe = true
+        v.subscribe(to: Self.throwingStream(from: stream))
     }
 
     /// Wrap an `AsyncStream<EEGSample>` in an
