@@ -7,9 +7,15 @@ import BCILLM
 
 /// SwiftUI host for the live 3D neural workspace.
 ///
-/// Hosts a `NeuralWorkspaceView` and a state selector. The view subscribes
-/// to the active EEG stream and animates the 4 Muse electrodes in real time
-/// with band-power and FSM state.
+/// Hosts a `NeuralWorkspaceView`. The view subscribes to the active EEG and
+/// classifier streams and animates the 4 Muse electrodes in real time —
+/// brightness from RMS, elevation from band power, edge pulse and tint from
+/// the live classifier's confidence/intent (see `NeuralWorkspaceView`'s own
+/// doc comment for the full mapping). There is no manual state control:
+/// an earlier "FSM state" picker here drove a `NeuralWorkspaceBridge`
+/// singleton whose `view` reference was never actually assigned, so it was
+/// always a no-op — removed rather than wired up, since live classifier
+/// output now genuinely drives the same visuals it was standing in for.
 ///
 /// This is a Phase B Sleep Validation Toolkit component (#2 in §21 of
 /// `SLEEP_CYCLE_DESIGN.md`). It is opened in the same Phase B Debug window
@@ -19,7 +25,6 @@ struct NeuralWorkspaceHost: View {
     /// before it is up — same nil-tolerant contract as `SleepValidationView`.
     let viewModel: AppViewModel?
 
-    @State private var fsmState: NeuralWorkspaceView.FSMState = .idle
     @State private var samplesIngested: UInt64 = 0
     @State private var streamStatus: String = "Idle"
     @State private var cameraDistance: Float = 0.30
@@ -65,20 +70,6 @@ struct NeuralWorkspaceHost: View {
 
     private var controlsPanel: some View {
         HStack(spacing: 16) {
-            Picker("FSM state", selection: $fsmState) {
-                ForEach([NeuralWorkspaceView.FSMState.idle,
-                         .wake, .n1, .n2n3, .rem], id: \.self) { state in
-                    Text(state.rawValue).tag(state)
-                }
-            }
-            .pickerStyle(.menu)
-            .frame(width: 180)
-            .onChange(of: fsmState) { _, newValue in
-                NeuralWorkspaceBridge.shared.setFSMState(newValue)
-            }
-
-            Divider().frame(height: 22)
-
             HStack(spacing: 6) {
                 Text("Camera distance")
                     .frame(width: 110, alignment: .leading)
@@ -175,17 +166,5 @@ struct NeuralWorkspaceRepresentable: NSViewRepresentable {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
-    }
-}
-
-/// A small singleton so the SwiftUI host can push FSM state into the
-/// workspace without holding a direct reference (which would conflict
-/// with the NSViewRepresentable lifecycle).
-@MainActor
-final class NeuralWorkspaceBridge {
-    static let shared = NeuralWorkspaceBridge()
-    weak var view: NeuralWorkspaceView?
-    func setFSMState(_ state: NeuralWorkspaceView.FSMState) {
-        view?.setFSMState(state)
     }
 }

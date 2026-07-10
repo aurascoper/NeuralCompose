@@ -27,15 +27,34 @@ import QuartzCore
 /// Per-channel features (computed from the live EEG stream) drive
 /// node animations:
 ///
-/// - **Alpha-band power** → emissive intensity (brightness) of each node
-///   via the alpha bandpass + RMS. Higher alpha = brighter node.
+/// - **Broadband RMS** → emissive intensity (brightness) of each node.
+///   Higher overall signal energy = brighter node, independent of band.
 /// - **Theta-band power** → Y-position offset (elevation). Higher theta
-///   = node rises above its rest position.
-/// - **Classifier confidence** → edge thickness between the active
-///   electrode and the highest-confidence neighbor. Optional; only
-///   enabled when a classifier output is bound.
-/// - **FSM state** → overall scene tint. The 4 sleep-stage predictions
-///   (Wake, N1, N2_N3, Uncertain_REM) map to 4 distinct color tints.
+///   = node rises above its rest position. ("Band power" driving height,
+///   per the visualization-pipeline design — theta specifically because
+///   it's the most sleep-stage-relevant band this view was first built
+///   for; swapping bands is a one-line change in `recompute()`.)
+/// - **Classifier confidence** → edge emission intensity/thickness,
+///   smoothed (EMA) so async prediction arrivals don't visually pop.
+///   Only enabled once a classifier stream is bound; a small residual
+///   sine "breathing" motion keeps edges visibly alive even at low
+///   confidence rather than going fully static.
+/// - **Classifier intent** (`IntentClass`) → overall scene/edge tint,
+///   read live from whatever classifier stream is bound via
+///   `subscribeClassifier(to:)`. Falls back to the (non-interactive)
+///   `FSMState` tint when no classifier is bound, so the view still
+///   renders something coherent standalone.
+///
+/// ## Synchronization
+///
+/// EEG samples and classifier predictions arrive on independent async
+/// streams (see `AppViewModel.liveSampleStream()` / `liveClassifierStream()`
+/// — both fan out from one multicast source, but delivery timing isn't
+/// lock-stepped). `recompute()` tracks the wall-clock age of the most
+/// recent classifier prediction against the most recent EEG sample; if a
+/// prediction hasn't arrived in a while despite samples still flowing
+/// (`classifierStaleThreshold`), intent-driven color/pulse are dimmed
+/// rather than showing a confidently-colored but stale classification.
 ///
 /// ## Why a 3D scene graph and not a 2D heatmap
 ///
@@ -98,8 +117,7 @@ public final class NeuralWorkspaceView: NSView {
     private var edgeMap: [String: SCNNode] = [:]  // "i-j" with i<j
     private var ringBuffer: [String: [Double]] = [:]  // per-electrode time-domain
     private let ringCapacity: Int = 256 * 2  // 2-second buffer per electrode
-    private var alphaFilter: [String: Biquad1P] = [:]  // per-electrode biquad state
-    private var thetaFilter: [String: Biquad1P] = [:]
+    private var thetaFilter: [String: Biquad1P] = [:]  // per-electrode biquad state
     private var streamTask: Task<Void, Never>?
     private var displayLink: CVDisplayLink?
     private var lastUpdate: CFTimeInterval = 0
@@ -114,12 +132,28 @@ public final class NeuralWorkspaceView: NSView {
 
     private var classifierStreamTask: Task<Void, Never>?
     /// Most recent classifier confidence (0...1), or nil if never bound.
-    /// Modulates overall edge-pulse intensity in `recompute()`. This is a
-    /// *global* modulation, not per-edge: `IntentClass` (jaw clench / blink
-    /// / rest / select) isn't localized to a specific electrode pair in a
-    /// 4-channel Muse montage, so there's no honest "highest-confidence
-    /// neighbor" to single out.
+    /// Drives edge emission intensity in `recompute()`, smoothed via
+    /// `smoothedConfidence`. This is a *global* modulation, not per-edge:
+    /// `IntentClass` (jaw clench / blink / rest / select) isn't localized to
+    /// a specific electrode pair in a 4-channel Muse montage, so there's no
+    /// honest "highest-confidence neighbor" to single out.
     private var latestClassifierConfidence: Float?
+    /// EMA-smoothed confidence actually used for rendering, so an async
+    /// prediction arrival doesn't make the pulse visibly jump frame-to-frame.
+    private var smoothedConfidence: Float = 0
+    /// Most recent classifier intent, or nil if never bound. Drives the
+    /// scene/edge tint via `intentColor(_:)`, replacing the old
+    /// manually-picked `FSMState` as the primary color source.
+    private var latestIntent: IntentClass?
+    /// Wall-clock time (`CACurrentMediaTime`) the most recent classifier
+    /// prediction and EEG sample arrived, used to detect a stalled
+    /// classifier stream — see the class doc's Synchronization section.
+    private var lastClassifierUpdateTime: CFTimeInterval = 0
+    private var lastSampleUpdateTime: CFTimeInterval = 0
+    /// How long a classifier prediction can go stale (no new prediction,
+    /// while samples keep flowing) before intent-driven visuals dim rather
+    /// than keep showing a possibly-outdated confident classification.
+    public var classifierStaleThreshold: CFTimeInterval = 3.0
 
     private var embeddingTask: Task<Void, Never>?
     /// Most recent embedding vector from `TokenEmbeddingProviding`, kept
@@ -155,7 +189,6 @@ public final class NeuralWorkspaceView: NSView {
         wantsLayer = true
         self.electrodes = Self.defaultElectrodes
         for id in ["TP9", "AF7", "AF8", "TP10"] {
-            alphaFilter[id] = Biquad1P.bandpass(lowHz: 8.0, highHz: 13.0, sampleRate: 256.0)
             thetaFilter[id] = Biquad1P.bandpass(lowHz: 4.0, highHz: 8.0, sampleRate: 256.0)
         }
         buildScene()
@@ -167,7 +200,6 @@ public final class NeuralWorkspaceView: NSView {
         wantsLayer = true
         self.electrodes = Self.defaultElectrodes
         for id in ["TP9", "AF7", "AF8", "TP10"] {
-            alphaFilter[id] = Biquad1P.bandpass(lowHz: 8.0, highHz: 13.0, sampleRate: 256.0)
             thetaFilter[id] = Biquad1P.bandpass(lowHz: 4.0, highHz: 8.0, sampleRate: 256.0)
         }
         buildScene()
@@ -391,6 +423,8 @@ public final class NeuralWorkspaceView: NSView {
                 for try await prediction in stream {
                     guard let self else { return }
                     self.latestClassifierConfidence = prediction.confidence
+                    self.latestIntent = prediction.intent
+                    self.lastClassifierUpdateTime = CACurrentMediaTime()
                 }
             } catch {
                 BCILog.eeg.error("NeuralWorkspace classifier stream error: \(error)")
@@ -453,11 +487,37 @@ public final class NeuralWorkspaceView: NSView {
             ringBuffer[id] = buf
         }
         consumed &+= 1
+        lastSampleUpdateTime = CACurrentMediaTime()
     }
 
     /// Update the FSM state visualization. Called by the host.
     public func setFSMState(_ state: FSMState) {
         fsmState = state
+    }
+
+    // MARK: - Test support
+    //
+    // Internal (not private) so `@testable import BCIEEG` can verify the
+    // signal -> material mappings in `recompute()` directly, without a real
+    // display link or on-screen window — screenshot comparison can't
+    // reliably catch subtle emission-intensity/color regressions in a
+    // native SceneKit view the way it can for web content.
+
+    func testableEmissionIntensity(for electrodeID: String) -> Float? {
+        nodeMap[electrodeID]?.geometry?.firstMaterial.map { Float($0.emission.intensity) }
+    }
+
+    func testableEdgeEmissionIntensity() -> Float? {
+        guard let edge = edgeMap.values.first, let cyl = edge.geometry as? SCNCylinder else { return nil }
+        return cyl.firstMaterial.map { Float($0.emission.intensity) }
+    }
+
+    func testableEdgeTintColor() -> NSColor? {
+        edgeMap.values.first?.geometry?.firstMaterial?.emission.contents as? NSColor
+    }
+
+    func testableTriggerRecompute() {
+        recompute()
     }
 
     // MARK: - Display link
@@ -486,43 +546,39 @@ public final class NeuralWorkspaceView: NSView {
     }
 
     private func recompute() {
-        // Per-electrode alpha and theta power → drive node animations.
+        // Per-electrode broadband RMS (brightness) and theta-band power
+        // (elevation) → drive node animations.
         for (id, buf) in ringBuffer {
             guard buf.count > 32,
                   let node = nodeMap[id],
                   let electrode = electrodes.first(where: { $0.id == id })
             else { continue }
-            // Bandpass filter the entire buffer (DFT-II transposed biquad).
-            // For visualization we don't need exact band power, just a
-            // stable, band-limited RMS. We use a 2nd-order Butterworth
-            // from BCICore's BandpassFilter.
-            // Filter into alpha and theta bands using per-electrode
-            // biquad state, then compute RMS as a proxy for band power.
-            guard let abq0 = alphaFilter[id], let tbq0 = thetaFilter[id] else { continue }
-            var abq = abq0
+            // Broadband RMS — no filtering, the raw signal's overall energy.
+            var rawAcc: Double = 0
+            for v in buf { rawAcc += v * v }
+            let rawRMS = sqrt(rawAcc / Double(buf.count))
+
+            // Theta-band power via per-electrode biquad state (DFT-II
+            // transposed biquad, 2nd-order Butterworth from
+            // `Biquad1P.bandpass`), RMS as a proxy for band power.
+            guard let tbq0 = thetaFilter[id] else { continue }
             var tbq = tbq0
-            var alphaAcc: Double = 0
             var thetaAcc: Double = 0
             for v in buf {
-                let a = abq.process(v)
                 let t = tbq.process(v)
-                alphaAcc += a * a
                 thetaAcc += t * t
             }
-            // Write the updated biquad state back to the dictionary.
-            alphaFilter[id] = abq
             thetaFilter[id] = tbq
-            let alpha = sqrt(alphaAcc / Double(buf.count))
             let theta = sqrt(thetaAcc / Double(buf.count))
-            // Map alpha to emissive intensity (0-1). We use a log
-            // compression so small changes are visible and large
-            // changes don't saturate.
-            let intensity = log1p(Float(alpha) * 50.0).clamped(to: 0...1)
+
+            // Map RMS to emissive intensity (0-1). Log compression so small
+            // changes are visible and large changes don't saturate.
+            let intensity = log1p(Float(rawRMS) * 0.05).clamped(to: 0...1)
             if let mat = node.geometry?.firstMaterial {
                 mat.emission.contents = Self.colorForElectrode(id).withAlphaComponent(1.0)
                 mat.emission.intensity = CGFloat(intensity)
             }
-            // Map theta to Y elevation above rest.
+            // Map theta band power to Y elevation above rest.
             let elevation = Float(log1p(theta * 30.0)).clamped(to: 0...0.04)
             node.position = SCNVector3(
                 electrode.position.x,
@@ -530,24 +586,35 @@ public final class NeuralWorkspaceView: NSView {
                 electrode.position.z
             )
         }
-        // Edge "pulse" — slow oscillation by FSM state, so the user
-        // can see the state visually even without looking at any UI.
-        // Classifier confidence (if bound) scales the pulse amplitude
-        // globally: higher confidence = a more pronounced pulse. This is
-        // deliberately not per-edge — see `latestClassifierConfidence`'s
-        // doc comment for why there's no honest per-electrode mapping.
-        let edgePulse: Float = edgePulseForFSM()
-        let clampedConfidence: Float = (latestClassifierConfidence ?? 1.0).clamped(to: 0...1)
-        let confidenceScale: Float = 0.5 + 0.5 * clampedConfidence
-        let radius: Float = 0.0015 + 0.0008 * edgePulse * confidenceScale
-        let intensity: Float = (0.3 + 0.4 * edgePulse) * confidenceScale
+
+        // Classifier freshness: dim intent-driven visuals if predictions
+        // have stopped arriving despite samples still flowing (see the
+        // class doc's Synchronization section).
+        let now = CACurrentMediaTime()
+        let classifierAge = now - lastClassifierUpdateTime
+        let samplesAreFlowing = (now - lastSampleUpdateTime) < 1.0
+        let isStale = latestIntent != nil && samplesAreFlowing && classifierAge > classifierStaleThreshold
+        let freshnessScale: Float = isStale ? 0.35 : 1.0
+
+        // Edge pulse: primarily classifier confidence (smoothed via EMA so
+        // an async prediction arrival doesn't make it visibly jump), plus a
+        // small residual sine "breathing" motion so edges stay visibly
+        // alive even at low/no confidence.
+        let targetConfidence: Float = (latestClassifierConfidence ?? 0).clamped(to: 0...1)
+        smoothedConfidence += (targetConfidence - smoothedConfidence) * 0.15
+        let breathing: Float = (sin(Float(now) * 1.2) + 1) / 2
+        let pulseIntensity: Float = ((latestIntent != nil)
+            ? (0.15 + 0.75 * smoothedConfidence)
+            : (0.2 + 0.3 * breathing)) * freshnessScale
+        let radius: Float = 0.0015 + 0.0010 * (latestIntent != nil ? smoothedConfidence : breathing) * freshnessScale
+        let tintColor = latestIntent.map(Self.intentColor) ?? Self.fsmColor(fsmState)
         for (_, edge) in edgeMap {
             guard let cyl = edge.geometry as? SCNCylinder,
                   let mat = cyl.firstMaterial
             else { continue }
             cyl.radius = CGFloat(radius)
-            mat.emission.contents = Self.fsmColor(fsmState)
-            mat.emission.intensity = CGFloat(intensity)
+            mat.emission.contents = tintColor
+            mat.emission.intensity = CGFloat(pulseIntensity)
         }
 
         // Embedding marker position — projected via `embeddingProjector`,
@@ -591,6 +658,19 @@ public final class NeuralWorkspaceView: NSView {
         case .n1:   return NSColor(red: 0.4, green: 0.7, blue: 1.0, alpha: 1.0)
         case .n2n3: return NSColor(red: 0.5, green: 0.4, blue: 1.0, alpha: 1.0)
         case .rem:  return NSColor(red: 1.0, green: 0.5, blue: 0.7, alpha: 1.0)
+        }
+    }
+
+    /// Tint for the live intent classifier's output — the primary color
+    /// source when a classifier stream is bound (see `subscribeClassifier`),
+    /// replacing the old manually-picked `FSMState` tint.
+    private static func intentColor(_ intent: IntentClass) -> NSColor {
+        switch intent {
+        case .rest:        return NSColor(white: 0.4, alpha: 1.0)
+        case .jawClench:   return NSColor(red: 1.0, green: 0.55, blue: 0.25, alpha: 1.0)
+        case .singleBlink: return NSColor(red: 0.4, green: 0.75, blue: 1.0, alpha: 1.0)
+        case .doubleBlink: return NSColor(red: 0.3, green: 0.9, blue: 0.8, alpha: 1.0)
+        case .select:      return NSColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 1.0)
         }
     }
 
