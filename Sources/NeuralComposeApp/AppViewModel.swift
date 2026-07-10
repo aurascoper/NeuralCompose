@@ -82,6 +82,10 @@ public final class AppViewModel: ObservableObject {
     // ── Per-start resources (recreated each call to start()) ─────────────
     private var composition: TextCompositionController?
     private var windowChannel: BoundedAsyncChannel<EEGWindow>?
+    /// Internal fan-out for raw `EEGSample`s. Created in `start()`, finished
+    /// in `stop()`. See the doc comment on `liveSampleStream()` for the
+    /// single-owner invariant this field enforces.
+    private var sampleChannel: BoundedAsyncChannel<EEGSample>?
     private var calibrationRecorder: CalibrationRecorder?
     private var trackBRecorder: TrackBRecorder?
     private var imaginedProtocol: ImaginedSpeechProtocol?
@@ -121,8 +125,14 @@ public final class AppViewModel: ObservableObject {
 
         // Per-start resources.
         let channel = BoundedAsyncChannel<EEGWindow>(capacity: 8, overflow: .dropOldest)
+        // Internal fan-out of raw samples. Capacity 8 with dropOldest keeps
+        // a recent history available for visualization consumers; the
+        // production classifier reads from `channel` (windows), not from
+        // here.
+        let samples = BoundedAsyncChannel<EEGSample>(capacity: 8, overflow: .dropOldest)
         let composition = TextCompositionController(predictor: predictor, metrics: metrics)
         self.windowChannel = channel
+        self.sampleChannel = samples
         self.composition = composition
         await composition.start()
 
@@ -161,7 +171,7 @@ public final class AppViewModel: ObservableObject {
         let initialResolved = container.streamResolved
         let containerRef = container
         streamTask = Task.detached(priority: .userInitiated) {
-            [weak self, windowing, metrics = metricsRef, channel] in
+            [weak self, windowing, metrics = metricsRef, channel, samples] in
             var current = initialResolved
             var calibrationSampleCounter = 0
             var calibrationLastLogTime = Date()
@@ -176,6 +186,8 @@ public final class AppViewModel: ObservableObject {
                     for try await sample in stream {
                         if Task.isCancelled { break }
                         samplesThisAttempt += 1
+                        // Single-owner fan-out (see liveSampleStream()).
+                        samples.send(sample)
 
                         // Record sample if in calibration mode (Track A) or
                         // in imagined-speech recording (Track B). The two
@@ -326,10 +338,36 @@ public final class AppViewModel: ObservableObject {
         // Finish channels so any straggling iterators terminate cleanly.
         windowChannel?.finish()
         windowChannel = nil
+        sampleChannel?.finish()
+        sampleChannel = nil
         if let c = composition { await c.finish() }
         composition = nil
 
         isRunning = false
+    }
+
+    /// Returns an `AsyncStream<EEGSample>` that replays the same samples
+    /// the production pipeline is consuming.
+    ///
+    /// **Single-owner invariant.** `AppViewModel` is the canonical owner
+    /// of the active EEG stream. Live BrainFlow sessions are
+    /// single-consumer — only `AppViewModel.start()` calls
+    /// `EEGStreaming.start()`. Visualization consumers (the plotter, the
+    /// channel-health provider) receive replicated samples through this
+    /// fan-out, not by calling `.start()` themselves. Calling
+    /// `EEGStreaming.start()` a second time on a live `BrainFlowService`
+    /// would open a second BLE/BrainFlow session and clobber the
+    /// supervisor's `pollTask` — do not do it.
+    ///
+    /// The returned stream:
+    /// - is backed by a `BoundedAsyncChannel<EEGSample>` (capacity 8,
+    ///   drop-oldest) so visualization can lag briefly without stalling
+    ///   the supervisor;
+    /// - is finished when `stop()` runs;
+    /// - returns an already-finished stream if `start()` has not yet run
+    ///   (e.g. the debug window is opened before the pipeline is up).
+    public func liveSampleStream() -> AsyncStream<EEGSample> {
+        sampleChannel?.stream ?? AsyncStream<EEGSample> { $0.finish() }
     }
 
     public func resetComposition(seed: String = "") async {
