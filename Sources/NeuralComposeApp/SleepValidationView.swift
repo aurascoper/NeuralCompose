@@ -11,10 +11,28 @@ import BCIEEG
 /// raw Muse EEG signal. The view opens in a separate window (via the
 /// "Open Phase B Debug" menu item or programmatically).
 ///
-/// The first component hosted here is `EEGScalpPlotterView`. The other
-/// 7 components (PSD heatmap, alpha/theta tracker, blink detector, etc.)
-/// will be added in subsequent commits.
+/// Components hosted here:
+///  * `EEGScalpPlotterView` — the depth-stacked 2D plotter.
+///  * `NeuralWorkspaceHost` — the SceneKit 3D neural workspace.
+///  * A per-channel health badge that reads from a
+///    `ChannelHealthProviding` constructed from the same live sample
+///    stream that feeds the plotter.
+///
+/// The view does NOT own the EEG stream. The view receives an
+/// `AppViewModel?` (nil during the brief loading window before the
+/// pipeline is up) and reads `viewModel.liveSampleStream()` for both
+/// the plotter subscription and the channel-health provider. See
+/// `AppViewModel.liveSampleStream()` for the single-owner invariant
+/// on the live EEG stream.
 struct SleepValidationView: View {
+    /// The running pipeline, or `nil` during the brief loading window
+    /// before it is up. This is a plain `let`, not `@ObservedObject`:
+    /// `@ObservedObject` requires an `ObservableObject`, and `Optional`
+    /// does not conform. Reactivity is handled by the parent scene —
+    /// `NeuralComposeAppEntry` observes the `AppLoader` and re-creates
+    /// this view with the bound view model once the pipeline is ready.
+    let viewModel: AppViewModel?
+
     @State private var scaleMicrovoltsPerPixel: Double = 0.5
     @State private var layerDepthSpacing: Double = 30.0
     @State private var timeWindowSeconds: Double = 5.0
@@ -22,8 +40,13 @@ struct SleepValidationView: View {
     @State private var streamStatus: String = "Idle — open Muse stream to begin"
     @State private var bridgeAvailable: Bool = false
     @State private var selectedTab: Int = 0
-    @State private var channelHealth: [ChannelHealthState] = ChannelHealthState.initialStates()
-    @State private var healthPollTask: Task<Void, Never>?
+    @State private var channelHealth: [ChannelHealthState] = initialChannelHealthStates()
+
+    /// Muse S layout. Used to populate the per-channel badge row
+    /// before any samples have been received and to construct the
+    /// `EEGChannelHealthProvider` when the live stream becomes
+    /// available.
+    private static let museChannelLabels = ["TP9", "AF7", "AF8", "TP10"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,27 +74,42 @@ struct SleepValidationView: View {
         .frame(minWidth: 900, minHeight: 600)
         .onAppear {
             bridgeAvailable = bci_bridge_is_available()
-            startHealthPolling()
         }
-        .onDisappear {
-            healthPollTask?.cancel()
+        // The health provider drains the live sample stream and
+        // updates `channelHealth` once per second. The task re-runs
+        // when the view model's identity changes (initially nil during
+        // pipeline load, then the running `AppViewModel`). We key on
+        // `ObjectIdentifier` because `AppViewModel` is a reference type
+        // and `.task(id:)` requires an `Equatable` id.
+        .task(id: viewModel.map(ObjectIdentifier.init)) {
+            await runHealthPolling()
         }
     }
 
-    /// Poll the live ring buffer every 1 second to compute per-channel RMS
-    /// and update the badge. The actual ring buffer lives inside
-    /// `EEGScalpPlotterView`; for now we estimate RMS from a 1-second
-    /// synthetic check, with a future path to wire the real buffer.
-    private func startHealthPolling() {
-        healthPollTask?.cancel()
-        healthPollTask = Task { @MainActor in
-            while !Task.isCancelled {
-                // For now, set the initial states to a healthy estimate.
-                // The plotter will update these as samples flow.
-                // This is a placeholder; the real wiring is in a follow-up
-                // commit that exposes the ring buffer's per-channel RMS.
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-            }
+    // MARK: - Wiring
+
+    /// Drain the live sample stream through an
+    /// `EEGChannelHealthProvider` and update `channelHealth` once
+    /// per second. The provider is constructed from the same
+    /// `AsyncStream<EEGSample>` that the plotter subscribes to; if
+    /// `viewModel` is nil (pipeline still loading), this returns
+    /// immediately and the task will be re-invoked when the view
+    /// model binds.
+    @MainActor
+    private func runHealthPolling() async {
+        guard let viewModel = viewModel else { return }
+        let stream = viewModel.liveSampleStream()
+        let provider = EEGChannelHealthProvider(
+            stream: stream,
+            channelCount: 4,
+            channelLabels: Self.museChannelLabels,
+            sampleRate: 256.0,
+            ringSeconds: 4.0
+        )
+        while !Task.isCancelled {
+            let states = await provider.currentChannelHealth(windowSeconds: 1.0)
+            channelHealth = states
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
         }
     }
 
@@ -100,25 +138,15 @@ struct SleepValidationView: View {
         .padding(.vertical, 8)
     }
 
-    /// Per-channel health badge. Shows TP9, AF7, AF8, TP10 with their
-    /// current health state (healthy / saturated / dead / unknown).
-    ///
-    /// The badge reads the live ring-buffer RMS from the
-    /// `EEGScalpPlotterView` (a 2-second rolling window). Channels with
-    /// RMS in 2-200 µV are healthy. Channels with RMS > 200 µV are
-    /// saturated. Channels with RMS < 2 µV are dead. Anything else is
-    /// "unknown" (waiting for samples).
-    ///
-    /// The badge updates at 1 Hz; it does not require the user to start
-    /// any other component. The state is published via a
-    /// `BoundedAsyncChannel<ChannelHealthState>` that the host subscribes
-    /// to. When 3 of 4 channels are healthy, the badge shows a
-    /// `3-of-4 mode` tag — this is the live equivalent of the 4/5
-    /// validation result, and is the actual operating state of this
-    /// Muse S unit as of 2026-07-10.
+    /// Per-channel health badge. Shows TP9, AF7, AF8, TP10 with
+    /// their current health state (healthy / saturated / dead /
+    /// unknown). Reads from the `EEGChannelHealthProvider` started
+    /// by `runHealthPolling()`. When the view first appears and no
+    /// samples have arrived yet, every channel shows `.unknown`
+    /// (the badge does not synthesize fake health numbers).
     private var channelHealthBar: some View {
         HStack(spacing: 8) {
-            ForEach(channelHealth, id: \.id) { ch in
+            ForEach(channelHealth, id: \.channel) { ch in
                 ChannelHealthBadge(state: ch)
             }
             Spacer()
@@ -141,10 +169,16 @@ struct SleepValidationView: View {
     }
 
     private var plotterContainer: some View {
+        // The representable creates the plotter NSView and
+        // subscribes it to the live sample stream at construction
+        // time. When `viewModel` is nil, the stream parameter is
+        // nil and the plotter renders against an empty buffer
+        // (the same behavior as before the fan-out was wired).
         EEGScalpPlotterRepresentable(
             scaleMicrovoltsPerPixel: $scaleMicrovoltsPerPixel,
             layerDepthSpacing: $layerDepthSpacing,
-            timeWindowSeconds: $timeWindowSeconds
+            timeWindowSeconds: $timeWindowSeconds,
+            liveSampleStream: viewModel?.liveSampleStream()
         )
         .background(Color.black)
     }
@@ -222,21 +256,27 @@ struct SleepValidationView: View {
 
 /// NSViewRepresentable wrapper around the AppKit-based `EEGScalpPlotterView`.
 ///
-/// This is the SwiftUI bridge: the plotter is AppKit + Core Animation (for
-/// the 3D effect and the 60 Hz display link), but the host is SwiftUI so
-/// the user gets a normal macOS view. The wrapper is bidirectional in
-/// scale: changes to the SwiftUI bindings update the plotter, and the
-/// plotter's actual sample consumption is internal.
+/// The wrapper is bidirectional in scale: changes to the SwiftUI
+/// bindings update the plotter, and the plotter's actual sample
+/// consumption is internal. When a `liveSampleStream` is supplied
+/// the wrapper subscribes the plotter to it on `makeNSView`. If
+/// the stream is nil (pipeline still loading) the plotter renders
+/// against an empty buffer, which is the same behavior as before
+/// the fan-out was wired.
 struct EEGScalpPlotterRepresentable: NSViewRepresentable {
     @Binding var scaleMicrovoltsPerPixel: Double
     @Binding var layerDepthSpacing: Double
     @Binding var timeWindowSeconds: Double
+    let liveSampleStream: AsyncStream<EEGSample>?
 
     func makeNSView(context: Context) -> EEGScalpPlotterView {
         let v = EEGScalpPlotterView(frame: .zero)
         v.scaleMicrovoltsPerPixel = scaleMicrovoltsPerPixel
         v.layerDepthSpacing = layerDepthSpacing
         v.timeWindowSeconds = timeWindowSeconds
+        if let stream = liveSampleStream {
+            v.subscribe(to: Self.throwingStream(from: stream))
+        }
         return v
     }
 
@@ -251,55 +291,33 @@ struct EEGScalpPlotterRepresentable: NSViewRepresentable {
             nsView.timeWindowSeconds = timeWindowSeconds
         }
     }
-}
 
-// MARK: - Per-channel health badge types
-//
-// The 4-channel EEG on the Muse S has a known failure mode where a
-// single pad loses skin contact or saturates the analog front-end.
-// On 2026-07-10 the AF7 channel on this Muse S unit was saturated at
-// ~900 µV RMS across 4 sessions. The platform must show this state
-// to the user so they understand which channels are usable for
-// downstream analysis (sleep staging, intent classification, etc.).
-//
-// These types are intentionally simple: a value-type state, a SwiftUI
-// view, and a static factory that initializes all 4 channels to
-// `.unknown`. The actual RMS sampling lives in the plotter and
-// workspace; this view is a read-only consumer.
-
-struct ChannelHealthState: Equatable {
-    enum Status: String, Equatable {
-        case unknown = "?"
-        case healthy = "OK"
-        case saturated = "Sat"
-        case dead = "Dead"
-    }
-
-    let id: String          // "TP9", "AF7", "AF8", "TP10"
-    let label: String       // 4-char display label
-    let status: Status
-    let rmsMicrovolts: Double
-    let color: String       // hex color hint for visualization
-
-    static func initialStates() -> [ChannelHealthState] {
-        return [
-            ChannelHealthState(id: "TP9",  label: "TP9",  status: .unknown,
-                               rmsMicrovolts: 0, color: "40CC66"),
-            ChannelHealthState(id: "AF7",  label: "AF7",  status: .unknown,
-                               rmsMicrovolts: 0, color: "6699FF"),
-            ChannelHealthState(id: "AF8",  label: "AF8",  status: .unknown,
-                               rmsMicrovolts: 0, color: "FFB24D"),
-            ChannelHealthState(id: "TP10", label: "TP10", status: .unknown,
-                               rmsMicrovolts: 0, color: "F24D8C"),
-        ]
+    /// Wrap an `AsyncStream<EEGSample>` in an
+    /// `AsyncThrowingStream<EEGSample, Never>` so the plotter's
+    /// existing subscribe signature can be used without change.
+    /// Cancellation of the wrapper's source propagates to the
+    /// inner stream's drain task.
+    private static func throwingStream(
+        from stream: AsyncStream<EEGSample>
+    ) -> AsyncThrowingStream<EEGSample, Never> {
+        AsyncThrowingStream<EEGSample, Never> { continuation in
+            let task = Task {
+                for await sample in stream {
+                    continuation.yield(sample)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 }
 
-/// Visual badge for a single channel. Color-coded by status:
-/// - .healthy: green
-/// - .saturated: red
-/// - .dead: gray
-/// - .unknown: secondary (waiting for samples)
+// MARK: - Per-channel health badge
+//
+// Renders a single `ChannelHealthState` (from `BCICore`) as a
+// compact pill. The status drives the dot color and the label
+// color. RMS is shown as a µV reading when samples are available.
+
 struct ChannelHealthBadge: View {
     let state: ChannelHealthState
 
@@ -308,18 +326,16 @@ struct ChannelHealthBadge: View {
             Circle()
                 .fill(statusColor)
                 .frame(width: 8, height: 8)
-            Text(state.label)
+            Text(state.channel.label)
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(statusColor)
                 .frame(width: 36, alignment: .leading)
-            Text(state.status.rawValue)
+            Text(displayString)
                 .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(statusColor == .green ? .green :
-                                 statusColor == .red ? .red :
-                                 statusColor == .gray ? .gray : .secondary)
+                .foregroundStyle(statusColor)
                 .frame(width: 28, alignment: .leading)
-            if state.rmsMicrovolts > 0 {
-                Text(String(format: "%.0fµV", state.rmsMicrovolts))
+            if state.samples > 0 {
+                Text(String(format: "%.0fµV", state.rms))
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
@@ -332,6 +348,18 @@ struct ChannelHealthBadge: View {
         )
     }
 
+    /// Short abbreviation for the badge slot. The view prefers
+    /// these short strings to the enum's rawValue because the badge
+    /// is space-constrained.
+    private var displayString: String {
+        switch state.status {
+        case .unknown:   return "?"
+        case .healthy:   return "OK"
+        case .saturated: return "Sat"
+        case .dead:      return "Dead"
+        }
+    }
+
     private var statusColor: Color {
         switch state.status {
         case .healthy:   return .green
@@ -340,4 +368,19 @@ struct ChannelHealthBadge: View {
         case .unknown:   return .secondary
         }
     }
+}
+
+// MARK: - Initial state for the badge row
+//
+// The view needs an initial set of `ChannelHealthState` values so
+// the badge row can render before any samples have arrived. Each
+// state has `.unknown` status and zero samples. The labels come
+// from the project's canonical Muse layout.
+private func initialChannelHealthStates() -> [ChannelHealthState] {
+    [
+        ChannelHealthState(channel: .tp9,  status: .unknown, rms: 0, samples: 0, timestamp: 0),
+        ChannelHealthState(channel: .af7,  status: .unknown, rms: 0, samples: 0, timestamp: 0),
+        ChannelHealthState(channel: .af8,  status: .unknown, rms: 0, samples: 0, timestamp: 0),
+        ChannelHealthState(channel: .tp10, status: .unknown, rms: 0, samples: 0, timestamp: 0),
+    ]
 }

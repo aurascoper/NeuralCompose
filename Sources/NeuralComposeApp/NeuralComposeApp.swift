@@ -34,7 +34,11 @@ struct NeuralComposeAppEntry: App {
         // EEGScalpPlotterView and the upcoming components (PSD, blink
         // detector, etc.). Not user-facing in the v1 sleep-cycle flow.
         Window("Phase B Debug", id: "phase-b-debug") {
-            SleepValidationView()
+            // `loader.viewModel` is nil until the pipeline finishes
+            // loading. `SleepValidationView` tolerates nil and re-runs
+            // its health-polling task when the view model binds, because
+            // this scene re-evaluates when the observed loader publishes.
+            SleepValidationView(viewModel: loader.viewModel)
         }
         .defaultSize(width: 1100, height: 720)
         .keyboardShortcut("d", modifiers: [.command, .shift])
