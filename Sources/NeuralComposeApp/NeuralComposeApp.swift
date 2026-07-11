@@ -10,8 +10,8 @@ struct NeuralComposeAppEntry: App {
     var body: some Scene {
         WindowGroup("NeuralCompose") {
             Group {
-                if let viewModel = loader.viewModel {
-                    ContentView(viewModel: viewModel)
+                if let viewModel = loader.viewModel, let dispatcher = loader.dispatcher {
+                    ContentView(viewModel: viewModel, dispatcher: dispatcher)
                 } else {
                     LoadingView()
                         .task { await loader.load() }
@@ -23,8 +23,8 @@ struct NeuralComposeAppEntry: App {
         .commands {
             CommandMenu("Composition") {
                 Button("Reset") {
-                    if let vm = loader.viewModel {
-                        Task { await vm.resetComposition() }
+                    if let dispatcher = loader.dispatcher {
+                        Task { await dispatcher.perform(.resetComposition) }
                     }
                 }.keyboardShortcut("r", modifiers: [.command])
             }
@@ -44,8 +44,18 @@ struct NeuralComposeAppEntry: App {
         .defaultSize(width: 1100, height: 720)
         .commands {
             CommandMenu("Debug") {
+                // Routes through the dispatcher rather than calling
+                // `openWindow(id:)` directly. The dispatcher sets
+                // `viewModel.pendingWindowOpen = "phase-b-debug"`, and
+                // the view's `.onChange(of: pendingWindowOpen)`
+                // performs the actual `openWindow(id:)` call. This
+                // keeps the openWindow env var off the App scene's
+                // button and on the view, where the SwiftUI bridge
+                // already lives.
                 Button("Open Phase B Debug Window") {
-                    openWindow(id: "phase-b-debug")
+                    if let dispatcher = loader.dispatcher {
+                        Task { await dispatcher.perform(.openPhaseBDebug) }
+                    }
                 }.keyboardShortcut("d", modifiers: [.command, .shift])
             }
         }
@@ -65,11 +75,20 @@ struct NeuralComposeAppEntry: App {
 final class AppLoader: ObservableObject {
     @Published var viewModel: AppViewModel?
 
+    /// The command dispatcher, built once the view model is up. `nil`
+    /// during the brief loading window. Both the menu items in
+    /// `NeuralComposeAppEntry` and the future debug palette consume
+    /// this so a single `AppCommand` resolution path is used by every
+    /// control surface.
+    @Published var dispatcher: AppCommandDispatcher?
+
     func load() async {
         let container = await AppContainer.makeDefault()
         let vm = AppViewModel(container: container)
         await vm.start()
+        let disp = AppCommandDispatcher(target: vm)
         self.viewModel = vm
+        self.dispatcher = disp
     }
 }
 

@@ -39,7 +39,7 @@ public enum SignalQuality: Sendable, Equatable {
 /// swaps in `EEGStreamFactory.makeSynthetic()` and continues, updating
 /// `pipelineMode` so the privacy banner reflects the degraded state.
 @MainActor
-public final class AppViewModel: ObservableObject {
+public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     // ── Published state ──────────────────────────────────────────────────
     @Published public private(set) var composedText: String = ""
@@ -92,6 +92,17 @@ public final class AppViewModel: ObservableObject {
     @Published public private(set) var isRefining: Bool = false
     @Published public private(set) var refinementSuggestion: Refinement?
     @Published public private(set) var refinementWarning: String?
+
+    // ── Command dispatch bridge ───────────────────────────────────────────
+    //    Transient, view-side navigation requests published by the
+    //    `AppCommandDispatcher` and consumed by SwiftUI's `.onChange`.
+    //    The dispatcher is `@MainActor` but not a SwiftUI view, so it
+    //    cannot call `openWindow(id:)` directly; it sets these fields
+    //    and the view's `.onChange` performs the SwiftUI action, then
+    //    immediately clears the field so subsequent emissions re-fire.
+    //    See `AppCommandDispatcher`'s doc comment for the full rationale.
+    @Published public var pendingWindowOpen: String?
+    @Published public var pendingTab: PendingTab?
 
     // ── Immutable wiring (lives for the lifetime of the view model) ──────
     public let container: AppContainer
@@ -440,6 +451,17 @@ public final class AppViewModel: ObservableObject {
 
     public func resetComposition(seed: String = "") async {
         await composition?.reset(to: seed)
+    }
+
+    /// Parameterless overload of `resetComposition(seed:)` so that
+    /// `AppCommandDispatchTarget` (which declares
+    /// `func resetComposition() async`) is satisfied without forcing
+    /// the protocol to grow a default parameter (which Swift does not
+    /// allow in protocol declarations). The dispatcher uses this
+    /// overload; the seed-bearing form is still available for callers
+    /// that want to seed the composition with non-empty text.
+    public func resetComposition() async {
+        await resetComposition(seed: "")
     }
 
     // MARK: - Calibration

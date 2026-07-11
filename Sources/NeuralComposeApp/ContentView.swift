@@ -20,6 +20,14 @@ enum PipelineUIMode: String, CaseIterable, Identifiable {
 
 struct ContentView: View {
     @ObservedObject var viewModel: AppViewModel
+    /// The single command dispatcher shared by every control surface
+    /// in this view (Reset / Speak / Refine / Hold-to-Talk buttons,
+    /// and the `pendingWindowOpen` / `pendingTab` SwiftUI bridges
+    /// below). The same instance is also consumed by the menu items
+    /// in `NeuralComposeAppEntry`, so all control surfaces resolve
+    /// through one `AppCommand` path.
+    let dispatcher: AppCommandDispatcher
+    @Environment(\.openWindow) private var openWindow
     @State private var showMetrics: Bool = false
     @State private var showCalibration: Bool = false
     @State private var uiMode: PipelineUIMode = .production
@@ -92,12 +100,36 @@ struct ContentView: View {
             Divider()
             ControlsView(
                 viewModel: viewModel,
+                dispatcher: dispatcher,
                 showMetrics: $showMetrics,
                 showCalibration: $showCalibration,
                 uiMode: $uiMode
             )
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+        }
+        // ── Command-dispatch bridges ──────────────────────────────────────
+        //    The dispatcher is `@MainActor` but not a SwiftUI view, so
+        //    it cannot call `openWindow(id:)` or mutate local `@State`
+        //    bindings directly. Instead it sets these transient
+        //    `@Published` fields on the view model; the `.onChange`
+        //    handlers below perform the actual SwiftUI action and
+        //    clear the field so subsequent emissions re-fire.
+        .onChange(of: viewModel.pendingWindowOpen) { _, newValue in
+            if let id = newValue {
+                openWindow(id: id)
+                viewModel.pendingWindowOpen = nil
+            }
+        }
+        .onChange(of: viewModel.pendingTab) { _, newValue in
+            if let tab = newValue {
+                switch tab {
+                case .production:  uiMode = .production
+                case .research:    uiMode = .research
+                case .calibration: showCalibration = true
+                }
+                viewModel.pendingTab = nil
+            }
         }
         .onChange(of: uiMode) { _, newMode in
             // Leaving Research mode mid-session should stop the Track B
@@ -171,6 +203,11 @@ struct ContentView: View {
 
 private struct ControlsView: View {
     @ObservedObject var viewModel: AppViewModel
+    /// Shared command dispatcher. Every button in this view routes
+    /// through `dispatcher.perform(.X)` rather than calling the
+    /// view model directly, so the unified command path covers the
+    /// same surfaces the menu items and (future) voice emitter cover.
+    let dispatcher: AppCommandDispatcher
     @Binding var showMetrics: Bool
     @Binding var showCalibration: Bool
     @Binding var uiMode: PipelineUIMode
@@ -178,7 +215,7 @@ private struct ControlsView: View {
     var body: some View {
         HStack(spacing: 12) {
             Button {
-                Task { await viewModel.resetComposition() }
+                Task { await dispatcher.perform(.resetComposition) }
             } label: {
                 Label("Reset", systemImage: "arrow.counterclockwise")
             }
@@ -203,8 +240,9 @@ private struct ControlsView: View {
 
             // Push-to-talk: mic is open only while this button is held —
             // `pressing:` fires on both press-down and release, which is
-            // exactly the push-to-talk lifecycle `startDictation()`/
-            // `stopDictation()` expect. Never a toggle/latch.
+            // exactly the push-to-talk lifecycle `.startDictation` /
+            // `.stopDictation` expect. Never a toggle/latch. Both
+            // press and release route through the dispatcher.
             Button {
                 // no-op: press/release handled by `pressing:` below.
             } label: {
@@ -212,21 +250,21 @@ private struct ControlsView: View {
             }
             .onLongPressGesture(minimumDuration: 0, pressing: { isPressing in
                 if isPressing {
-                    Task { await viewModel.startDictation() }
+                    Task { await dispatcher.perform(.startDictation) }
                 } else {
-                    Task { await viewModel.stopDictation() }
+                    Task { await dispatcher.perform(.stopDictation) }
                 }
             }, perform: {})
 
             Button {
-                Task { await viewModel.speak() }
+                Task { await dispatcher.perform(.speak) }
             } label: {
                 Label("Speak", systemImage: "speaker.wave.2.fill")
             }
             .disabled(viewModel.composedText.isEmpty || viewModel.isSpeaking)
 
             Button {
-                Task { await viewModel.refineComposedText() }
+                Task { await dispatcher.perform(.refine) }
             } label: {
                 if viewModel.isRefining {
                     ProgressView().controlSize(.small)
