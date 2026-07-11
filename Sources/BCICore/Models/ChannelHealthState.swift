@@ -36,6 +36,17 @@ public enum ChannelHealthStatus: String, Sendable, Hashable, Codable {
     /// RMS below the dead threshold; typically an electrode lifted off
     /// the scalp or a dry pad.
     case dead
+    /// No new sample has been ingested in longer than the provider's
+    /// staleness window — the amplitude-derived bucket above (healthy /
+    /// saturated / dead) is frozen at whatever it last was and may no
+    /// longer reflect reality. Distinct from `.dead` on purpose: a dead
+    /// electrode is a contact-quality problem the amplitude genuinely
+    /// shows; `.stale` means no fresh amplitude reading has arrived at
+    /// all, e.g. the transport silently stalled. Conflating the two —
+    /// the bug this case exists to fix — let a frozen "healthy" or
+    /// "saturated" reading sit on screen indefinitely during a stalled
+    /// transport, indistinguishable from the genuine thing.
+    case stale
 }
 
 /// One channel's health snapshot, as produced by a
@@ -48,11 +59,14 @@ public struct ChannelHealthState: Sendable, Hashable {
     public let rms: Float
     /// Number of samples that contributed to `rms`.
     public let samples: Int
-    /// Wall-clock time of the most recent sample that contributed to
-    /// this estimate, in seconds since the Unix epoch. Matches the
-    /// `timestamp` field on `EEGSample` and on `ImaginedTrialEvent`,
-    /// so a downstream consumer can align channel health with
-    /// protocol events without a clock translation.
+    /// Timestamp of the most recent sample that contributed to this
+    /// estimate. Mirrors `EEGSample.timestamp`'s own contract exactly
+    /// (seconds relative to stream start, not the Unix epoch) so a
+    /// downstream consumer can align channel health with protocol
+    /// events without a clock translation. Because this is
+    /// stream-relative, `.stale` (see `ChannelHealthStatus`) is
+    /// computed from real wall-clock time elapsed since the last
+    /// ingest, not from comparing this field against `Date()`.
     public let timestamp: TimeInterval
 
     public init(

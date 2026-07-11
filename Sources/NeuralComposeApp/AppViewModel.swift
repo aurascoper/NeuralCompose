@@ -287,6 +287,19 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                              self?.calibrationRecorder,
                              self?.trackBRecorder)
                         }
+                        // The first sample of an attempt that follows a
+                        // prior failure (liveRetries > 0) is the
+                        // "reconnected" moment — the live link is
+                        // producing samples again. Logged before
+                        // liveRetries gets reset below (samplesThisAttempt
+                        // >= 256 branch) so this only fires once per
+                        // recovery, right when it actually happens.
+                        if samplesThisAttempt == 1, liveRetries > 0, isCalibrating, let recorder = recorder {
+                            await recorder.recordTransportEvent(
+                                .reconnected, at: Date().timeIntervalSince1970,
+                                detail: "after \(liveRetries) retr\(liveRetries == 1 ? "y" : "ies")"
+                            )
+                        }
                         if isCalibrating, let recorder = recorder {
                             await recorder.recordSample(sample)
                             calibrationSampleCounter += 1
@@ -363,14 +376,32 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 // the budget so transient hiccups don't accumulate.
                 if samplesThisAttempt >= 256 { liveRetries = 0 }
                 liveRetries += 1
+                // Transport events are recorded independent of the
+                // per-sample loop's local `recorder`/`isCalibrating`
+                // (out of scope here), so fetch fresh.
+                let (isCalibratingNow, recorderNow) = await MainActor.run {
+                    (self?.isCalibrating ?? false, self?.calibrationRecorder)
+                }
                 if liveRetries > maxLiveRetries {
                     BCILog.pipeline.notice("Live stream exhausted \(maxLiveRetries) retries — falling back to synthetic")
+                    if isCalibratingNow, let recorderNow {
+                        await recorderNow.recordTransportEvent(
+                            .fellBackToSynthetic, at: Date().timeIntervalSince1970,
+                            detail: "exhausted \(maxLiveRetries) retries"
+                        )
+                    }
                     current = EEGStreamFactory.makeSynthetic()
                     liveRetries = 0
                     await MainActor.run { self?.isReconnecting = false }
                 } else {
                     let backoff = min(8.0, pow(2.0, Double(liveRetries - 1)))
                     BCILog.pipeline.notice("Live stream interrupted (\(samplesThisAttempt) samples); retry \(liveRetries)/\(maxLiveRetries) after \(backoff)s")
+                    if isCalibratingNow, let recorderNow {
+                        await recorderNow.recordTransportEvent(
+                            .stalled, at: Date().timeIntervalSince1970,
+                            detail: "retry \(liveRetries)/\(maxLiveRetries) after \(backoff)s, \(samplesThisAttempt) samples this attempt"
+                        )
+                    }
                     await MainActor.run {
                         self?.isReconnecting = true
                         self?.signalQuality = .lost

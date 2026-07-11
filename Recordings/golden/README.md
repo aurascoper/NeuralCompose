@@ -26,7 +26,8 @@ Recordings/validation/2026-07-10/) working through two separate real issues:
    retry/reconnect logic detecting it, leaving the channel-health UI frozen
    on stale "saturated" values indistinguishable on-screen from genuine live
    saturation. Several "still bad" readings during troubleshooting were this,
-   not actual contact problems. Not yet fixed in code — see note below.
+   not actual contact problems. **Fixed** — see note below (was open when
+   this recording was made; no longer applies to sessions recorded after).
 
 ## Quality (via analyze-eeg-session.py)
 
@@ -75,15 +76,28 @@ raw CSV is required locally for that test to run (it's gitignored, per
 above) — the test skips gracefully if it's absent, e.g. on a fresh clone or
 in a CI environment that hasn't been given the fixture deliberately.
 
-## Known follow-up (not yet done)
+## Known follow-up — fixed in two stages
 
-The silent-BLE-disconnect bug above is real and worth fixing: AppViewModel's
-live-stream retry/backoff (see `Live stream interrupted` logging) appears to
-only trigger on *initial* connection failure, not on a mid-session drop of an
-already-started BrainFlow stream. The channel-health UI has no way to
-indicate "stale" vs "currently live" — worth adding a staleness indicator
-(e.g. grey out badges if no sample received in N seconds) rather than only
-fixing the reconnect logic.
+The silent-BLE-disconnect bug above is fixed as of two changes:
+
+1. **Transport-level watchdog** (`BrainFlowService`/`MindMonitorOSCStream`,
+   commit `c6b2a8a`, 2026-07-10, made after this recording): a 0-sample poll
+   for longer than `staleTimeoutSec` (5s default) now finishes the stream
+   with an error instead of polling forever, so `AppViewModel`'s existing
+   retry/backoff/fallback-to-synthetic supervisor actually fires on a
+   mid-session drop, not just an initial connection failure.
+2. **Channel-health staleness + metadata logging** (this fix): the
+   per-channel badge UI had no way to distinguish "frozen because the
+   transport stalled" from "genuinely current" — a separate, shorter
+   (`staleTimeoutSec` 2s default) wall-clock watchdog inside
+   `EEGChannelHealthProvider` now reports `ChannelHealthStatus.stale`
+   instead of a frozen amplitude-derived bucket once no sample has arrived
+   for that long. `CalibrationRecorder.recordTransportEvent(_:at:detail:)`
+   also logs every stall/reconnect/fallback-to-synthetic transition to a
+   new `transport_events.csv` in the session directory, with a
+   `transport_degraded`/`transport_event_count` summary in `metadata.json`
+   — so a session affected by a disconnect is now unambiguous on review,
+   not silently indistinguishable from a clean one.
 
 ## Usage
 

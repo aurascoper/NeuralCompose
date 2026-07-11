@@ -24,6 +24,37 @@ private extension CalibrationLabel {
     }
 }
 
+/// A discrete transport lifecycle event, recorded alongside the raw
+/// EEG/label data so a session can be told apart from one where the
+/// live link stayed up the whole time. Distinct from
+/// `CalibrationLabelEvent`: that type is a *behavioral* protocol
+/// marker (blink, jaw clench, rest) the participant or protocol
+/// script produces; this is a *transport diagnostic* the pipeline
+/// itself produces, independent of anything the participant did.
+public enum TransportEventKind: String, Sendable {
+    /// The live stream stopped producing samples and the supervisor
+    /// began a retry/backoff attempt.
+    case stalled
+    /// A retry succeeded — the live stream is producing samples
+    /// again after a prior `stalled` event.
+    case reconnected
+    /// Retries were exhausted and the pipeline fell back to the
+    /// synthetic source. Everything recorded after this event for
+    /// the remainder of the session is synthetic, not live, data.
+    case fellBackToSynthetic
+}
+
+struct TransportEvent: Sendable {
+    /// Unix epoch wall-clock time, **not** stream-relative like
+    /// `EEGSample.timestamp` / `CalibrationLabelEvent.tStart`. A
+    /// transport event has no meaningful position on the live
+    /// stream's own relative clock — that clock restarts (or stops
+    /// altogether) at exactly the moments this event records.
+    let t: Double
+    let kind: TransportEventKind
+    let detail: String
+}
+
 public actor CalibrationRecorder {
     public private(set) var sessionID: String = ""
     public private(set) var windowCount: Int = 0
@@ -32,10 +63,12 @@ public actor CalibrationRecorder {
     private var eegFileHandle: FileHandle?
     private var eventsFileHandle: FileHandle?
     private var labelsFileHandle: FileHandle?
+    private var transportEventsFileHandle: FileHandle?
     private var sessionURL: URL?
     private var channelLabels: [String] = []
     private var activeEvents: [StickyState] = []
     private var allEvents: [CalibrationLabelEvent] = []
+    private var transportEvents: [TransportEvent] = []
     private var windowingConfig: (seconds: Double, strideSeconds: Double) = (2.0, 1.0)
     private var profile: MuseBoardProfile = .synthetic
     private var sampleRate: Double = 256.0
@@ -82,9 +115,35 @@ public actor CalibrationRecorder {
         labelsFileHandle = try FileHandle(forWritingTo: labelsURL)
         labelsFileHandle?.write(Data(labelsHeader.utf8))
 
+        let transportHeader = "session_id,t_wallclock_epoch,event,detail\n"
+        let transportURL = sessionDir.appendingPathComponent("transport_events.csv")
+        FileManager.default.createFile(atPath: transportURL.path, contents: nil)
+        transportEventsFileHandle = try FileHandle(forWritingTo: transportURL)
+        transportEventsFileHandle?.write(Data(transportHeader.utf8))
+
         sessionURL = sessionDir
         windowCount = 0
         sampleCount = 0
+        transportEvents = []
+    }
+
+    /// Records a transport lifecycle event (stall / reconnect /
+    /// fallback-to-synthetic) to `transport_events.csv` and keeps an
+    /// in-memory tally for the `transport_degraded` /
+    /// `transport_event_count` summary fields `finishSession()` writes
+    /// into `metadata.json`. Call from `AppViewModel`'s stream
+    /// supervisor whenever it changes retry state — see
+    /// `TransportEventKind`'s doc comment for what each case means.
+    ///
+    /// - Parameter t: Unix epoch wall-clock time (`Date().timeIntervalSince1970`),
+    ///   not stream-relative — see `TransportEvent.t`'s doc comment.
+    public func recordTransportEvent(_ kind: TransportEventKind, at t: Double, detail: String = "") {
+        let event = TransportEvent(t: t, kind: kind, detail: detail)
+        transportEvents.append(event)
+        guard let fh = transportEventsFileHandle else { return }
+        let escapedDetail = detail.replacingOccurrences(of: ",", with: ";")
+        let row = "\(sessionID),\(String(format: "%.6f", t)),\(kind.rawValue),\(escapedDetail)\n"
+        fh.write(Data(row.utf8))
     }
 
     public func startStickyLabel(_ label: CalibrationLabel, at t: Double) {
@@ -158,6 +217,7 @@ public actor CalibrationRecorder {
         eegFileHandle?.closeFile()
         eventsFileHandle?.closeFile()
         labelsFileHandle?.closeFile()
+        transportEventsFileHandle?.closeFile()
 
         if let sessionURL = self.sessionURL {
             let metadata: [String: Any] = [
@@ -166,7 +226,16 @@ public actor CalibrationRecorder {
                 "sample_rate": self.sampleRate,
                 "window_seconds": self.windowingConfig.seconds,
                 "stride_seconds": self.windowingConfig.strideSeconds,
-                "timestamp": ISO8601DateFormatter().string(from: Date())
+                "timestamp": ISO8601DateFormatter().string(from: Date()),
+                // A non-empty transport event log means the live link
+                // stalled, retried, or fell back to synthetic at some
+                // point during this session — see transport_events.csv
+                // for exactly when and what kind. Surfaced here as a
+                // summary so a downstream consumer doesn't have to open
+                // that file just to know whether the session was
+                // affected at all.
+                "transport_degraded": !self.transportEvents.isEmpty,
+                "transport_event_count": self.transportEvents.count
             ]
             if let jsonData = try? JSONSerialization.data(withJSONObject: metadata, options: .prettyPrinted) {
                 let metadataURL = sessionURL.appendingPathComponent("metadata.json")
@@ -179,6 +248,7 @@ public actor CalibrationRecorder {
         eegFileHandle = nil
         eventsFileHandle = nil
         labelsFileHandle = nil
+        transportEventsFileHandle = nil
     }
 
     private func writeEvent(_ event: CalibrationLabelEvent) {

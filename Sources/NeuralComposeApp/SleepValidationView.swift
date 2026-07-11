@@ -382,6 +382,7 @@ struct ChannelHealthBadge: View {
         case .healthy:   return "OK"
         case .saturated: return "Sat"
         case .dead:      return "Dead"
+        case .stale:     return "Stale"
         }
     }
 
@@ -391,6 +392,10 @@ struct ChannelHealthBadge: View {
         case .saturated: return .red
         case .dead:      return .gray
         case .unknown:   return .secondary
+        // Distinct from every other bucket on purpose — `.dead` and
+        // `.unknown` are already gray/secondary, and `.stale` needs to
+        // read as "this reading is old," not "this electrode is bad."
+        case .stale:     return .yellow
         }
     }
 }

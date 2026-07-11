@@ -43,6 +43,23 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
     private let storage: Storage
     private let drainTask: Task<Void, Never>?
 
+    /// If no sample has been ingested for longer than this many real
+    /// (wall-clock) seconds, every channel's status is reported as
+    /// `.stale` regardless of what the amplitude-derived bucket would
+    /// otherwise say. See `ChannelHealthStatus.stale`'s doc comment
+    /// for why this exists — without it, a stalled transport leaves
+    /// the badge UI frozen on a last-known reading with no visual
+    /// distinction from a genuinely current one.
+    ///
+    /// Deliberately shorter than `BrainFlowService`/
+    /// `MindMonitorOSCStream`'s own `staleTimeoutSec` (5s default,
+    /// used to decide when to actually retry the transport). This
+    /// value only gates a *display* signal — "is this reading
+    /// current" — so it can and should fire well before the
+    /// transport-level watchdog forces a retry, giving the user an
+    /// earlier heads-up that something's off.
+    private let staleTimeoutSec: Double
+
     /// - Parameters:
     ///   - stream: A live `AsyncStream<EEGSample>`. The provider
     ///     spawns a task that drains the stream into its internal
@@ -58,13 +75,15 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
     ///   - ringSeconds: Width of the ring in seconds. Default 4.
     ///   - thresholds: Initial engineering thresholds. Default
     ///     `.default`.
+    ///   - staleTimeoutSec: See the property's doc comment. Default 2.
     public init(
         stream: AsyncStream<EEGSample>? = nil,
         channelCount: Int = 4,
         channelLabels: [String] = ["TP9", "AF7", "AF8", "TP10"],
         sampleRate: Double = 256.0,
         ringSeconds: Double = 4.0,
-        thresholds: ChannelHealthThresholds = .default
+        thresholds: ChannelHealthThresholds = .default,
+        staleTimeoutSec: Double = 2.0
     ) {
         precondition(channelCount > 0, "channelCount must be positive")
         precondition(ringSeconds > 0, "ringSeconds must be positive")
@@ -73,6 +92,7 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
         self.thresholds = thresholds
         self.channelCount = channelCount
         self.channelLabels = channelLabels
+        self.staleTimeoutSec = staleTimeoutSec
         let capacity = max(1, Int(ringSeconds * sampleRate))
         self.storage = Storage(channelCount: channelCount, capacity: capacity)
         if let stream = stream {
@@ -92,7 +112,26 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
 
     public func currentChannelHealth(windowSeconds: Double) async -> [ChannelHealthState] {
         let windowSamples = max(1, Int((windowSeconds > 0 ? windowSeconds : 1.0) * sampleRate))
-        return storage.snapshot(windowSamples: windowSamples, thresholds: thresholds, channelLabels: channelLabels)
+        let states = storage.snapshot(windowSamples: windowSamples, thresholds: thresholds, channelLabels: channelLabels)
+
+        // Staleness is a property of the *stream*, not any one
+        // channel — if the transport stopped delivering samples,
+        // every channel is equally stale. `secondsSinceLastIngest`
+        // is `nil` before the first sample ever arrives, in which
+        // case the amplitude-derived `.unknown` bucket already
+        // communicates "no data yet" and staleness would be
+        // redundant (and wrong — there's nothing stale about a
+        // provider that was only just constructed).
+        guard let staleness = storage.secondsSinceLastIngest(now: Date()),
+              staleness > staleTimeoutSec
+        else { return states }
+
+        return states.map { state in
+            ChannelHealthState(
+                channel: state.channel, status: .stale,
+                rms: state.rms, samples: state.samples, timestamp: state.timestamp
+            )
+        }
     }
 
     // MARK: - Storage
@@ -110,14 +149,30 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
         /// Number of samples that have ever been appended; used to
         /// distinguish a ring full of stale zeros from a fresh ring.
         private var totalAppends: Int = 0
-        /// Timestamp of the most recent sample ingested.
+        /// Timestamp of the most recent sample ingested. Stream-relative
+        /// (see `EEGSample.timestamp`), so it cannot be compared against
+        /// `Date()` to detect staleness — `lastIngestWallClock` below is
+        /// the real clock reading used for that.
         private var lastTimestamp: TimeInterval = 0
+        /// Real wall-clock time `ingest(_:)` was last called. Distinct
+        /// from `lastTimestamp` on purpose — see that property's doc
+        /// comment.
+        private var lastIngestWallClock: Date?
         private let lock = NSLock()
 
         init(channelCount: Int, capacity: Int) {
             self.channelCount = channelCount
             self.capacity = capacity
             self.buffers = Array(repeating: [Float](repeating: 0, count: capacity), count: channelCount)
+        }
+
+        /// Real seconds elapsed since the last `ingest(_:)` call, or
+        /// `nil` if nothing has ever been ingested.
+        func secondsSinceLastIngest(now: Date) -> TimeInterval? {
+            lock.lock()
+            defer { lock.unlock() }
+            guard let lastIngestWallClock else { return nil }
+            return now.timeIntervalSince(lastIngestWallClock)
         }
 
         func ingest(_ sample: EEGSample) {
@@ -128,6 +183,7 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
             }
             writeIndex = (writeIndex &+ 1) % capacity
             totalAppends &+= 1
+            lastIngestWallClock = Date()
             lastTimestamp = sample.timestamp
         }
 

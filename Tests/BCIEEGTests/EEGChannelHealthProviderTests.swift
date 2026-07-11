@@ -168,6 +168,71 @@ final class EEGChannelHealthProviderTests: XCTestCase {
         continuation.finish()
     }
 
+    // MARK: - Staleness
+
+    func testProviderReportsStaleAfterNoIngestForLongerThanTimeout() async {
+        // A short staleTimeoutSec (well under the test's own sleep) so
+        // the test doesn't need to wait seconds for the real default.
+        let (stream, continuation) = AsyncStream<EEGSample>.makeStream()
+        let p = EEGChannelHealthProvider(stream: stream, staleTimeoutSec: 0.05)
+        for i in 0..<256 {
+            continuation.yield(EEGSample(
+                timestamp: TimeInterval(i) / 256.0,
+                channels: [50, 50, 50, 50]
+            ))
+        }
+        try? await Task.sleep(nanoseconds: 20_000_000) // let the drain catch up
+        // Confirm it's genuinely healthy before staleness kicks in.
+        let fresh = await p.currentChannelHealth(windowSeconds: 1.0)
+        for s in fresh { XCTAssertEqual(s.status, .healthy) }
+
+        // Let real wall-clock time pass with no further ingest.
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        let stale = await p.currentChannelHealth(windowSeconds: 1.0)
+        continuation.finish()
+
+        XCTAssertEqual(stale.count, 4)
+        for s in stale {
+            XCTAssertEqual(s.status, .stale, "\(s.channel) should report .stale once no sample has arrived for longer than staleTimeoutSec")
+            // rms/samples still carry the frozen diagnostic values —
+            // staleness overrides only the status, not the readings.
+            XCTAssertEqual(s.rms, 50, accuracy: 0.001)
+        }
+    }
+
+    func testProviderWithNoSamplesEverIsNotStale() async {
+        // A provider that has never received a sample is .unknown,
+        // not .stale — there's nothing stale about "hasn't started yet."
+        let p = EEGChannelHealthProvider(stream: nil, staleTimeoutSec: 0.01)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        let states = await p.currentChannelHealth(windowSeconds: 1.0)
+        for s in states {
+            XCTAssertEqual(s.status, .unknown)
+        }
+    }
+
+    func testProviderStaysFreshWithContinuousIngestPastTheTimeoutWindow() async {
+        // Staleness is measured from the *last* ingest, not the
+        // first — a stream that keeps producing samples (even slowly)
+        // should never go stale, however long it's been running.
+        let (stream, continuation) = AsyncStream<EEGSample>.makeStream()
+        let p = EEGChannelHealthProvider(stream: stream, staleTimeoutSec: 0.2)
+        for round in 0..<3 {
+            for i in 0..<64 {
+                continuation.yield(EEGSample(
+                    timestamp: TimeInterval(round * 64 + i) / 256.0,
+                    channels: [50, 50, 50, 50]
+                ))
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000) // < staleTimeoutSec
+        }
+        let states = await p.currentChannelHealth(windowSeconds: 1.0)
+        continuation.finish()
+        for s in states {
+            XCTAssertEqual(s.status, .healthy, "continuous ingest should never trip staleness")
+        }
+    }
+
     // MARK: - Concurrency
 
     func testProviderCanBeQueriedFromMultipleTasks() async {
