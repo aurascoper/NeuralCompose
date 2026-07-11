@@ -37,7 +37,7 @@ final class TextCompositionControllerTests: XCTestCase {
         // the task ends the `AsyncStream` iteration, so awaiting the value
         // resolves promptly with whatever was seen inside the window.
         let task = Task<Bool, Never> {
-            for await s in await c.snapshots {
+            for await s in c.snapshots {
                 if !s.isPredicting, !s.candidates.isEmpty {
                     return true
                 }
@@ -56,7 +56,7 @@ final class TextCompositionControllerTests: XCTestCase {
         // Drain to capture post-commit snapshot.
         let collected = Task<TextCompositionController.Snapshot?, Never> {
             var last: TextCompositionController.Snapshot? = nil
-            for await s in await c.snapshots {
+            for await s in c.snapshots {
                 last = s
                 if !s.isPredicting, s.lastCommittedWord != nil {
                     break
@@ -81,7 +81,7 @@ final class TextCompositionControllerTests: XCTestCase {
         until predicate: @escaping @Sendable (TextCompositionController.Snapshot) -> Bool
     ) async -> TextCompositionController.Snapshot? {
         let task = Task<TextCompositionController.Snapshot?, Never> {
-            for await s in await controller.snapshots {
+            for await s in controller.snapshots {
                 if predicate(s) { return s }
             }
             return nil
