@@ -189,7 +189,7 @@ $$\hat c_n = \hat c_{n-1} + \alpha\,(c_n - \hat c_{n-1}), \qquad \alpha = 0.15$$
 and node brightness is broadband RMS under a log compression so small
 changes stay visible without large ones saturating:
 
-$$I = \operatorname{clamp}\big(\log(1 + 0.05\cdot\mathrm{RMS}),\ 0,\ 1\big)$$
+$$I = \mathrm{clamp}\big(\log(1 + 0.05\cdot\mathrm{RMS}),\ 0,\ 1\big)$$
 
 Predictions and samples arrive on independent streams; if a prediction goes
 stale (no update for `classifierStaleThreshold` while samples keep
