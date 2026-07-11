@@ -1,11 +1,32 @@
 import SwiftUI
 import BCICore
+import BCILLM
+import Dispatch
 
 @main
 struct NeuralComposeAppEntry: App {
 
     @StateObject private var loader = AppLoader()
     @Environment(\.openWindow) private var openWindow
+
+    /// If this process was launched as `PredictorFactory`'s MLX probe
+    /// subprocess, `runProbeIfRequested()` never returns — it calls
+    /// `exit(_:)` itself. This must run before anything else in `init()`
+    /// (before `AppLoader`/`AppContainer` construction, before SwiftUI's
+    /// scene graph is ever touched) so a probe invocation stays a
+    /// lightweight, disposable child process rather than standing up the
+    /// whole app just to immediately tear it down. Bridged to synchronous
+    /// code with a semaphore because `App.init()` isn't `async` and this
+    /// has to complete (or exit) before `init()` returns.
+    init() {
+        guard ProcessInfo.processInfo.environment[PredictorFactory.probeDirEnvVar] != nil else { return }
+        let semaphore = DispatchSemaphore(value: 0)
+        Task {
+            _ = await PredictorFactory.runProbeIfRequested()
+            semaphore.signal() // unreached in practice — the probe always exit()s.
+        }
+        semaphore.wait()
+    }
 
     var body: some Scene {
         WindowGroup("NeuralCompose") {
