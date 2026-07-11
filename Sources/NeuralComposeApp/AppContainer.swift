@@ -3,6 +3,7 @@ import BCICore
 import BCIEEG
 import BCIClassifier
 import BCILLM
+import BCIVoice
 
 /// Composition root. Knows nothing about SwiftUI; constructs the pipeline
 /// pieces and hands them to the view model. Kept here so previews and unit
@@ -11,6 +12,8 @@ public struct AppContainer: Sendable {
     public let streamResolved: EEGStreamFactory.Resolved
     public let classifierResolved: ClassifierFactory.Resolved
     public let predictorResolved: PredictorFactory.Resolved
+    public let voiceOutputResolved: VoiceOutputFactory.Resolved
+    public let voiceInputResolved: VoiceInputFactory.Resolved
     public let metrics: MetricsCollector
     public let windowingConfig: EEGWindowingConfig
     public let smootherConfig: IntentSmoother.Config
@@ -49,6 +52,8 @@ public struct AppContainer: Sendable {
         streamResolved: EEGStreamFactory.Resolved,
         classifierResolved: ClassifierFactory.Resolved,
         predictorResolved: PredictorFactory.Resolved,
+        voiceOutputResolved: VoiceOutputFactory.Resolved,
+        voiceInputResolved: VoiceInputFactory.Resolved,
         metrics: MetricsCollector,
         windowingConfig: EEGWindowingConfig,
         smootherConfig: IntentSmoother.Config = .init()
@@ -56,6 +61,8 @@ public struct AppContainer: Sendable {
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
         self.predictorResolved = predictorResolved
+        self.voiceOutputResolved = voiceOutputResolved
+        self.voiceInputResolved = voiceInputResolved
         self.metrics = metrics
         self.windowingConfig = windowingConfig
         self.smootherConfig = smootherConfig
@@ -71,6 +78,8 @@ public struct AppContainer: Sendable {
         let stream = EEGStreamFactory.make(profile: profile, playbackPath: playbackPath, oscPort: oscPort)
         let classifier = ClassifierFactory.live()
         let predictor = await PredictorFactory.live()
+        let voiceOutput = VoiceOutputFactory.live()
+        let voiceInput = VoiceInputFactory.live()
         let metrics = MetricsCollector()
         let windowingConfig = EEGWindowingConfig(
             windowSeconds: 2.0,
@@ -82,6 +91,8 @@ public struct AppContainer: Sendable {
             streamResolved: stream,
             classifierResolved: classifier,
             predictorResolved: predictor,
+            voiceOutputResolved: voiceOutput,
+            voiceInputResolved: voiceInput,
             metrics: metrics,
             windowingConfig: windowingConfig
         )

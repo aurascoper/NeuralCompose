@@ -33,6 +33,7 @@ let package = Package(
         .library(name: "BCIEEG",        targets: ["BCIEEG"]),
         .library(name: "BCIClassifier", targets: ["BCIClassifier"]),
         .library(name: "BCILLM",        targets: ["BCILLM"]),
+        .library(name: "BCIVoice",      targets: ["BCIVoice"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -99,10 +100,19 @@ let package = Package(
             ]
         ),
 
+        // ── Push-to-talk dictation + TTS (system frameworks only) ─────────
+        .target(
+            name: "BCIVoice",
+            dependencies: ["BCICore"],
+            path: "Sources/BCIVoice",
+            swiftSettings: strictConcurrency,
+            linkerSettings: [.linkedFramework("Speech")]
+        ),
+
         // ── Application ──────────────────────────────────────────────────
         .executableTarget(
             name: "NeuralComposeApp",
-            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM"],
+            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice"],
             path: "Sources/NeuralComposeApp",
             // Info.plist lives in Resources/ for reference / Xcode builds but
             // is intentionally NOT declared as a SwiftPM resource: SwiftPM
@@ -143,8 +153,13 @@ let package = Package(
             path: "Tests/BCILLMTests"
         ),
         .testTarget(
+            name: "BCIVoiceTests",
+            dependencies: ["BCIVoice", "BCICore"],
+            path: "Tests/BCIVoiceTests"
+        ),
+        .testTarget(
             name: "NeuralComposeAppTests",
-            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM"],
+            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice"],
             path: "Tests/NeuralComposeAppTests"
         ),
     ],

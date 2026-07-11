@@ -97,6 +97,37 @@ public actor TextCompositionController {
         publishSnapshot()
     }
 
+    /// Merges a fully-transcribed utterance (or any other non-EEG text) into
+    /// the same `composed` buffer EEG commits populate. Bypasses
+    /// `stateMachine.step(_:)` entirely — this is a second, independent
+    /// input modality into the buffer, not an EEG-sourced commit, so it must
+    /// not perturb the FSM's phase/highlight state. Appends the whole
+    /// string atomically (no notion of "in-progress" partial text).
+    public func appendExternalText(_ text: String, source: CompositionSource) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        composed = appendToken(composed, trimmed)
+        lastCommittedWord = trimmed.split(separator: " ").last.map(String.init) ?? trimmed
+        metrics.recordExternalText(source: source, wordCount: trimmed.split(separator: " ").count)
+        await requestPredictions()
+        publishSnapshot()
+    }
+
+    /// Replaces `composed` outright with `text` — unlike `appendExternalText`,
+    /// which appends, a dialectic synthesis is a full rewrite of the
+    /// sentence, not a continuation. Preserves the FSM's current phase
+    /// (unlike `reset(to:)`, which resets it) since accepting a refinement
+    /// isn't the start of a new utterance.
+    public func applyRefinement(_ text: String) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        composed = trimmed
+        lastCommittedWord = trimmed.split(separator: " ").last.map(String.init)
+        metrics.recordExternalText(source: .automation, wordCount: trimmed.split(separator: " ").count)
+        await requestPredictions()
+        publishSnapshot()
+    }
+
     public func reset(to seed: String = "") async {
         currentCancellation = UUID()
         _ = stateMachine.step(.reset)

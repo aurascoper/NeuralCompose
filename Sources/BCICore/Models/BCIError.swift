@@ -29,6 +29,12 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
     // Tokenizer
     case tokenizerLoadFailed(reason: String)
 
+    // Voice
+    case speechSynthesisFailed(reason: String)
+    case speechRecognitionUnavailable(reason: String)
+    case microphonePermissionDenied
+    case speechRecognitionPermissionDenied
+
     // App-level
     case cancelled
 
@@ -62,6 +68,14 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
             return "MLX predictor inference failed: \(reason)"
         case .tokenizerLoadFailed(let reason):
             return "Tokenizer load failed: \(reason)"
+        case .speechSynthesisFailed(let reason):
+            return "Speech synthesis failed: \(reason)"
+        case .speechRecognitionUnavailable(let reason):
+            return "Speech recognition unavailable: \(reason)"
+        case .microphonePermissionDenied:
+            return "Microphone permission denied"
+        case .speechRecognitionPermissionDenied:
+            return "Speech recognition permission denied"
         case .cancelled:
             return "Cancelled"
         }

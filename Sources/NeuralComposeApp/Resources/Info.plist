@@ -18,6 +18,10 @@
     <false/>
     <key>NSBluetoothAlwaysUsageDescription</key>
     <string>NeuralCompose connects to your Muse headband over Bluetooth to read EEG locally. EEG data never leaves your machine.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>NeuralCompose captures microphone audio only while you press and hold the dictation button, and processes it entirely on-device via Apple's Speech framework. Audio never leaves your machine and is never captured continuously.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>NeuralCompose uses on-device speech recognition to transcribe dictated text into your composed sentence, only while you press and hold the dictation button.</string>
     <key>NSHumanReadableCopyright</key>
     <string>NeuralCompose — local-only research prototype.</string>
 </dict>

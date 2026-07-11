@@ -5,6 +5,7 @@ import BCICore
 import BCIEEG
 import BCIClassifier
 import BCILLM
+import BCIVoice
 
 public struct CalibrationMetrics: Sendable {
     public let channelCount: Int
@@ -71,6 +72,27 @@ public final class AppViewModel: ObservableObject {
     @Published public private(set) var imaginedDroppedSampleCount: Int = 0
     @Published public private(set) var imaginedSessionURL: URL?
 
+    // ── Voice I/O — push-to-talk dictation + explicit-trigger TTS. Event-
+    //    driven only: `isDictating` is true only while the mic button is
+    //    held, never as a background/continuous state. `voiceWarning` is
+    //    kept separate from `lastError`, which stays reserved for EEG/
+    //    classifier/predictor pipeline health — voice degradation is an
+    //    on-demand concern, not a pipeline health signal. ─────────────────
+    @Published public private(set) var isDictating: Bool = false
+    @Published public private(set) var isSpeaking: Bool = false
+    @Published public private(set) var voiceWarning: String?
+
+    // ── Semantic dialectic engine — explicit-trigger thesis/antithesis/
+    //    synthesis refinement of the composed sentence. Never runs
+    //    automatically (see `DialecticEngine`'s doc comment for why: three
+    //    sequential LLM decode passes are too slow for the carousel's hot
+    //    path). `refinementWarning` is its own field for the same
+    //    separation-of-concerns reason `voiceWarning` is separate from
+    //    `lastError`. ─────────────────────────────────────────────────────
+    @Published public private(set) var isRefining: Bool = false
+    @Published public private(set) var refinementSuggestion: Refinement?
+    @Published public private(set) var refinementWarning: String?
+
     // ── Immutable wiring (lives for the lifetime of the view model) ──────
     public let container: AppContainer
     private let metrics: MetricsCollector
@@ -78,6 +100,9 @@ public final class AppViewModel: ObservableObject {
     private let smoother: IntentSmoother
     private let classifier: any IntentClassifying
     private let predictor: any NextWordPredicting
+    private let voiceOutput: any SpeechSynthesizing
+    private let voiceInput: any DictationRecognizing
+    private let dialecticEngine: DialecticEngine
 
     // ── Per-start resources (recreated each call to start()) ─────────────
     private var composition: TextCompositionController?
@@ -112,6 +137,12 @@ public final class AppViewModel: ObservableObject {
         self.metrics = container.metrics
         self.classifier = container.classifierResolved.classifier
         self.predictor = container.predictorResolved.predictor
+        self.voiceOutput = container.voiceOutputResolved.synthesizer
+        self.voiceInput = container.voiceInputResolved.recognizer
+        self.dialecticEngine = DialecticEngine(
+            generator: container.predictorResolved.generator,
+            metrics: container.metrics
+        )
         self.pipelineMode = container.pipelineMode
         self.computeMode = container.classifierResolved.computeMode
         self.windowing = EEGWindowing(config: container.windowingConfig)
@@ -121,6 +152,11 @@ public final class AppViewModel: ObservableObject {
             self.lastError = w
         } else if let w = container.predictorResolved.warning {
             self.lastError = w
+        }
+        if let w = container.voiceOutputResolved.warning {
+            self.voiceWarning = w
+        } else if let w = container.voiceInputResolved.warning {
+            self.voiceWarning = w
         }
     }
 
@@ -346,6 +382,8 @@ public final class AppViewModel: ObservableObject {
         guard isRunning else { return }
         await stopCalibrationRecording()
         await stopImaginedSpeechSession()
+        if isDictating { await voiceInput.cancelRecording(); isDictating = false }
+        await voiceOutput.stopSpeaking()
         streamTask?.cancel();   streamTask = nil
         classifyTask?.cancel(); classifyTask = nil
         carouselTask?.cancel(); carouselTask = nil
@@ -566,6 +604,87 @@ public final class AppViewModel: ObservableObject {
         self.trackBRecorder = nil
         self.imaginedProtocol = nil
         self.isImaginedSpeechRecording = false
+    }
+
+    // MARK: - Voice I/O
+
+    /// Begins push-to-talk dictation. Requests mic/speech authorization on
+    /// first use (not at app launch — see `VoiceInputFactory.live()`'s doc
+    /// comment), then opens the mic. Call on button-press.
+    public func startDictation() async {
+        guard !isDictating, composition != nil else { return }
+        let granted = await voiceInput.requestAuthorization()
+        guard granted else {
+            voiceWarning = "Microphone/speech access not granted"
+            return
+        }
+        do {
+            try await voiceInput.startRecording()
+            isDictating = true
+        } catch {
+            voiceWarning = "Dictation unavailable: \(error.localizedDescription)"
+        }
+    }
+
+    /// Ends push-to-talk dictation, merging the final transcript into the
+    /// same composition buffer EEG commits populate. Call on button-release.
+    public func stopDictation() async {
+        guard isDictating else { return }
+        defer { isDictating = false }
+        do {
+            let finalText = try await voiceInput.stopRecording()
+            if let composition {
+                await composition.appendExternalText(finalText, source: .dictation)
+            }
+        } catch {
+            voiceWarning = "Dictation failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// Reads the current composed sentence aloud. Explicit-trigger only —
+    /// never invoked automatically on word commit.
+    public func speak() async {
+        guard !isSpeaking, !composedText.isEmpty else { return }
+        isSpeaking = true
+        defer { isSpeaking = false }
+        do {
+            try await voiceOutput.speak(composedText)
+        } catch {
+            voiceWarning = "Speech failed: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Semantic Dialectic Engine
+
+    /// Runs the three-pass thesis/antithesis/synthesis refinement over the
+    /// current composed sentence. Explicit-trigger only — see
+    /// `DialecticEngine`'s doc comment for why this never runs
+    /// automatically.
+    public func refineComposedText() async {
+        guard !isRefining, !composedText.isEmpty else { return }
+        isRefining = true
+        defer { isRefining = false }
+        do {
+            refinementSuggestion = try await dialecticEngine.refine(composedText)
+        } catch is CancellationError {
+            // no-op
+        } catch {
+            refinementWarning = "Refinement failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// Accepts the current suggestion's synthesis as the new composed text
+    /// — a replace, not an append (see
+    /// `TextCompositionController.applyRefinement`).
+    public func acceptRefinement() async {
+        guard let refinement = refinementSuggestion, let composition else { return }
+        await composition.applyRefinement(refinement.synthesis)
+        refinementSuggestion = nil
+    }
+
+    /// Discards the current suggestion without changing composed text.
+    public func dismissRefinement() {
+        refinementSuggestion = nil
     }
 
     // MARK: - Helpers

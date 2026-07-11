@@ -59,6 +59,7 @@ public final class MetricsCollector: MetricsRecording, @unchecked Sendable {
     private var lastErrorDescription: String?
     private var classifierMode: ClassifierComputeMode = .cpuAndNeuralEngine
     private var predictorIdentifier: String = "stub"
+    private var externalTextWordCounts: [CompositionSource: Int] = [:]
 
     public init(ringSize: Int = 128) {
         self.ringSize = ringSize
@@ -95,6 +96,9 @@ public final class MetricsCollector: MetricsRecording, @unchecked Sendable {
     }
     public func recordError(_ error: BCIError) {
         lock.withLock { lastErrorDescription = error.description }
+    }
+    public func recordExternalText(source: CompositionSource, wordCount: Int) {
+        lock.withLock { externalTextWordCounts[source, default: 0] += wordCount }
     }
 
     public func snapshot() -> Snapshot {

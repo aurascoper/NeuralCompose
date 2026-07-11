@@ -9,6 +9,8 @@ struct PrivacyIndicatorView: View {
     let lastError: String?
     var signalQuality: SignalQuality? = nil
     var isReconnecting: Bool = false
+    var isDictating: Bool = false
+    var isSpeaking: Bool = false
 
     @State private var expanded: Bool = false
 
@@ -20,6 +22,7 @@ struct PrivacyIndicatorView: View {
                 Text(mode.substitutionSummary).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 signalBadge
+                voiceBadge
                 Button(action: { expanded.toggle() }) {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
                 }
@@ -118,6 +121,32 @@ struct PrivacyIndicatorView: View {
         case .healthy: return "Signal OK"
         case .poor:    return "Signal weak"
         case .lost:    return "No signal"
+        }
+    }
+
+    /// Transient, event-driven badge — visible only while the mic is
+    /// actually open (push-to-talk held) or speech is playing, and gone the
+    /// instant either stops. Deliberately not folded into `PipelineMode`:
+    /// voice isn't part of the continuous EEG pipeline, it only meets it at
+    /// the composition buffer (see `PipelineMode`'s own doc comment).
+    @ViewBuilder
+    private var voiceBadge: some View {
+        if isDictating {
+            Label("Mic", systemImage: "mic.fill")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
+        } else if isSpeaking {
+            Label("Speaking…", systemImage: "speaker.wave.2.fill")
+                .font(.caption)
+                .foregroundStyle(.blue)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.blue.opacity(0.12))
+                .cornerRadius(4)
         }
     }
 }

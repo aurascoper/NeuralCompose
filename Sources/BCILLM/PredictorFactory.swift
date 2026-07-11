@@ -20,6 +20,13 @@ public enum PredictorFactory {
         /// `MLXNextWordPredictor` and `StubNextWordPredictor` conform, so
         /// this is never nil.
         public let embeddingProvider: any TokenEmbeddingProviding
+        /// Same underlying instance as `predictor` again, exposed through
+        /// `TextGenerating` — the free-form multi-pass generation seam
+        /// `DialecticEngine` uses. Kept separate from `NextWordPredicting`
+        /// for the same reason `embeddingProvider` is separate: a distinct
+        /// capability with a distinct cost profile, not a widening of the
+        /// carousel's single-forward-pass protocol.
+        public let generator: any TextGenerating
         public let tokenizer: any TokenizerProviding
         public let kind: PipelineMode.Predictor
         public let warning: String?
@@ -37,6 +44,7 @@ public enum PredictorFactory {
             return Resolved(
                 predictor: stub,
                 embeddingProvider: stub,
+                generator: stub,
                 tokenizer: tokenizer,
                 kind: .stub,
                 warning: nil
@@ -48,6 +56,7 @@ public enum PredictorFactory {
             return Resolved(
                 predictor: mlx,
                 embeddingProvider: mlx,
+                generator: mlx,
                 tokenizer: tokenizer,
                 kind: .mlx,
                 warning: nil
@@ -59,6 +68,7 @@ public enum PredictorFactory {
             return Resolved(
                 predictor: stub,
                 embeddingProvider: stub,
+                generator: stub,
                 tokenizer: tokenizer,
                 kind: .stub,
                 warning: "MLX present but failed to load: \(reason)"

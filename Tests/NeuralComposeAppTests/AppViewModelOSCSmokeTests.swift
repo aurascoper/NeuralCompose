@@ -5,6 +5,7 @@ import Network
 @testable import BCICore
 @testable import BCIClassifier
 @testable import BCILLM
+@testable import BCIVoice
 
 /// End-to-end smoke test: does `AppViewModel`'s consumption loop actually
 /// receive and record samples when the live source is `MindMonitorOSCStream`?
@@ -78,6 +79,8 @@ final class AppViewModelOSCSmokeTests: XCTestCase {
             streamResolved: resolved,
             classifierResolved: classifierResolved,
             predictorResolved: predictorResolved,
+            voiceOutputResolved: VoiceOutputFactory.live(),
+            voiceInputResolved: VoiceInputFactory.live(overrideAvailability: false),
             metrics: MetricsCollector(),
             windowingConfig: windowingConfig
         )

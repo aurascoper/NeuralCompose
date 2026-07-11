@@ -17,7 +17,7 @@ import Tokenizers
 ///
 /// Threading: actor. Forward passes are serialized by the underlying
 /// `ModelContainer` — running two on the Apple GPU at once just thrashes.
-public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding {
+public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, TextGenerating {
 
     public nonisolated let isLive: Bool = true
     public nonisolated let modelIdentifier: String
@@ -115,6 +115,51 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding {
             let lastLogits = logits[0..., -1, 0...].squeezed()
             eval(lastLogits)
             return lastLogits.asArray(Float.self)
+        }
+        #else
+        throw BCIError.predictorInferenceFailed(reason: "MLX modules not importable")
+        #endif
+    }
+
+    // MARK: - TextGenerating
+
+    /// Free-form generation via the vendored `MLXLMCommon.generate(...)`
+    /// (an autoregressive decode loop) rather than `predictNextWords`'s
+    /// single forward pass. Reuses this actor's already-loaded `container`
+    /// — no second model load, consistent with the Package.swift
+    /// "single MLX runtime" isolation rule.
+    ///
+    /// Deliberately encodes `prompt` as a flat string via
+    /// `ctx.tokenizer.encode(text:)` (the same call `predictNextWords`
+    /// already uses) rather than routing through
+    /// `Tokenizer.applyChatTemplate(messages:)` — that API takes
+    /// `[String: Any]` messages, which aren't `Sendable`, and the
+    /// instruction wording is already fully self-contained in the prompt
+    /// text `DialecticEngine` constructs, so a chat template isn't needed
+    /// for this to work correctly on an instruct-tuned model.
+    public func generate(
+        prompt: String,
+        maxTokens: Int,
+        temperature: Double,
+        cancellationID: UUID
+    ) async throws -> String {
+        try Task.checkCancellation()
+
+        #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
+        let text = prompt.isEmpty ? " " : prompt
+        let params = GenerateParameters(
+            maxTokens: maxTokens,
+            temperature: Float(max(temperature, 0.0001))
+        )
+
+        return try await container.perform { (ctx: ModelContext) throws -> String in
+            let tokenIds = ctx.tokenizer.encode(text: text)
+            guard !tokenIds.isEmpty else { return "" }
+            let input = LMInput(tokens: MLXArray(tokenIds))
+            let result: GenerateResult = try MLXLMCommon.generate(
+                input: input, parameters: params, context: ctx
+            ) { _ in .more }
+            return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         #else
         throw BCIError.predictorInferenceFailed(reason: "MLX modules not importable")

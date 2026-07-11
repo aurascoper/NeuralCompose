@@ -14,7 +14,7 @@ import BCICore
 ///
 /// Quality is intentionally modest — this is a stand-in so the app demos
 /// end-to-end without a model. Switch on real MLX for actual fluency.
-public final class StubNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, @unchecked Sendable {
+public final class StubNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, TextGenerating, @unchecked Sendable {
 
     public let isLive: Bool = false
     public let modelIdentifier: String = "stub-unigram"
@@ -57,6 +57,24 @@ public final class StubNextWordPredictor: NextWordPredicting, TokenEmbeddingProv
         return (0..<Self.stubEmbeddingDimension).map { _ in
             Float(generator.next() % 2000) / 1000.0 - 1.0 // uniform in [-1, 1)
         }
+    }
+
+    // MARK: - TextGenerating
+
+    /// Deterministic canned transform — no real generation in stub mode.
+    /// Exists so the Refine UI is exercisable end-to-end in stub/synthetic
+    /// mode without pretending to be a real dialectic pass; the "[stub-
+    /// refined]" prefix makes it unmistakable this isn't real model output.
+    public func generate(
+        prompt: String,
+        maxTokens: Int,
+        temperature: Double,
+        cancellationID: UUID
+    ) async throws -> String {
+        try Task.checkCancellation()
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        return "[stub-refined] " + trimmed.prefix(80)
     }
 
     // MARK: - Tables

@@ -14,6 +14,7 @@ public protocol MetricsRecording: Sendable {
     func recordSelection(committedToken: String)
     func recordIntent(_ intent: SmoothedIntent)
     func recordError(_ error: BCIError)
+    func recordExternalText(source: CompositionSource, wordCount: Int)
 }
 
 public struct NullMetricsRecorder: MetricsRecording {
@@ -25,4 +26,5 @@ public struct NullMetricsRecorder: MetricsRecording {
     public func recordSelection(committedToken: String) {}
     public func recordIntent(_ intent: SmoothedIntent) {}
     public func recordError(_ error: BCIError) {}
+    public func recordExternalText(source: CompositionSource, wordCount: Int) {}
 }

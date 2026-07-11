@@ -31,7 +31,9 @@ struct ContentView: View {
                 mode: viewModel.pipelineMode,
                 lastError: viewModel.lastError,
                 signalQuality: viewModel.signalQuality,
-                isReconnecting: viewModel.isReconnecting
+                isReconnecting: viewModel.isReconnecting,
+                isDictating: viewModel.isDictating,
+                isSpeaking: viewModel.isSpeaking
             )
             Divider()
 
@@ -74,6 +76,17 @@ struct ContentView: View {
                 Divider()
                 ImaginedSpeechCalibrationView(viewModel: viewModel)
                     .transition(.opacity)
+            }
+
+            if let refinement = viewModel.refinementSuggestion {
+                Divider()
+                RefinementSuggestionView(
+                    refinement: refinement,
+                    onAccept: { Task { await viewModel.acceptRefinement() } },
+                    onDismiss: { viewModel.dismissRefinement() }
+                )
+                .padding(12)
+                .transition(.opacity)
             }
 
             Divider()
@@ -187,6 +200,41 @@ private struct ControlsView: View {
             .frame(maxWidth: 220)
 
             Spacer()
+
+            // Push-to-talk: mic is open only while this button is held —
+            // `pressing:` fires on both press-down and release, which is
+            // exactly the push-to-talk lifecycle `startDictation()`/
+            // `stopDictation()` expect. Never a toggle/latch.
+            Button {
+                // no-op: press/release handled by `pressing:` below.
+            } label: {
+                Label(viewModel.isDictating ? "Listening…" : "Hold to Talk", systemImage: "mic.fill")
+            }
+            .onLongPressGesture(minimumDuration: 0, pressing: { isPressing in
+                if isPressing {
+                    Task { await viewModel.startDictation() }
+                } else {
+                    Task { await viewModel.stopDictation() }
+                }
+            }, perform: {})
+
+            Button {
+                Task { await viewModel.speak() }
+            } label: {
+                Label("Speak", systemImage: "speaker.wave.2.fill")
+            }
+            .disabled(viewModel.composedText.isEmpty || viewModel.isSpeaking)
+
+            Button {
+                Task { await viewModel.refineComposedText() }
+            } label: {
+                if viewModel.isRefining {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Label("Refine", systemImage: "sparkles")
+                }
+            }
+            .disabled(viewModel.composedText.isEmpty || viewModel.isRefining)
 
             Toggle(isOn: $showMetrics) {
                 Label("Metrics", systemImage: "gauge.with.dots.needle.33percent")
