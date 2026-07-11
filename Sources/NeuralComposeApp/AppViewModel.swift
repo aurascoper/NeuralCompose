@@ -170,9 +170,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.voiceInput = container.voiceInputResolved.recognizer
         // The voice command recognizer holds a parser closure that
         // wraps whatever recognizer the app is currently using
-        // (StubCommandRecognizer today; FuzzyCommandRecognizer in
-        // commit 3). Captured here so the voice service's actor
-        // never has to know about the recognizer type.
+        // (FuzzyCommandRecognizer today). Captured here so the
+        // voice service's actor never has to know about the
+        // recognizer type.
         self.voiceCommandInput = container.voiceCommandResolved.recognizer
         self.dialecticEngine = DialecticEngine(
             generator: container.predictorResolved.generator,

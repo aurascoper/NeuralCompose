@@ -36,7 +36,7 @@ public struct StubCommandRecognizer: AppCommandRecognizing {
         _ text: String,
         in descriptors: [CommandDescriptor]
     ) -> AppCommand? {
-        let cleaned = Self.clean(text)
+        let cleaned = CommandTextNormalizer.clean(text)
         guard !cleaned.isEmpty else { return nil }
 
         var bestLength = 0
@@ -60,59 +60,4 @@ public struct StubCommandRecognizer: AppCommandRecognizing {
 
         return bestCommand
     }
-
-    // MARK: - Cleaning
-
-    /// Lowercase, trim, strip outer punctuation, strip politeness
-    /// prefixes/suffixes. Returns the cleaned string, or empty if
-    /// the input was empty/whitespace-only.
-    static func clean(_ text: String) -> String {
-        // Step 1: lowercase + trim + strip outer punctuation
-        var s = text.lowercased()
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        s = s.trimmingCharacters(in: CharacterSet.punctuationCharacters)
-        guard !s.isEmpty else { return "" }
-
-        // Step 2: strip politeness prefixes (longest first so "i want to "
-        // matches before "i ").
-        for prefix in politenessPrefixes {
-            if s.hasPrefix(prefix) {
-                s = String(s.dropFirst(prefix.count))
-                s = s.trimmingCharacters(in: .whitespacesAndNewlines)
-                break
-            }
-        }
-
-        // Step 3: strip politeness suffixes (longest first so
-        // " thank you" matches before " thanks").
-        for suffix in politenessSuffixes {
-            if s.hasSuffix(suffix) {
-                s = String(s.dropLast(suffix.count))
-                s = s.trimmingCharacters(in: .whitespacesAndNewlines)
-                break
-            }
-        }
-
-        return s
-    }
-
-    /// Order matters: longest prefixes first, so the most-specific
-    /// prefix is tried before any shorter one is tried.
-    private static let politenessPrefixes: [String] = [
-        "i'd like to ",
-        "i would like to ",
-        "i want to ",
-        "i need to ",
-        "could you ",
-        "can you ",
-        "would you ",
-        "please ",
-    ]
-
-    /// Order matters: longest suffixes first.
-    private static let politenessSuffixes: [String] = [
-        " thank you",
-        " thanks",
-        " please",
-    ]
 }

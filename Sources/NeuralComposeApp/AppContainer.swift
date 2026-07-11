@@ -84,13 +84,11 @@ public struct AppContainer: Sendable {
         let voiceOutput = VoiceOutputFactory.live()
         let voiceInput = VoiceInputFactory.live()
         // The voice command recognizer is constructed with a
-        // parser closure that wraps the current
-        // `StubCommandRecognizer` (commit 3 of this iteration
-        // will swap this for `FuzzyCommandRecognizer` without
-        // changing the factory's signature). The closure
-        // captures the recognizer by reference; the recognizer
-        // is stateless and Sendable.
-        let commandRecognizer = StubCommandRecognizer()
+        // parser closure that wraps `FuzzyCommandRecognizer`
+        // (ASR-tolerant token-level matching — see that type's
+        // doc comment). The closure captures the recognizer by
+        // reference; the recognizer is stateless and Sendable.
+        let commandRecognizer = FuzzyCommandRecognizer()
         let voiceCommand = VoiceCommandFactory.live(
             parser: { text, descriptors in
                 commandRecognizer.recognize(text, in: descriptors)
