@@ -79,7 +79,7 @@ A reasonable threshold: $\tau \approx 1.5$ (theta power > 1.5x alpha power). Thi
 
 The Core ML classifier is a small CNN on a 30s × 4ch × 128-bin log-magnitude spectrogram (see `SLEEP_CYCLE_DESIGN.md` §16.3 for the architecture). Its output is a 4-class softmax:
 
-$$p(c \mid W_i) = \frac{\exp(z_c(W_i))}{\sum_{c'} \exp(z_{c'}(W_i))}, \quad c \in \{\text{Wake}, \text{N1}, \text{N2_N3}, \text{Uncertain_REM}\}$$
+$$p(c \mid W_i) = \frac{\exp(z_c(W_i))}{\sum_{c'} \exp(z_{c'}(W_i))}, \quad c \in \{\text{Wake}, \text{N1}, \text{N2\_N3}, \text{Uncertain\_REM}\}$$
 
 where $z_c(W_i)$ is the pre-softmax logit for class $c$. The classifier is trained on a labeled dataset (Sleep-EDFx with channel-mapping transfer, or per-user labeled data when available) and quantized to FP16 for ANE.
 
@@ -89,8 +89,8 @@ Single-epoch predictions are noisy. The smoother aggregates the last $k$ predict
 
 AASM rule: sleep stages do not skip. The transition graph is:
 
-$$\text{Wake} \leftrightarrow \text{N1} \leftrightarrow \text{N2_N3}$$
-$$\text{N2_N3} \leftrightarrow \text{Uncertain_REM}$$
+$$\text{Wake} \leftrightarrow \text{N1} \leftrightarrow \text{N2\_N3}$$
+$$\text{N2\_N3} \leftrightarrow \text{Uncertain\_REM}$$
 
 (Direct Wake ↔ N2_N3 is forbidden; the smoother will not emit such a transition regardless of classifier confidence.)
 
