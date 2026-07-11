@@ -40,6 +40,12 @@ final class AppCommandDispatcherTests: XCTestCase {
         func stopDictation() async {
             callLog.append("stopDictation")
         }
+        func startCommandListening() async {
+            callLog.append("startCommandListening")
+        }
+        func stopCommandListening() async {
+            callLog.append("stopCommandListening")
+        }
     }
 
     private func makeDispatcher() -> (AppCommandDispatcher, SpyTarget) {
@@ -116,6 +122,18 @@ final class AppCommandDispatcherTests: XCTestCase {
         XCTAssertEqual(spy.callLog, ["stopDictation"])
     }
 
+    func testStartCommandCallsStartCommandListening() async {
+        let (d, spy) = makeDispatcher()
+        await d.perform(.startCommand)
+        XCTAssertEqual(spy.callLog, ["startCommandListening"])
+    }
+
+    func testStopCommandCallsStopCommandListening() async {
+        let (d, spy) = makeDispatcher()
+        await d.perform(.stopCommand)
+        XCTAssertEqual(spy.callLog, ["stopCommandListening"])
+    }
+
     // MARK: - All 10 cases exhaustively
 
     /// Sweep over every `AppCommand` case asserting that exactly one
@@ -158,6 +176,8 @@ final class AppCommandDispatcherTests: XCTestCase {
             .refine,
             .startDictation,
             .stopDictation,
+            .startCommand,
+            .stopCommand,
         ] {
             let (d, spy) = makeDispatcher()
             await d.perform(command)
@@ -200,7 +220,7 @@ final class AppCommandDispatcherTests: XCTestCase {
     func testDispatcherExposesItsCommandDescriptors() {
         let (d, _) = makeDispatcher()
         let vocab = d.commandDescriptors
-        XCTAssertEqual(vocab.count, 10, "default vocabulary should have 10 entries")
+        XCTAssertEqual(vocab.count, 12, "default vocabulary should have 12 entries (10 existing + startCommand + stopCommand)")
         // Every case in the enum has a descriptor.
         let caseSet = Set(vocab.map { $0.command })
         let allCases = AppCommand.allCasesForTesting
@@ -231,6 +251,8 @@ extension AppCommand {
             .refine,
             .startDictation,
             .stopDictation,
+            .startCommand,
+            .stopCommand,
         ]
     }
 }

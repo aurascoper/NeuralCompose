@@ -28,12 +28,24 @@ public enum VoiceCommandFactory {
     /// `VoiceInputFactory.live(overrideAvailability:)`): pass a
     /// fixed value in tests to force a branch without depending on
     /// the test machine's actual Speech-framework/locale state.
-    public static func live(overrideAvailability: Bool? = nil) -> Resolved {
+    public static func live(
+        overrideAvailability: Bool? = nil,
+        parser: @escaping @Sendable (String, [CommandDescriptor]) -> AppCommand? = { _, _ in nil },
+        vocabulary: [CommandDescriptor] = []
+    ) -> Resolved {
         let available = overrideAvailability ?? (SFSpeechRecognizer(locale: Locale(identifier: "en-US"))?.isAvailable ?? false)
         guard available else {
             BCILog.voice.notice("On-device speech recognition unavailable for this locale/Mac; using stub for voice commands")
             return Resolved(recognizer: StubVoiceCommandRecognizer(), kind: .stub, warning: nil)
         }
-        return Resolved(recognizer: SpeechCommandRecognizerService(), kind: .live, warning: nil)
+        return Resolved(
+            recognizer: SpeechCommandRecognizerService(
+                locale: Locale(identifier: "en-US"),
+                parser: parser,
+                vocabulary: vocabulary
+            ),
+            kind: .live,
+            warning: nil
+        )
     }
 }

@@ -14,6 +14,7 @@ public struct AppContainer: Sendable {
     public let predictorResolved: PredictorFactory.Resolved
     public let voiceOutputResolved: VoiceOutputFactory.Resolved
     public let voiceInputResolved: VoiceInputFactory.Resolved
+    public let voiceCommandResolved: VoiceCommandFactory.Resolved
     public let metrics: MetricsCollector
     public let windowingConfig: EEGWindowingConfig
     public let smootherConfig: IntentSmoother.Config
@@ -54,6 +55,7 @@ public struct AppContainer: Sendable {
         predictorResolved: PredictorFactory.Resolved,
         voiceOutputResolved: VoiceOutputFactory.Resolved,
         voiceInputResolved: VoiceInputFactory.Resolved,
+        voiceCommandResolved: VoiceCommandFactory.Resolved = VoiceCommandFactory.live(overrideAvailability: false),
         metrics: MetricsCollector,
         windowingConfig: EEGWindowingConfig,
         smootherConfig: IntentSmoother.Config = .init()
@@ -63,6 +65,7 @@ public struct AppContainer: Sendable {
         self.predictorResolved = predictorResolved
         self.voiceOutputResolved = voiceOutputResolved
         self.voiceInputResolved = voiceInputResolved
+        self.voiceCommandResolved = voiceCommandResolved
         self.metrics = metrics
         self.windowingConfig = windowingConfig
         self.smootherConfig = smootherConfig
@@ -80,6 +83,20 @@ public struct AppContainer: Sendable {
         let predictor = await PredictorFactory.live()
         let voiceOutput = VoiceOutputFactory.live()
         let voiceInput = VoiceInputFactory.live()
+        // The voice command recognizer is constructed with a
+        // parser closure that wraps the current
+        // `StubCommandRecognizer` (commit 3 of this iteration
+        // will swap this for `FuzzyCommandRecognizer` without
+        // changing the factory's signature). The closure
+        // captures the recognizer by reference; the recognizer
+        // is stateless and Sendable.
+        let commandRecognizer = StubCommandRecognizer()
+        let voiceCommand = VoiceCommandFactory.live(
+            parser: { text, descriptors in
+                commandRecognizer.recognize(text, in: descriptors)
+            },
+            vocabulary: DefaultCommandDescriptors.all
+        )
         let metrics = MetricsCollector()
         let windowingConfig = EEGWindowingConfig(
             windowSeconds: 2.0,
@@ -93,6 +110,7 @@ public struct AppContainer: Sendable {
             predictorResolved: predictor,
             voiceOutputResolved: voiceOutput,
             voiceInputResolved: voiceInput,
+            voiceCommandResolved: voiceCommand,
             metrics: metrics,
             windowingConfig: windowingConfig
         )

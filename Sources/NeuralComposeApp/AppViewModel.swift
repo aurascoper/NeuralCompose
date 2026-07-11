@@ -82,6 +82,16 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var isSpeaking: Bool = false
     @Published public private(set) var voiceWarning: String?
 
+    // ── Voice command listening — push-to-talk ASR → AppCommand. Same
+    //    privacy posture as dictation: mic open only between explicit
+    //    start/stop pairs, never a continuous stream. `isCommanding` is
+    //    the banner flag; `commandWarning` is its own field (mirrors
+    //    `voiceWarning` / `refinementWarning` separation-of-concerns
+    //    pattern) so a command failure doesn't pollute the dictation
+    //    health signal. ───────────────────────────────────────────────
+    @Published public private(set) var isCommanding: Bool = false
+    @Published public private(set) var commandWarning: String?
+
     // ── Semantic dialectic engine — explicit-trigger thesis/antithesis/
     //    synthesis refinement of the composed sentence. Never runs
     //    automatically (see `DialecticEngine`'s doc comment for why: three
@@ -113,6 +123,14 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private let predictor: any NextWordPredicting
     private let voiceOutput: any SpeechSynthesizing
     private let voiceInput: any DictationRecognizing
+    private let voiceCommandInput: any VoiceCommandRecognizing
+    /// Set by `AppLoader` after the dispatcher is constructed. Used
+    /// by `stopCommandListening()` to dispatch the recognized
+    /// command through the same path the palette / menu / buttons
+    /// use (rather than calling `AppViewModel` methods directly).
+    /// `weak` so the dispatcher's lifetime is owned by the loader,
+    /// not extended by the view model.
+    public weak var commandDispatcher: AppCommandDispatcher?
     private let dialecticEngine: DialecticEngine
 
     // ── Per-start resources (recreated each call to start()) ─────────────
@@ -150,6 +168,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.predictor = container.predictorResolved.predictor
         self.voiceOutput = container.voiceOutputResolved.synthesizer
         self.voiceInput = container.voiceInputResolved.recognizer
+        // The voice command recognizer holds a parser closure that
+        // wraps whatever recognizer the app is currently using
+        // (StubCommandRecognizer today; FuzzyCommandRecognizer in
+        // commit 3). Captured here so the voice service's actor
+        // never has to know about the recognizer type.
+        self.voiceCommandInput = container.voiceCommandResolved.recognizer
         self.dialecticEngine = DialecticEngine(
             generator: container.predictorResolved.generator,
             metrics: container.metrics
@@ -168,6 +192,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             self.voiceWarning = w
         } else if let w = container.voiceInputResolved.warning {
             self.voiceWarning = w
+        }
+        if let w = container.voiceCommandResolved.warning {
+            self.commandWarning = w
         }
     }
 
@@ -661,6 +688,73 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         } catch {
             voiceWarning = "Dictation failed: \(error.localizedDescription)"
         }
+    }
+
+    /// Begins push-to-talk voice command listening. Requests
+    /// mic/speech authorization on first use (not at app launch —
+    /// see `VoiceCommandFactory.live()`'s doc comment), then opens
+    /// the mic. Call on button-press. The recognizer is *not* the
+    /// dictation service; this is a separate `SFSpeechRecognizer`
+    /// instance dedicated to commands, so the user can hold the
+    /// "Hold to Command" button without affecting "Hold to Talk".
+    public func startCommandListening() async {
+        guard !isCommanding else { return }
+        let granted = await voiceCommandInput.requestAuthorization()
+        guard granted else {
+            commandWarning = "Microphone/speech access not granted"
+            return
+        }
+        do {
+            try await voiceCommandInput.startCommand()
+            isCommanding = true
+        } catch {
+            commandWarning = "Voice commands unavailable: \(error.localizedDescription)"
+        }
+    }
+
+    /// Ends push-to-talk voice command listening. The final
+    /// transcript is parsed by the configured recognizer and, on a
+    /// successful match, the resulting `AppCommand` is dispatched
+    /// through the same `AppCommandDispatcher` the palette and
+    /// menus use. On a no-match, sets `commandWarning`. Call on
+    /// button-release.
+    public func stopCommandListening() async {
+        guard isCommanding else { return }
+        defer { isCommanding = false }
+        do {
+            // `stopAndRecognize()` combines the mic teardown +
+            // parser invocation + diagnostic record construction
+            // in one call (see SpeechCommandRecognizerService's
+            // doc comment). The parser closure was captured at
+            // init() time.
+            let (command, result) = try await voiceCommandInput.stopAndRecognize()
+            // Diagnostic log for every recognition attempt. Mirrors
+            // the existing voice-dictation log pattern (see
+            // `BCILog.voice.notice` calls in `VoiceCommandFactory`).
+            // This becomes the dataset for evaluating fuzzy /
+            // embedding recognizers — every transcript is a labeled
+            // example (transcript -> command, or transcript ->
+            // rejection).
+            BCILog.voice.notice("voice command recognition: transcript=\(result.transcript) command=\(result.command?.id ?? "nil") rejection=\(result.rejectionReason?.rawValue ?? "none")")
+            if let command, let dispatcher = commandDispatcher {
+                await dispatcher.perform(command)
+            } else if result.command == nil {
+                commandWarning = "Couldn't recognize that command"
+            }
+        } catch {
+            commandWarning = "Voice command failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// Cancels an in-flight voice command utterance without
+    /// dispatching. Mirrors `stopDictation()`'s "release without
+    /// commit" path; called when the user releases the button but
+    /// the recognizer hasn't produced a final transcript (e.g. an
+    /// empty utterance).
+    public func cancelCommandListening() async {
+        guard isCommanding else { return }
+        defer { isCommanding = false }
+        await voiceCommandInput.cancelCommand()
     }
 
     /// Reads the current composed sentence aloud. Explicit-trigger only —

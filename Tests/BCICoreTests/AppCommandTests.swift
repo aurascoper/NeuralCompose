@@ -38,6 +38,8 @@ final class AppCommandTests: XCTestCase {
             .refine,
             .startDictation,
             .stopDictation,
+            .startCommand,
+            .stopCommand,
         ]
         let ids = allCases.map { $0.id }
         XCTAssertEqual(ids.count, Set(ids).count, "ids must be unique across all cases")
@@ -58,6 +60,8 @@ final class AppCommandTests: XCTestCase {
             .refine,
             .startDictation,
             .stopDictation,
+            .startCommand,
+            .stopCommand,
         ]
         for c in allCases {
             XCTAssertFalse(
@@ -82,6 +86,8 @@ final class AppCommandTests: XCTestCase {
             .refine,
             .startDictation,
             .stopDictation,
+            .startCommand,
+            .stopCommand,
         ]
         for c in allCases {
             XCTAssertFalse(c.id.isEmpty, "id for \(c) is empty")
@@ -103,5 +109,7 @@ final class AppCommandTests: XCTestCase {
         XCTAssertEqual(AppCommand.refine.id,             "refine.run")
         XCTAssertEqual(AppCommand.startDictation.id,     "dictation.start")
         XCTAssertEqual(AppCommand.stopDictation.id,      "dictation.stop")
+        XCTAssertEqual(AppCommand.startCommand.id,       "command.start")
+        XCTAssertEqual(AppCommand.stopCommand.id,        "command.stop")
     }
 }

@@ -29,6 +29,21 @@ public final class StubVoiceCommandRecognizer: VoiceCommandRecognizing, @uncheck
 
     public func cancelCommand() async {}
 
+    public func stopAndRecognize() async throws -> (AppCommand?, CommandRecognitionResult) {
+        // The stub never produces a meaningful transcript, so
+        // its `stopAndRecognize()` mirrors its `recognizeLastTranscript()`:
+        // always rejects as emptyTranscript. The wiring path is
+        // identical to the live impl's call shape, so the
+        // dispatcher's contract is uniform across both backends.
+        (nil, CommandRecognitionResult(
+            transcript: "",
+            normalized: "",
+            command: nil,
+            confidence: 0.0,
+            rejectionReason: .emptyTranscript
+        ))
+    }
+
     public func recognizeLastTranscript() async -> (AppCommand?, CommandRecognitionResult) {
         (nil, CommandRecognitionResult(
             transcript: "",

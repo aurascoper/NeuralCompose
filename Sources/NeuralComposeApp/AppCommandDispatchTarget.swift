@@ -24,6 +24,8 @@ public protocol AppCommandDispatchTarget: AnyObject {
     func refineComposedText() async
     func startDictation() async
     func stopDictation() async
+    func startCommandListening() async
+    func stopCommandListening() async
 }
 
 /// Transient view-side navigation requests published by the dispatcher

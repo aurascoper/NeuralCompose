@@ -87,6 +87,12 @@ final class AppLoader: ObservableObject {
         let vm = AppViewModel(container: container)
         await vm.start()
         let disp = AppCommandDispatcher(target: vm)
+        // Wire the dispatcher back into the view model so
+        // voice commands resolved by `stopCommandListening()`
+        // route through the same `AppCommand` execution path
+        // the palette and menus use. The ref is `weak` so
+        // the dispatcher's lifetime stays owned by the loader.
+        vm.commandDispatcher = disp
         self.viewModel = vm
         self.dispatcher = disp
     }

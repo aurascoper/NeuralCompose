@@ -141,16 +141,9 @@ public actor SpeechCommandRecognizerService: VoiceCommandRecognizing {
         // a subsequent press). The caller is expected to invoke
         // `recognizeLastTranscript()` immediately after the
         // matching `stopCommand()` with the transcript the stop
-        // returned. The wiring in `AppViewModel` is:
-        //     let text = try await voiceInput.stopCommand()
-        //     let (cmd, result) = await voiceInput.recognize(text)
-        //
-        // So this method, as specified by the protocol, has no
-        // captured state to operate on. To keep the protocol
-        // useful (and not require the wiring to thread `text`
-        // through), the recognizer's stop command should be
-        // called via a convenience method that returns the
-        // parsed result directly. See `stopAndRecognize()` below.
+        // returned. The wiring in `AppViewModel` uses
+        // `stopAndRecognize()` instead — that method handles the
+        // teardown and parses the result in one call.
         return (nil, CommandRecognitionResult(
             transcript: "",
             normalized: "",
@@ -160,14 +153,6 @@ public actor SpeechCommandRecognizerService: VoiceCommandRecognizing {
         ))
     }
 
-    /// Convenience: stop the recording AND parse the resulting
-    /// transcript in one call. This is the path the UI's
-    /// `stopCommandListening()` will use — it avoids the
-    /// "thread the transcript through" awkwardness of the bare
-    /// `recognizeLastTranscript()` API while keeping the protocol
-    /// surface for future recognizers that *do* buffer their
-    /// own transcript (e.g. a future always-on design that
-    /// pre-runs the parser).
     public func stopAndRecognize() async throws -> (AppCommand?, CommandRecognitionResult) {
         let transcript = try await stopCommand()
         let command = parser(transcript, vocabulary)

@@ -74,6 +74,10 @@ public final class AppCommandDispatcher {
             await target.startDictation()
         case .stopDictation:
             await target.stopDictation()
+        case .startCommand:
+            await target.startCommandListening()
+        case .stopCommand:
+            await target.stopCommandListening()
         }
     }
 }

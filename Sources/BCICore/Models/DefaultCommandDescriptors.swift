@@ -105,5 +105,23 @@ public enum DefaultCommandDescriptors {
                 "end dictation",
             ]
         ),
+        CommandDescriptor(
+            command: .startCommand,
+            title: "Start Command Listening",
+            aliases: [
+                "start command listening",
+                "start commanding",
+                "start command",
+            ]
+        ),
+        CommandDescriptor(
+            command: .stopCommand,
+            title: "Stop Command Listening",
+            aliases: [
+                "stop command listening",
+                "stop commanding",
+                "stop command",
+            ]
+        ),
     ]
 }

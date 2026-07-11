@@ -81,6 +81,7 @@ final class AppViewModelOSCSmokeTests: XCTestCase {
             predictorResolved: predictorResolved,
             voiceOutputResolved: VoiceOutputFactory.live(),
             voiceInputResolved: VoiceInputFactory.live(overrideAvailability: false),
+            voiceCommandResolved: VoiceCommandFactory.live(overrideAvailability: false),
             metrics: MetricsCollector(),
             windowingConfig: windowingConfig
         )

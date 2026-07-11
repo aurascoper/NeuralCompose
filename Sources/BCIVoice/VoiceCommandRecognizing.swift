@@ -77,4 +77,12 @@ public protocol VoiceCommandRecognizing: Sendable {
     /// recent `stopCommand()`. Returns `(nil, result)` when the
     /// transcript doesn't match any command.
     func recognizeLastTranscript() async -> (AppCommand?, CommandRecognitionResult)
+
+    /// Convenience: stop the recording AND parse the resulting
+    /// transcript in one call. The canonical path the UI uses
+    /// (`AppViewModel.stopCommandListening()` calls this). Returns
+    /// the matched command plus a diagnostic record. Throws
+    /// `BCIError.speechRecognitionUnavailable` if the underlying
+    /// engine can't produce a transcript.
+    func stopAndRecognize() async throws -> (AppCommand?, CommandRecognitionResult)
 }

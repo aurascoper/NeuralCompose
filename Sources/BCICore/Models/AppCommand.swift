@@ -25,6 +25,8 @@ public enum AppCommand: Sendable, Equatable, Hashable {
     case refine
     case startDictation
     case stopDictation
+    case startCommand
+    case stopCommand
 }
 
 extension AppCommand {
@@ -51,6 +53,8 @@ extension AppCommand {
         case .refine:             return "refine.run"
         case .startDictation:     return "dictation.start"
         case .stopDictation:      return "dictation.stop"
+        case .startCommand:       return "command.start"
+        case .stopCommand:        return "command.stop"
         }
     }
 }

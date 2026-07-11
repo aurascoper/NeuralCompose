@@ -42,7 +42,8 @@ struct ContentView: View {
                 signalQuality: viewModel.signalQuality,
                 isReconnecting: viewModel.isReconnecting,
                 isDictating: viewModel.isDictating,
-                isSpeaking: viewModel.isSpeaking
+                isSpeaking: viewModel.isSpeaking,
+                isCommanding: viewModel.isCommanding
             )
             Divider()
 
@@ -297,6 +298,24 @@ private struct ControlsView: View {
                     Task { await dispatcher.perform(.startDictation) }
                 } else {
                     Task { await dispatcher.perform(.stopDictation) }
+                }
+            }, perform: {})
+
+            // Push-to-command: same push-to-talk lifecycle as
+            // "Hold to Talk" but a *separate* `SFSpeechRecognizer`
+            // instance dedicated to commands. The user can hold
+            // both buttons at different times (the buttons share
+            // the same TCC permission but distinct recognizers).
+            Button {
+                // no-op: press/release handled by `pressing:` below.
+            } label: {
+                Label(viewModel.isCommanding ? "Cmd…" : "Hold to Command", systemImage: "command")
+            }
+            .onLongPressGesture(minimumDuration: 0, pressing: { isPressing in
+                if isPressing {
+                    Task { await dispatcher.perform(.startCommand) }
+                } else {
+                    Task { await dispatcher.perform(.stopCommand) }
                 }
             }, perform: {})
 

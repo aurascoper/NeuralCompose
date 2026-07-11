@@ -11,6 +11,7 @@ struct PrivacyIndicatorView: View {
     var isReconnecting: Bool = false
     var isDictating: Bool = false
     var isSpeaking: Bool = false
+    var isCommanding: Bool = false
 
     @State private var expanded: Bool = false
 
@@ -23,6 +24,7 @@ struct PrivacyIndicatorView: View {
                 Spacer()
                 signalBadge
                 voiceBadge
+                cmdBadge
                 Button(action: { expanded.toggle() }) {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
                 }
@@ -146,6 +148,24 @@ struct PrivacyIndicatorView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Color.blue.opacity(0.12))
+                .cornerRadius(4)
+        }
+    }
+
+    /// Sibling of `voiceBadge` for the voice command recognizer.
+    /// Distinct color (purple) so the user can see at a glance
+    /// which mic-driven path is active. Visible only while the
+    /// "Hold to Command" button is held — never as a continuous
+    /// state.
+    @ViewBuilder
+    private var cmdBadge: some View {
+        if isCommanding {
+            Label("Cmd", systemImage: "command")
+                .font(.caption)
+                .foregroundStyle(.purple)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.purple.opacity(0.12))
                 .cornerRadius(4)
         }
     }
