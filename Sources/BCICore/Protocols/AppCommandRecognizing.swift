@@ -1,5 +1,4 @@
 import Foundation
-import BCICore
 
 /// Maps a free-text utterance (or a typed query) to an `AppCommand`,
 /// given a vocabulary. The single method is a pure function — no

@@ -1,5 +1,4 @@
 import Foundation
-import BCICore
 
 /// One row in the application's command vocabulary. The descriptor is the
 /// single source of truth for "this command exists, here's how the user

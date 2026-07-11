@@ -1,5 +1,4 @@
 import Foundation
-import BCICore
 
 /// Canonical command vocabulary for NeuralCompose. Every recognizer
 /// (stub today, speech/embedding/LLM in future iterations) and the
