@@ -32,6 +32,7 @@ struct ContentView: View {
     @State private var showCalibration: Bool = false
     @State private var uiMode: PipelineUIMode = .production
     @State private var keyboardMonitor: Any?
+    @State private var showCommandPalette: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -132,21 +133,42 @@ struct ContentView: View {
             }
         }
         .onChange(of: uiMode) { _, newMode in
-            // Leaving Research mode mid-session should stop the Track B
-            // recorder cleanly — otherwise the recorder keeps writing to disk
-            // for a session the user can no longer see or stop.
-            if newMode != .research, viewModel.isImaginedSpeechRecording {
-                Task { await viewModel.stopImaginedSpeechSession() }
-            }
-            // Production-mode keyboard monitor only makes sense in Production.
-            if newMode == .research {
-                teardownKeyboardMonitoring()
-            } else if showCalibration {
-                setupKeyboardMonitoring()
-            }
+            handleUIModeChange(newMode)
         }
         .onAppear { setupKeyboardMonitoring() }
         .onDisappear { teardownKeyboardMonitoring() }
+        // ── Command palette overlay (⌘⇧P) ────────────────────────────────
+        //    Bound to a top-level keyboard shortcut below. The overlay
+        //    sits on top of the main content; a scrim behind it captures
+        //    click-outside-to-dismiss via the same `showCommandPalette`
+        //    binding the palette view uses.
+        .overlay {
+            if showCommandPalette {
+                ZStack {
+                    Color.black.opacity(0.25)
+                        .ignoresSafeArea()
+                        .onTapGesture { showCommandPalette = false }
+                    DebugCommandPaletteView(
+                        descriptors: dispatcher.commandDescriptors,
+                        dispatcher: dispatcher,
+                        isPresented: $showCommandPalette
+                    )
+                }
+                .transition(.opacity)
+            }
+        }
+        // Hidden button that captures ⌘⇧P regardless of which
+        // subview is focused. `.keyboardShortcut` attaches to a
+        // specific view in the hierarchy, so a zero-size button
+        // placed at the root reliably captures the global shortcut
+        // for the app. The button itself is never rendered visibly.
+        .overlay(alignment: .topLeading) {
+            Button("") { showCommandPalette.toggle() }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+                .frame(width: 0, height: 0)
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
         .onChange(of: showCalibration) { _, isOn in
             // Calibration panel just toggled — install or tear down the
             // keyboard monitor accordingly. The original onAppear runs once,
@@ -197,6 +219,28 @@ struct ContentView: View {
         if let monitor = keyboardMonitor {
             NSEvent.removeMonitor(monitor)
             keyboardMonitor = nil
+        }
+    }
+
+    /// Extracted from the `onChange(of: uiMode)` closure so the
+    /// SwiftUI type-checker doesn't time out on the now-larger body
+    /// (this method's calls are simple statements; the closure's
+    /// nested `if`-`else if` plus `Task` block was the straw that
+    /// broke the compiler's back once the palette overlay and
+    /// keyboard-shortcut modifiers were added).
+    private func handleUIModeChange(_ newMode: PipelineUIMode) {
+        // Leaving Research mode mid-session should stop the Track B
+        // recorder cleanly — otherwise the recorder keeps writing
+        // to disk for a session the user can no longer see or stop.
+        if newMode != .research, viewModel.isImaginedSpeechRecording {
+            Task { await viewModel.stopImaginedSpeechSession() }
+        }
+        // Production-mode keyboard monitor only makes sense in
+        // Production.
+        if newMode == .research {
+            teardownKeyboardMonitoring()
+        } else if showCalibration {
+            setupKeyboardMonitoring()
         }
     }
 }
