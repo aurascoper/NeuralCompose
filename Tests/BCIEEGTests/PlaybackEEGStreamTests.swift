@@ -122,6 +122,30 @@ final class PlaybackEEGStreamTests: XCTestCase {
         XCTAssertLessThan(elapsedSeconds, 0.2, "instant pacing should not sleep between samples")
     }
 
+    // MARK: - Channel count available before start()
+
+    func testChannelCountIsKnownBeforeStartIsCalled() throws {
+        // AppContainer reads `channelCount` synchronously to build
+        // EEGWindowingConfig before ever calling `start()` — a stale 0
+        // default here trips EEGWindowingConfig's `channelCount > 0`
+        // precondition and crashes the app the instant playback mode is
+        // selected. This is a regression test for that exact failure.
+        let url = try writeJitteryFixture()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let stream = PlaybackEEGStream(path: url.path)
+        XCTAssertEqual(stream.channelCount, 2, "should be known from the header without calling start()")
+    }
+
+    func testChannelCountFallsBackSafelyWhenFileIsMissing() {
+        // A missing/malformed file can't be peeked, but channelCount must
+        // still be positive so EEGWindowingConfig's precondition never
+        // fires — start()'s own throwing validation remains the place
+        // that surfaces the real error.
+        let stream = PlaybackEEGStream(path: "/nonexistent/PlaybackEEGStreamTests.csv")
+        XCTAssertGreaterThan(stream.channelCount, 0)
+    }
+
     // MARK: - Rate inference
 
     func testEffectiveSampleRateUsesFullSpanAverage() async throws {
