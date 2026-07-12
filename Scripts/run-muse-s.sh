@@ -9,6 +9,15 @@
 #   NEURALCOMPOSE_MUSE_MAC="AA:BB:CC:DD:EE:FF" \
 #   ./Scripts/run-muse-s.sh                                    # scan by MAC
 #
+# Launches via `open` against a bundled .app (see package-app-bundle.sh),
+# never the bare .build/debug/NeuralCompose executable directly — a bare
+# SwiftPM executable has no bundle Info.plist, so macOS TCC SIGABRTs the
+# process the instant BrainFlow's BLE scan touches CoreBluetooth instead
+# of prompting for Bluetooth access (confirmed by hand, 2026-07-11).
+# `open` also gives correct LaunchServices window/activation behavior
+# that a direct exec doesn't — a bare-exec'd bundle registers with the
+# window server but never creates a window.
+#
 
 set -euo pipefail
 
@@ -27,11 +36,20 @@ if [[ ! -d "$BF/compiled" ]]; then
     exit 1
 fi
 
-export DYLD_LIBRARY_PATH="$BF/compiled:${DYLD_LIBRARY_PATH:-}"
-export NEURALCOMPOSE_BOARD_PROFILE="${NEURALCOMPOSE_BOARD_PROFILE:-muses}"
+"$REPO_ROOT/Scripts/package-app-bundle.sh"
+
+BOARD_PROFILE="${NEURALCOMPOSE_BOARD_PROFILE:-muses}"
+
+ENV_ARGS=(--env "NEURALCOMPOSE_BOARD_PROFILE=$BOARD_PROFILE")
+if [[ -n "${NEURALCOMPOSE_MUSE_SERIAL_NUMBER:-}" ]]; then
+    ENV_ARGS+=(--env "NEURALCOMPOSE_MUSE_SERIAL_NUMBER=$NEURALCOMPOSE_MUSE_SERIAL_NUMBER")
+fi
+if [[ -n "${NEURALCOMPOSE_MUSE_MAC:-}" ]]; then
+    ENV_ARGS+=(--env "NEURALCOMPOSE_MUSE_MAC=$NEURALCOMPOSE_MUSE_MAC")
+fi
 
 echo "Running NeuralCompose with native Muse S BLE..."
-echo "  BOARD_PROFILE: $NEURALCOMPOSE_BOARD_PROFILE"
+echo "  BOARD_PROFILE: $BOARD_PROFILE"
 if [[ -n "${NEURALCOMPOSE_MUSE_SERIAL_NUMBER:-}" ]]; then
     echo "  SERIAL_NUMBER: $NEURALCOMPOSE_MUSE_SERIAL_NUMBER"
 fi
@@ -40,4 +58,4 @@ if [[ -n "${NEURALCOMPOSE_MUSE_MAC:-}" ]]; then
 fi
 echo ""
 
-exec .build/debug/NeuralCompose
+open -n "${ENV_ARGS[@]}" "$REPO_ROOT/.build/NeuralCompose.app"

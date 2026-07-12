@@ -55,6 +55,7 @@ channel-health pipeline and checks the output against a committed reference.
 | ✅ | Phase B Sleep Validation Toolkit — 2D plotter + 3D live topography |
 | ✅ | Deterministic playback (`PlaybackEEGStream.normalized`) + CI regression against a golden recording |
 | ✅ | 3D workspace driven entirely by live classifier output (no manual controls) |
+| ✅ | Semantic embedding backend — `SentenceEmbedder` seam, golden replay, `EmbeddingBench` harness, and a real Core ML conversion of BGE-small-en-v1.5 |
 | 🚧 | Sleep-stage classifier (4-class: Wake / N1 / N2_N3 / Uncertain_REM) |
 | 🚧 | Dream-session controller + session FSM |
 | 🚧 | LLM primer generation + dream-report analogy extraction |
@@ -95,9 +96,10 @@ channel-health pipeline and checks the output against a committed reference.
 - `BCICore` — pure-Swift models, protocols, FSMs, buffers. **No third-party deps.**
 - `BCIBridge` — Obj-C++ shim for BrainFlow (stub by default, gated by `BCI_BRAINFLOW_AVAILABLE`).
 - `BCIEEG` — `BrainFlowService`, `SyntheticEEGStream`, `PlaybackEEGStream`, `EEGScalpPlotterView`, `NeuralWorkspaceView`.
-- `BCIClassifier` — Core ML wrapper + deterministic mock (also the CI classifier).
+- `BCIClassifier` — Core ML wrapper + deterministic mock (also the CI classifier); also hosts `CoreMLSentenceEmbedder` + `WordPieceTokenizer` for real semantic embeddings.
 - `BCILLM` — **MLX-Swift linked only here.** Adapter + stub + tokenizer.
 - `NeuralComposeApp` — SwiftUI views, Phase B debug window, menu-bar UI.
+- `EmbeddingBench` — sibling executable (not part of the app) that benchmarks any `SentenceEmbedder` conformer; knows nothing about Core ML or MLX.
 
 The app talks to `BCILLM` through `NextWordPredicting`, so there's exactly
 **one** MLX runtime copy in the linked binary.
@@ -146,7 +148,9 @@ stalls and reconnects, the recording subsystem, and the transport
 diagnostics.
 
 **Intelligence** is the analysis layer: feature extraction, the
-intent classifier, the (future) sentence embedder, the projection
+intent classifier, the sentence embedder (`SentenceEmbedder` protocol —
+`DeterministicSentenceEmbedder` stub by default, `CoreMLSentenceEmbedder`
+when a converted model is present under `Models/`), and the projection
 that turns a high-dimensional embedding into a 3D point. It does not
 know what produced the samples or what will render the output.
 
@@ -240,16 +244,19 @@ NeuralCompose/
 │   ├── BCIBridge/        Obj-C++ shim for BrainFlow (stub by default)
 │   ├── BCICore/          pure-Swift models, protocols, FSMs, buffers
 │   ├── BCIEEG/           EEG streams, 2D plotter, 3D workspace (Phase B)
-│   ├── BCIClassifier/    Core ML wrapper + deterministic mock
+│   ├── BCIClassifier/    Core ML wrapper + deterministic mock; CoreMLSentenceEmbedder
 │   ├── BCILLM/           MLX adapter + stub + tokenizer  ← only MLX target
-│   └── NeuralComposeApp/ SwiftUI views, Phase B debug window
-├── Tests/                unit + golden-recording regression tests
+│   ├── NeuralComposeApp/ SwiftUI views, Phase B debug window
+│   └── EmbeddingBench/   benchmarks any SentenceEmbedder conformer (sibling executable)
+├── Tests/                unit + golden-recording + semantic-replay regression tests
 ├── Scripts/
 │   ├── build.sh / run-synthetic.sh / run-muse-s.sh
 │   ├── record-golden.sh              # capture a new golden reference recording
 │   ├── analyze-eeg-session.py        # PSD/band-power/spectrogram/quality report for any recording
-│   └── validate-muse-physiology.py   # live 5-condition acquisition sanity check
+│   ├── validate-muse-physiology.py   # live 5-condition acquisition sanity check
+│   └── convert-sentence-embedder.py  # HF sentence-embedding model -> Core ML (BGE/E5/MiniLM)
 ├── Recordings/           per-session EEG (gitignored) + golden/ (committed reference + report)
+├── Benchmarks/           dated per-backend embedding benchmark JSON — historical record, never overwritten
 ├── docs/                 long-form documentation
 ├── SLEEP_CYCLE_DESIGN.md full D1–D8 sleep architecture spec
 └── HARDWARE_SETUP.md / MODEL_SETUP.md / CALIBRATION.md / TROUBLESHOOTING.md
@@ -303,6 +310,7 @@ toolkit, architectural spec, and codebase are useful on their own.
 - [`HARDWARE_SETUP.md`](HARDWARE_SETUP.md) · [`MODEL_SETUP.md`](MODEL_SETUP.md) · [`CALIBRATION.md`](CALIBRATION.md) · [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
 - [`SLEEP_CYCLE_DESIGN.md`](SLEEP_CYCLE_DESIGN.md) — full D1–D8 sleep architecture spec.
 - [`docs/Architecture.md`](docs/Architecture.md) · [`docs/Math.md`](docs/Math.md) · [`docs/Validation.md`](docs/Validation.md) · [`docs/Research.md`](docs/Research.md)
+- [`docs/architecture/embedding_contract.md`](docs/architecture/embedding_contract.md) — the `SentenceEmbedder` backend contract every conformer (stub, Core ML, future MLX) must satisfy; ratified by [ADR-004](docs/architecture/decision-log/ADR-004-sentence-embedder-backend-contract.md).
 
 ## Citation
 

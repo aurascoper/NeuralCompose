@@ -34,6 +34,7 @@ let package = Package(
         .library(name: "BCIClassifier", targets: ["BCIClassifier"]),
         .library(name: "BCILLM",        targets: ["BCILLM"]),
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
+        .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -122,10 +123,33 @@ let package = Package(
             swiftSettings: strictConcurrency
         ),
 
+        // ── Embedding benchmark harness (Stage 3.1) ───────────────────────
+        // Sibling executable, not a test target and not part of the app.
+        // Depends only on BCICore so it can measure any `SentenceEmbedder`
+        // conformer — including a future CoreMLSentenceEmbedder or
+        // MLXSentenceEmbedder — without this target ever importing CoreML
+        // or MLX itself. See docs/architecture/embedding_contract.md §6.
+        .executableTarget(
+            name: "EmbeddingBench",
+            // BCIClassifier is needed to construct CoreMLSentenceEmbedder
+            // (Stage 3.2) directly by its concrete type — BenchmarkRunner
+            // itself stays generic over `any SentenceEmbedder` and knows
+            // nothing about Core ML.
+            dependencies: ["BCICore", "BCIClassifier"],
+            path: "Sources/EmbeddingBench",
+            swiftSettings: strictConcurrency
+        ),
+
         // ── Tests ────────────────────────────────────────────────────────
         .testTarget(
             name: "BCICoreTests",
-            dependencies: ["BCICore"],
+            // BCIClassifier is pulled in for SemanticBGEReplayRegressionTests,
+            // which exercises the same text -> SentenceEmbedder -> Embedding ->
+            // RandomProjectionProjector pipeline as the stub's replay test, but
+            // against CoreMLSentenceEmbedder (BCIClassifier). Same rationale as
+            // BCIEEGTests pulling in BCIClassifier below: a dedicated
+            // cross-module test target felt like overkill for one suite.
+            dependencies: ["BCICore", "BCIClassifier"],
             path: "Tests/BCICoreTests"
         ),
         .testTarget(

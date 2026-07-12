@@ -1,0 +1,33 @@
+{
+  "model": {
+    "type": "WordPiece",
+    "unk_token": "[UNK]",
+    "continuing_subword_prefix": "##",
+    "max_input_chars_per_word": 100,
+    "vocab": {
+      "[PAD]": 0,
+      "[UNK]": 1,
+      "[CLS]": 2,
+      "[SEP]": 3,
+      "hello": 4,
+      "world": 5,
+      "play": 6,
+      "##ing": 7,
+      "sleep": 8,
+      ".": 9
+    }
+  },
+  "normalizer": {
+    "type": "BertNormalizer",
+    "clean_text": true,
+    "handle_chinese_chars": true,
+    "strip_accents": null,
+    "lowercase": true
+  },
+  "added_tokens": [
+    { "id": 0, "content": "[PAD]", "special": true },
+    { "id": 1, "content": "[UNK]", "special": true },
+    { "id": 2, "content": "[CLS]", "special": true },
+    { "id": 3, "content": "[SEP]", "special": true }
+  ]
+}

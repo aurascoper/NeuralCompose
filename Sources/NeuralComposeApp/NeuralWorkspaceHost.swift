@@ -37,7 +37,7 @@ struct NeuralWorkspaceHost: View {
                 cameraDistance: $cameraDistance,
                 makeStream: { viewModel?.liveSampleStream() },
                 makeClassifierStream: { viewModel?.liveClassifierStream() },
-                embeddingProvider: { viewModel?.container.predictorResolved.embeddingProvider },
+                embeddingProvider: { viewModel?.container.sentenceEmbedder },
                 embeddingContextProvider: { viewModel?.composedText ?? "" }
             )
                 .background(Color(white: 0.05))
@@ -108,7 +108,7 @@ struct NeuralWorkspaceRepresentable: NSViewRepresentable {
     @Binding var cameraDistance: Float
     let makeStream: () -> AsyncStream<EEGSample>?
     let makeClassifierStream: () -> AsyncStream<IntentPrediction>?
-    let embeddingProvider: () -> (any TokenEmbeddingProviding)?
+    let embeddingProvider: () -> (any SentenceEmbedder)?
     let embeddingContextProvider: () -> String
 
     /// Tracks whether the workspace has already been subscribed, matching

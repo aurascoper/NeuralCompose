@@ -62,7 +62,16 @@ public final class PlaybackEEGStream: EEGStreaming, @unchecked Sendable {
 
     public let profile: MuseBoardProfile = .playback
     public private(set) var effectiveSampleRate: Double = 256.0
-    public private(set) var channelCount: Int = 0
+    // Default of 4 (not 0) matters: callers like `AppContainer` read
+    // `channelCount` synchronously to build `EEGWindowingConfig` *before*
+    // `start()` ever runs, and `EEGWindowingConfig.init` preconditions on
+    // `channelCount > 0` — a 0 default crashed the process the instant
+    // playback mode was selected. `init` below overwrites this with the
+    // real value via a cheap header peek when the file is readable; if the
+    // file is missing or malformed, this placeholder stands in until
+    // `start()`'s full parse throws the proper `BCIError`, which the
+    // existing stream-retry/fallback supervisor already handles.
+    public private(set) var channelCount: Int = 4
 
     private let url: URL
     private let timing: PlaybackTiming
@@ -74,6 +83,34 @@ public final class PlaybackEEGStream: EEGStreaming, @unchecked Sendable {
         self.url = URL(fileURLWithPath: path)
         self.timing = timing
         self.pacing = pacing
+        if let peeked = Self.peekChannelCount(at: self.url) {
+            self.channelCount = peeked
+        }
+    }
+
+    /// Reads just enough of the file to parse the header row, without the
+    /// full-file read `start()` does. Best-effort: returns `nil` on any
+    /// problem (missing file, no header, wrong first column) and leaves
+    /// the caller's existing default in place — `start()` remains the
+    /// single source of truth for validation errors.
+    private static func peekChannelCount(at url: URL) -> Int? {
+        guard let handle = FileHandle(forReadingAtPath: url.path) else { return nil }
+        defer { try? handle.close() }
+        var data = Data()
+        while data.count < 8192 {
+            let chunk = handle.readData(ofLength: 512)
+            if chunk.isEmpty { break }
+            data.append(chunk)
+            if chunk.contains(UInt8(ascii: "\n")) { break }
+        }
+        guard let text = String(data: data, encoding: .utf8),
+              let firstLine = text.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: true).first
+        else { return nil }
+        let header = firstLine.split(separator: ",", omittingEmptySubsequences: false)
+        guard header.count >= 2, header[0].trimmingCharacters(in: .whitespaces) == "t_seconds" else {
+            return nil
+        }
+        return header.count - 1
     }
 
     public func start() async throws -> AsyncThrowingStream<EEGSample, any Error> {

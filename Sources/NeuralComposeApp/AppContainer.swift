@@ -18,6 +18,13 @@ public struct AppContainer: Sendable {
     public let metrics: MetricsCollector
     public let windowingConfig: EEGWindowingConfig
     public let smootherConfig: IntentSmoother.Config
+    /// Semantic sentence embedder feeding the 3D workspace. Lives on the
+    /// composition root (not `PredictorFactory.Resolved`) so text embedding
+    /// stays decoupled from the LLM predictor — a real Core ML/MLX embedder is
+    /// its own concern, not a widening of the generation seam. Defaults to the
+    /// dependency-free deterministic stub; test-overridable like everything
+    /// else here.
+    public let sentenceEmbedder: any SentenceEmbedder
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
@@ -58,7 +65,8 @@ public struct AppContainer: Sendable {
         voiceCommandResolved: VoiceCommandFactory.Resolved = VoiceCommandFactory.live(overrideAvailability: false),
         metrics: MetricsCollector,
         windowingConfig: EEGWindowingConfig,
-        smootherConfig: IntentSmoother.Config = .init()
+        smootherConfig: IntentSmoother.Config = .init(),
+        sentenceEmbedder: any SentenceEmbedder = DeterministicSentenceEmbedder()
     ) {
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
@@ -69,6 +77,7 @@ public struct AppContainer: Sendable {
         self.metrics = metrics
         self.windowingConfig = windowingConfig
         self.smootherConfig = smootherConfig
+        self.sentenceEmbedder = sentenceEmbedder
     }
 
     /// Build a container from the environment. This is what the App entry
@@ -102,6 +111,20 @@ public struct AppContainer: Sendable {
             sampleRate: stream.stream.effectiveSampleRate,
             channelCount: stream.stream.channelCount
         )
+
+        let sentenceEmbedder: any SentenceEmbedder
+        let sentenceEmbedderBackend: String
+        do {
+            sentenceEmbedder = try CoreMLSentenceEmbedder(
+                modelDirectory: URL(fileURLWithPath: "Models/BGE-small-en-v1.5")
+            )
+            sentenceEmbedderBackend = "coreml"
+        } catch {
+            sentenceEmbedder = DeterministicSentenceEmbedder()
+            sentenceEmbedderBackend = "stub"
+        }
+        BCILog.embedding.notice("sentenceEmbedder backend: \(sentenceEmbedderBackend, privacy: .public)")
+
         return AppContainer(
             streamResolved: stream,
             classifierResolved: classifier,
@@ -110,7 +133,8 @@ public struct AppContainer: Sendable {
             voiceInputResolved: voiceInput,
             voiceCommandResolved: voiceCommand,
             metrics: metrics,
-            windowingConfig: windowingConfig
+            windowingConfig: windowingConfig,
+            sentenceEmbedder: sentenceEmbedder
         )
     }
 

@@ -29,6 +29,13 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
     // Tokenizer
     case tokenizerLoadFailed(reason: String)
 
+    // Sentence embedding
+    case embedderModelMissing(path: String)
+    case embedderLoadFailed(path: String, underlying: String)
+    case embedderInferenceFailed(reason: String)
+    case embedderOutputShapeUnexpected(expected: String, actual: String)
+    case embedderMetadataInvalid(path: String, reason: String)
+
     // Voice
     case speechSynthesisFailed(reason: String)
     case speechRecognitionUnavailable(reason: String)
@@ -68,6 +75,16 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
             return "MLX predictor inference failed: \(reason)"
         case .tokenizerLoadFailed(let reason):
             return "Tokenizer load failed: \(reason)"
+        case .embedderModelMissing(let path):
+            return "Sentence embedder model not found at \(path)"
+        case .embedderLoadFailed(let path, let underlying):
+            return "Sentence embedder load failed at \(path): \(underlying)"
+        case .embedderInferenceFailed(let reason):
+            return "Sentence embedder inference failed: \(reason)"
+        case .embedderOutputShapeUnexpected(let expected, let actual):
+            return "Sentence embedder output shape mismatch — expected \(expected), got \(actual)"
+        case .embedderMetadataInvalid(let path, let reason):
+            return "Sentence embedder metadata invalid at \(path): \(reason)"
         case .speechSynthesisFailed(let reason):
             return "Speech synthesis failed: \(reason)"
         case .speechRecognitionUnavailable(let reason):

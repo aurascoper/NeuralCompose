@@ -223,6 +223,7 @@ public actor CalibrationRecorder {
             let metadata: [String: Any] = [
                 "session_id": self.sessionID,
                 "profile": self.profile == .synthetic ? "synthetic" : "muses",
+                "transport": self.profile.transportLabel,
                 "sample_rate": self.sampleRate,
                 "window_seconds": self.windowingConfig.seconds,
                 "stride_seconds": self.windowingConfig.strideSeconds,

@@ -150,4 +150,23 @@ final class NeuralWorkspaceViewTests: XCTestCase {
         // even though no classifier was ever subscribed.
         XCTAssertNotNil(view.testableEdgeTintColor())
     }
+
+    // MARK: - Embedding source <- SentenceEmbedder
+
+    func testStoresSentenceEmbedderVectorForContext() async throws {
+        let view = makeView()
+        let embedder = DeterministicSentenceEmbedder()
+        view.subscribeEmbeddings(provider: embedder, contextProvider: { "hello world" })
+
+        // The polling loop encodes immediately on its first iteration, before
+        // sleeping — a short wait is enough to capture that first embedding.
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        let expected = try await embedder.encode("hello world")
+        let stored = try XCTUnwrap(view.latestEmbedding, "an embedding should be stored after subscribing")
+        XCTAssertEqual(stored.values, expected.values)
+        XCTAssertEqual(stored.modelID, "stub-hash-v1")
+
+        view.cancelEmbeddingSubscription()
+    }
 }
