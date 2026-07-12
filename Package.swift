@@ -35,6 +35,7 @@ let package = Package(
         .library(name: "BCILLM",        targets: ["BCILLM"]),
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
+        .executable(name: "SemanticEval", targets: ["SemanticEval"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -137,6 +138,19 @@ let package = Package(
             // nothing about Core ML.
             dependencies: ["BCICore", "BCIClassifier"],
             path: "Sources/EmbeddingBench",
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── Semantic evaluation (Stage 3.3) ───────────────────────────────
+        // Sibling executable, generic over `any SentenceEmbedder` (a
+        // `--model` flag picks the concrete conformer — argument parsing,
+        // not a backend registry). Emits raw embeddings and cosine
+        // relationships only; projection and clustering metrics are
+        // derived downstream in Scripts/generate-semantic-eval-artifacts.py.
+        .executableTarget(
+            name: "SemanticEval",
+            dependencies: ["BCICore", "BCIClassifier"],
+            path: "Sources/SemanticEval",
             swiftSettings: strictConcurrency
         ),
 

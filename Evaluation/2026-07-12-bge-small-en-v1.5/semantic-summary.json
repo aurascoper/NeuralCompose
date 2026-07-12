@@ -1,0 +1,12 @@
+{
+  "model_id": "bge-small-en-v1.5",
+  "retrieval_mean_top1_similarity": 0.93725015,
+  "paraphrase_mean_similarity": 0.9037362520000001,
+  "antonym_mean_similarity": 0.757119415,
+  "alias_intra_command_similarity": 0.871536335,
+  "alias_inter_command_similarity": 0.61332047,
+  "alias_cohesion_gap": 0.25821586500000004,
+  "trajectory_mean_step_similarity": 0.7295611157142857,
+  "silhouette_score": 0.3083758128970015,
+  "davies_bouldin_index": 1.0534518449470063
+}
