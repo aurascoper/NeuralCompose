@@ -125,24 +125,9 @@ final class SentenceEmbedderTests: XCTestCase {
         }
     }
 
-    // MARK: - Golden master (locks the text → vector mapping)
-
-    /// If this fails, the mapping from text to vector changed. That is only
-    /// acceptable alongside a `version` bump and a refresh of these constants
-    /// — the semantic analog of the EEG golden-recording regression. Captured
-    /// at dimension 8, seed 0 for `"the quick brown fox"`.
-    func testGoldenMasterVectorIsLocked() async throws {
-        let e = try await embed("the quick brown fox", dimension: 8, seed: 0)
-        let expected: [Float] = GOLDEN_QUICK_BROWN_FOX
-        XCTAssertEqual(e.values.count, expected.count)
-        for i in 0..<expected.count {
-            XCTAssertEqual(e.values[i], expected[i], accuracy: 1e-6, "component \(i) drifted")
-        }
-    }
+    // Golden-master lock on the text → vector mapping lives in
+    // `SemanticReplayRegressionTests` (per-backend fixture, cosine matrix,
+    // projection fingerprint). The full text→vector contract is now
+    // pinned in one place rather than split between an inline constant
+    // here and a larger fixture there.
 }
-
-// Filled from the first run (record-then-lock). See testGoldenMasterVectorIsLocked.
-private let GOLDEN_QUICK_BROWN_FOX: [Float] = [
-    0.16388348, -0.34754175, 0.46816793, 0.5084591,
-    0.006179598, -0.07168357, -0.22147752, -0.5660531,
-]
