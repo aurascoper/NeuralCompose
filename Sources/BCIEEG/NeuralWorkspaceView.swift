@@ -170,9 +170,11 @@ public final class NeuralWorkspaceView: NSView {
     public var classifierStaleThreshold: CFTimeInterval = 3.0
 
     private var embeddingTask: Task<Void, Never>?
-    /// Most recent embedding vector from `TokenEmbeddingProviding`, kept
-    /// around for inspection/future re-projection.
-    public private(set) var latestEmbedding: [Float] = []
+    /// Most recent semantic embedding from the bound `SentenceEmbedder`, kept
+    /// whole (values + provenance) so `modelID`/`seed` travel with it; only
+    /// `.values` is unwrapped, at the projection call. `nil` until the first
+    /// embedding arrives.
+    public private(set) var latestEmbedding: Embedding?
     /// Reduces `latestEmbedding` to a 3D point for `embeddingNode`. Default
     /// is `RandomProjectionProjector` — see that type's doc comment for why
     /// its output is a visualization convenience, not a semantically
@@ -457,14 +459,13 @@ public final class NeuralWorkspaceView: NSView {
     /// main actor — `NeuralWorkspaceView` is `@MainActor`, and the polling
     /// loop below inherits that isolation since it isn't `.detached`.
     ///
-    /// Stores the vector in `latestEmbedding`; `recompute()` reduces it via
-    /// `embeddingProjector` to place `embeddingNode` each frame. See
-    /// `RandomProjectionProjector`'s doc comment for why that placement is
-    /// a visualization convenience and not a semantically meaningful
-    /// layout, and `TokenEmbeddingProviding` for why the vector itself is
-    /// currently a logit vector rather than a hidden state.
+    /// Stores the embedding in `latestEmbedding`; `recompute()` reduces its
+    /// `values` via `embeddingProjector` to place `embeddingNode` each frame.
+    /// See `RandomProjectionProjector`'s doc comment for why that placement is
+    /// a visualization convenience — the projection stays a Johnson–
+    /// Lindenstrauss layout regardless of how semantic the source vector is.
     public func subscribeEmbeddings(
-        provider: any TokenEmbeddingProviding,
+        provider: any SentenceEmbedder,
         contextProvider: @escaping () -> String,
         interval: TimeInterval = 1.0
     ) {
@@ -473,8 +474,8 @@ public final class NeuralWorkspaceView: NSView {
             while !Task.isCancelled {
                 guard let self else { return }
                 let text = contextProvider()
-                if let vector = try? await provider.embedding(for: text) {
-                    self.latestEmbedding = vector
+                if let embedding = try? await provider.encode([text]).first {
+                    self.latestEmbedding = embedding
                 }
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
             }
@@ -636,8 +637,8 @@ public final class NeuralWorkspaceView: NSView {
         // unbounded, so a normalized direction is what's actually stable
         // to look at; magnitude isn't discarded for any principled reason,
         // just because an unbounded value would send the marker off-screen).
-        if !latestEmbedding.isEmpty {
-            let projected = embeddingProjector.project(latestEmbedding)
+        if let embedding = latestEmbedding, !embedding.values.isEmpty {
+            let projected = embeddingProjector.project(embedding.values)
             let norm = simd_length(projected)
             if norm > 1e-6 {
                 let unit = projected / norm
