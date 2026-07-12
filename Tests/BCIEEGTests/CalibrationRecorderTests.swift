@@ -27,11 +27,22 @@ final class CalibrationRecorderTests: XCTestCase {
         let metadata = try await readMetadata(sessionDir: dir, recorder: recorder)
         XCTAssertEqual(metadata["transport_degraded"] as? Bool, false)
         XCTAssertEqual(metadata["transport_event_count"] as? Int, 0)
+        XCTAssertEqual(metadata["transport"] as? String, "synthetic")
 
         let csv = try await readTransportEventsCSV(sessionDir: dir, recorder: recorder)
         // Header only — no event rows.
         XCTAssertEqual(csv.count, 1)
         XCTAssertEqual(csv[0], "session_id,t_wallclock_epoch,event,detail")
+    }
+
+    func testTransportLabelReflectsBrainFlowProfile() async throws {
+        let recorder = CalibrationRecorder()
+        let dir = try makeTempDirectory()
+        try await recorder.beginSession(to: dir, profile: .museSNativeBLE)
+        await recorder.finishSession()
+
+        let metadata = try await readMetadata(sessionDir: dir, recorder: recorder)
+        XCTAssertEqual(metadata["transport"] as? String, "brainflow")
     }
 
     func testStalledEventIsWrittenAndSummarized() async throws {

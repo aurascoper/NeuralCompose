@@ -116,6 +116,27 @@ public enum MuseBoardProfile: String, Sendable, CaseIterable, Codable, Hashable 
         }
     }
 
+    /// Machine-readable transport label for `metadata.json` and
+    /// cross-transport analysis (see the dual-transport comparison notes in
+    /// the reliability-hardening roadmap) — coarser than `displayName`:
+    /// every BrainFlow-backed Muse profile collapses to `"brainflow"`
+    /// regardless of BLE vs. BLED112 dongle, since that distinction doesn't
+    /// matter for comparing against the OSC path.
+    public var transportLabel: String {
+        switch self {
+        case .museTwoNativeBLE, .museTwoBLED,
+             .museSNativeBLE,   .museSBLED,
+             .museSAthena:
+            return "brainflow"
+        case .oscRemote:
+            return "osc"
+        case .playback:
+            return "playback"
+        case .synthetic:
+            return "synthetic"
+        }
+    }
+
     /// True if this profile requires a physical BrainFlow connection.
     public var requiresBrainFlow: Bool {
         switch self {
