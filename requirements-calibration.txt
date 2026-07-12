@@ -21,3 +21,9 @@ pandas>=2.0          # CSV ingest for events + EEG
 # analyze-eeg-session.py — offline recorded-session analysis (PSD, band
 # power, spectrogram, RMS, artifact detection, HTML report)
 matplotlib>=3.8       # dev: 3.10.8, Agg backend for headless PNG output
+
+# Track C — convert-sentence-embedder.py (Stage 3.2: BGE/E5/MiniLM -> Core ML)
+# Direct PyTorch trace -> Core ML (coremltools 9.x dropped ONNX as a
+# ct.convert() source entirely), so no onnx/onnxruntime/onnxscript needed.
+transformers>=4.36    # dev: 5.13.1
+sentence-transformers>=2.3   # dev: 5.6.0

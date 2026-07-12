@@ -19,6 +19,10 @@ struct BenchmarkResult: Codable {
     let batchSizes: [String: Double]
     let rssMB: Double
     let embeddingsPerSecond: Double
+    /// `"cls"`, `"mean"`, or `"n/a"` for a backend with no pooling concept
+    /// (e.g. the deterministic stub). Additive field — see
+    /// `docs/architecture/embedding_contract.md` §10.
+    let pooling: String
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
@@ -35,6 +39,7 @@ struct BenchmarkResult: Codable {
         case batchSizes = "batch_sizes"
         case rssMB = "rss_mb"
         case embeddingsPerSecond = "embeddings_per_second"
+        case pooling
     }
 
     init(
@@ -50,7 +55,8 @@ struct BenchmarkResult: Codable {
         warmEncodeMs: Double,
         batchSizes: [String: Double],
         rssMB: Double,
-        embeddingsPerSecond: Double
+        embeddingsPerSecond: Double,
+        pooling: String = "n/a"
     ) {
         self.schemaVersion = 1
         self.modelID = modelID
@@ -66,5 +72,6 @@ struct BenchmarkResult: Codable {
         self.batchSizes = batchSizes
         self.rssMB = rssMB
         self.embeddingsPerSecond = embeddingsPerSecond
+        self.pooling = pooling
     }
 }

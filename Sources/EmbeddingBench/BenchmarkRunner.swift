@@ -8,7 +8,13 @@ import Foundation
 enum BenchmarkRunner {
     static let batchSizes = [1, 8, 32, 128]
 
-    static func run(embedder: any SentenceEmbedder, runtime: String) async throws -> BenchmarkResult {
+    static func run(
+        embedder: any SentenceEmbedder,
+        runtime: String,
+        pooling: String = "n/a",
+        coremlSHA256: String = "",
+        tokenizerSHA256: String = ""
+    ) async throws -> BenchmarkResult {
         let sentences = sampleSentences
 
         // The protocol has no separate `load()` step, so the first `encode`
@@ -47,16 +53,18 @@ enum BenchmarkRunner {
             device: SystemInfo.device(),
             macos: SystemInfo.macOSVersion(),
             buildSHA: SystemInfo.buildSHA(),
-            // Not applicable to a non-Core ML backend; a CoreMLSentenceEmbedder
-            // (Stage 3.2) will populate these from the .mlmodelc it loads.
-            coremlSHA256: "",
-            tokenizerSHA256: "",
+            // Empty for a backend with no model/tokenizer file on disk (the
+            // stub); the caller (main.swift) supplies real hashes for a
+            // CoreMLSentenceEmbedder.
+            coremlSHA256: coremlSHA256,
+            tokenizerSHA256: tokenizerSHA256,
             dimension: embedder.dimension,
             coldLoadMs: coldLoadMs,
             warmEncodeMs: warmEncodeMs,
             batchSizes: batchMs,
             rssMB: SystemInfo.residentSetSizeMB(),
-            embeddingsPerSecond: embeddingsPerSecond
+            embeddingsPerSecond: embeddingsPerSecond,
+            pooling: pooling
         )
     }
 

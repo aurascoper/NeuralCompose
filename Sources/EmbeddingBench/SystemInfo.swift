@@ -1,3 +1,4 @@
+import CryptoKit
 import Darwin
 import Foundation
 
@@ -54,5 +55,35 @@ enum SystemInfo {
         }
         guard result == KERN_SUCCESS else { return 0 }
         return Double(info.resident_size) / (1024 * 1024)
+    }
+
+    /// SHA-256 hex digest of a single file's contents.
+    static func sha256(ofFileAt url: URL) -> String {
+        guard let data = try? Data(contentsOf: url) else { return "" }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// SHA-256 hex digest of a directory (e.g. a `.mlmodelc` bundle):
+    /// concatenates every regular file's contents in sorted relative-path
+    /// order, then hashes the result. Sorted order makes this deterministic
+    /// regardless of the filesystem's directory-enumeration order.
+    static func sha256(ofDirectoryAt url: URL) -> String {
+        let fileManager = FileManager.default
+        guard let enumerator = fileManager.enumerator(
+            at: url,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else { return "" }
+
+        let files = enumerator.compactMap { $0 as? URL }
+            .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true }
+            .sorted { $0.path < $1.path }
+
+        var hasher = SHA256()
+        for file in files {
+            guard let data = try? Data(contentsOf: file) else { continue }
+            hasher.update(data: data)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 }

@@ -111,6 +111,20 @@ public struct AppContainer: Sendable {
             sampleRate: stream.stream.effectiveSampleRate,
             channelCount: stream.stream.channelCount
         )
+
+        let sentenceEmbedder: any SentenceEmbedder
+        let sentenceEmbedderBackend: String
+        do {
+            sentenceEmbedder = try CoreMLSentenceEmbedder(
+                modelDirectory: URL(fileURLWithPath: "Models/BGE-small-en-v1.5")
+            )
+            sentenceEmbedderBackend = "coreml"
+        } catch {
+            sentenceEmbedder = DeterministicSentenceEmbedder()
+            sentenceEmbedderBackend = "stub"
+        }
+        BCILog.embedding.notice("sentenceEmbedder backend: \(sentenceEmbedderBackend, privacy: .public)")
+
         return AppContainer(
             streamResolved: stream,
             classifierResolved: classifier,
@@ -119,7 +133,8 @@ public struct AppContainer: Sendable {
             voiceInputResolved: voiceInput,
             voiceCommandResolved: voiceCommand,
             metrics: metrics,
-            windowingConfig: windowingConfig
+            windowingConfig: windowingConfig,
+            sentenceEmbedder: sentenceEmbedder
         )
     }
 

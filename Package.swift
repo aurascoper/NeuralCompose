@@ -131,7 +131,11 @@ let package = Package(
         // or MLX itself. See docs/architecture/embedding_contract.md §6.
         .executableTarget(
             name: "EmbeddingBench",
-            dependencies: ["BCICore"],
+            // BCIClassifier is needed to construct CoreMLSentenceEmbedder
+            // (Stage 3.2) directly by its concrete type — BenchmarkRunner
+            // itself stays generic over `any SentenceEmbedder` and knows
+            // nothing about Core ML.
+            dependencies: ["BCICore", "BCIClassifier"],
             path: "Sources/EmbeddingBench",
             swiftSettings: strictConcurrency
         ),
@@ -139,7 +143,13 @@ let package = Package(
         // ── Tests ────────────────────────────────────────────────────────
         .testTarget(
             name: "BCICoreTests",
-            dependencies: ["BCICore"],
+            // BCIClassifier is pulled in for SemanticBGEReplayRegressionTests,
+            // which exercises the same text -> SentenceEmbedder -> Embedding ->
+            // RandomProjectionProjector pipeline as the stub's replay test, but
+            // against CoreMLSentenceEmbedder (BCIClassifier). Same rationale as
+            // BCIEEGTests pulling in BCIClassifier below: a dedicated
+            // cross-module test target felt like overkill for one suite.
+            dependencies: ["BCICore", "BCIClassifier"],
             path: "Tests/BCICoreTests"
         ),
         .testTarget(

@@ -125,3 +125,49 @@ The channel is the only way the UI sees the session state. The UI is read-only; 
 The validation session on 2026-07-10 measured $P_\alpha^{\text{closed}} / P_\alpha^{\text{open}}$ at 3.08× on TP9, 2.07× on AF7, 2.78× on TP10. This is a calibration observation on a single participant, not a normative threshold. The pipeline produces the data; the ratio is a property of the data.
 
 For a population estimate, repeat the protocol across $N \geq 5$ participants, compute the per-participant ratio, and report the median and 95% CI. The literature consensus is 2-3× alpha rise on eyes-closed for frontal derivations; the calibration observation is consistent with that range.
+
+## 11. Semantic Embedding Pipeline
+
+The 3D workspace's semantic layer (`SentenceEmbedder` → `Embedding` →
+`EmbeddingProjecting`) is a separate pipeline from the sleep/EEG math above —
+it turns composed text into a 3D point, not a signal into a sleep stage. Full
+invariants are in [`docs/architecture/embedding_contract.md`](architecture/embedding_contract.md);
+this is the reader-friendly derivation of the two pieces of actual math involved.
+
+**L2 normalization and cosine similarity.** Every `SentenceEmbedder`
+conformer (the deterministic stub, `CoreMLSentenceEmbedder`) returns a
+unit-norm vector:
+
+$$\hat{v} = \frac{v}{\lVert v \rVert_2}, \qquad \lVert v \rVert_2 = \sqrt{\textstyle\sum_i v_i^2}$$
+
+Because both operands are already unit-norm, similarity between two
+embeddings is a plain dot product rather than the general cosine formula's
+division by both magnitudes:
+
+$$\cos(\hat{v}_1, \hat{v}_2) = \hat{v}_1 \cdot \hat{v}_2 = \sum_i \hat{v}_{1,i}\,\hat{v}_{2,i} \in [-1, 1]$$
+
+This is what `Embedding.cosineSimilarity(to:)` computes, and it's the
+semantic contract the golden replay fixtures (`semantic_stub_v1.json`,
+`semantic_bge_small_v1.json`) pin per-backend: e.g. under the real BGE-small
+conversion, $\cos(\text{"sleep"}, \text{"light sleep"}) \approx 0.86$ versus
+$\cos(\text{"sleep"}, \text{"banana"}) \approx 0.54$ — genuine semantic
+clustering, unlike the deterministic stub's token-overlap structure, which
+is decorative by design (see the contract's §3.4 non-guarantee).
+
+**Random projection (display only).** `RandomProjectionProjector` reduces an
+arbitrary-dimension embedding $v \in \mathbb{R}^d$ (32 for the stub, 384 for
+BGE-small) to the 3D point the SceneKit workspace actually renders, via a
+fixed, seeded Rademacher matrix $R \in \{+\frac{1}{\sqrt d}, -\frac{1}{\sqrt
+d}\}^{3 \times d}$:
+
+$$y = Rv, \qquad y \in \mathbb{R}^3$$
+
+This is a Johnson–Lindenstrauss-style projection: it approximately preserves
+*relative distances* between points, which is a much weaker property than
+"nearby points are semantically similar." Spatial proximity in the
+workspace is therefore a display convenience, not evidence of semantic
+similarity on its own — the cosine similarity above is the actual semantic
+signal; the projection is only how it gets drawn. A fitted projector (PCA,
+once an embedding corpus exists to fit on) is the anticipated replacement,
+behind the same `EmbeddingProjecting` protocol, with no change to
+`SentenceEmbedder` or `Embedding`.
