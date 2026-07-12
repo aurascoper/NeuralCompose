@@ -34,6 +34,7 @@ let package = Package(
         .library(name: "BCIClassifier", targets: ["BCIClassifier"]),
         .library(name: "BCILLM",        targets: ["BCILLM"]),
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
+        .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -119,6 +120,19 @@ let package = Package(
             // forbids Info.plist as a top-level resource. `swift run` produces
             // a runnable binary without one.
             exclude: ["Resources/Info.plist"],
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── Embedding benchmark harness (Stage 3.1) ───────────────────────
+        // Sibling executable, not a test target and not part of the app.
+        // Depends only on BCICore so it can measure any `SentenceEmbedder`
+        // conformer — including a future CoreMLSentenceEmbedder or
+        // MLXSentenceEmbedder — without this target ever importing CoreML
+        // or MLX itself. See docs/architecture/embedding_contract.md §6.
+        .executableTarget(
+            name: "EmbeddingBench",
+            dependencies: ["BCICore"],
+            path: "Sources/EmbeddingBench",
             swiftSettings: strictConcurrency
         ),
 

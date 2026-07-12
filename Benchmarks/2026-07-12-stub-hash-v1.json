@@ -1,0 +1,21 @@
+{
+  "batch_sizes" : {
+    "1" : 1.51,
+    "128" : 147.06375,
+    "32" : 38.100542,
+    "8" : 10.276541
+  },
+  "build_sha" : "cad3249743008b68e48eda7a22f654c90792cc16",
+  "cold_load_ms" : 2.397708,
+  "coreml_sha256" : "",
+  "device" : "Apple M4",
+  "dimension" : 384,
+  "embeddings_per_second" : 870.3708425767737,
+  "macos" : "26.5.2",
+  "model_id" : "stub-hash-v1",
+  "rss_mb" : 8.671875,
+  "runtime" : "stub",
+  "schema_version" : 1,
+  "tokenizer_sha256" : "",
+  "warm_encode_ms" : 1.674625
+}
