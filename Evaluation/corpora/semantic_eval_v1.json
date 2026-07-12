@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "corpus": [
+    "start recording", "begin recording", "stop recording", "end recording",
+    "begin sleep protocol", "start sleep protocol", "run sleep protocol",
+    "begin calibration", "start calibration", "calibrate",
+    "reset composition", "clear composition", "reset", "clear",
+    "speak", "read it", "read aloud", "say it", "say",
+    "refine", "refine it", "improve it", "improve",
+    "start dictation", "begin dictation", "stop dictation", "end dictation",
+    "start command listening", "stop command listening",
+    "deep sleep", "REM sleep", "light sleep", "slow-wave sleep", "dreaming",
+    "lucid dream", "wake", "N1", "N2 N3", "uncertain REM",
+    "banana", "the stock market closed lower today", "a recipe for lasagna"
+  ],
+  "queries": ["sleep", "begin recording"],
+  "commandGroups": {
+    "openPhaseBDebug": ["open phase b", "open the phase b debug window", "open phase b debug"],
+    "startRecording": ["start recording", "begin recording"],
+    "stopRecording": ["stop recording", "end recording"],
+    "beginCalibration": ["begin calibration", "start calibration", "calibrate"],
+    "beginSleepProtocol": ["begin sleep protocol", "start sleep protocol", "run sleep protocol", "begin sleep", "start sleep"],
+    "resetComposition": ["reset composition", "reset", "clear composition", "clear"],
+    "speak": ["speak", "read it", "read aloud", "say it", "say"],
+    "refine": ["refine", "refine it", "improve it", "improve"],
+    "startDictation": ["start dictation", "begin dictation"],
+    "stopDictation": ["stop dictation", "end dictation"],
+    "startCommand": ["start command listening", "start commanding", "start command"],
+    "stopCommand": ["stop command listening", "stop commanding", "stop command"]
+  },
+  "paraphrasePairs": [
+    ["start recording", "begin recording"],
+    ["stop recording", "end recording"],
+    ["speak", "say it"],
+    ["refine it", "improve it"],
+    ["begin sleep protocol", "start sleep protocol"]
+  ],
+  "antonymPairs": [
+    ["start recording", "stop recording"],
+    ["begin calibration", "stop recording"],
+    ["start dictation", "stop dictation"],
+    ["start command listening", "stop command listening"]
+  ],
+  "trajectories": [
+    {
+      "name": "sleep-to-lucid-dream",
+      "phrases": ["sleep", "deep sleep", "REM sleep", "dream", "lucid dream"]
+    },
+    {
+      "name": "aasm-stage-transitions",
+      "phrases": ["wake", "N1", "N2 N3", "uncertain REM"]
+    }
+  ],
+  "topK": 5
+}
