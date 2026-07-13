@@ -33,30 +33,35 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
 
     public nonisolated let isLive: Bool = true
     public nonisolated let modelIdentifier: String
+    public nonisolated let configuration: GenerationConfiguration
 
     #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
     private let container: ModelContainer
     #endif
 
-    public init(modelDirectory: URL) async throws {
+    public init(
+        modelDirectory: URL,
+        configuration: GenerationConfiguration = .qwen
+    ) async throws {
         guard FileManager.default.fileExists(atPath: modelDirectory.path) else {
             throw BCIError.predictorWeightsMissing(path: modelDirectory.path)
         }
         self.modelIdentifier = modelDirectory.lastPathComponent
+        self.configuration = configuration
 
         #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
-        // `<|im_end|>` is Qwen's ChatML end-of-turn token — registering it as
-        // an extra EOS candidate only matters when the decode loop's own
+        // Registering the family's end-of-turn token as an extra EOS
+        // candidate only matters when the decode loop's own
         // `additionalEOSTokenIds` lookup (`Evaluate.swift`) can resolve it via
         // `tokenizer.convertTokenToId`. Harmless no-op for any other model
         // family that happens to load here (unknown token strings are just
         // filtered out, not an error).
-        let configuration = ModelConfiguration(
-            directory: modelDirectory, extraEOSTokens: ["<|im_end|>"]
+        let modelConfiguration = ModelConfiguration(
+            directory: modelDirectory, extraEOSTokens: configuration.extraEOSTokens
         )
         do {
             self.container = try await LLMModelFactory.shared.loadContainer(
-                configuration: configuration
+                configuration: modelConfiguration
             )
         } catch {
             throw BCIError.predictorInitFailed(reason: error.localizedDescription)
@@ -195,7 +200,7 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
         let params = GenerateParameters(
             maxTokens: maxTokens,
             temperature: Float(max(temperature, 0.0001)),
-            repetitionPenalty: Self.defaultRepetitionPenalty
+            repetitionPenalty: configuration.repetitionPenalty
         )
 
         return try await container.perform { (ctx: ModelContext) throws -> GenerationMetrics in
@@ -228,14 +233,6 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
     #endif
 
     #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
-    /// Mild default token-repeat suppression for free-form generation
-    /// (`generate`, not `predictNextWords` — the carousel's single forward
-    /// pass has no decode loop to repeat within). A named constant rather
-    /// than an inline literal because Stage 3.4's human evaluation may
-    /// conclude a different value fits better, and a named constant avoids
-    /// hunting through this function to retune it.
-    private static let defaultRepetitionPenalty: Float = 1.3
-
     /// Builds the token sequence to decode from: build prompt -> encode.
     /// Prefers the tokenizer's own chat template when it has one; falls
     /// back to a manual, model-specific framing otherwise. Kept separate

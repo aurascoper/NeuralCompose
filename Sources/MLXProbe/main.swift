@@ -7,11 +7,16 @@ import Foundation
 // drift apart.
 //
 // Usage:
-//   MLXProbe <model-directory> [prompt]           human-readable output
-//   MLXProbe --json <model-directory> [prompt]    exactly one JSON line on
-//                                                  stdout (ProbeResult) —
-//                                                  this is what
-//                                                  PredictorFactory parses
+//   MLXProbe [--backend qwen|gemma] <model-directory> [prompt]
+//       human-readable output
+//   MLXProbe --json [--backend qwen|gemma] <model-directory> [prompt]
+//       exactly one JSON line on stdout (ProbeResult) — this is what
+//       PredictorFactory parses
+//
+// `--backend` selects which GenerationConfiguration (EOS tokens,
+// repetition penalty) to load the model with; defaults to `qwen`. It does
+// not change which model directory gets loaded — that's still whatever
+// directory is passed positionally.
 //
 // Needs the Xcode-built binary to reach the real MLX path — a bare
 // `swift build` binary crashes on metallib load (pre-existing, documented
@@ -19,11 +24,23 @@ import Foundation
 // `./Scripts/build-xcode-mlx.sh`, then run the product it produces.
 
 var jsonMode = false
+var backend = MLXBackend.qwen
 var positional: [String] = []
-for arg in CommandLine.arguments.dropFirst() {
-    if arg == "--json" {
+var args = CommandLine.arguments.dropFirst().makeIterator()
+while let arg = args.next() {
+    switch arg {
+    case "--json":
         jsonMode = true
-    } else {
+    case "--backend":
+        guard let value = args.next(), let parsed = MLXBackend(rawValue: value) else {
+            FileHandle.standardError.write(
+                "MLXProbe: --backend requires one of: \(MLXBackend.allCases.map(\.rawValue).joined(separator: ", "))\n"
+                    .data(using: .utf8)!
+            )
+            exit(1)
+        }
+        backend = parsed
+    default:
         positional.append(arg)
     }
 }
@@ -34,7 +51,7 @@ func fail(_ message: String) -> Never {
 }
 
 guard let modelDirectoryArg = positional.first else {
-    fail("Usage: MLXProbe [--json] <model-directory> [prompt]")
+    fail("Usage: MLXProbe [--json] [--backend qwen|gemma] <model-directory> [prompt]")
 }
 
 let modelDirectory = URL(fileURLWithPath: modelDirectoryArg)
@@ -46,7 +63,10 @@ if !jsonMode {
     print("MLXProbe: prompt = \"\(prompt)\"")
 }
 
-let result = await MLXInitProbe.run(modelDirectory: modelDirectory, prompt: prompt, maxTokens: 120, temperature: 0.7)
+let result = await MLXInitProbe.run(
+    modelDirectory: modelDirectory, configuration: backend.configuration,
+    prompt: prompt, maxTokens: 120, temperature: 0.7
+)
 
 if jsonMode {
     // Exactly one line on stdout — nothing else. `PredictorFactory` reads
