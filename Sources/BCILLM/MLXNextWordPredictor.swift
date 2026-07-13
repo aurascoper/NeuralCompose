@@ -33,7 +33,15 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
         self.modelIdentifier = modelDirectory.lastPathComponent
 
         #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
-        let configuration = ModelConfiguration(directory: modelDirectory)
+        // `<|im_end|>` is Qwen's ChatML end-of-turn token — registering it as
+        // an extra EOS candidate only matters when the decode loop's own
+        // `additionalEOSTokenIds` lookup (`Evaluate.swift`) can resolve it via
+        // `tokenizer.convertTokenToId`. Harmless no-op for any other model
+        // family that happens to load here (unknown token strings are just
+        // filtered out, not an error).
+        let configuration = ModelConfiguration(
+            directory: modelDirectory, extraEOSTokens: ["<|im_end|>"]
+        )
         do {
             self.container = try await LLMModelFactory.shared.loadContainer(
                 configuration: configuration
@@ -129,14 +137,20 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
     /// — no second model load, consistent with the Package.swift
     /// "single MLX runtime" isolation rule.
     ///
-    /// Deliberately encodes `prompt` as a flat string via
-    /// `ctx.tokenizer.encode(text:)` (the same call `predictNextWords`
-    /// already uses) rather than routing through
-    /// `Tokenizer.applyChatTemplate(messages:)` — that API takes
-    /// `[String: Any]` messages, which aren't `Sendable`, and the
-    /// instruction wording is already fully self-contained in the prompt
-    /// text `DialecticEngine` constructs, so a chat template isn't needed
-    /// for this to work correctly on an instruct-tuned model.
+    /// Prompt framing prefers the tokenizer's own chat template
+    /// (`Tokenizer.hasChatTemplate`/`applyChatTemplate(messages:)`) over a
+    /// hand-rolled format — see `tokenIDs(for:tokenizer:)` below. An earlier
+    /// version of this method avoided `applyChatTemplate` entirely because
+    /// its `[String: Any]` `Message` type isn't `Sendable`; that turned out
+    /// to be the wrong conclusion; `ModelContainer.perform`'s closure only
+    /// requires *itself* to be `@Sendable`
+    /// (`MLXLMCommon/ModelContainer.swift:63`), and a `[Message]` array
+    /// built and consumed entirely inside that closure never crosses an
+    /// isolation boundary, so it never needs to be `Sendable`. Skipping chat
+    /// framing was also empirically wrong: without it, an instruct model has
+    /// little signal to emit its real end-of-turn token, and can drift into
+    /// a repetitive decode loop instead of stopping cleanly — see
+    /// `MLXGenerationRegressionTests` for the repro this fixes.
     public func generate(
         prompt: String,
         maxTokens: Int,
@@ -149,22 +163,120 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
         let text = prompt.isEmpty ? " " : prompt
         let params = GenerateParameters(
             maxTokens: maxTokens,
-            temperature: Float(max(temperature, 0.0001))
+            temperature: Float(max(temperature, 0.0001)),
+            repetitionPenalty: Self.defaultRepetitionPenalty
         )
 
         return try await container.perform { (ctx: ModelContext) throws -> String in
-            let tokenIds = ctx.tokenizer.encode(text: text)
+            let tokenIds = try Self.tokenIDs(for: text, tokenizer: ctx.tokenizer)
             guard !tokenIds.isEmpty else { return "" }
             let input = LMInput(tokens: MLXArray(tokenIds))
             let result: GenerateResult = try MLXLMCommon.generate(
                 input: input, parameters: params, context: ctx
             ) { _ in .more }
+            Self.logGenerationDiagnostics(result: result, maxTokens: maxTokens)
             return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         #else
         throw BCIError.predictorInferenceFailed(reason: "MLX modules not importable")
         #endif
     }
+
+    #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
+    /// Mild default token-repeat suppression for free-form generation
+    /// (`generate`, not `predictNextWords` — the carousel's single forward
+    /// pass has no decode loop to repeat within). A named constant rather
+    /// than an inline literal because Stage 3.4's human evaluation may
+    /// conclude a different value fits better, and a named constant avoids
+    /// hunting through this function to retune it.
+    private static let defaultRepetitionPenalty: Float = 1.3
+
+    /// Builds the token sequence to decode from: build prompt -> encode.
+    /// Prefers the tokenizer's own chat template when it has one; falls
+    /// back to a manual, model-specific framing otherwise. Kept separate
+    /// from `generate` so prompt construction can be reasoned about (and
+    /// eventually tested) independently of decoding.
+    private static func tokenIDs(for text: String, tokenizer: any Tokenizer) throws -> [Int] {
+        if tokenizer.hasChatTemplate {
+            let messages: [Message] = [
+                ["role": "system", "content": "You are a helpful assistant."],
+                ["role": "user", "content": text],
+            ]
+            return try tokenizer.applyChatTemplate(messages: messages)
+        }
+        // No known message-template contract on this tokenizer — fall back
+        // to a manual, model-specific framing. Qwen ChatML today; a model
+        // family without a real `chat_template.json` would need its own
+        // branch here until every backend we support ships one.
+        return tokenizer.encode(text: chatMLPrompt(for: text))
+    }
+
+    private static func chatMLPrompt(for text: String) -> String {
+        "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n"
+            + "<|im_start|>user\n\(text)<|im_end|>\n<|im_start|>assistant\n"
+    }
+
+    /// Debug-only instrumentation for diagnosing decoder degeneration
+    /// (repetitive loops that run to `maxTokens` instead of stopping
+    /// cleanly). Logged at `.debug` level with generated text kept out of
+    /// the message entirely — this is a local-only diagnostic aid, not a
+    /// UI surface or telemetry, and deliberately doesn't persist the user's
+    /// composed text even to the local unified log.
+    private static func logGenerationDiagnostics(result: GenerateResult, maxTokens: Int) {
+        let stoppedAtCap = result.tokens.count >= maxTokens
+        let (period, repeatCount) = maxRepeatedNGram(in: result.output)
+        BCILog.predictor.debug("""
+            generation diagnostics: tokens=\(result.tokens.count, privacy: .public)\
+            /\(maxTokens, privacy: .public) \
+            stopReason=\(stoppedAtCap ? "maxTokens" : "eos", privacy: .public) \
+            maxRepeatedNGram=period\(period, privacy: .public)x\(repeatCount, privacy: .public)
+            """)
+        // Not currently logged, and not trivial to add: per-step entropy /
+        // top-1 probability, and the token index where a repetition run
+        // first begins. Both would require bypassing the high-level
+        // `MLXLMCommon.generate(...)` convenience wrapper for the
+        // lower-level `TokenIterator` API and reimplementing the decode
+        // loop this code otherwise gets for free — a real feature, not a
+        // side effect of this bug fix. `cancelled` isn't a reachable stop
+        // reason here either: cancellation throws out of `generate` (via
+        // `Task.checkCancellation()`) before a `GenerateResult` exists.
+    }
+
+    /// Longest short-period decoding loop found in `text` — a short word
+    /// n-gram (period 1-3) recurring immediately and mechanically, e.g.
+    /// "and a and a and a" -> (period: 2, repeatCount: 3). This is a
+    /// specific decoder pathology, not "repetition" in general: the same
+    /// failure shape regardless of whether the surface content is "and a"
+    /// or "one two three." Finds, for each candidate period and start
+    /// position, how many consecutive times that exact slice repeats,
+    /// rather than comparing single positions at a fixed lag (which
+    /// doesn't actually verify the whole n-gram repeats, and can under- or
+    /// over-count depending on period). Same detection idea as
+    /// `MLXGenerationRegressionTests`'s loop check, deliberately duplicated
+    /// rather than shared: one is a lightweight debug log, the other a
+    /// hard test assertion.
+    private static func maxRepeatedNGram(in text: String) -> (period: Int, repeatCount: Int) {
+        let words = text.lowercased().split(separator: " ").map(String.init)
+        var best = (period: 0, repeatCount: 1)
+        for period in 1...3 {
+            guard words.count >= period * 2 else { continue }
+            var start = 0
+            while start + period * 2 <= words.count {
+                let candidate = Array(words[start..<(start + period)])
+                var repeatCount = 1
+                var next = start + period
+                while next + period <= words.count,
+                      Array(words[next..<(next + period)]) == candidate {
+                    repeatCount += 1
+                    next += period
+                }
+                if repeatCount > best.repeatCount { best = (period, repeatCount) }
+                start += 1
+            }
+        }
+        return best
+    }
+    #endif
 
     /// True when a decoded token represents the start of a real word: leading
     /// space, plus body composed of letters / digits / `'` / `-`. Rejects

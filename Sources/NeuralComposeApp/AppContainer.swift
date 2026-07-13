@@ -90,6 +90,7 @@ public struct AppContainer: Sendable {
         let stream = EEGStreamFactory.make(profile: profile, playbackPath: playbackPath, oscPort: oscPort)
         let classifier = ClassifierFactory.live()
         let predictor = await PredictorFactory.live()
+        BCILog.predictor.notice("predictor backend: \(predictor.kind.rawValue, privacy: .public)")
         let voiceOutput = VoiceOutputFactory.live()
         let voiceInput = VoiceInputFactory.live()
         // The voice command recognizer is constructed with a

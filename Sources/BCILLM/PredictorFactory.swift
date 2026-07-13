@@ -80,7 +80,12 @@ public enum PredictorFactory {
                 generator: stub,
                 tokenizer: tokenizer,
                 kind: .stub,
-                warning: "MLX unavailable in this environment (Metal library failed to load) — using stub predictor"
+                // Deliberately not claiming a specific cause (e.g. "Metal
+                // library failed to load") — `runProbeSubprocess` only knows
+                // the probe didn't exit 0 within the timeout; it can't yet
+                // distinguish a crash, a hang, or a launch failure. See
+                // `Sources/MLXProbe/main.swift` for isolating which one.
+                warning: "MLX probe did not complete successfully; using stub predictor. See logs for probe result."
             )
         }
 
