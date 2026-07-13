@@ -36,8 +36,12 @@ to one change over another.
 Toggle chat templating and the repetition penalty independently by
 temporarily commenting out each piece in `generate` (EOS registration
 is cheap enough to leave on throughout, but note in your observations
-if you also tried disabling it). Run all six regression prompts at
-each combination:
+if you also tried disabling it). Given the baseline (off/off) failure
+already turned out to be stochastic (see "Surprises" below), a single
+run per cell only samples one outcome, not a rate — run **multiple
+trials per cell** and record the observed failure rate
+(`loops / trials`), not just pass/fail, for each of the six regression
+prompts at each combination:
 
 1. "Say the word no"
 2. "I will not say the words 'a' or 'and' again in this or any future sentences transcribed"

@@ -32,12 +32,6 @@ public enum PredictorFactory {
         public let warning: String?
     }
 
-    /// Set (to the model directory path) in the environment of the probe
-    /// subprocess `live(modelDirectory:)` spawns before it ever touches MLX
-    /// in-process. See `runProbeIfRequested()`'s doc comment for why this
-    /// exists.
-    public static let probeDirEnvVar = "NEURALCOMPOSE_MLX_PROBE_DIR"
-
     public static func live(
         modelDirectory: URL? = nil
     ) async -> Resolved {
@@ -46,121 +40,107 @@ public enum PredictorFactory {
         let tokenizer = TokenizerService(modelDirectory: chosenDir)
 
         guard let dir = chosenDir, FileManager.default.fileExists(atPath: dir.path) else {
-            let stub = StubNextWordPredictor()
-            return Resolved(
-                predictor: stub,
-                embeddingProvider: stub,
-                generator: stub,
-                tokenizer: tokenizer,
-                kind: .stub,
-                warning: nil
-            )
+            return stubResolved(tokenizer: tokenizer, warning: nil)
         }
 
         // MLX's C++/Metal layer can fail to load its default metallib in a
         // way that is NOT a catchable Swift `Error` — it aborts the whole
         // process before `MLXNextWordPredictor.init`'s own `do/catch` ever
-        // gets a chance to run (confirmed empirically: a plain `swift run`/
-        // `swift test` invocation crashes with "MLX error: Failed to load
-        // the default metallib" the instant any MLX API is touched, in an
-        // environment where mlx-swift's Metal shaders weren't bundled next
-        // to a bare SwiftPM-built binary the way they would be in an
-        // Xcode-built .app — see MODEL_SETUP.md). Prediction is optional;
-        // the application launching is not. So the real load is only
-        // attempted in-process after a disposable child-process probe
-        // (re-running this same executable) has already survived it — if
-        // the probe crashes, so would we, and we fall back to the stub
-        // instead.
-        guard await runProbeSubprocess(modelDirectory: dir) else {
-            BCILog.predictor.notice("MLX probe subprocess failed or crashed for \(dir.path, privacy: .public); using stub")
-            let stub = StubNextWordPredictor()
-            return Resolved(
-                predictor: stub,
-                embeddingProvider: stub,
-                generator: stub,
-                tokenizer: tokenizer,
-                kind: .stub,
-                // Deliberately not claiming a specific cause (e.g. "Metal
-                // library failed to load") — `runProbeSubprocess` only knows
-                // the probe didn't exit 0 within the timeout; it can't yet
-                // distinguish a crash, a hang, or a launch failure. See
-                // `Sources/MLXProbe/main.swift` for isolating which one.
-                warning: "MLX probe did not complete successfully; using stub predictor. See logs for probe result."
-            )
-        }
-
-        do {
-            let mlx = try await MLXNextWordPredictor(modelDirectory: dir)
-            return Resolved(
-                predictor: mlx,
-                embeddingProvider: mlx,
-                generator: mlx,
-                tokenizer: tokenizer,
-                kind: .mlx,
-                warning: nil
-            )
-        } catch {
-            let reason = (error as? BCIError)?.description ?? error.localizedDescription
-            BCILog.predictor.notice("MLX init failed (\(reason, privacy: .public)); using stub")
-            let stub = StubNextWordPredictor()
-            return Resolved(
-                predictor: stub,
-                embeddingProvider: stub,
-                generator: stub,
-                tokenizer: tokenizer,
-                kind: .stub,
-                warning: "MLX present but failed to load: \(reason)"
-            )
+        // gets a chance to run. Prediction is optional; the application
+        // launching is not. So the real load is only attempted in-process
+        // after a disposable child-process probe has already survived it —
+        // if the probe crashes, so would we, and we fall back to the stub
+        // instead. The probe launches the standalone `MLXProbe` executable
+        // (`Sources/MLXProbe/main.swift`) — a purpose-built, minimal binary
+        // — rather than re-invoking the app's own binary with an env var,
+        // so the app never needs to detect "am I secretly a probe right
+        // now" in its own entry point.
+        switch await runInitProbeSubprocess(modelDirectory: dir) {
+        case .success(let metrics):
+            BCILog.predictor.notice("""
+                MLX probe succeeded: \(metrics.modelIdentifier, privacy: .public) \
+                modelLoad=\(metrics.modelLoadTime, privacy: .public)s \
+                firstToken=\(metrics.firstTokenLatency, privacy: .public)s \
+                throughput=\(metrics.tokensPerSecond, privacy: .public) tok/s
+                """)
+            do {
+                let mlx = try await MLXNextWordPredictor(modelDirectory: dir)
+                return Resolved(
+                    predictor: mlx,
+                    embeddingProvider: mlx,
+                    generator: mlx,
+                    tokenizer: tokenizer,
+                    kind: .mlx,
+                    warning: nil
+                )
+            } catch {
+                let reason = (error as? BCIError)?.description ?? error.localizedDescription
+                BCILog.predictor.notice("MLX init failed after a successful probe (\(reason, privacy: .public)); using stub")
+                return stubResolved(tokenizer: tokenizer, warning: "MLX present but failed to load: \(reason)")
+            }
+        case .timeout:
+            BCILog.predictor.notice("MLX probe timed out for \(dir.path, privacy: .public); using stub")
+            return stubResolved(tokenizer: tokenizer, warning: "MLX probe timed out; using stub predictor.")
+        case .crashed(let signal):
+            BCILog.predictor.notice("MLX probe crashed (signal \(signal, privacy: .public)) for \(dir.path, privacy: .public); using stub")
+            return stubResolved(tokenizer: tokenizer, warning: "MLX probe crashed (signal \(signal)); using stub predictor.")
+        case .failed(let reason):
+            BCILog.predictor.notice("MLX probe failed (\(reason, privacy: .public)) for \(dir.path, privacy: .public); using stub")
+            return stubResolved(tokenizer: tokenizer, warning: "MLX probe failed: \(reason)")
         }
     }
 
-    /// If this process was launched as an MLX probe (see `live(modelDirectory:)`'s
-    /// doc comment), attempts the real MLX load and **terminates the
-    /// process** with exit code 0 (success) or 1 (a catchable failure) —
-    /// never returns in that case. A native crash here just crashes this
-    /// disposable child process, which is exactly the point: the parent
-    /// (the real app) observes a non-zero/signal exit and falls back to
-    /// the stub instead of dying itself.
-    ///
-    /// Call this once, as early as possible in the app's entry point,
-    /// before any other startup work — see `NeuralComposeAppEntry.init()`.
-    /// Returns normally (a no-op) when the probe env var isn't set, i.e.
-    /// for every regular app launch.
-    public static func runProbeIfRequested() async -> Never? {
-        guard let dir = ProcessInfo.processInfo.environment[probeDirEnvVar], !dir.isEmpty else {
-            return nil
-        }
-        do {
-            _ = try await MLXNextWordPredictor(modelDirectory: URL(fileURLWithPath: dir))
-            exit(0)
-        } catch {
-            exit(1)
-        }
+    private static func stubResolved(tokenizer: any TokenizerProviding, warning: String?) -> Resolved {
+        let stub = StubNextWordPredictor()
+        return Resolved(
+            predictor: stub,
+            embeddingProvider: stub,
+            generator: stub,
+            tokenizer: tokenizer,
+            kind: .stub,
+            warning: warning
+        )
     }
 
-    /// Re-invokes this same executable with `probeDirEnvVar` set, and
-    /// waits for it to exit. `true` only on a clean exit(0); `false` on
-    /// any non-zero exit, a crash/signal, *or* a timeout.
+    /// Looks for an `MLXProbe` binary next to the app's own executable —
+    /// true for `swift build`/`swift run`/Xcode SwiftPM-scheme builds (the
+    /// only ways this app is currently launched; both put sibling
+    /// executables in the same build-products directory). A real
+    /// distributable `.app` bundling `MLXProbe` as a helper tool is future
+    /// work, not handled here — `nil` in that case, same as any other
+    /// probe-unavailable path.
+    private static func locateMLXProbeBinary() -> URL? {
+        guard let executablePath = CommandLine.arguments.first else { return nil }
+        let sibling = URL(fileURLWithPath: executablePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("MLXProbe")
+        return FileManager.default.fileExists(atPath: sibling.path) ? sibling : nil
+    }
+
+    /// Spawns the standalone `MLXProbe` binary (`--json <modelDirectory>`)
+    /// as a disposable child process and races it against a timeout,
+    /// returning a `ProbeResult` that distinguishes success, a parseable
+    /// failure, a timeout, and a crash-by-signal — rather than the `Bool`
+    /// this used to return. `MLXProbe --json` writes exactly one JSON line
+    /// to stdout and nothing else, so reading the whole pipe after the
+    /// process exits (inside `terminationHandler`) is safe without a
+    /// streaming reader — the payload is always small.
     ///
     /// The timeout matters independently of the crash risk this whole
     /// mechanism exists for: MLX model loading can also hang rather than
-    /// crash (observed: a tokenizer-config resolution step that made a
-    /// network call and never returned on a restricted connection) — with
-    /// no timeout, a hung probe would block the entire app's startup
-    /// forever instead of just falling back to the stub.
-    private static func runProbeSubprocess(
+    /// crash — with no timeout, a hung probe would block the entire app's
+    /// startup forever instead of just falling back to the stub.
+    private static func runInitProbeSubprocess(
         modelDirectory: URL, timeoutSeconds: Double = 20.0
-    ) async -> Bool {
-        guard let executablePath = CommandLine.arguments.first else { return false }
+    ) async -> ProbeResult {
+        guard let probeBinary = locateMLXProbeBinary() else {
+            return .failed(reason: "MLXProbe binary not found alongside the app executable")
+        }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: executablePath)
-        var env = ProcessInfo.processInfo.environment
-        env[probeDirEnvVar] = modelDirectory.path
-        process.environment = env
-        // The probe never touches stdin/stdout meaningfully; discard both
-        // so a crash's stderr diagnostic doesn't get tangled with the
-        // parent app's own output.
-        process.standardOutput = FileHandle.nullDevice
+        process.executableURL = probeBinary
+        process.arguments = ["--json", modelDirectory.path]
+        let stdoutPipe = Pipe()
+        process.standardOutput = stdoutPipe
         process.standardError = FileHandle.nullDevice
 
         // Guards against resuming the continuation twice: the
@@ -169,7 +149,7 @@ public enum PredictorFactory {
         final class ResumeOnce: @unchecked Sendable {
             private let lock = NSLock()
             private var done = false
-            func resume(_ continuation: CheckedContinuation<Bool, Never>, _ value: Bool) {
+            func resume(_ continuation: CheckedContinuation<ProbeResult, Never>, _ value: ProbeResult) {
                 lock.lock()
                 defer { lock.unlock() }
                 guard !done else { return }
@@ -181,12 +161,23 @@ public enum PredictorFactory {
         return await withCheckedContinuation { continuation in
             let once = ResumeOnce()
             process.terminationHandler = { p in
-                once.resume(continuation, p.terminationStatus == 0)
+                if p.terminationReason == .uncaughtSignal {
+                    once.resume(continuation, .crashed(signal: p.terminationStatus))
+                    return
+                }
+                let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                guard let decoded = try? JSONDecoder().decode(ProbeResult.self, from: data) else {
+                    once.resume(continuation, .failed(
+                        reason: "probe exited with status \(p.terminationStatus), no parseable output"
+                    ))
+                    return
+                }
+                once.resume(continuation, decoded)
             }
             do {
                 try process.run()
             } catch {
-                once.resume(continuation, false)
+                once.resume(continuation, .failed(reason: "failed to launch MLXProbe: \(error.localizedDescription)"))
                 return
             }
             Task {
@@ -194,7 +185,7 @@ public enum PredictorFactory {
                 guard process.isRunning else { return }
                 BCILog.predictor.notice("MLX probe subprocess exceeded \(timeoutSeconds, format: .fixed(precision: 0))s; terminating and using stub")
                 process.terminate()
-                once.resume(continuation, false)
+                once.resume(continuation, .timeout)
             }
         }
     }

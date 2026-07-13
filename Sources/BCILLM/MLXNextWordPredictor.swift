@@ -8,6 +8,18 @@ import MLXLMCommon
 import Tokenizers
 #endif
 
+/// Generation output plus the timing/throughput `GenerateResult` already
+/// computes — `generate()` (the `TextGenerating` conformance) discards
+/// everything but `text`; `MLXInitProbe` wants the rest. Declared
+/// unconditionally (not gated by `canImport(MLX)`) since the non-MLX
+/// `#else` build of `generateDetailed` still needs a return type.
+struct GenerationMetrics: Sendable {
+    let text: String
+    let promptTime: TimeInterval
+    let generateTime: TimeInterval
+    let tokensPerSecond: Double
+}
+
 /// MLX-Swift-backed next-word predictor.
 ///
 /// Loads an MLX-converted causal LM from a local directory and serves
@@ -157,9 +169,28 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
         temperature: Double,
         cancellationID: UUID
     ) async throws -> String {
+        try await generateDetailed(
+            prompt: prompt, maxTokens: maxTokens, temperature: temperature,
+            cancellationID: cancellationID
+        ).text
+    }
+
+    #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
+    /// Same generation as `generate`, but keeps the timing/throughput
+    /// fields `GenerateResult` already computes (`promptTime`,
+    /// `generateTime`, `tokensPerSecond`) instead of discarding them after
+    /// extracting `.output`. `generate` (the `TextGenerating` conformance
+    /// `DialecticEngine` calls) delegates to this; `MLXInitProbe` is the
+    /// other caller, for probe/benchmark metrics — kept `internal` since
+    /// both live in this module and nothing outside `BCILLM` needs it.
+    func generateDetailed(
+        prompt: String,
+        maxTokens: Int,
+        temperature: Double,
+        cancellationID: UUID
+    ) async throws -> GenerationMetrics {
         try Task.checkCancellation()
 
-        #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
         let text = prompt.isEmpty ? " " : prompt
         let params = GenerateParameters(
             maxTokens: maxTokens,
@@ -167,20 +198,34 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
             repetitionPenalty: Self.defaultRepetitionPenalty
         )
 
-        return try await container.perform { (ctx: ModelContext) throws -> String in
+        return try await container.perform { (ctx: ModelContext) throws -> GenerationMetrics in
             let tokenIds = try Self.tokenIDs(for: text, tokenizer: ctx.tokenizer)
-            guard !tokenIds.isEmpty else { return "" }
+            guard !tokenIds.isEmpty else {
+                return GenerationMetrics(text: "", promptTime: 0, generateTime: 0, tokensPerSecond: 0)
+            }
             let input = LMInput(tokens: MLXArray(tokenIds))
             let result: GenerateResult = try MLXLMCommon.generate(
                 input: input, parameters: params, context: ctx
             ) { _ in .more }
             Self.logGenerationDiagnostics(result: result, maxTokens: maxTokens)
-            return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            return GenerationMetrics(
+                text: result.output.trimmingCharacters(in: .whitespacesAndNewlines),
+                promptTime: result.promptTime,
+                generateTime: result.generateTime,
+                tokensPerSecond: result.tokensPerSecond
+            )
         }
-        #else
-        throw BCIError.predictorInferenceFailed(reason: "MLX modules not importable")
-        #endif
     }
+    #else
+    func generateDetailed(
+        prompt: String,
+        maxTokens: Int,
+        temperature: Double,
+        cancellationID: UUID
+    ) async throws -> GenerationMetrics {
+        throw BCIError.predictorInferenceFailed(reason: "MLX modules not importable")
+    }
+    #endif
 
     #if canImport(MLX) && canImport(MLXLLM) && canImport(MLXLMCommon)
     /// Mild default token-repeat suppression for free-form generation
