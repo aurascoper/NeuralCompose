@@ -57,12 +57,14 @@ if command -v xcbeautify >/dev/null 2>&1; then
     xcodebuild \
         -scheme NeuralCompose \
         -configuration "$CONFIG" \
+        -destination 'platform=macOS' \
         -derivedDataPath "$REPO_ROOT/.build/xcode" \
         build | xcbeautify
 else
     xcodebuild \
         -scheme NeuralCompose \
         -configuration "$CONFIG" \
+        -destination 'platform=macOS' \
         -derivedDataPath "$REPO_ROOT/.build/xcode" \
         build
 fi

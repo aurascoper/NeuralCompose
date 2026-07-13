@@ -36,6 +36,7 @@ let package = Package(
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
+        .executable(name: "MLXProbe", targets: ["MLXProbe"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -151,6 +152,19 @@ let package = Package(
             name: "SemanticEval",
             dependencies: ["BCICore", "BCIClassifier"],
             path: "Sources/SemanticEval",
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── MLX load probe (temporary diagnostic) ─────────────────────────
+        // Isolated `MLXNextWordPredictor.init()` + `generate()` call with
+        // none of `PredictorFactory`'s subprocess/semaphore/App-lifecycle
+        // machinery around it. See Sources/MLXProbe/main.swift's doc
+        // comment. Delete this target once the probe-subprocess stall is
+        // diagnosed.
+        .executableTarget(
+            name: "MLXProbe",
+            dependencies: ["BCILLM"],
+            path: "Sources/MLXProbe",
             swiftSettings: strictConcurrency
         ),
 
