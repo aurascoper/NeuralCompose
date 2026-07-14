@@ -1,0 +1,210 @@
+{
+  "provenance": {
+    "provenance_schema_version": 1,
+    "timestamp": "2026-07-14T12:18:11.357145+00:00",
+    "git_commit": "320b28d4c3a65b91de01397815fdc981fade6a43",
+    "git_branch": "research/lit-review-methodology",
+    "git_dirty": true,
+    "device": "Apple M4",
+    "macos_version": "26.5.2",
+    "ram_gb": 16.0,
+    "python_version": "3.11.15",
+    "packages": {
+      "sentence-transformers": "5.6.0",
+      "torch": "2.13.0",
+      "transformers": "5.13.1",
+      "numpy": "1.26.4",
+      "huggingface_hub": "1.23.0",
+      "mlx": "0.32.0",
+      "mlx-lm": "0.31.3",
+      "einops": "0.8.2",
+      "psutil": "7.2.2"
+    }
+  },
+  "validator": {
+    "n_fail": 0,
+    "n_warn": 17,
+    "findings": [
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/Qwen3-Embedding-0.6B/python/benchmark.json",
+        "message": "pre-provenance legacy artifact (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/all-MiniLM-L6-v2/python/benchmark.json",
+        "message": "pre-provenance legacy artifact (no provenance block)"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/all-MiniLM-L6-v2-mlx/mlx",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/all-MiniLM-L6-v2-mlx/python",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/bge-m3/python/benchmark.json",
+        "message": "pre-provenance legacy artifact (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/bge-small-en-v1.5/python/benchmark.json",
+        "message": "pre-provenance legacy artifact (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/bge-small-en-v1.5",
+        "message": "benchmark.json present but metadata.json missing (legacy artifact)"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/bge-small-en-v1.5-mlx/mlx",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/bge-small-en-v1.5-mlx/python",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/gte-base-en-v1.5/python",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/gte-large-en-v1.5/python",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/jina-embeddings-v3/python",
+        "message": "2 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/multilingual-e5-large/python",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/multilingual-e5-small/python/benchmark.json",
+        "message": "pre-provenance legacy artifact (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/multilingual-e5-small",
+        "message": "benchmark.json present but metadata.json missing (legacy artifact)"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/nomic-embed-text-v1.5/python",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/snowflake-arctic-embed/python",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "INFO",
+        "category": "embedding-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/stella_en_400M_v5/python",
+        "message": "1 archived failed attempt(s) preserved"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/gemma-3-1b/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "INFO",
+        "category": "generation-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/gemma-3-4b",
+        "message": "terminal failure recorded: smoke_test_failed"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/gemma-3n-e2b/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/gemma-3n-e4b/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/llama-3.2-1b/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/llama-3.2-3b/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "INFO",
+        "category": "generation-checkpoints",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/openelm-3b",
+        "message": "terminal failure recorded: unavailable: mlx-community has no OpenELM-3B instruct conversion (only base OpenELM-3B, verified 2026-07-14); a base model is not comparable in an instruction-following eval"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/phi-3.5-mini/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/phi-4-mini/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/qwen2.5-0.5b/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/qwen2.5-1.5b/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      },
+      {
+        "level": "WARN",
+        "category": "provenance",
+        "path": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/qwen2.5-3b/metadata.json",
+        "message": "pre-provenance legacy metadata (no provenance block)"
+      }
+    ]
+  }
+}
