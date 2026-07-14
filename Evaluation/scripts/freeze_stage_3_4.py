@@ -136,7 +136,9 @@ def main():
 
     FROZEN_DIR.mkdir(parents=True)
 
-    checksums = "\n".join(f"{f['sha256']}  ../../{f['path']}" for f in files) + "\n"
+    # frozen/ sits three levels below the repo root the paths are relative to
+    # (frozen → stage_3_4 → Evaluation → root).
+    checksums = "\n".join(f"{f['sha256']}  ../../../{f['path']}" for f in files) + "\n"
     (FROZEN_DIR / "checksums.txt").write_text(checksums)
 
     registry = json.load(open(EVAL_DIR / "corpora" / "hypothesis_registry.json"))
