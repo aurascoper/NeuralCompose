@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "stage_3_4": [
+    {
+      "id": "3.4-A-runtime-consistency",
+      "title": "Runtime consistency: Python vs CoreML vs MLX",
+      "question": "Do CoreML and MLX runtime conversions introduce cosine drift vs the Python reference?",
+      "metric": "Mean cosine similarity between embeddings of same text across runtimes",
+      "success_criterion": "Mean cosine >= 0.999 (no drift) for at least one non-Python runtime",
+      "expected_effect_size": {
+        "cosine_drift": "< 0.001",
+        "latency_diff": "CoreML >= 2x faster than Python"
+      },
+      "status": "evaluated",
+      "work_package": "A"
+    },
+    {
+      "id": "3.4-B-joint-embeddings",
+      "title": "Joint embeddings: does combining top-K models improve retrieval?",
+      "question": "Does concatenating or fusing embeddings from 2+ top models improve separation_ratio vs the best single model?",
+      "metric": "separation_ratio (intra-group mean / cross-group mean cosine)",
+      "success_criterion": ">= 5% improvement in separation_ratio over best single model",
+      "expected_effect_size": {
+        "separation_ratio": "+5-15%",
+        "latency": "<25% increase",
+        "memory": "<2x baseline"
+      },
+      "status": "pre-registered",
+      "work_package": "B"
+    },
+    {
+      "id": "3.4-C-embedding-space",
+      "title": "Embedding-space analysis: are top models geometrically similar?",
+      "question": "How aligned are the embedding spaces of the top-K models?",
+      "metric": "CKA (Centered Kernel Alignment) + SVCCA + Procrustes distance",
+      "success_criterion": "CKA >= 0.7 between at least one pair (evidence of convergent representation)",
+      "expected_effect_size": {
+        "cka": "0.5-0.8 for same-family models, 0.2-0.5 cross-family",
+        "svcca": "0.3-0.7"
+      },
+      "status": "evaluated",
+      "work_package": "C"
+    },
+    {
+      "id": "3.4-D-cross-model-agreement",
+      "title": "Cross-model agreement: do models agree on neighbors?",
+      "question": "How often do the top-K models retrieve the same top-k neighbors for the same query?",
+      "metric": "Mean Jaccard overlap of top-k neighbor sets across model pairs",
+      "success_criterion": "Mean Jaccard >= 0.5 for at least one pair (sufficient agreement for ensemble)",
+      "expected_effect_size": {
+        "jaccard": "0.3-0.6 cross-family, 0.6-0.9 same-family"
+      },
+      "status": "evaluated",
+      "work_package": "D"
+    },
+    {
+      "id": "3.4-E-generator-comparison",
+      "title": "Generator comparison: same prompt, multiple generators",
+      "question": "How much do top-3 generators agree on rewrite quality for the same prompt?",
+      "metric": "Pairwise cosine similarity between generator outputs + BLEU-4",
+      "success_criterion": "Mean pairwise output cosine >= 0.8 (high agreement) OR < 0.6 (divergent, ensemble-worthy)",
+      "expected_effect_size": {
+        "output_cosine": "0.65-0.85",
+        "bleu4": "0.1-0.4 (low, rewrites are paraphrastic not exact)"
+      },
+      "status": "evaluated",
+      "work_package": "E"
+    },
+    {
+      "id": "3.4-F-offline-fusion",
+      "title": "Offline fusion: which fusion strategy works best for joint embeddings?",
+      "question": "Which fusion method (concatenation, weighted, PCA, CCA, late fusion) yields the best retrieval quality?",
+      "metric": "retrieval_top1 + separation_ratio",
+      "success_criterion": "At least one fusion method improves retrieval_top1 by >= 2% over best single model",
+      "expected_effect_size": {
+        "retrieval_top1": "+2-5%",
+        "separation_ratio": "+5-10%",
+        "latency": "<25% increase"
+      },
+      "status": "pre-registered",
+      "work_package": "F"
+    }
+  ],
+  "stage_3_5": [
+    {
+      "id": "3.5-A-joint-embedding-selection",
+      "title": "Joint embedding selection for production",
+      "question": "Given Stage 3.4 evidence, which joint embedding configuration is best for production?",
+      "metric": "separation_ratio + retrieval_top1 + latency",
+      "success_criterion": "Identified configuration is Pareto-optimal on quality+latency vs all single models",
+      "expected_effect_size": {
+        "separation_ratio": "+5-15%",
+        "retrieval_top1": "+2-5%",
+        "latency": "<25% increase"
+      },
+      "status": "pre-registered",
+      "work_package": "A"
+    },
+    {
+      "id": "3.5-B-adaptive-routing",
+      "title": "Adaptive embedding routing by input type",
+      "question": "Does routing queries to different embedding models by input type improve overall retrieval vs fixed routing?",
+      "metric": "Weighted retrieval accuracy across input categories",
+      "success_criterion": ">= 3% improvement over best fixed model",
+      "expected_effect_size": {
+        "retrieval_accuracy": "+3-8%",
+        "latency_overhead": "<10% (routing is cheap)"
+      },
+      "status": "pre-registered",
+      "work_package": "B"
+    },
+    {
+      "id": "3.5-C-pipeline-benchmark",
+      "title": "Full pipeline benchmark: embedding x generator combinations",
+      "question": "Which embedding-generator pipeline has the best quality-latency Pareto frontier?",
+      "metric": "Pipeline score (rewrite cosine + retrieval accuracy + latency)",
+      "success_criterion": "At least one pipeline is Pareto-optimal that is NOT Pareto-optimal on either component axis alone",
+      "expected_effect_size": {
+        "pipeline_score_spread": "0.3-0.7 across 9 pipelines",
+        "novel_pareto_members": "1-2 pipelines"
+      },
+      "status": "pre-registered",
+      "work_package": "C"
+    },
+    {
+      "id": "3.5-D-cascaded-generation",
+      "title": "Cascaded generation: fast draft + quality edit",
+      "question": "Does a fast-model-draft + quality-model-edit cascade improve rewrite quality vs single-model, within latency budget?",
+      "metric": "Cosine similarity to reference + latency",
+      "success_criterion": "Cascade cosine >= single best model AND latency < 2x fast model alone",
+      "expected_effect_size": {
+        "cosine_improvement": "+1-5% over fast-only",
+        "latency": "1.3-1.8x fast-only"
+      },
+      "status": "pre-registered",
+      "work_package": "D"
+    },
+    {
+      "id": "3.5-E-confidence-consensus",
+      "title": "Confidence-based model selection",
+      "question": "Can embedding model confidence (entropy of similarity distribution) predict when a second model is needed?",
+      "metric": "Retrieval accuracy improvement when confidence-gated second model is added",
+      "success_criterion": "Gated second model improves retrieval by >= 2% on low-confidence queries without degrading high-confidence queries",
+      "expected_effect_size": {
+        "retrieval_improvement_low_conf": "+2-5%",
+        "retrieval_degradation_high_conf": "<0.5%",
+        "second_model_invocation_rate": "10-30%"
+      },
+      "status": "pre-registered",
+      "work_package": "E"
+    },
+    {
+      "id": "3.5-P-pipeline-policies",
+      "title": "Pipeline policy comparison: fast vs balanced vs quality vs adaptive",
+      "question": "Which pipeline policy yields the best Pareto position for NeuralCompose's use case?",
+      "metric": "Pareto rank across quality, latency, and memory",
+      "success_criterion": "Adaptive mode is Pareto-optimal OR within 5% of the best fixed mode on every axis",
+      "expected_effect_size": {
+        "adaptive_vs_best_fixed": "<5% gap on every axis",
+        "adaptive_pareto_probability": "60-80%"
+      },
+      "status": "pre-registered",
+      "work_package": "P"
+    }
+  ],
+  "policy_registry": {
+    "version": 1,
+    "description": "Named pipeline policies for Stage 3.5 comparison. Each policy maps to a concrete (embedding, generator) pair or routing logic. Reports compare named policies rather than opaque combinations.",
+    "policies": [
+      {
+        "name": "Fast",
+        "description": "Minimum latency for real-time EEG communication",
+        "embedding": "auto:fastest_available",
+        "generator": "auto:fastest_available",
+        "latency_budget_s": 2.0,
+        "use_case": "Short commands, high-frequency interaction"
+      },
+      {
+        "name": "Balanced",
+        "description": "Good quality at moderate latency",
+        "embedding": "auto:mid_tier",
+        "generator": "auto:mid_tier",
+        "latency_budget_s": 5.0,
+        "use_case": "General-purpose communication, filler removal"
+      },
+      {
+        "name": "Quality",
+        "description": "Best rewrite quality, latency permitting",
+        "embedding": "auto:best_overall",
+        "generator": "auto:best_quality",
+        "latency_budget_s": 15.0,
+        "use_case": "Complex rewrites, technical-term preservation, low-frequency high-stakes output"
+      },
+      {
+        "name": "Adaptive",
+        "description": "Route by query characteristics + confidence; short commands to fast pipeline, long/uncertain to quality pipeline",
+        "embedding": "routing:short_command->fastest, technical->best, uncertain->confidence_gated",
+        "generator": "routing:short_command->fastest, long->quality",
+        "latency_budget_s": "per_query: 2.0-15.0",
+        "use_case": "Production intent \u2014 maximizes real-world communication rate"
+      }
+    ]
+  }
+}
