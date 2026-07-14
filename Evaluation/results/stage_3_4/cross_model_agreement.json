@@ -1,0 +1,83 @@
+{
+  "generated_at": "2026-07-14T06:42:03.125285+00:00",
+  "models": [
+    "all-MiniLM-L6-v2",
+    "multilingual-e5-small"
+  ],
+  "neighbors_k": 5,
+  "pairwise_agreement": {
+    "all-MiniLM-L6-v2+multilingual-e5-small": {
+      "mean_jaccard": 0.6857142857142857,
+      "std": 0.18220120447341895,
+      "min": 0.42857142857142855,
+      "max": 1.0,
+      "n": 10
+    }
+  },
+  "consensus": {
+    "mean_consensus_ratio": 0.6857142857142857,
+    "std": 0.18220120447341895,
+    "per_text": [
+      {
+        "text_idx": 0,
+        "text": "refine the composition",
+        "consensus_ratio": 0.6666666666666666,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 1,
+        "text": "refine it",
+        "consensus_ratio": 0.6666666666666666,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 2,
+        "text": "improve it",
+        "consensus_ratio": 1.0,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 3,
+        "text": "improve the text",
+        "consensus_ratio": 1.0,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 4,
+        "text": "make it clearer",
+        "consensus_ratio": 0.42857142857142855,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 5,
+        "text": "make it more concise",
+        "consensus_ratio": 0.6666666666666666,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 6,
+        "text": "fix the grammar",
+        "consensus_ratio": 0.42857142857142855,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 7,
+        "text": "edit the last sentence",
+        "consensus_ratio": 0.6666666666666666,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 8,
+        "text": "rewrite that",
+        "consensus_ratio": 0.6666666666666666,
+        "any_model_agreement": true
+      },
+      {
+        "text_idx": 9,
+        "text": "clean up the text",
+        "consensus_ratio": 0.6666666666666666,
+        "any_model_agreement": true
+      }
+    ]
+  }
+}

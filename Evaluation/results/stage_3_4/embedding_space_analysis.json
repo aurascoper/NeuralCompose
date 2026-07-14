@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-07-14T06:42:02.823753+00:00",
+  "models": [
+    "all-MiniLM-L6-v2",
+    "multilingual-e5-small",
+    "bge-small-en-v1.5"
+  ],
+  "pairwise": [
+    {
+      "model_a": "all-MiniLM-L6-v2",
+      "model_b": "multilingual-e5-small",
+      "cka": 0.9619117065359569,
+      "svcca": 0.8592405951207932,
+      "procrustes_disparity": 0.024200506842188975,
+      "neighborhood_overlap": 0.6857142857142857,
+      "cluster_purity": 0.8,
+      "intrinsic_dim_a": 7.183480004246349,
+      "intrinsic_dim_b": 7.0199519970183
+    },
+    {
+      "model_a": "all-MiniLM-L6-v2",
+      "model_b": "bge-small-en-v1.5",
+      "cka": 0.9569989443154713,
+      "svcca": 0.9190296019005499,
+      "procrustes_disparity": 0.024962552488458637,
+      "neighborhood_overlap": 0.6619047619047619,
+      "cluster_purity": 0.8,
+      "intrinsic_dim_a": 7.183480004246349,
+      "intrinsic_dim_b": 6.730543392190372
+    },
+    {
+      "model_a": "multilingual-e5-small",
+      "model_b": "bge-small-en-v1.5",
+      "cka": 0.9655491294235293,
+      "svcca": 0.8556842502488085,
+      "procrustes_disparity": 0.020686119593129992,
+      "neighborhood_overlap": 0.6678571428571429,
+      "cluster_purity": 1.0,
+      "intrinsic_dim_a": 7.0199519970183,
+      "intrinsic_dim_b": 6.730543392190372
+    }
+  ],
+  "intrinsic_dimensionality": {
+    "all-MiniLM-L6-v2": 7.183480004246349,
+    "multilingual-e5-small": 7.0199519970183,
+    "bge-small-en-v1.5": 6.730543392190372
+  }
+}
