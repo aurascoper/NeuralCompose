@@ -68,6 +68,9 @@ RQ1_EVALUATED_FIELDS = ["dimension", "cold_load_time", "embeddings_per_second"]
 
 PROVENANCE_FIELDS = ["git_commit", "git_branch", "device", "macos_version",
                      "python_version", "packages"]
+# Swift EmbeddingBench artifacts have no Python toolchain to record; their
+# provenance is git commit + machine + artifact hashes (SystemInfo.swift).
+RQ1_PROVENANCE_FIELDS = ["git_commit", "device", "macos_version"]
 
 GENERATION_PROVENANCE_FIELDS = ["candidates_fixture_version", "prompts_fixture_version",
                                 "device", "git_commit", "macos_version"]
@@ -239,7 +242,9 @@ def check_embedding_checkpoints(report):
                 report.warn("provenance", bench_path,
                             "pre-provenance legacy artifact (no provenance block)")
             else:
-                for field in PROVENANCE_FIELDS:
+                required = (RQ1_PROVENANCE_FIELDS if runtime in RQ1_ONLY_RUNTIMES
+                            else PROVENANCE_FIELDS)
+                for field in required:
                     if field not in prov:
                         report.fail("provenance", bench_path,
                                     f"provenance missing field: {field}")
