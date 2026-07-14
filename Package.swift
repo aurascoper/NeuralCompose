@@ -95,6 +95,9 @@ let package = Package(
                 .product(name: "MLXRandom",     package: "mlx-swift"),
                 .product(name: "MLXLLM",        package: "mlx-swift-examples"),
                 .product(name: "MLXLMCommon",   package: "mlx-swift-examples"),
+                // Sentence-embedding models (BERT family) for the Stage 3.4
+                // RQ1 MLXSentenceEmbedder — mlx_lm cannot load encoders.
+                .product(name: "MLXEmbedders",  package: "mlx-swift-examples"),
                 .product(name: "Transformers", package: "swift-transformers"),
             ],
             path: "Sources/BCILLM",
@@ -134,10 +137,12 @@ let package = Package(
         .executableTarget(
             name: "EmbeddingBench",
             // BCIClassifier is needed to construct CoreMLSentenceEmbedder
-            // (Stage 3.2) directly by its concrete type — BenchmarkRunner
-            // itself stays generic over `any SentenceEmbedder` and knows
-            // nothing about Core ML.
-            dependencies: ["BCICore", "BCIClassifier"],
+            // (Stage 3.2) directly by its concrete type; BCILLM likewise for
+            // MLXSentenceEmbedder (Stage 3.4 RQ1) — BenchmarkRunner itself
+            // stays generic over `any SentenceEmbedder` and knows nothing
+            // about Core ML or MLX. Single executable → still one MLX
+            // runtime in the linked binary.
+            dependencies: ["BCICore", "BCIClassifier", "BCILLM"],
             path: "Sources/EmbeddingBench",
             swiftSettings: strictConcurrency
         ),
