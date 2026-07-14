@@ -175,9 +175,9 @@ principles.
 ## Playback & synchronization math
 
 Live BLE acquisition is a noisy clock — inter-sample gaps jitter with radio
-conditions. `PlaybackEEGStream.normalized` resamples a recording onto an
-exact uniform grid before replay, via linear interpolation between the two
-nearest recorded samples $(t_a, x_a)$, $(t_b, x_b)$:
+`PlaybackEEGStream.normalized` resamples a recording onto an
+exact uniform grid before replay, via linear interpolation between the
+two nearest recorded samples $(t_a, x_a)$, $(t_b, x_b)$:
 
 $$x(t) = x_a + (x_b - x_a)\cdot\frac{t - t_a}{t_b - t_a}, \qquad t_a \le t \le t_b$$
 
@@ -185,15 +185,15 @@ Two replays of the same file at the same target rate then produce
 byte-identical sample sequences, independent of the original jitter — the
 property the CI regression test depends on.
 
-Classifier confidence driving the 3D workspace's edge pulse is EMA-smoothed
-so an async prediction arrival doesn't visibly pop:
+Classifier confidence driving the 3D workspace's edge pulse is
+EMA-smoothed so an async prediction arrival doesn't visibly pop:
 
-$$\hat c_n = \hat c_{n-1} + \alpha\,(c_n - \hat c_{n-1}), \qquad \alpha = 0.15$$
+$$\hat{c}_n = \hat{c}_{n-1} + \alpha\,(c_n - \hat{c}_{n-1}), \qquad \alpha = 0.15$$
 
 and node brightness is broadband RMS under a log compression so small
 changes stay visible without large ones saturating:
 
-$$I = \mathrm{clamp}\big(\log(1 + 0.05\cdot\mathrm{RMS}),\ 0,\ 1\big)$$
+$$I = \mathrm{clamp}\bigl(\log(1 + 0.05\cdot\mathrm{RMS}),\;0,\;1\bigr)$$
 
 Predictions and samples arrive on independent streams; if a prediction goes
 stale (no update for `classifierStaleThreshold` while samples keep
@@ -231,10 +231,20 @@ insight improvement) are treated as unproven. Every claim in
 
 **Core signal-processing definitions** (full derivations in [`docs/Math.md`](docs/Math.md)):
 
-$$X(t) \in \mathbb{R}^{4 \times N}, \qquad P_b = \sum_{f \in \text{band}_b} |\mathcal{F}\{x\}_f|^2 \cdot \frac{1}{N_{\text{bin}}}, \qquad r_\alpha(t) = \frac{P_\alpha^{\text{baseline}}}{P_\alpha(t)}$$
+$$X(t) \in \mathbb{R}^{4 \times N}, \qquad \hat{S}_{xx}(f) = \frac{1}{K\,U}\sum_{k=1}^{K}\left|\mathcal{F}\{w_k''\}(f)\right|^2, \qquad P_b = \int_{f \in \text{band}_b}\hat{S}_{xx}(f)\,df, \qquad r_\alpha(t) = \frac{P_\alpha^{\mathrm{baseline}}}{P_\alpha(t)}$$
 
-$P_b$ is Welch-style band power; $r_\alpha > 1$ means current alpha is
-*lower* than baseline — the canonical N1-onset signature.
+$\hat{S}_{xx}$ is the Welch PSD estimate (segmented, Hann-windowed,
+window-normalized); $P_b$ is band power as an integral over the PSD;
+$r_\alpha > 1$ means current alpha is *lower* than baseline — the
+canonical N1-onset signature. See also: $r_\alpha^{\mathrm{dB}} =
+20\log_{10}(r_\alpha)$ for the decibel form clinicians use.
+
+**Embedding, generation, and pipeline metrics** are also specified
+mathematically in [`docs/Math.md`](docs/Math.md) §11–15: L2
+normalization and cosine similarity, random projection, joint embedding
+fusion, generation metrics (latency, throughput, prompt echo, decoder
+loop), embedding stability under perturbation, and pipeline evaluation
+(Pareto frontier, adaptive routing gain).
 
 ## Repository layout
 

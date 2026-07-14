@@ -95,11 +95,12 @@ for how to collect the input data.
 Pick something small enough that next-word latency stays under 200 ms on a
 recent Apple Silicon mac (M1 → M4). Good starting points:
 
-- `Qwen2.5-0.5B-Instruct-4bit`
+- `Qwen2.5-0.5B-Instruct-4bit` — the default backend (`MLXBackend.qwen`).
 - `Qwen2.5-1.5B-Instruct-4bit`
 - `SmolLM2-360M-Instruct-4bit`
 - `SmolLM2-1.7B-Instruct-4bit`
-- `gemma-2-2b-it-4bit`  (heavier; may add latency on M1)
+- `gemma-3n-E2B-it-lm-4bit` — text-only int4 Gemma 3n, the second built-in
+  backend (`MLXBackend.gemma`). "lm" means text-only (no audio/vision).
 - `Phi-3.5-mini-instruct-4bit`
 
 ### Conversion
@@ -111,6 +112,10 @@ modern `hf` CLI from `huggingface_hub`:
 ```bash
 hf download mlx-community/Qwen2.5-0.5B-Instruct-4bit \
   --local-dir Models/Qwen2.5-0.5B-Instruct-4bit
+
+# Second backend:
+hf download mlx-community/gemma-3n-E2B-it-lm-4bit \
+  --local-dir Models/gemma-3n-E2B-it-lm-4bit
 ```
 
 (The older `huggingface-cli download` command works on installations
@@ -127,8 +132,19 @@ tokenizer_config.json
 
 ### Pointing the app at a model
 
-Either edit `defaultMLXModelName` in `BCILLM/PredictorFactory.swift`, or set
-`NEURALCOMPOSE_MLX_MODEL=<folder name>` in the environment before launch.
+Two backends are built in — `MLXBackend.qwen` (default) and
+`MLXBackend.gemma` — each with its own `GenerationConfiguration` (end-of-turn
+token, repetition penalty) defined in `BCILLM/MLXBackend.swift`. Switch
+between them with an environment variable:
+
+```bash
+NEURALCOMPOSE_MLX_BACKEND=gemma ./Scripts/run-synthetic.sh   # or any launch script
+```
+
+Unset or unrecognized values fall back to `qwen`. `NEURALCOMPOSE_MLX_MODEL`
+still overrides the model *directory* independently (absolute path, or a
+folder name resolved under `Models/`) and applies to whichever backend is
+selected.
 
 ### What if the model fails to load?
 

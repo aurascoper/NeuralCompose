@@ -58,6 +58,7 @@ public enum MLXInitProbe {
     /// deeper testing.
     public static func run(
         modelDirectory: URL,
+        configuration: GenerationConfiguration = .qwen,
         prompt: String = "Hello",
         maxTokens: Int = 16,
         temperature: Double = 0.7
@@ -65,7 +66,9 @@ public enum MLXInitProbe {
         let initStart = Date()
         let predictor: MLXNextWordPredictor
         do {
-            predictor = try await MLXNextWordPredictor(modelDirectory: modelDirectory)
+            predictor = try await MLXNextWordPredictor(
+                modelDirectory: modelDirectory, configuration: configuration
+            )
         } catch {
             return .failed(reason: String(describing: error))
         }

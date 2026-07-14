@@ -5,11 +5,12 @@ import BCICore
 /// exist on disk and init succeeds, stub otherwise.
 public enum PredictorFactory {
 
-    /// Default directory for MLX model weights, relative to the app working
-    /// directory. Override with `NEURALCOMPOSE_MLX_MODEL` env var (folder
-    /// name) or with the explicit argument to `live(modelDirectory:)`.
-    public static let defaultMLXModelName = "Qwen2.5-0.5B-Instruct-4bit"
-    public static let defaultMLXBaseDir   = "Models"
+    /// Base directory for MLX model weights, relative to the app working
+    /// directory. The model name within it comes from
+    /// `MLXBackend.defaultModelName`, overridable per-call via
+    /// `NEURALCOMPOSE_MLX_MODEL` (folder name or absolute path) or the
+    /// explicit argument to `live(modelDirectory:)`.
+    public static let defaultMLXBaseDir = "Models"
 
     public struct Resolved: Sendable {
         public let predictor: any NextWordPredicting
@@ -33,9 +34,11 @@ public enum PredictorFactory {
     }
 
     public static func live(
-        modelDirectory: URL? = nil
+        modelDirectory: URL? = nil,
+        backend: MLXBackend? = nil
     ) async -> Resolved {
-        let chosenDir: URL? = modelDirectory ?? resolveDefaultDirectory()
+        let chosenBackend = backend ?? resolveBackendFromEnvironment()
+        let chosenDir: URL? = modelDirectory ?? resolveDefaultDirectory(backend: chosenBackend)
 
         let tokenizer = TokenizerService(modelDirectory: chosenDir)
 
@@ -55,7 +58,7 @@ public enum PredictorFactory {
         // — rather than re-invoking the app's own binary with an env var,
         // so the app never needs to detect "am I secretly a probe right
         // now" in its own entry point.
-        switch await runInitProbeSubprocess(modelDirectory: dir) {
+        switch await runInitProbeSubprocess(modelDirectory: dir, backend: chosenBackend) {
         case .success(let metrics):
             BCILog.predictor.notice("""
                 MLX probe succeeded: \(metrics.modelIdentifier, privacy: .public) \
@@ -64,7 +67,9 @@ public enum PredictorFactory {
                 throughput=\(metrics.tokensPerSecond, privacy: .public) tok/s
                 """)
             do {
-                let mlx = try await MLXNextWordPredictor(modelDirectory: dir)
+                let mlx = try await MLXNextWordPredictor(
+                    modelDirectory: dir, configuration: chosenBackend.configuration
+                )
                 return Resolved(
                     predictor: mlx,
                     embeddingProvider: mlx,
@@ -131,14 +136,14 @@ public enum PredictorFactory {
     /// crash — with no timeout, a hung probe would block the entire app's
     /// startup forever instead of just falling back to the stub.
     private static func runInitProbeSubprocess(
-        modelDirectory: URL, timeoutSeconds: Double = 20.0
+        modelDirectory: URL, backend: MLXBackend, timeoutSeconds: Double = 20.0
     ) async -> ProbeResult {
         guard let probeBinary = locateMLXProbeBinary() else {
             return .failed(reason: "MLXProbe binary not found alongside the app executable")
         }
         let process = Process()
         process.executableURL = probeBinary
-        process.arguments = ["--json", modelDirectory.path]
+        process.arguments = ["--json", "--backend", backend.rawValue, modelDirectory.path]
         let stdoutPipe = Pipe()
         process.standardOutput = stdoutPipe
         process.standardError = FileHandle.nullDevice
@@ -192,9 +197,9 @@ public enum PredictorFactory {
 
     /// Where we look for MLX weights, in priority order:
     ///   1. `NEURALCOMPOSE_MLX_MODEL` env var: an absolute path *or* a folder
-    ///      name resolved under `Models/`.
-    ///   2. `Models/<defaultMLXModelName>/`.
-    private static func resolveDefaultDirectory() -> URL? {
+    ///      name resolved under `Models/`. Applies to either backend.
+    ///   2. `Models/<backend.defaultModelName>/`.
+    private static func resolveDefaultDirectory(backend: MLXBackend) -> URL? {
         let env = ProcessInfo.processInfo.environment["NEURALCOMPOSE_MLX_MODEL"]
         if let env = env, !env.isEmpty {
             if env.hasPrefix("/") {
@@ -202,6 +207,18 @@ public enum PredictorFactory {
             }
             return URL(fileURLWithPath: defaultMLXBaseDir).appendingPathComponent(env)
         }
-        return URL(fileURLWithPath: defaultMLXBaseDir).appendingPathComponent(defaultMLXModelName)
+        return URL(fileURLWithPath: defaultMLXBaseDir)
+            .appendingPathComponent(backend.defaultModelName)
+    }
+
+    /// `NEURALCOMPOSE_MLX_BACKEND` env var (`"qwen"`/`"gemma"`,
+    /// case-insensitive). Unset or unrecognized falls back to `.qwen` —
+    /// same "fall back to known-good" pattern as
+    /// `AppContainer.profileFromEnvironment()`.
+    private static func resolveBackendFromEnvironment() -> MLXBackend {
+        guard let raw = ProcessInfo.processInfo.environment["NEURALCOMPOSE_MLX_BACKEND"] else {
+            return .qwen
+        }
+        return MLXBackend(rawValue: raw.lowercased()) ?? .qwen
     }
 }
