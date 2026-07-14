@@ -36,10 +36,13 @@ Python → Core ML → MLX. The outcome isn't "which runtime is faster" but
 
 Don't use embeddings — study them. The frozen Stage 3.4 evidence base
 holds 11 evaluated embedding models (of 17 attempted; 6 recorded
-permanent failures), so this becomes interesting. Includes CKA, SVCCA, orthogonal
-Procrustes, neighborhood overlap, trustworthiness, continuity,
-intrinsic dimensionality, spectral decay, and manifold overlap. This
-is almost a paper by itself.
+permanent failures), so this becomes interesting. Includes CKA, SVCCA,
+scaled Procrustes (superimposition — tolerant of scale differences) and
+orthogonal Procrustes (rotation-only — the stronger geometric claim;
+see `methodology-review_v1.md`/`v2.md` Pillar A for why these two answer
+different questions and shouldn't be conflated), neighborhood overlap,
+trustworthiness, continuity, intrinsic dimensionality, spectral decay,
+and manifold overlap. This is almost a paper by itself.
 
 ### RQ3 — Agreement
 
@@ -147,7 +150,7 @@ Stage 3.4/3.5 analysis completes.
 |----|-------|-----|--------|-------------|
 | A | 3.4 | RQ1 | `cross_runtime_consistency.py` | Cosine drift between Python/CoreML/MLX |
 | B | 3.4 | RQ5 | `joint_embeddings.py` (deferred) | Concatenation, weighted, PCA, late fusion |
-| C | 3.4 | RQ2 | `embedding_space_analysis.py` | CKA, SVCCA, Procrustes, neighborhood overlap |
+| C | 3.4 | RQ2 | `embedding_space_analysis.py` | CKA, SVCCA, Procrustes (scaled + orthogonal), neighborhood overlap |
 | D | 3.4 | RQ3 | `cross_model_agreement.py` | Jaccard overlap of top-k neighbor sets |
 | E | 3.4 | RQ4 | `generator_comparison.py` | Pairwise cosine, BLEU-4, exact match |
 | F | 3.4 | RQ5 | `joint_embeddings.py` (deferred) | Fusion strategy comparison |
