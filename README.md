@@ -231,20 +231,57 @@ insight improvement) are treated as unproven. Every claim in
 
 **Core signal-processing definitions** (full derivations in [`docs/Math.md`](docs/Math.md)):
 
-$$X(t) \in \mathbb{R}^{4 \times N}, \qquad \hat{S}_{xx}(f) = \frac{1}{K\,U}\sum_{k=1}^{K}\left|\mathcal{F}\{w_k''\}(f)\right|^2, \qquad P_b = \int_{f \in \text{band}_b}\hat{S}_{xx}(f)\,df, \qquad r_\alpha(t) = \frac{P_\alpha^{\mathrm{baseline}}}{P_\alpha(t)}$$
+### EEG Representation
 
-$\hat{S}_{xx}$ is the Welch PSD estimate (segmented, Hann-windowed,
-window-normalized); $P_b$ is band power as an integral over the PSD;
-$r_\alpha > 1$ means current alpha is *lower* than baseline — the
-canonical N1-onset signature. See also: $r_\alpha^{\mathrm{dB}} =
-20\log_{10}(r_\alpha)$ for the decibel form clinicians use.
+$$
+\mathbf{X}(t) =
+\begin{bmatrix}
+x_{\mathrm{TP9}}(t)\\
+x_{\mathrm{AF7}}(t)\\
+x_{\mathrm{AF8}}(t)\\
+x_{\mathrm{TP10}}(t)
+\end{bmatrix}
+\in \mathbb{R}^{4 \times N}
+$$
 
-**Embedding, generation, and pipeline metrics** are also specified
-mathematically in [`docs/Math.md`](docs/Math.md) §11–15: L2
-normalization and cosine similarity, random projection, joint embedding
-fusion, generation metrics (latency, throughput, prompt echo, decoder
-loop), embedding stability under perturbation, and pipeline evaluation
-(Pareto frontier, adaptive routing gain).
+### Band Power
+
+$$
+P_b = \int_{f_1}^{f_2} \hat{S}_{xx}(f)\,df \approx \sum_i \hat{S}_{xx}(f_i)\,\Delta f
+$$
+
+### Alpha Dropout
+
+$$
+r_\alpha = \frac{P_\alpha^{\mathrm{baseline}}}{P_\alpha}
+$$
+
+### Embedding Similarity
+
+For unit-normalized embeddings,
+
+$$
+\cos(\hat{\mathbf{v}}_1, \hat{\mathbf{v}}_2) = \hat{\mathbf{v}}_1^\top \hat{\mathbf{v}}_2
+$$
+
+### Joint Embeddings
+
+For multiple embedding models,
+
+$$
+\mathbf{z} = \frac{\operatorname{concat}(w_i\,\mathbf{v}_i)}{\left\|\operatorname{concat}(w_i\,\mathbf{v}_i)\right\|_2}
+$$
+
+### Decoder Stability
+
+$$
+D = \max_n r_n
+$$
+
+where $r_n$ is the repeat count for period $n$. Decoder stability
+additionally records loop period and repeat count.
+
+For complete derivations and notation, see [`docs/Math.md`](docs/Math.md).
 
 ## Repository layout
 

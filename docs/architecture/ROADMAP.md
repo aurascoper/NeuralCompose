@@ -62,6 +62,12 @@ specific tasks (files, PRs, tests) live in GitHub Issues.
 - `□` `EmbeddingProjector` integration: replace `RandomProjectionProjector`
   consumer with real `SentenceEmbedding` input, keeping the renderer
   source-agnostic
+- `~` Stage 3.4: Cross-model & cross-runtime evaluation (offline analysis —
+  CKA, SVCCA, joint embeddings, cross-model agreement, generator comparison;
+  results in `Evaluation/results/stage_3_4/`)
+- `□` Stage 3.5: System composition & adaptive routing (pipeline benchmark,
+  adaptive embedding routing, cascaded generation, confidence-gated selection,
+  pipeline policy comparison; results in `Evaluation/results/stage_3_5/`)
 
 ### Interface
 - `□` Playback-driven 2D + 3D visualization (the canonical demo path;
