@@ -1,7 +1,7 @@
 # Stage 3.4 Exit Report
 
-**Generated:** 2026-07-14T12:15:05.028626+00:00 — by `generate_exit_report.py` from primary artifacts (do not hand-edit)
-**Git:** `5da17659c62b` on `research/lit-review-methodology` (dirty)
+**Generated:** 2026-07-14T12:25:41.501702+00:00 — by `generate_exit_report.py` from primary artifacts (do not hand-edit)
+**Git:** `20f6de87ee23` on `research/lit-review-methodology` (dirty)
 **Machine:** Apple M4, macOS 26.5.2, 16.0 GB
 
 ## Research question status
@@ -54,7 +54,7 @@
 
 ## Audit findings (validator)
 
-**PASS** — 0 failure(s), 18 warning(s)
+**PASS** — 0 failure(s), 17 warning(s)
 
 ## Reproducibility
 
@@ -67,12 +67,10 @@
 - [x] RQ1 evidence exists (≥1 cross-runtime comparison)
 - [x] Validator passes (no FAIL findings)
 - [ ] Reproducibility report PASS
-- [ ] Corpora frozen (MANIFEST.sha256)
-- [ ] Evidence frozen (Evaluation/stage_3_4/frozen/)
+- [x] Corpora frozen (MANIFEST.sha256)
+- [x] Evidence frozen (Evaluation/stage_3_4/frozen/)
 
 ## Final recommendation
 
 Stage 3.4 is **not ready to close**. Remaining:
 - Reproducibility report PASS
-- Corpora frozen (MANIFEST.sha256)
-- Evidence frozen (Evaluation/stage_3_4/frozen/)
