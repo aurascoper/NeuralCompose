@@ -12,7 +12,16 @@ Qwen2.5-0.5B-Instruct-4bit is 11x faster in generation throughput (40.9 tok/s vs
 
 Gemma-3n-E2B produces higher meaning-preservation cosine scores (0.771 vs 0.744) and better instruction-following behavior (single-word responses to "Say the word yes", correct sequence continuation, structured multi-option rewrites). Where latency is not binding — e.g. background text processing, asynchronous message drafting — Gemma's quality advantage may justify its throughput cost.
 
-**Models not yet evaluated:** Qwen2.5-1.5B, Qwen2.5-3B, Qwen3-1.7B, Qwen3-4B, Gemma-3-1B, Gemma-3-4B, Gemma-3n-E4B, Phi-3.5-mini, Phi-4-mini, SmolLM2-360M, SmolLM2-1.7B, Llama-3.2-1B, Llama-3.2-3B, TinyLlama-1.1B, OpenELM-1.1B, OpenELM-3B. The candidates fixture (v2) includes all of these; they were not downloaded on the evaluation machine. The model survey (Evaluation/reports/model_survey.md) provides expected characteristics. Downloading and benchmarking these is the primary future work.
+## 2026-07-14 update — full-fleet results (supersedes the two-model scope above)
+
+The streaming campaign has since completed the full v3 candidates fixture: **18/18 candidates terminal — 16 evaluated**, plus gemma-3-4b (recorded smoke-test failure: architecture unsupported by the pinned mlx-swift) and openelm-3b (recorded unavailable: no mlx-community instruct conversion). All numbers below are from the frozen leaderboard (`Evaluation/results/leaderboard.json`, checksummed in `Evaluation/stage_3_4/frozen/`).
+
+- **Composite ranking:** tinyllama-1.1b #1 (0.843), qwen2.5-0.5b #2 (0.801), smollm2-360m #3 (0.784). Pareto frontier: tinyllama-1.1b, qwen2.5-0.5b, smollm2-360m, qwen2.5-3b.
+- **Reproducibility caveat** (`Evaluation/results/repro/repro_report.md`): generation quality metrics vary run-to-run beyond the 0.005 tolerance (instruction_following ±0.2, stability ±0.06 observed), so the top-3 composite ordering is within measurement noise on its quality components. Latency, throughput, and RSS reproduce within ±13%.
+- **Memory:** qwen2.5-0.5b has the lowest RSS of the top three (707 MB vs tinyllama's 1455 MB) — significant on a 16 GB machine running the full EEG pipeline.
+- **Consequence for the recommendation:** the two-model analysis below (Qwen vs Gemma) remains valid as far as it goes, but the *default-generator* decision now has fleet-wide evidence; see decision registry entry #2, which flags the tinyllama-vs-qwen call for human review. Gemma-3n-E2B is no longer the obvious quality-tier option — qwen2.5-3b (0.794), qwen3-4b (0.793), and gemma-3-1b (0.791) all post higher meaning cosine at better latency.
+
+The original two-model report follows unchanged.
 
 ## Methodology
 

@@ -14,7 +14,9 @@ This survey catalogs all instruction-tuned language models ≤4B parameters suit
 
 The currently evaluated Gemma-3n-E2B ranks lower on latency (7.2 tok/s measured) but higher on quality (0.771 cosine). It remains a viable optional backend for latency-tolerant tasks.
 
-**Critical gap:** Only 2 of 18 candidates have been benchmarked. The survey identifies expected characteristics based on architecture, parameter count, and published benchmarks, but these are hypotheses requiring validation — explicitly marked as such.
+**Status update (2026-07-14):** the gap below is closed — **16 of 18 candidates are now benchmarked** (gemma-3-4b: recorded smoke-test failure, unsupported by the pinned mlx-swift; openelm-3b: recorded unavailable, no instruct conversion). Measured results live in the frozen leaderboard (`Evaluation/results/leaderboard.md`). Notable survey-hypothesis outcomes: the #1 survey pick qwen2.5-0.5b measured #2 on composite score; tinyllama-1.1b — not in the survey's top 5 — measured #1 (0.843), though the gap is within observed run-to-run variance on quality components (`repro_report.md`); survey pick #3 gemma-3-1b measured mid-pack (#7) with instruction-following 0.0 on the scored subset.
+
+**Critical gap (as written 2026-07-13, now historical):** Only 2 of 18 candidates have been benchmarked. The survey identifies expected characteristics based on architecture, parameter count, and published benchmarks, but these are hypotheses requiring validation — explicitly marked as such.
 
 ## Methodology
 

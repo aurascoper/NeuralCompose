@@ -6,6 +6,16 @@
 **Audience**: The contributor who would otherwise re-derive the model
 choice for `CoreMLSentenceEmbedder`.
 
+> **Outcome note (2026-07-14):** the question below was answered in Stage
+> 3.2 with **BGE-small-en-v1.5** — as the *first Core ML conformer*, an
+> integration choice. It is not the overall model ranking: the frozen
+> Stage 3.4 leaderboard (`Evaluation/results/embeddings/leaderboard.md`,
+> 11 evaluated models) ranks **all-MiniLM-L6-v2 #1 overall** (score
+> 0.855) with BGE-small **#2** (0.830 — higher stability 0.941 vs 0.868,
+> lower quality 0.647 vs 0.734, both Pareto-optimal), and MiniLM remains
+> the production default (decision registry entry #1, confidence High
+> after RQ1 confirmed python↔coreml↔mlx-swift at cosine 1.000000).
+
 ## Question
 
 > Which embedding model deserves to become the first `CoreMLSentenceEmbedder`

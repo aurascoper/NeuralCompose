@@ -34,8 +34,9 @@ Python → Core ML → MLX. The outcome isn't "which runtime is faster" but
 
 ### RQ2 — Geometry
 
-Don't use embeddings — study them. Now that we have 17+ embedding
-models, this becomes interesting. Includes CKA, SVCCA, orthogonal
+Don't use embeddings — study them. The frozen Stage 3.4 evidence base
+holds 11 evaluated embedding models (of 17 attempted; 6 recorded
+permanent failures), so this becomes interesting. Includes CKA, SVCCA, orthogonal
 Procrustes, neighborhood overlap, trustworthiness, continuity,
 intrinsic dimensionality, spectral decay, and manifold overlap. This
 is almost a paper by itself.
@@ -68,12 +69,20 @@ software do?" This is a fundamentally different objective.
 
 ### Policy Registry
 
-| Policy | Retrieval | Generator | Goal |
-|--------|-----------|-----------|------|
-| Fast | MiniLM | Qwen-0.5B | latency |
-| Balanced | e5-small | Qwen-1.5B | compromise |
-| Quality | BGE-M3 | Gemma | quality |
-| Adaptive | learned router | selected dynamically | optimize utility |
+Policies bind to *abstract roles with latency budgets*, not to model
+names — concrete models are resolved from the frozen Stage 3.4
+leaderboards at policy-evaluation time (the canonical bindings and
+budgets live in `Evaluation/corpora/hypothesis_registry.json` →
+`policy_registry`). Hard-coding names here rotted once before: an
+earlier draft pinned "Quality = BGE-M3", which the completed benchmark
+ranks last among evaluated models.
+
+| Policy | Retrieval binding | Generator binding | Latency budget | Goal |
+|--------|-------------------|-------------------|----------------|------|
+| Fast | auto:fastest_available | auto:fastest_available | 2.0 s | latency |
+| Balanced | auto:mid_tier | auto:mid_tier | 5.0 s | compromise |
+| Quality | auto:best_overall | auto:best_overall | 15.0 s | quality |
+| Adaptive | learned router | selected dynamically | per-query | optimize utility |
 
 ### Routing
 

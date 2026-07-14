@@ -20,29 +20,29 @@ Each entry:
 ### 1. MiniLM remains default embedding
 
 - **Decision:** all-MiniLM-L6-v2 stays the default embedding model for production
-- **Evidence:** Stage 3.3 benchmark: score 0.606, 1980 emb/s, 497MB RSS, stability 0.868. Pareto-optimal on throughput + memory + quality. 6/6 Pareto-optimal models identified, MiniLM dominates on speed/memory.
-- **Supporting hypotheses:** (pending 3.4-A runtime consistency confirmation)
-- **Supporting benchmark(s):** `Evaluation/results/embeddings/all-MiniLM-L6-v2/python/benchmark.json`, `Evaluation/results/embeddings/leaderboard.json`
-- **Confidence:** Medium — pending Stage 3.4 cross-runtime consistency and cross-model agreement analyses
-- **Status:** Accepted (provisional — will revisit if 3.4-A shows runtime drift or 3.4-D shows high disagreement)
+- **Evidence:** Frozen Stage 3.4 leaderboard (2026-07-14, 11 evaluated models): rank #1, score 0.855, quality 0.7336, stability 0.868, 1015 emb/s, 506 MB RSS, Pareto-optimal. (An earlier entry cited 1980 emb/s from a lost source JSON — resolved in `throughput_discrepancy.md`: throughput on this machine is load-dependent by >2×, quality metrics reproduce to |Δ|≤0.0008; the leaderboard value now re-derives mechanically from the on-disk checkpoint, enforced by the validator.)
+- **Supporting hypotheses:** 3.4-A **evaluated** — runtime equivalence confirmed, 4/4 cross-runtime comparisons (MiniLM py↔mlx-swift; bge-small py↔mlx-swift/py↔coreml/mlx-swift↔coreml) at cosine 1.000000, see `cross_runtime_consistency.json`. 3.4-D evaluated (pilot) — pairwise Jaccard@5 0.66–0.80 across 3 models, see `cross_model_agreement.json`.
+- **Supporting benchmark(s):** `Evaluation/results/embeddings/all-MiniLM-L6-v2/python/benchmark.json`, `Evaluation/results/embeddings/leaderboard.json`, `Evaluation/results/stage_3_4/cross_runtime_consistency.json`
+- **Confidence:** High — 3.4-A shows no runtime drift; repro run reproduces every quality metric within tolerance
+- **Status:** Accepted
 
 ### 2. Qwen2.5-0.5B as default generator
 
 - **Decision:** qwen2.5-0.5b is the default generator (latency binding constraint for EEG communication)
-- **Evidence:** Stage 3.3 benchmark: 40.9 tok/s vs gemma-3n-e2b 7.2 tok/s (p<0.0001, d=17.7). Pareto-optimal on latency. Gemma slightly higher cosine (0.771 vs 0.744, not significant after Bonferroni).
-- **Supporting hypotheses:** 3.4-E (generator comparison)
-- **Supporting benchmark(s):** `Evaluation/results/raw.json`, `Evaluation/results/leaderboard.json`
-- **Confidence:** Medium — pending Stage 3.4-E generator agreement analysis
-- **Status:** Accepted (provisional)
+- **Evidence:** Stage 3.3 two-model comparison: 40.9 tok/s vs gemma-3n-e2b 7.2 tok/s (p<0.0001, d=17.7); Pareto-optimal on latency. Frozen fleet leaderboard (2026-07-14, 16 evaluated): qwen2.5-0.5b rank #2 (score 0.801), behind tinyllama-1.1b (#1, 0.843) and ahead of smollm2-360m (#3, 0.784) — all three Pareto-optimal. qwen2.5-0.5b has the lowest RSS of the top 3 (707 MB vs tinyllama's 1455 MB). Reproducibility caveat (repro_report, 2026-07-14): generation quality metrics vary run-to-run beyond tolerance (instruction_following ±0.2, stability ±0.06 observed on the qwen repro pair), so the top-3 composite ordering is within measurement noise on its quality components.
+- **Supporting hypotheses:** 3.4-E **evaluated** — 10 generators, 45 pairs, 27 prompts, mean pairwise cosine ~0.55 (generators genuinely divergent), see `generator_comparison.json`
+- **Supporting benchmark(s):** `Evaluation/results/leaderboard.json`, `Evaluation/results/stage_3_4/generator_comparison.json`, `Evaluation/results/repro/repro_report.json`
+- **Confidence:** Medium — fleet evidence complete, but the #1/#2 composite gap is inside observed run-to-run variance
+- **Status:** Accepted (provisional — human review recommended: does tinyllama-1.1b's composite advantage outweigh 2× the RSS of qwen2.5-0.5b, given the quality-metric variance?)
 
 ### 3. Gemma-3n-E2B as optional quality generator
 
 - **Decision:** gemma-3n-e2b as optional generator for quality-critical tasks
-- **Evidence:** Stage 3.3 benchmark: Pareto-optimal on quality. Slightly higher cosine than Qwen (not significant after Bonferroni). 7.2 tok/s — too slow for real-time EEG but viable for non-time-critical rewrites.
-- **Supporting hypotheses:** 3.4-E (generator comparison), 3.5-D (cascaded generation)
-- **Supporting benchmark(s):** `Evaluation/results/raw.json`, `Evaluation/results/leaderboard.json`
+- **Evidence:** Stage 3.3 two-model comparison: Pareto-optimal on quality, higher cosine than Qwen (0.771 vs 0.744, not significant after Bonferroni), 7.2 tok/s — too slow for real-time EEG but viable for non-time-critical rewrites. Fleet context (frozen leaderboard 2026-07-14): several evaluated models now post higher meaning cosine at better latency — qwen2.5-3b 0.794, qwen3-4b 0.793, gemma-3-1b 0.791 — so gemma-3n-e2b is no longer the obvious quality pick for a cascade's edit stage.
+- **Supporting hypotheses:** 3.4-E **evaluated** — see `generator_comparison.json`; 3.5-D (cascaded generation, pre-registered)
+- **Supporting benchmark(s):** `Evaluation/results/leaderboard.json`, `Evaluation/results/stage_3_4/generator_comparison.json`
 - **Confidence:** Medium
-- **Status:** Deferred (pending 3.5-D cascade evaluation — may become the "quality edit" stage in a fast-draft + quality-edit cascade)
+- **Status:** Deferred (pending 3.5-D cascade evaluation — the quality-edit-stage candidate set should be drawn from the frozen leaderboard, not assumed to be gemma-3n-e2b)
 
 ### 4. Joint embeddings for production (pending)
 

@@ -59,6 +59,10 @@ $$
 
 ## 7. Joint Embeddings
 
+*(Definition only — joint/fused representations are RQ5, deferred to
+Stage 3.4-B/F; no fusion has been evaluated as of the 2026-07-14
+Stage 3.4 freeze.)*
+
 $$
 \mathbf{z} = \frac{\operatorname{concat}(w_i\,\mathbf{v}_i)}{\left\|\operatorname{concat}(w_i\,\mathbf{v}_i)\right\|_2}
 $$
