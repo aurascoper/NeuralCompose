@@ -55,19 +55,25 @@ specific tasks (files, PRs, tests) live in GitHub Issues.
   deferred from the OSC review)
 
 ### Intelligence
-- `□` `SentenceEmbedding` protocol + stub + tests (per the proposed
-  seven-section format; see also ADR-005 when it lands)
-- `□` Core ML MiniLM-L6-v2 adapter (sentence embedder for 3D workspace,
+- `✓` `SentenceEmbeding` protocol + stub + tests
+- `✓` Core ML MiniLM-L6-v2 adapter (sentence embedder for 3D workspace,
   on ANE)
-- `□` `EmbeddingProjector` integration: replace `RandomProjectionProjector`
-  consumer with real `SentenceEmbedding` input, keeping the renderer
-  source-agnostic
-- `~` Stage 3.4: Cross-model & cross-runtime evaluation (offline analysis —
-  CKA, SVCCA, joint embeddings, cross-model agreement, generator comparison;
-  results in `Evaluation/results/stage_3_4/`)
-- `□` Stage 3.5: System composition & adaptive routing (pipeline benchmark,
-  adaptive embedding routing, cascaded generation, confidence-gated selection,
-  pipeline policy comparison; results in `Evaluation/results/stage_3_5/`)
+- `✓` `EmbeddingProjector` integration: `RandomProjectionProjector`
+  consumer with real `SentenceEmbeding` input, renderer source-agnostic
+- `✓` Stage 3.1–3.3: Individual component validity — EmbeddingBench
+  harness, generation benchmark, per-model scientific validation
+- `~` Stage 3.4: Cross-model & cross-runtime **interaction science** —
+  RQ1 runtime equivalence, RQ2 geometry (CKA, SVCCA, Procrustes),
+  RQ3 agreement (Jaccard), RQ4 generator comparison, RQ5 joint
+  representations (deferred); results in `Evaluation/results/stage_3_4/`
+- `□` Stage 3.5: Pipeline **system engineering** — policy registry
+  (Fast, Balanced, Quality, Adaptive), adaptive routing, cascaded
+  generation, confidence-gated selection, pipeline policy comparison;
+  results in `Evaluation/results/stage_3_5/`
+- `□` Stage 4: Deploy only what the evidence supports — adaptive
+  routing, learned confidence estimation, online policy selection,
+  production telemetry (privacy-preserving), continual evaluation.
+  Stage 4 **consumes** evidence, not generates it.
 
 ### Interface
 - `□` Playback-driven 2D + 3D visualization (the canonical demo path;

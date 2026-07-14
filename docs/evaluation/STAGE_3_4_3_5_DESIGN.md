@@ -1,69 +1,148 @@
 # Stage 3.4/3.5 Evaluation Design
 
-> Offline cross-model and pipeline evaluation for NeuralCompose.
-> The hypothesis registry (`Evaluation/corpora/hypothesis_registry.json`)
-> and decision registry (`Evaluation/reports/decision_registry.md`) are
-> the source of truth; this doc provides narrative context.
+> The roadmap now decomposes into a **scientific program** rather than
+> just an engineering roadmap.
+>
+> - Stage 3.1–3.3 establish **individual component validity**.
+> - Stage 3.4 establishes **interaction science**.
+> - Stage 3.5 establishes **system engineering**.
+> - Stage 4 deploys only what the evidence supports.
 
-## Stage progression
+## Stage boundaries
 
 | Stage | Scope | Production code changes? |
 |-------|-------|---------------------------|
-| 3.3 (done) | Scientific validation of individual models | No |
-| 3.4 | Cross-model and cross-runtime scientific analysis | **No** — offline analysis only |
-| 3.5 | Representation/pipeline validation | **No** — offline policy evaluation only |
-| 4 (future) | Implement architectural changes supported by evidence | Yes |
+| 3.1–3.3 (done) | Individual component validity | No |
+| 3.4 | Interaction science | **No** — offline analysis only |
+| 3.5 | System engineering | **No** — offline policy evaluation only |
+| 4 (future) | Deploy evidence-supported changes | Yes — Stage 4 **consumes** evidence, not generates it |
 
-## Hypothesis registry
+---
 
-Every experiment is pre-registered in `Evaluation/corpora/hypothesis_registry.json`
-with a metric, success criterion, expected effect size, and status before
-any code is written. The registry has two sections:
+## Stage 3.4 — Cross-Model & Cross-Runtime Science
 
-- `stage_3_4`: 6 hypotheses (A–F) covering runtime consistency, joint
-  embeddings, embedding-space analysis, cross-model agreement, generator
-  comparison, and offline fusion.
-- `stage_3_5`: 6 hypotheses (A–E, P) covering joint embedding selection,
-  adaptive routing, pipeline benchmark, cascaded generation,
-  confidence-based selection, and pipeline policy comparison.
+This stage answers five research questions.
 
-## Policy registry
+### RQ1 — Runtime Equivalence
 
-The `policy_registry` in the hypothesis registry defines four named
-policies for Stage 3.5 comparison:
+> Do identical models behave the same across runtimes?
 
-| Policy | Latency budget | Use case |
-|--------|---------------|----------|
-| Fast | 2.0s | Short commands, high-frequency interaction |
-| Balanced | 5.0s | General-purpose communication |
-| Quality | 15.0s | Complex rewrites, technical-term preservation |
-| Adaptive | 2.0–15.0s per query | Production intent — maximizes communication rate |
+Measure embedding cosine drift, nearest-neighbor preservation, ranking
+stability, numerical precision, latency, and RSS across
+Python → Core ML → MLX. The outcome isn't "which runtime is faster" but
+**whether switching runtimes changes semantics**.
 
-These are evaluated offline using the benchmark framework only. They do
-NOT modify `PredictorFactory`, routing logic, or any production pipeline.
+### RQ2 — Geometry
 
-## Decision registry
+Don't use embeddings — study them. Now that we have 17+ embedding
+models, this becomes interesting. Includes CKA, SVCCA, orthogonal
+Procrustes, neighborhood overlap, trustworthiness, continuity,
+intrinsic dimensionality, spectral decay, and manifold overlap. This
+is almost a paper by itself.
 
-`Evaluation/reports/decision_registry.md` bridges scientific findings to
-future engineering work (Stage 4). Each entry captures:
+### RQ3 — Agreement
 
-- Decision, Evidence, Supporting hypotheses, Supporting benchmark(s),
-  Confidence (High/Medium/Low), Status (Accepted/Deferred/Rejected/Pending)
+Instead of comparing vectors, compare decisions. For each utterance,
+compute top-10 neighbors according to each model (MiniLM, BGE, E5,
+Jina, ...). How often do they agree? Consensus itself becomes a signal.
 
-Seeded with 6 entries from Stage 3.3 findings. Updated after every Stage
-3.4/3.5 analysis completes.
+### RQ4 — Generator Comparison
+
+Exactly the same prompts → Qwen, Gemma, Phi, SmolLM. Measure
+instruction following, verbosity, semantic preservation, decoder
+stability, prompt echo, and hallucination. This remains offline. No
+routing. No production decisions.
+
+### RQ5 — Joint Representations
+
+Only after benchmarking finishes. Take top 3 or top 5 models. Study
+concatenation, weighted fusion, PCA, CCA, reciprocal-rank fusion, and
+learned linear projections. Offline only.
+
+---
+
+## Stage 3.5 — Pipeline Engineering
+
+Every experiment changes from "What is true?" to "What should the
+software do?" This is a fundamentally different objective.
+
+### Policy Registry
+
+| Policy | Retrieval | Generator | Goal |
+|--------|-----------|-----------|------|
+| Fast | MiniLM | Qwen-0.5B | latency |
+| Balanced | e5-small | Qwen-1.5B | compromise |
+| Quality | BGE-M3 | Gemma | quality |
+| Adaptive | learned router | selected dynamically | optimize utility |
+
+### Routing
+
+Adaptive routing becomes meaningful. Instead of "always BGE" you can
+ask: technical? → BGE, otherwise → MiniLM. Or: confidence below
+threshold? → second model.
+
+### Cascades
+
+Fast draft → quality refinement instead of one generator.
+
+### Confidence
+
+Evaluate single model vs fallback vs ensemble rather than simply
+"best model."
+
+---
+
+## Hypothesis Registry
+
+Every experiment is pre-registered in
+`Evaluation/corpora/hypothesis_registry.json` **before** any code is
+written. For every experiment, record:
+
+- rationale
+- expected effect size
+- statistical test
+- stopping criterion
+- success criterion
+
+This makes the evaluation substantially more rigorous.
+
+## Evidence Registry
+
+Every result should link back to:
+
+- benchmark version
+- corpus version
+- model version
+- runtime
+- git commit
+- hypothesis ID
+
+rather than existing only inside markdown reports. This makes every
+recommendation traceable.
+
+## Decision Registry
+
+`Evaluation/reports/decision_registry.md` bridges scientific findings
+to future engineering work (Stage 4). Each entry captures Decision,
+Evidence, Supporting hypotheses, Supporting benchmark(s), Confidence
+(High/Medium/Low), and Status (Accepted/Deferred/Rejected/Pending).
+
+Seeded with 6 entries from Stage 3.3 findings. Updated after every
+Stage 3.4/3.5 analysis completes.
+
+---
 
 ## Work packages
 
-| WP | Stage | Script | Description |
-|----|-------|--------|-------------|
-| A | 3.4 | `cross_runtime_consistency.py` | Cosine drift between Python/CoreML/MLX |
-| B | 3.4 | `joint_embeddings.py` (deferred) | Concatenation, weighted, PCA, late fusion |
-| C | 3.4 | `embedding_space_analysis.py` | CKA, SVCCA, Procrustes, neighborhood overlap |
-| D | 3.4 | `cross_model_agreement.py` | Jaccard overlap of top-k neighbor sets |
-| E | 3.4 | `generator_comparison.py` | Pairwise cosine, BLEU-4, exact match |
-| F | 3.4 | `joint_embeddings.py` (deferred) | Fusion strategy comparison |
-| A–E, P | 3.5 | `run_stage_3_5.py` | Pipeline benchmark, routing, cascade, confidence, policies |
+| WP | Stage | RQ | Script | Description |
+|----|-------|-----|--------|-------------|
+| A | 3.4 | RQ1 | `cross_runtime_consistency.py` | Cosine drift between Python/CoreML/MLX |
+| B | 3.4 | RQ5 | `joint_embeddings.py` (deferred) | Concatenation, weighted, PCA, late fusion |
+| C | 3.4 | RQ2 | `embedding_space_analysis.py` | CKA, SVCCA, Procrustes, neighborhood overlap |
+| D | 3.4 | RQ3 | `cross_model_agreement.py` | Jaccard overlap of top-k neighbor sets |
+| E | 3.4 | RQ4 | `generator_comparison.py` | Pairwise cosine, BLEU-4, exact match |
+| F | 3.4 | RQ5 | `joint_embeddings.py` (deferred) | Fusion strategy comparison |
+| A–E, P | 3.5 | — | `run_stage_3_5.py` | Pipeline benchmark, routing, cascade, confidence, policies |
 
 ## How to run
 
@@ -83,11 +162,36 @@ python3 Tests/eval/test_eval_stats.py
 python3 Tests/eval/test_embedding_space.py
 ```
 
+## Deferral rationale
+
+Joint embeddings (RQ5) are delayed until the embedding benchmark
+completes. Running fusion experiments on an incomplete leaderboard
+risks optimizing combinations that won't include the eventual strongest
+models. Waiting lets us automatically select the top-K based on
+completed evidence and keeps the combinatorial search tractable.
+
 ## How results inform Stage 4
 
 The decision registry is the bridge. When Stage 3.4/3.5 analyses
 complete, the aggregate runners update the registry with evidence,
-confidence levels, and statuses. Stage 4 implementation decisions should
-reference specific decision registry entries — not raw benchmark JSON —
-so the chain from hypothesis → evidence → decision → implementation is
-auditable.
+confidence levels, and statuses. Stage 4 implementation decisions
+should reference specific decision registry entries — not raw benchmark
+JSON — so the chain from hypothesis → evidence → decision →
+implementation is auditable.
+
+## Documentation loop
+
+Because both embedding and generation benchmarking frameworks are
+built, Stage 3.4 and 3.5 feed directly into the documentation overhaul.
+Instead of documenting only the implementation, `README.md` and
+`docs/Math.md` document:
+
+- the mathematical formulation of joint embeddings,
+- the evaluation methodology (bootstrap CIs, Pareto frontiers, hypothesis testing),
+- the routing objective functions,
+- and the engineering hypotheses that motivate each stage.
+
+This closes the loop between the implementation, the experiments, and
+the mathematical specification, making the documentation itself a
+faithful description of the scientific program rather than just the
+code.
