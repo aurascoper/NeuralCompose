@@ -1,59 +1,65 @@
 {
-  "generated_at": "2026-07-14T06:42:57.170080+00:00",
+  "generated_at": "2026-07-14T12:12:53.023070+00:00",
   "generators": [
     "gemma-3-1b",
     "gemma-3n-e2b",
     "gemma-3n-e4b",
     "llama-3.2-1b",
     "llama-3.2-3b",
+    "openelm-1.1b",
     "phi-3.5-mini",
     "phi-4-mini",
     "qwen2.5-0.5b",
     "qwen2.5-1.5b",
-    "qwen2.5-3b"
+    "qwen2.5-3b",
+    "qwen3-1.7b",
+    "qwen3-4b",
+    "smollm2-1.7b",
+    "smollm2-360m",
+    "tinyllama-1.1b"
   ],
   "pairwise": [
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "gemma-3n-e2b",
-      "mean_output_cosine": 0.6746449266563858,
-      "std_output_cosine": 0.18330041480595805,
+      "mean_output_cosine": 0.6746449176627479,
+      "std_output_cosine": 0.18330042323220838,
       "mean_bleu4": 0.05721556714817691,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.6325351122337312,
-          "mean_bleu4": 0.058876703791938156,
-          "n": 4
-        },
         "concise-rewrite": {
-          "mean_cosine": 0.5527016763631556,
+          "mean_cosine": 0.5527016702952525,
           "mean_bleu4": 0.02447596834110215,
           "n": 4
         },
+        "punctuation-restoration": {
+          "mean_cosine": 0.6325351271348923,
+          "mean_bleu4": 0.058876703791938156,
+          "n": 4
+        },
         "filler-removal": {
-          "mean_cosine": 0.5841299144509428,
+          "mean_cosine": 0.5841299144509429,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.8245111071670275,
-          "mean_bleu4": 0.1283473749496821,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.6569860604894682,
-          "mean_bleu4": 0.06722523860865456,
-          "n": 5
-        },
         "technical-term-preservation": {
-          "mean_cosine": 0.8411508986005991,
+          "mean_cosine": 0.8411509383370289,
           "mean_bleu4": 0.16341376885876538,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.6569860099351974,
+          "mean_bleu4": 0.06722523860865456,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.8245110744464342,
+          "mean_bleu4": 0.1283473749496821,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.7140074719452196,
+          "mean_cosine": 0.7140074603358665,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -62,44 +68,44 @@
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "gemma-3n-e4b",
-      "mean_output_cosine": 0.6897376089471886,
-      "std_output_cosine": 0.16230129294352627,
+      "mean_output_cosine": 0.6897376115165105,
+      "std_output_cosine": 0.1623013054951222,
       "mean_bleu4": 0.06183567514901533,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.6060212478041649,
-          "mean_bleu4": 0.022647088819082083,
-          "n": 4
-        },
         "concise-rewrite": {
-          "mean_cosine": 0.5868367764152438,
+          "mean_cosine": 0.5868367778204644,
           "mean_bleu4": 0.041513260515706515,
           "n": 4
         },
-        "filler-removal": {
-          "mean_cosine": 0.5528854723706491,
-          "mean_bleu4": 0.015508645198767811,
+        "punctuation-restoration": {
+          "mean_cosine": 0.6060212962823137,
+          "mean_bleu4": 0.022647088819082083,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7557421326637268,
-          "mean_bleu4": 0.03320666811578455,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.7501783973932421,
-          "mean_bleu4": 0.08756581498033067,
-          "n": 5
+        "filler-removal": {
+          "mean_cosine": 0.5528854690347782,
+          "mean_bleu4": 0.015508645198767811,
+          "n": 4
         },
         "technical-term-preservation": {
           "mean_cosine": 0.9141822842334083,
           "mean_bleu4": 0.27114605721339374,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.750178359227755,
+          "mean_bleu4": 0.08756581498033067,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7557421326637268,
+          "mean_bleu4": 0.03320666811578455,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.7198190543890612,
+          "mean_cosine": 0.7198190728913452,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -108,44 +114,44 @@
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "llama-3.2-1b",
-      "mean_output_cosine": 0.5302208051680287,
-      "std_output_cosine": 0.19048378567605237,
+      "mean_output_cosine": 0.5302208044687093,
+      "std_output_cosine": 0.19048379216810976,
       "mean_bleu4": 0.006003616434709375,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.44801739508692695,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.5593654873727686,
           "mean_bleu4": 0.011019519777305538,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.44801739130172946,
+        "filler-removal": {
+          "mean_cosine": 0.4786372378957958,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "filler-removal": {
-          "mean_cosine": 0.47863723789579576,
+        "technical-term-preservation": {
+          "mean_cosine": 0.6702686053371268,
           "mean_bleu4": 0.0,
-          "n": 4
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4971236646237614,
+          "mean_bleu4": 0.0,
+          "n": 5
         },
         "capitalization": {
           "mean_cosine": 0.7155290444691976,
           "mean_bleu4": 0.039339854875976986,
           "n": 3
         },
-        "instruction-following": {
-          "mean_cosine": 0.4971236726649641,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
-        "technical-term-preservation": {
-          "mean_cosine": 0.6702686252053418,
-          "mean_bleu4": 0.0,
-          "n": 3
-        },
         "command-reformulation": {
-          "mean_cosine": 0.4322174752267904,
+          "mean_cosine": 0.4322174916738518,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -154,20 +160,20 @@
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "llama-3.2-3b",
-      "mean_output_cosine": 0.6306802037281661,
-      "std_output_cosine": 0.18518433750319135,
+      "mean_output_cosine": 0.630680219384023,
+      "std_output_cosine": 0.18518435122384785,
       "mean_bleu4": 0.01138731514817248,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.6681766151377669,
-          "mean_bleu4": 0.0,
+        "concise-rewrite": {
+          "mean_cosine": 0.555878611808979,
+          "mean_bleu4": 0.018443787924789276,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.5558785921276002,
-          "mean_bleu4": 0.018443787924789276,
+        "punctuation-restoration": {
+          "mean_cosine": 0.6681766331655588,
+          "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
@@ -175,23 +181,69 @@
           "mean_bleu4": 0.016283145649549382,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.8623488346735636,
-          "mean_bleu4": 0.0561832582344341,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.4872530616236214,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.736606498559316,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.487253062528276,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.8623488346735636,
+          "mean_bleu4": 0.0561832582344341,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.6607730753008826,
+          "mean_cosine": 0.6607731421379266,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3-1b",
+      "generator_b": "openelm-1.1b",
+      "mean_output_cosine": 0.28756049865871675,
+      "std_output_cosine": 0.19281042787398653,
+      "mean_bleu4": 0.0,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2100820387713611,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.10083113343792047,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.16202019290415776,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.47417646459194196,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.28527156303126694,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.2853471765741093,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5418678161692767,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -200,20 +252,20 @@
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "phi-3.5-mini",
-      "mean_output_cosine": 0.5551694752427766,
-      "std_output_cosine": 0.15914395199074505,
+      "mean_output_cosine": 0.5551694778107703,
+      "std_output_cosine": 0.1591439483205793,
       "mean_bleu4": 0.0024275964049418402,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.543117938594051,
-          "mean_bleu4": 0.0,
+        "concise-rewrite": {
+          "mean_cosine": 0.42737594060599804,
+          "mean_bleu4": 0.016386275733357422,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.42737593484643677,
-          "mean_bleu4": 0.016386275733357422,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5431179236928898,
+          "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
@@ -221,23 +273,23 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.6967050234476725,
-          "mean_bleu4": 0.0,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.536007641090432,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.6356108784675598,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5360076322194252,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6967050234476725,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.6783842156622003,
+          "mean_cosine": 0.678384253226517,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -246,44 +298,44 @@
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "phi-4-mini",
-      "mean_output_cosine": 0.48515841695115103,
-      "std_output_cosine": 0.13624914915530462,
+      "mean_output_cosine": 0.4851584167226424,
+      "std_output_cosine": 0.1362491601041178,
       "mean_bleu4": 0.0,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.38184477016329765,
+        "concise-rewrite": {
+          "mean_cosine": 0.5056818918152478,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.5056819046793475,
+        "punctuation-restoration": {
+          "mean_cosine": 0.38184475526213646,
           "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
-          "mean_cosine": 0.5170904969808294,
+          "mean_cosine": 0.5170904969808293,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.42437242586170393,
-          "mean_bleu4": 0.0,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5215210776762418,
-          "mean_bleu4": 0.0,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.5259846250216166,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5215210950203064,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.4243724258617039,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.5055330073390024,
+          "mean_cosine": 0.5055330118817496,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -292,20 +344,20 @@
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "qwen2.5-0.5b",
-      "mean_output_cosine": 0.5570896005818502,
-      "std_output_cosine": 0.19162268002749616,
+      "mean_output_cosine": 0.5570895977543125,
+      "std_output_cosine": 0.1916227053555189,
       "mean_bleu4": 0.006610157193643036,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.401783250272274,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.4960516393184662,
           "mean_bleu4": 0.030493281876471195,
-          "n": 4
-        },
-        "concise-rewrite": {
-          "mean_cosine": 0.4017832862152561,
-          "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
@@ -313,23 +365,23 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7944504113341958,
-          "mean_bleu4": 0.018833705574159063,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.517208415939132,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.6088366442763227,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5172084032929435,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7944504113341958,
+          "mean_bleu4": 0.018833705574159063,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.6159681907087573,
+          "mean_cosine": 0.6159682233735969,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -338,44 +390,44 @@
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "qwen2.5-1.5b",
-      "mean_output_cosine": 0.5564715889767535,
-      "std_output_cosine": 0.18466388674727469,
+      "mean_output_cosine": 0.5564715908251965,
+      "std_output_cosine": 0.18466389023245627,
       "mean_bleu4": 0.022691337604233693,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5958814207267096,
+        "concise-rewrite": {
+          "mean_cosine": 0.4953211072915618,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.4953211191303286,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5958814281772902,
           "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
-          "mean_cosine": 0.35661365854442406,
+          "mean_cosine": 0.356613658544424,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.6987538099819829,
-          "mean_bleu4": 0.02715172344970226,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.46106642040903667,
-          "mean_bleu4": 0.0001715615400067834,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.6666069229443868,
           "mean_bleu4": 0.13508625657351417,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.46106641706902163,
+          "mean_bleu4": 0.0001715615400067834,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6987538099819829,
+          "mean_bleu4": 0.02715172344970226,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.7080134519855514,
+          "mean_cosine": 0.7080134730257464,
           "mean_bleu4": 0.03127359188615664,
           "n": 4
         }
@@ -384,20 +436,20 @@
     {
       "generator_a": "gemma-3-1b",
       "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.6174810806965948,
-      "std_output_cosine": 0.1449374488839261,
+      "mean_output_cosine": 0.6174810834228106,
+      "std_output_cosine": 0.14493744705371672,
       "mean_bleu4": 0.03267899838246792,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.590692798837433,
-          "mean_bleu4": 0.008522024050728407,
+        "concise-rewrite": {
+          "mean_cosine": 0.6147240882705156,
+          "mean_bleu4": 0.0018396226077738748,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.614724057195358,
-          "mean_bleu4": 0.0018396226077738748,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5906927839362718,
+          "mean_bleu4": 0.008522024050728407,
           "n": 4
         },
         "filler-removal": {
@@ -405,24 +457,254 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7424250028892726,
+          "mean_bleu4": 0.17351701210178128,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5120087259665581,
+          "mean_bleu4": 0.01623424992608847,
+          "n": 5
+        },
         "capitalization": {
           "mean_cosine": 0.7115303255214193,
           "mean_bleu4": 0.042078173734039964,
           "n": 3
         },
-        "instruction-following": {
-          "mean_cosine": 0.5120087266753671,
-          "mean_bleu4": 0.01623424992608847,
-          "n": 5
+        "command-reformulation": {
+          "mean_cosine": 0.7086961339480026,
+          "mean_bleu4": 0.028232390638679643,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3-1b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.5555396389378789,
+      "std_output_cosine": 0.20006023064495232,
+      "mean_bleu4": 0.017471004281062366,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3932460951968256,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.47368913354714953,
+          "mean_bleu4": 0.02631490332603055,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.43306920729210774,
+          "mean_bleu4": 0.0,
+          "n": 4
         },
         "technical-term-preservation": {
-          "mean_cosine": 0.7424250028892727,
-          "mean_bleu4": 0.17351701210178128,
+          "mean_cosine": 0.6898271803422237,
+          "mean_bleu4": 0.047902325120470414,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.6155503743507207,
+          "mean_bleu4": 0.008603875881447124,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7006910381100471,
+          "mean_bleu4": 0.050986256349435745,
           "n": 3
         },
         "command-reformulation": {
-          "mean_cosine": 0.70869613083403,
-          "mean_bleu4": 0.028232390638679643,
+          "mean_cosine": 0.6375614950169959,
+          "mean_bleu4": 0.006693094616901899,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3-1b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.5810274343502231,
+      "std_output_cosine": 0.19055812682642445,
+      "mean_bleu4": 0.016836608034986583,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4408532455563545,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5622464418411255,
+          "mean_bleu4": 0.020547202673174572,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4388004993854888,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7428596363182646,
+          "mean_bleu4": 0.02963420473333635,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.6006404310087465,
+          "mean_bleu4": 0.014008046823167062,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7753712415339503,
+          "mean_bleu4": 0.062324617703987534,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5905612979309427,
+          "mean_bleu4": 0.006620726206033111,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3-1b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.541022912783045,
+      "std_output_cosine": 0.1733522945429441,
+      "mean_bleu4": 0.0007431430242279829,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.48292169719934464,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.46833986475658884,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.43051085261843874,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7029102968319575,
+          "mean_bleu4": 0.006688287218051846,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5266189781588183,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5655236343542734,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6605330756229859,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3-1b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.5011793268021631,
+      "std_output_cosine": 0.16115603853558888,
+      "mean_bleu4": 0.004875701993805325,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.396767563276906,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.46490360506179274,
+          "mean_bleu4": 0.015132287501683122,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4202161412312141,
+          "mean_bleu4": 0.010957231250196646,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5874981663737722,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4610083236176156,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5522324377653436,
+          "mean_bleu4": 0.009095292941741566,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6700147887183312,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3-1b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.5224058287700363,
+      "std_output_cosine": 0.15649538014345307,
+      "mean_bleu4": 0.008711746436169475,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3536030986253478,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5154365358539803,
+          "mean_bleu4": 0.026595705630639874,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.45485704015190764,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6494097730227582,
+          "mean_bleu4": 0.0008046536213809491,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4720398233412132,
+          "mean_bleu4": 0.0252840740779747,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6039881706237793,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6722444326550899,
+          "mean_bleu4": 0.0,
           "n": 4
         }
       }
@@ -430,44 +712,44 @@
     {
       "generator_a": "gemma-3n-e2b",
       "generator_b": "gemma-3n-e4b",
-      "mean_output_cosine": 0.7663817589472922,
-      "std_output_cosine": 0.14355159534949236,
+      "mean_output_cosine": 0.7663817481857088,
+      "std_output_cosine": 0.1435515948315614,
       "mean_bleu4": 0.1447031849529172,
       "exact_match_rate": 0.037037037037037035,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.779449118365857,
-          "mean_bleu4": 0.2188956061138253,
-          "n": 4
-        },
         "concise-rewrite": {
-          "mean_cosine": 0.6070395261671974,
+          "mean_cosine": 0.6070395261671973,
           "mean_bleu4": 0.09320483434882347,
           "n": 4
         },
+        "punctuation-restoration": {
+          "mean_cosine": 0.7794490827548969,
+          "mean_bleu4": 0.2188956061138253,
+          "n": 4
+        },
         "filler-removal": {
-          "mean_cosine": 0.6515389140489336,
+          "mean_cosine": 0.6515389233827591,
           "mean_bleu4": 0.08320065230518152,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.8332940493464523,
-          "mean_bleu4": 0.11298458148560199,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.8552035673827376,
-          "mean_bleu4": 0.18772396020453241,
-          "n": 5
-        },
         "technical-term-preservation": {
-          "mean_cosine": 0.8344805172640138,
+          "mean_cosine": 0.8344805371322299,
           "mean_bleu4": 0.2745988898508595,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.8552035554618087,
+          "mean_bleu4": 0.18772396020453241,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.8332940151355835,
+          "mean_bleu4": 0.11298458148560199,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.8152139301259637,
+          "mean_cosine": 0.8152139094205614,
           "mean_bleu4": 0.056102851906349185,
           "n": 4
         }
@@ -476,44 +758,44 @@
     {
       "generator_a": "gemma-3n-e2b",
       "generator_b": "llama-3.2-1b",
-      "mean_output_cosine": 0.5044505325192036,
-      "std_output_cosine": 0.18286228295989707,
+      "mean_output_cosine": 0.5044505275987949,
+      "std_output_cosine": 0.1828622798937565,
       "mean_bleu4": 0.009764113806987685,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2995872595595192,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
         "punctuation-restoration": {
-          "mean_cosine": 0.5222630202770255,
+          "mean_cosine": 0.5222630053758643,
           "mean_bleu4": 0.007944364434137157,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.29958728191125833,
-          "mean_bleu4": 0.0,
-          "n": 4
-        },
         "filler-removal": {
-          "mean_cosine": 0.5384895286770203,
+          "mean_cosine": 0.5384895286770202,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.713952121408597,
-          "mean_bleu4": 0.0424339585730417,
+        "technical-term-preservation": {
+          "mean_cosine": 0.6632933842266703,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
-          "mean_cosine": 0.45742660714863914,
+          "mean_cosine": 0.4574266190695681,
           "mean_bleu4": 0.02091034786659875,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.6632933842266704,
-          "mean_bleu4": 0.0,
+        "capitalization": {
+          "mean_cosine": 0.7139520965288088,
+          "mean_bleu4": 0.0424339585730417,
           "n": 3
         },
         "command-reformulation": {
-          "mean_cosine": 0.43998387547707074,
+          "mean_cosine": 0.4399838832758928,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -522,20 +804,20 @@
     {
       "generator_a": "gemma-3n-e2b",
       "generator_b": "llama-3.2-3b",
-      "mean_output_cosine": 0.5938131823960823,
-      "std_output_cosine": 0.17637828913326864,
-      "mean_bleu4": 0.012087515818175552,
+      "mean_output_cosine": 0.5938131836615997,
+      "std_output_cosine": 0.17637828465911076,
+      "mean_bleu4": 0.012087515818175546,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5795339705257143,
-          "mean_bleu4": 0.025471296186819772,
-          "n": 4
-        },
         "concise-rewrite": {
           "mean_cosine": 0.5555847123806954,
           "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5795339919722453,
+          "mean_bleu4": 0.025471296186819772,
           "n": 4
         },
         "filler-removal": {
@@ -543,9 +825,9 @@
           "mean_bleu4": 0.007081337007316531,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.8181116540795985,
-          "mean_bleu4": 0.045553369267918024,
+        "technical-term-preservation": {
+          "mean_cosine": 0.6584671861121012,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
@@ -553,13 +835,13 @@
           "mean_bleu4": 0.001242955226253142,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.6584671463756714,
-          "mean_bleu4": 0.0,
+        "capitalization": {
+          "mean_cosine": 0.8181116210182243,
+          "mean_bleu4": 0.045553369267918024,
           "n": 3
         },
         "command-reformulation": {
-          "mean_cosine": 0.6705041296462638,
+          "mean_cosine": 0.6705041117356845,
           "mean_bleu4": 0.013319377594793713,
           "n": 4
         }
@@ -567,20 +849,66 @@
     },
     {
       "generator_a": "gemma-3n-e2b",
+      "generator_b": "openelm-1.1b",
+      "mean_output_cosine": 0.28370886144209234,
+      "std_output_cosine": 0.19275453042263047,
+      "mean_bleu4": 0.0019446721356639082,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.22401896653311695,
+          "mean_bleu4": 0.01312653691573138,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.12101453397324087,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.19878675043582916,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.503340937263946,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.2094230837012568,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.27070835889720235,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5288987370445042,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e2b",
       "generator_b": "phi-3.5-mini",
-      "mean_output_cosine": 0.527462338618125,
-      "std_output_cosine": 0.19131279022465397,
+      "mean_output_cosine": 0.527462337183481,
+      "std_output_cosine": 0.19131278413593997,
       "mean_bleu4": 0.008350115301169928,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.653006170918745,
+        "concise-rewrite": {
+          "mean_cosine": 0.32662248493611046,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.32662247748552986,
+        "punctuation-restoration": {
+          "mean_cosine": 0.653006170918745,
           "mean_bleu4": 0.0,
           "n": 4
         },
@@ -589,9 +917,9 @@
           "mean_bleu4": 0.010982297161135867,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7005335030355934,
-          "mean_bleu4": 0.038943453838687365,
+        "technical-term-preservation": {
+          "mean_cosine": 0.5864258912995108,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
@@ -599,13 +927,13 @@
           "mean_bleu4": 0.008264729155040996,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.5864258714312959,
-          "mean_bleu4": 0.0,
+        "capitalization": {
+          "mean_cosine": 0.7005334718229776,
+          "mean_bleu4": 0.038943453838687365,
           "n": 3
         },
         "command-reformulation": {
-          "mean_cosine": 0.6779476485184822,
+          "mean_cosine": 0.6779476398923546,
           "mean_bleu4": 0.005842479298944374,
           "n": 4
         }
@@ -614,19 +942,19 @@
     {
       "generator_a": "gemma-3n-e2b",
       "generator_b": "phi-4-mini",
-      "mean_output_cosine": 0.478741552410765,
-      "std_output_cosine": 0.14853789949514126,
+      "mean_output_cosine": 0.4787415510522823,
+      "std_output_cosine": 0.1485379082666125,
       "mean_bleu4": 0.0018209242786314099,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.442335045533717,
+        "concise-rewrite": {
+          "mean_cosine": 0.46674636236645417,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.4667463623664542,
+        "punctuation-restoration": {
+          "mean_cosine": 0.442335045533717,
           "mean_bleu4": 0.0,
           "n": 4
         },
@@ -635,23 +963,23 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.384125933499881,
-          "mean_bleu4": 0.01638831850768269,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5195823149483421,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.5008373750539725,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5195823333284848,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.3841259120141917,
+          "mean_bleu4": 0.01638831850768269,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.5292206709632591,
+          "mean_cosine": 0.5292206549325891,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -660,20 +988,20 @@
     {
       "generator_a": "gemma-3n-e2b",
       "generator_b": "qwen2.5-0.5b",
-      "mean_output_cosine": 0.49358625801288813,
-      "std_output_cosine": 0.18394870025023488,
+      "mean_output_cosine": 0.493586247969174,
+      "std_output_cosine": 0.1839487013493879,
       "mean_bleu4": 0.0028520937795755044,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.48889335931943373,
-          "mean_bleu4": 0.0,
+        "concise-rewrite": {
+          "mean_cosine": 0.32167003148453926,
+          "mean_bleu4": 0.0022882341436785904,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.32167005011098854,
-          "mean_bleu4": 0.0022882341436785904,
+        "punctuation-restoration": {
+          "mean_cosine": 0.48889334441827254,
+          "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
@@ -681,23 +1009,23 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7325712520071154,
-          "mean_bleu4": 0.02261786515794142,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.3889608359299944,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.5360690146358043,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.3889608362308946,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7325712284156575,
+          "mean_bleu4": 0.02261786515794142,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.5659964318354849,
+          "mean_cosine": 0.5659964148854936,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -706,19 +1034,19 @@
     {
       "generator_a": "gemma-3n-e2b",
       "generator_b": "qwen2.5-1.5b",
-      "mean_output_cosine": 0.542058920621846,
-      "std_output_cosine": 0.16939775324679388,
+      "mean_output_cosine": 0.542058920981107,
+      "std_output_cosine": 0.16939775193402337,
       "mean_bleu4": 0.0023178222190096045,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.6022696150528206,
+        "concise-rewrite": {
+          "mean_cosine": 0.3810068102448285,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.3810068102448286,
+        "punctuation-restoration": {
+          "mean_cosine": 0.6022696299539827,
           "mean_bleu4": 0.0,
           "n": 4
         },
@@ -727,23 +1055,23 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7093447158826965,
-          "mean_bleu4": 0.02072233999804915,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.4664253062411087,
-          "mean_bleu4": 8.283598382237306e-05,
-          "n": 5
-        },
         "technical-term-preservation": {
-          "mean_cosine": 0.6346296185581538,
+          "mean_cosine": 0.6346296582945837,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.46642530624110856,
+          "mean_bleu4": 8.283598382237306e-05,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7093446845264223,
+          "mean_bleu4": 0.02072233999804915,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.6662193090752584,
+          "mean_cosine": 0.6662192903139907,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -752,20 +1080,20 @@
     {
       "generator_a": "gemma-3n-e2b",
       "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.5851635233026259,
-      "std_output_cosine": 0.13256362239194266,
+      "mean_output_cosine": 0.585163512062673,
+      "std_output_cosine": 0.13256361553037146,
       "mean_bleu4": 0.0038952165353943555,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.6125590363714776,
-          "mean_bleu4": 0.0,
+        "concise-rewrite": {
+          "mean_cosine": 0.43417519773406354,
+          "mean_bleu4": 0.006150655359532222,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.4341752040758051,
-          "mean_bleu4": 0.006150655359532222,
+        "punctuation-restoration": {
+          "mean_cosine": 0.6125590214703183,
+          "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
@@ -773,9 +1101,9 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7156619118423079,
-          "mean_bleu4": 0.02629159369564216,
+        "technical-term-preservation": {
+          "mean_cosine": 0.6861291116574116,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
@@ -783,14 +1111,244 @@
           "mean_bleu4": 0.0,
           "n": 5
         },
+        "capitalization": {
+          "mean_cosine": 0.7156618835050047,
+          "mean_bleu4": 0.02629159369564216,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6305169278449366,
+          "mean_bleu4": 0.0004233609826480563,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e2b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.6178457259635098,
+      "std_output_cosine": 0.158923281232452,
+      "mean_bleu4": 0.021349407194024655,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.6089300525598185,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.563532346197828,
+          "mean_bleu4": 0.04206004520856127,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.5968858632748708,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
         "technical-term-preservation": {
-          "mean_cosine": 0.6861291116574119,
+          "mean_cosine": 0.7450153549400255,
+          "mean_bleu4": 0.027960541430469023,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5244929030671541,
+          "mean_bleu4": 0.029141134040131605,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.714232670326235,
+          "mean_bleu4": 0.04728109174149084,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.651058240437536,
+          "mean_bleu4": 0.009190810921970752,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e2b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.6173335351066961,
+      "std_output_cosine": 0.17219376423501975,
+      "mean_bleu4": 0.019145190814599304,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.581341594952347,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5831853031522968,
+          "mean_bleu4": 0.037911606153321536,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.5660832448509251,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7763560640348087,
+          "mean_bleu4": 0.018105006857204984,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5112425291114964,
+          "mean_bleu4": 0.02781546415396883,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7616065719561916,
+          "mean_bleu4": 0.04601308240128545,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6438660806320095,
+          "mean_bleu4": 0.008460534708894886,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e2b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.5353730057946864,
+      "std_output_cosine": 0.16971604714729477,
+      "mean_bleu4": 0.0007238240897278807,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.39214385532559576,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5784641843837706,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.43855204690055744,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6398229847574575,
+          "mean_bleu4": 0.006514416807550927,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5670726310050915,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.450322348870845,
           "mean_bleu4": 0.0,
           "n": 3
         },
         "command-reformulation": {
-          "mean_cosine": 0.6305169612187409,
-          "mean_bleu4": 0.0004233609826480563,
+          "mean_cosine": 0.6781579135266183,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e2b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.45182010046309623,
+      "std_output_cosine": 0.1543464998475319,
+      "mean_bleu4": 0.005584923151195604,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.35015105835988425,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.49107363361813416,
+          "mean_bleu4": 0.030264575003366233,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4114004965688397,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5647199047580139,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.327321718545787,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.48821658661976325,
+          "mean_bleu4": 0.009911541689605457,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5983059728634745,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e2b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.4914396313138763,
+      "std_output_cosine": 0.17834953842771792,
+      "mean_bleu4": 0.00396874305036543,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3185216604060038,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5205809412666633,
+          "mean_bleu4": 0.00827270382677875,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4087105020880699,
+          "mean_bleu4": 0.0185163117631879,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6434609040342981,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4335878359037292,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5870841447842777,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6045108261143343,
+          "mean_bleu4": 0.0,
           "n": 4
         }
       }
@@ -798,40 +1356,40 @@
     {
       "generator_a": "gemma-3n-e4b",
       "generator_b": "llama-3.2-1b",
-      "mean_output_cosine": 0.4877920243492613,
-      "std_output_cosine": 0.17558986833961768,
+      "mean_output_cosine": 0.4877920210056651,
+      "std_output_cosine": 0.1755898652222443,
       "mean_bleu4": 0.005992692284661801,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5094298160424722,
+        "concise-rewrite": {
+          "mean_cosine": 0.380608731857842,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.3806087169566826,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5094298015827541,
           "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
-          "mean_cosine": 0.4798319788668147,
+          "mean_cosine": 0.4798319782078414,
           "mean_bleu4": 0.008771200495689867,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.6350553333759308,
-          "mean_bleu4": 0.01771070339898713,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.4601109979925617,
-          "mean_bleu4": 0.014717155901229554,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.6135594333672255,
           "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4601109801111683,
+          "mean_bleu4": 0.014717155901229554,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6350553333759308,
+          "mean_bleu4": 0.01771070339898713,
           "n": 3
         },
         "command-reformulation": {
@@ -844,39 +1402,39 @@
     {
       "generator_a": "gemma-3n-e4b",
       "generator_b": "llama-3.2-3b",
-      "mean_output_cosine": 0.580928198973901,
-      "std_output_cosine": 0.16692352750580663,
+      "mean_output_cosine": 0.5809282075791993,
+      "std_output_cosine": 0.16692352446486886,
       "mean_bleu4": 0.006227411687689756,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5578409761921688,
+        "concise-rewrite": {
+          "mean_cosine": 0.5222688775406139,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.5222688626394527,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5578410096038406,
           "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
-          "mean_cosine": 0.4486511131689144,
+          "mean_cosine": 0.4486511080406841,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7340376377105713,
+        "technical-term-preservation": {
+          "mean_cosine": 0.7649582349512176,
           "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
-          "mean_cosine": 0.45247003465026686,
+          "mean_cosine": 0.4524700465711959,
           "mean_bleu4": 0.008793658998138321,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.7649582349512176,
+        "capitalization": {
+          "mean_cosine": 0.7340376377105713,
           "mean_bleu4": 0.0,
           "n": 3
         },
@@ -889,45 +1447,91 @@
     },
     {
       "generator_a": "gemma-3n-e4b",
-      "generator_b": "phi-3.5-mini",
-      "mean_output_cosine": 0.5389493469830884,
-      "std_output_cosine": 0.1654355101993427,
-      "mean_bleu4": 0.010114275228005147,
+      "generator_b": "openelm-1.1b",
+      "mean_output_cosine": 0.2870176296316668,
+      "std_output_cosine": 0.19736328898031186,
+      "mean_bleu4": 5.025364528701271e-08,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5912761511841647,
+        "concise-rewrite": {
+          "mean_cosine": 0.2918322668364838,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.40372566859608305,
+        "punctuation-restoration": {
+          "mean_cosine": 0.10762558466336702,
           "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
-          "mean_cosine": 0.4393455193702034,
-          "mean_bleu4": 0.03743977521167117,
+          "mean_cosine": 0.16070297546684742,
+          "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.6339511275291443,
-          "mean_bleu4": 0.016585099881150547,
+        "technical-term-preservation": {
+          "mean_cosine": 0.4848415088907396,
+          "mean_bleu4": 4.5228280758311436e-07,
           "n": 3
         },
         "instruction-following": {
-          "mean_cosine": 0.45210318604792155,
+          "mean_cosine": 0.23857254141761955,
           "mean_bleu4": 0.0,
           "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.26636800635191166,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5155853598430399,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e4b",
+      "generator_b": "phi-3.5-mini",
+      "mean_output_cosine": 0.538949339349256,
+      "std_output_cosine": 0.16543551475666596,
+      "mean_bleu4": 0.010114275228005147,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.40372567418401883,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5912760968226449,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4393454935489361,
+          "mean_bleu4": 0.03743977521167117,
+          "n": 4
         },
         "technical-term-preservation": {
           "mean_cosine": 0.6214404427603216,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.4521031979688491,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6339511275291443,
+          "mean_bleu4": 0.016585099881150547,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.6968880927083945,
+          "mean_cosine": 0.696888100873718,
           "mean_bleu4": 0.018392757666500663,
           "n": 4
         }
@@ -936,39 +1540,39 @@
     {
       "generator_a": "gemma-3n-e4b",
       "generator_b": "phi-4-mini",
-      "mean_output_cosine": 0.48368393420238903,
-      "std_output_cosine": 0.1559057256997532,
+      "mean_output_cosine": 0.4836839330044998,
+      "std_output_cosine": 0.15590573383265546,
       "mean_bleu4": 0.0030282146958076875,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.3466805862262845,
-          "mean_bleu4": 0.009969702876836585,
-          "n": 4
-        },
         "concise-rewrite": {
           "mean_cosine": 0.5142571450049083,
           "mean_bleu4": 0.010336977952840784,
           "n": 4
         },
+        "punctuation-restoration": {
+          "mean_cosine": 0.3466805774264184,
+          "mean_bleu4": 0.009969702876836585,
+          "n": 4
+        },
         "filler-removal": {
-          "mean_cosine": 0.5185870150577969,
+          "mean_cosine": 0.5185870001608119,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.41674908959738133,
+        "technical-term-preservation": {
+          "mean_cosine": 0.5329151273779148,
           "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
-          "mean_cosine": 0.5081077571554907,
+          "mean_cosine": 0.5081077696443693,
           "mean_bleu4": 0.00010701469361961653,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.5329151273779148,
+        "capitalization": {
+          "mean_cosine": 0.41674908959738133,
           "mean_bleu4": 0.0,
           "n": 3
         },
@@ -982,40 +1586,40 @@
     {
       "generator_a": "gemma-3n-e4b",
       "generator_b": "qwen2.5-0.5b",
-      "mean_output_cosine": 0.4993320790599842,
-      "std_output_cosine": 0.2010154340163213,
+      "mean_output_cosine": 0.4993320764869897,
+      "std_output_cosine": 0.2010154414672133,
       "mean_bleu4": 0.005747427483997929,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3202308358007019,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
         "punctuation-restoration": {
-          "mean_cosine": 0.44399940967559814,
+          "mean_cosine": 0.4439994420732522,
           "mean_bleu4": 0.020617029211743198,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.320230861877734,
-          "mean_bleu4": 0.0,
-          "n": 4
-        },
         "filler-removal": {
-          "mean_cosine": 0.5169169145021424,
+          "mean_cosine": 0.5169168955936835,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.6545136534556241,
-          "mean_bleu4": 0.024237475073657092,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.4280031444199168,
-          "mean_bleu4": 0.0,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.6448068308799756,
           "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.42800314059601574,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6545136534556241,
+          "mean_bleu4": 0.024237475073657092,
           "n": 3
         },
         "command-reformulation": {
@@ -1028,40 +1632,40 @@
     {
       "generator_a": "gemma-3n-e4b",
       "generator_b": "qwen2.5-1.5b",
-      "mean_output_cosine": 0.5417502743932597,
-      "std_output_cosine": 0.1562778904473572,
+      "mean_output_cosine": 0.5417502796575576,
+      "std_output_cosine": 0.15627789423069943,
       "mean_bleu4": 0.01339296822264597,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5215472002543683,
+        "concise-rewrite": {
+          "mean_cosine": 0.441599065824272,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.4415990509231108,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5215472074159238,
           "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
-          "mean_cosine": 0.4284366190389538,
+          "mean_cosine": 0.4284366176090859,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.6064861286168666,
-          "mean_bleu4": 0.03192059478161781,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.476455215795992,
-          "mean_bleu4": 0.0,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.6737970440485661,
           "mean_bleu4": 0.08861611922219591,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.47645522771692167,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6064861286168666,
+          "mean_bleu4": 0.03192059478161781,
           "n": 3
         },
         "command-reformulation": {
@@ -1074,40 +1678,40 @@
     {
       "generator_a": "gemma-3n-e4b",
       "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.5857050294525,
-      "std_output_cosine": 0.14113972983435005,
+      "mean_output_cosine": 0.5857050386350875,
+      "std_output_cosine": 0.14113972855458146,
       "mean_bleu4": 0.01642908633171856,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5390457347991913,
+        "concise-rewrite": {
+          "mean_cosine": 0.5311209415746722,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.5311209183086647,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5390457657794261,
           "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
-          "mean_cosine": 0.5691887419651349,
+          "mean_cosine": 0.5691887348001969,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.612817482142341,
-          "mean_bleu4": 0.03518100787448659,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.49221221683856875,
-          "mean_bleu4": 0.0,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.7503785962075399,
           "mean_bleu4": 0.07981417302911413,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4922122287594977,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.612817482142341,
+          "mean_bleu4": 0.03518100787448659,
           "n": 3
         },
         "command-reformulation": {
@@ -1118,22 +1722,252 @@
       }
     },
     {
+      "generator_a": "gemma-3n-e4b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.573153565642953,
+      "std_output_cosine": 0.19502493516385816,
+      "mean_bleu4": 0.02020936186815218,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4812004269196746,
+          "mean_bleu4": 0.011012441889226229,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5295543232646611,
+          "mean_bleu4": 0.025671667981372256,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.5115924038992556,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6692440825247935,
+          "mean_bleu4": 0.055160492475973565,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5294488072085284,
+          "mean_bleu4": 0.024730708543154754,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6523644151322374,
+          "mean_bleu4": 0.02479495919680791,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6934220317529072,
+          "mean_bleu4": 0.008849108305899174,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e4b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.5789134546583169,
+      "std_output_cosine": 0.18629424410296622,
+      "mean_bleu4": 0.018391281834554966,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.5592549013965288,
+          "mean_bleu4": 0.01213743440979232,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.527890322068015,
+          "mean_bleu4": 0.03238240661407889,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.488425343142555,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7047595560022025,
+          "mean_bleu4": 0.041114259846569405,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5117452354904775,
+          "mean_bleu4": 0.017749744822850338,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6578095829170337,
+          "mean_bleu4": 0.024183867649319943,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6704868537840165,
+          "mean_bleu4": 0.008460534708894886,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e4b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.5400683947744084,
+      "std_output_cosine": 0.1741253652364364,
+      "mean_bleu4": 0.0012645563480048047,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.46473481397209543,
+          "mean_bleu4": 0.0017904086089715846,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5658430407183956,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.41493003548637947,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7365776405016585,
+          "mean_bleu4": 0.008993795653414464,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5455494497407315,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.38988369703292847,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.673170959223531,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e4b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.46980395199545244,
+      "std_output_cosine": 0.15770005534381373,
+      "mean_bleu4": 0.002487529732649668,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.41826291821794453,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.45091731337860136,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.37674741924719524,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6045875050870678,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.40130873843876713,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.4805707986077347,
+          "mean_bleu4": 0.022387767593847013,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6097443743060025,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "gemma-3n-e4b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.4770484063287415,
+      "std_output_cosine": 0.17410141322900324,
+      "mean_bleu4": 0.005586688006816277,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3358309206114461,
+          "mean_bleu4": 0.007758830446062919,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5020300903082592,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3263205252587795,
+          "mean_bleu4": 0.029951313599946947,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6233511103027278,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4181592957725691,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5786742568016052,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6316770614965588,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
       "generator_a": "llama-3.2-1b",
       "generator_b": "llama-3.2-3b",
-      "mean_output_cosine": 0.5408185400215211,
-      "std_output_cosine": 0.20245432438147143,
+      "mean_output_cosine": 0.5408185460608177,
+      "std_output_cosine": 0.20245432619818002,
       "mean_bleu4": 0.019719494089930945,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5721979099760077,
-          "mean_bleu4": 0.0002933287538954552,
+        "concise-rewrite": {
+          "mean_cosine": 0.3674994858997104,
+          "mean_bleu4": 0.018514027140642864,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.3674994709985483,
-          "mean_bleu4": 0.018514027140642864,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5721979283895173,
+          "mean_bleu4": 0.0002933287538954552,
           "n": 4
         },
         "filler-removal": {
@@ -1141,19 +1975,19 @@
           "mean_bleu4": 0.025046919314474007,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7173173626263937,
-          "mean_bleu4": 0.01737147993818951,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5067481602845916,
-          "mean_bleu4": 0.05198749465084607,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.6741407993602819,
           "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5067481662450561,
+          "mean_bleu4": 0.05198749465084607,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7173173626263937,
+          "mean_bleu4": 0.01737147993818951,
           "n": 3
         },
         "command-reformulation": {
@@ -1165,20 +1999,66 @@
     },
     {
       "generator_a": "llama-3.2-1b",
+      "generator_b": "openelm-1.1b",
+      "mean_output_cosine": 0.2356640363816944,
+      "std_output_cosine": 0.1780869690339045,
+      "mean_bleu4": 0.0038387754440656657,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.21198713462703983,
+          "mean_bleu4": 0.025911734247443245,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.08952259708030141,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.1416780852949482,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.4163067694427727,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.20489092946173706,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.2893927639618906,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.3621561166934791,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-1b",
       "generator_b": "phi-3.5-mini",
-      "mean_output_cosine": 0.4996810203854872,
-      "std_output_cosine": 0.20432238334985053,
+      "mean_output_cosine": 0.4996810184870033,
+      "std_output_cosine": 0.20432238231759597,
       "mean_bleu4": 0.0006606520079098387,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.6074639892586281,
+        "concise-rewrite": {
+          "mean_cosine": 0.3401554025288897,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.34015541556740575,
+        "punctuation-restoration": {
+          "mean_cosine": 0.6074639892586281,
           "mean_bleu4": 0.0,
           "n": 4
         },
@@ -1187,23 +2067,23 @@
           "mean_bleu4": 0.004459401053391411,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.6169199148813883,
-          "mean_bleu4": 0.0,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5523837878258273,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.6523391922190253,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5523837818653636,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6169199148813883,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.42341715656220913,
+          "mean_cosine": 0.4234171642365392,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -1212,19 +2092,19 @@
     {
       "generator_a": "llama-3.2-1b",
       "generator_b": "phi-4-mini",
-      "mean_output_cosine": 0.4182545250479903,
-      "std_output_cosine": 0.18190341511722405,
+      "mean_output_cosine": 0.41825452440210215,
+      "std_output_cosine": 0.1819034219645232,
       "mean_bleu4": 0.0,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.3271186260553347,
+        "concise-rewrite": {
+          "mean_cosine": 0.3524177450809178,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.3524177525314975,
+        "punctuation-restoration": {
+          "mean_cosine": 0.3271186260553347,
           "mean_bleu4": 0.0,
           "n": 4
         },
@@ -1233,18 +2113,18 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.383163051532647,
+        "technical-term-preservation": {
+          "mean_cosine": 0.6024462948809134,
           "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
-          "mean_cosine": 0.5611439821093839,
+          "mean_cosine": 0.5611439845820517,
           "mean_bleu4": 0.0,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.6024462948809134,
+        "capitalization": {
+          "mean_cosine": 0.383163051532647,
           "mean_bleu4": 0.0,
           "n": 3
         },
@@ -1258,40 +2138,40 @@
     {
       "generator_a": "llama-3.2-1b",
       "generator_b": "qwen2.5-0.5b",
-      "mean_output_cosine": 0.47731654136332724,
-      "std_output_cosine": 0.19003146481526081,
+      "mean_output_cosine": 0.47731652638069993,
+      "std_output_cosine": 0.19003147979870205,
       "mean_bleu4": 0.004304727072251085,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.29314528148810115,
+          "mean_bleu4": 0.0034222009302873812,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.5442729731050823,
           "mean_bleu4": 0.013238941406248268,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.29314532619158473,
-          "mean_bleu4": 0.0034222009302873812,
-          "n": 4
-        },
         "filler-removal": {
-          "mean_cosine": 0.3897192486238355,
+          "mean_cosine": 0.38971921882151317,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.7375740304421488,
-          "mean_bleu4": 0.01652768720154556,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.4862997458943027,
-          "mean_bleu4": 0.0,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.4957263199461754,
           "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.48629972459276016,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7375740304421488,
+          "mean_bleu4": 0.01652768720154556,
           "n": 3
         },
         "command-reformulation": {
@@ -1304,20 +2184,20 @@
     {
       "generator_a": "llama-3.2-1b",
       "generator_b": "qwen2.5-1.5b",
-      "mean_output_cosine": 0.49440625005728406,
-      "std_output_cosine": 0.18644436757342409,
+      "mean_output_cosine": 0.49440625226486334,
+      "std_output_cosine": 0.1864443718235391,
       "mean_bleu4": 0.004804401820556696,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.4695539586413134,
-          "mean_bleu4": 0.020827062565728433,
+        "concise-rewrite": {
+          "mean_cosine": 0.34992741813885236,
+          "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.3499273883365299,
-          "mean_bleu4": 0.0,
+        "punctuation-restoration": {
+          "mean_cosine": 0.46955395864131344,
+          "mean_bleu4": 0.020827062565728433,
           "n": 4
         },
         "filler-removal": {
@@ -1325,19 +2205,19 @@
           "mean_bleu4": 0.007098889719113277,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.6957955191405008,
-          "mean_bleu4": 0.006005013338554649,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5345119411779372,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.6453062007477292,
           "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5345119292570075,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6957955191405008,
+          "mean_bleu4": 0.006005013338554649,
           "n": 3
         },
         "command-reformulation": {
@@ -1350,40 +2230,40 @@
     {
       "generator_a": "llama-3.2-1b",
       "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.5394856505546286,
-      "std_output_cosine": 0.18694734538453828,
+      "mean_output_cosine": 0.539485660428504,
+      "std_output_cosine": 0.18694734599929533,
       "mean_bleu4": 0.009334129387771601,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.513492330908777,
+          "mean_bleu4": 0.013872378211449673,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.6434284765212384,
           "mean_bleu4": 0.020448077301428703,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.5134923015130178,
-          "mean_bleu4": 0.013872378211449673,
-          "n": 4
-        },
         "filler-removal": {
-          "mean_cosine": 0.4064054681877061,
+          "mean_cosine": 0.40640546818770606,
           "mean_bleu4": 0.0,
           "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7373045357954887,
+          "mean_bleu4": 0.0019072318598242141,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4838559043495888,
+          "mean_bleu4": 0.0,
+          "n": 5
         },
         "capitalization": {
           "mean_cosine": 0.6701722285638363,
           "mean_bleu4": 0.03633932527961569,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.4838558983891243,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
-        "technical-term-preservation": {
-          "mean_cosine": 0.7373044960590636,
-          "mean_bleu4": 0.0019072318598242141,
           "n": 3
         },
         "command-reformulation": {
@@ -1394,32 +2274,308 @@
       }
     },
     {
+      "generator_a": "llama-3.2-1b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.45561551821542184,
+      "std_output_cosine": 0.18294714233015408,
+      "mean_bleu4": 0.009599889301839646,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2772058424851448,
+          "mean_bleu4": 0.009339897631236996,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.401555110471901,
+          "mean_bleu4": 0.01608293858078032,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.44310682182976857,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6002006161536328,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5255892068103245,
+          "mean_bleu4": 0.008469705241823342,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.61871595804292,
+          "mean_bleu4": 0.038385713364161494,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.38236303400696264,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-1b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.4736224554038665,
+      "std_output_cosine": 0.18165943314431768,
+      "mean_bleu4": 0.006974218403199205,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.31191985546084106,
+          "mean_bleu4": 0.008704322443337388,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.48518934854333295,
+          "mean_bleu4": 0.015970068881104367,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.44541731811704477,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6383747136813162,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5117914108790145,
+          "mean_bleu4": 0.007642594472620399,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6483658907154848,
+          "mean_bleu4": 0.017131119741836502,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.34963033495851126,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-1b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.47757490178151374,
+      "std_output_cosine": 0.17588839157049554,
+      "mean_bleu4": 0.0012218690681413814,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4626228849570908,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.43976977249847693,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4340387472394598,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6573752617738543,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4665872646975333,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.48908839623133343,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.4441173579543829,
+          "mean_bleu4": 0.008247616209954324,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-1b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.43760553249321177,
+      "std_output_cosine": 0.19640424488800481,
+      "mean_bleu4": 0.005297301640280133,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2956993867310678,
+          "mean_bleu4": 0.005868732827922489,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.49393125936635596,
+          "mean_bleu4": 0.026045990679575845,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.36221815335582264,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.575813818970703,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4421301450500669,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.47883204285475073,
+          "mean_bleu4": 0.005122750085856753,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.45834146719425917,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-1b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.46758093805306866,
+      "std_output_cosine": 0.20981939356074014,
+      "mean_bleu4": 0.0008016102878689895,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.351346521739286,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.44789293678302816,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3651819121780744,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6757380847389198,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5159230418882712,
+          "mean_bleu4": 0.0043286955544925435,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6427327195803324,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.35799305555804717,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-3b",
+      "generator_b": "openelm-1.1b",
+      "mean_output_cosine": 0.30169107773534654,
+      "std_output_cosine": 0.20273275620008768,
+      "mean_bleu4": 0.0,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3290210709695905,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.0735454161432545,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.20259878105435053,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.48007772297759516,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.215022852107866,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.2982715766851108,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5787089666645318,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
       "generator_a": "llama-3.2-3b",
       "generator_b": "phi-3.5-mini",
-      "mean_output_cosine": 0.5380390391964791,
-      "std_output_cosine": 0.19731269944974747,
+      "mean_output_cosine": 0.538039040859734,
+      "std_output_cosine": 0.19731269999887657,
       "mean_bleu4": 0.020621763214167352,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5835457174323424,
-          "mean_bleu4": 0.0,
-          "n": 4
-        },
         "concise-rewrite": {
           "mean_cosine": 0.41545862157366076,
           "mean_bleu4": 0.0431615504667479,
           "n": 4
         },
-        "filler-removal": {
-          "mean_cosine": 0.4386565004131339,
+        "punctuation-restoration": {
+          "mean_cosine": 0.5835457207603241,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.704295794169108,
-          "mean_bleu4": 0.03760838789688697,
+        "filler-removal": {
+          "mean_cosine": 0.438656500413134,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6949768861134847,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
@@ -1427,13 +2583,13 @@
           "mean_bleu4": 0.0,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.6949768861134847,
-          "mean_bleu4": 0.0,
+        "capitalization": {
+          "mean_cosine": 0.704295794169108,
+          "mean_bleu4": 0.03760838789688697,
           "n": 3
         },
         "command-reformulation": {
-          "mean_cosine": 0.6172961083935392,
+          "mean_cosine": 0.6172961162925278,
           "mean_bleu4": 0.0678290603062165,
           "n": 4
         }
@@ -1442,20 +2598,20 @@
     {
       "generator_a": "llama-3.2-3b",
       "generator_b": "phi-4-mini",
-      "mean_output_cosine": 0.4867776819605356,
-      "std_output_cosine": 0.17383685923529876,
-      "mean_bleu4": 0.01865564148526473,
+      "mean_output_cosine": 0.4867776810479043,
+      "std_output_cosine": 0.1738368591022003,
+      "mean_bleu4": 0.018655641485264725,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.3265867297218435,
-          "mean_bleu4": 0.0,
-          "n": 4
-        },
         "concise-rewrite": {
           "mean_cosine": 0.4518290151516968,
           "mean_bleu4": 0.053344694046474884,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.32658673170146496,
+          "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
@@ -1463,23 +2619,23 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.3985393367937447,
-          "mean_bleu4": 0.026150186366710588,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5657968421164985,
-          "mean_bleu4": 0.033129130643878416,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.6530713041623434,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5657968356045925,
+          "mean_bleu4": 0.033129130643878416,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.3985393367937447,
+          "mean_bleu4": 0.026150186366710588,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.535432535735914,
+          "mean_cosine": 0.5354325357359139,
           "mean_bleu4": 0.011556832899181062,
           "n": 4
         }
@@ -1488,20 +2644,20 @@
     {
       "generator_a": "llama-3.2-3b",
       "generator_b": "qwen2.5-0.5b",
-      "mean_output_cosine": 0.5205903114880994,
-      "std_output_cosine": 0.22221093602507327,
+      "mean_output_cosine": 0.5205903046510904,
+      "std_output_cosine": 0.2222109416861472,
       "mean_bleu4": 0.032535057560430035,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.48408509160077584,
-          "mean_bleu4": 0.0,
+        "concise-rewrite": {
+          "mean_cosine": 0.38463264596177077,
+          "mean_bleu4": 0.059722341749322096,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.38463267203880286,
-          "mean_bleu4": 0.059722341749322096,
+        "punctuation-restoration": {
+          "mean_cosine": 0.4840850829191208,
+          "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
@@ -1509,19 +2665,19 @@
           "mean_bleu4": 0.03661484055813077,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.8159942512432248,
-          "mean_bleu4": 0.0,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.34809991430848514,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.7106241196922624,
           "mean_bleu4": 0.16436594163393314,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.3480999051955852,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.8159942512432248,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "command-reformulation": {
@@ -1534,30 +2690,30 @@
     {
       "generator_a": "llama-3.2-3b",
       "generator_b": "qwen2.5-1.5b",
-      "mean_output_cosine": 0.5616309165364705,
-      "std_output_cosine": 0.19854883987431138,
+      "mean_output_cosine": 0.5616309198859678,
+      "std_output_cosine": 0.19854883854323763,
       "mean_bleu4": 0.010590157879088498,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.5791737868092631,
-          "mean_bleu4": 0.0,
-          "n": 4
-        },
         "concise-rewrite": {
           "mean_cosine": 0.5174039127189605,
           "mean_bleu4": 0.027540510080091535,
           "n": 4
         },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5791738094183697,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
         "filler-removal": {
-          "mean_cosine": 0.35026880722389203,
+          "mean_cosine": 0.3502688072238921,
           "mean_bleu4": 0.019869996561603615,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7224871547840084,
-          "mean_bleu4": 0.03209741205620294,
+        "technical-term-preservation": {
+          "mean_cosine": 0.753893256187439,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
@@ -1565,9 +2721,9 @@
           "mean_bleu4": 0.0,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.753893256187439,
-          "mean_bleu4": 0.0,
+        "capitalization": {
+          "mean_cosine": 0.7224871547840084,
+          "mean_bleu4": 0.03209741205620294,
           "n": 3
         },
         "command-reformulation": {
@@ -1580,20 +2736,20 @@
     {
       "generator_a": "llama-3.2-3b",
       "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.6338980134390846,
-      "std_output_cosine": 0.19727765377843415,
-      "mean_bleu4": 0.025277267403729615,
+      "mean_output_cosine": 0.6338980200252005,
+      "std_output_cosine": 0.19727765709708264,
+      "mean_bleu4": 0.02527726740372961,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.6281850415200088,
-          "mean_bleu4": 0.01899232185624458,
+        "concise-rewrite": {
+          "mean_cosine": 0.5632389732210555,
+          "mean_bleu4": 0.015609303872064677,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.5632389474969827,
-          "mean_bleu4": 0.015609303872064677,
+        "punctuation-restoration": {
+          "mean_cosine": 0.6281850602522185,
+          "mean_bleu4": 0.01899232185624458,
           "n": 4
         },
         "filler-removal": {
@@ -1601,9 +2757,9 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.7252715802802924,
-          "mean_bleu4": 0.013348523163677026,
+        "technical-term-preservation": {
+          "mean_cosine": 0.8819266232265349,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
@@ -1611,9 +2767,9 @@
           "mean_bleu4": 0.0,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.8819266232265349,
-          "mean_bleu4": 0.0,
+        "capitalization": {
+          "mean_cosine": 0.7252715802802924,
+          "mean_bleu4": 0.013348523163677026,
           "n": 3
         },
         "command-reformulation": {
@@ -1624,46 +2780,736 @@
       }
     },
     {
+      "generator_a": "llama-3.2-3b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.4990251930598651,
+      "std_output_cosine": 0.17905149668253664,
+      "mean_bleu4": 0.0024834944615073178,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4207674369909373,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.43521285291397915,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.49426460136595907,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5644745340583431,
+          "mean_bleu4": 0.02235145015356586,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.41099604410402657,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6860385284205707,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5665453098939957,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-3b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.5067677713674542,
+      "std_output_cosine": 0.19702038984831874,
+      "mean_bleu4": 0.004652688651818076,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4379550708151376,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.47922510408038416,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4482082969679268,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5866156172721952,
+          "mean_bleu4": 0.021722620880197222,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.3928703802425001,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7497110841421858,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5619609835029563,
+          "mean_bleu4": 0.015113682739624098,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-3b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.5147851793281571,
+      "std_output_cosine": 0.22098179609807553,
+      "mean_bleu4": 0.01528516267722712,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4987634324154998,
+          "mean_bleu4": 0.0062084446483331585,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.426049297422857,
+          "mean_bleu4": 0.0037746508287228283,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.351680873550258,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.8136619681704085,
+          "mean_bleu4": 0.12358697472806181,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.43440879098478347,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.529143343369166,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6481913846907856,
+          "mean_bleu4": 0.0005015215481807148,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-3b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.49287759779397383,
+      "std_output_cosine": 0.17619441197742045,
+      "mean_bleu4": 0.022070220922007135,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4040061002069596,
+          "mean_bleu4": 0.019612181462738805,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5002982202048797,
+          "mean_bleu4": 0.026909435291032423,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.36085644283025864,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6892050018813366,
+          "mean_bleu4": 0.13660316595970254,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.3879203504457704,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5151910917585201,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.67356551358012,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "llama-3.2-3b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.4855877367246681,
+      "std_output_cosine": 0.2006130134743382,
+      "mean_bleu4": 0.0017318236515802216,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.34922264217202076,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4791457009245545,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3431394631794872,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7742922177761136,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.37142231562070316,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6025541226069132,
+          "mean_bleu4": 0.015586412864221993,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6092967668022986,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "phi-3.5-mini",
+      "mean_output_cosine": 0.26670153965612337,
+      "std_output_cosine": 0.1410260678132494,
+      "mean_bleu4": 0.0,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.21604572609066963,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.13042886487844807,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.26827123160775534,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.41253372225147306,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.20193427522927138,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.21293613134844225,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.46396933586543426,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "phi-4-mini",
+      "mean_output_cosine": 0.25661002834311203,
+      "std_output_cosine": 0.14874713845581855,
+      "mean_bleu4": 0.0,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2101586167617046,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.18869767469436965,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.21196746840286895,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.37848635041955525,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.2791458962769736,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.07191097992056843,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.43456356335575347,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "qwen2.5-0.5b",
+      "mean_output_cosine": 0.2614899928716971,
+      "std_output_cosine": 0.16670879291847374,
+      "mean_bleu4": 0.001951571651094412,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.21095735020935535,
+          "mean_bleu4": 0.01317310864488728,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.12127983464065809,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.2130956807032004,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.35349564376480364,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.2391296653299054,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.2961542691752708,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.4335750699633041,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "qwen2.5-1.5b",
+      "mean_output_cosine": 0.2787188257382568,
+      "std_output_cosine": 0.2005416881324982,
+      "mean_bleu4": 0.00627539696886329,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2555069119984864,
+          "mean_bleu4": 0.04235892953982721,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.11164289507483574,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.13940342873367334,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.4888913417192196,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.1913951571308125,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.28697474133992035,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.553655329218367,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "qwen2.5-3b",
+      "mean_output_cosine": 0.2804109212694272,
+      "std_output_cosine": 0.1903840967965773,
+      "mean_bleu4": 0.015909844653470374,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2721255929500804,
+          "mean_bleu4": 0.041718704050321076,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.0841648563811879,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.13815529477852154,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.48461711131692814,
+          "mean_bleu4": 0.08756366314747194,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.26061971223395597,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.25465315120905024,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5181006372719149,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.274515268510165,
+      "std_output_cosine": 0.18487547730029608,
+      "mean_bleu4": 0.0,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.210861539974958,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.15428875531793967,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.17843455087046678,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.3838803895833702,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.2598636488153467,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.1970613157512344,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5488573762601126,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.2889950321104185,
+      "std_output_cosine": 0.19925980039380117,
+      "mean_bleu4": 0.001457386985202449,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2654939293861389,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.14068208341042676,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.15924419109826143,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.42633209883499906,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.2868215269145147,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.23112047381630374,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5336799247188775,
+          "mean_bleu4": 0.00983736215011653,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.2579425444289978,
+      "std_output_cosine": 0.214197237216587,
+      "mean_bleu4": 0.005490656179699109,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.264072148129344,
+          "mean_bleu4": 0.012438555540747177,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.0910244441047771,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.09397820548919199,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.4721908966120427,
+          "mean_bleu4": 0.032831164896295735,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.22052878626576158,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.21530832498694918,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5007519781409758,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.27243267254962167,
+      "std_output_cosine": 0.19158765800676056,
+      "mean_bleu4": 0.00263100098406427,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.1841610307399365,
+          "mean_bleu4": 0.017759256642433822,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.08893388136301808,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.16771538538269545,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.42478384897950566,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.27090901249659605,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.25524585030275143,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5494517021418583,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "openelm-1.1b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.2755491200817867,
+      "std_output_cosine": 0.17137228580292513,
+      "mean_bleu4": 0.0,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.23240128952739028,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.09900649592748906,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.23473743349313736,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.4069598391846312,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.2728340261510817,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.21821846401197212,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.48388508151773924,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
       "generator_a": "phi-3.5-mini",
       "generator_b": "phi-4-mini",
-      "mean_output_cosine": 0.4901040505175435,
-      "std_output_cosine": 0.1728120220125088,
+      "mean_output_cosine": 0.4901040556389156,
+      "std_output_cosine": 0.1728120257404263,
       "mean_bleu4": 0.010928446715739148,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.36831011376825035,
+          "mean_bleu4": 0.027359004652939483,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.41162460217937125,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.3683101072489931,
-          "mean_bleu4": 0.027359004652939483,
-          "n": 4
-        },
         "filler-removal": {
-          "mean_cosine": 0.4473637401111834,
+          "mean_cosine": 0.4473637401111833,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.500677037132057,
-          "mean_bleu4": 0.06187734757106636,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5705303353552222,
-          "mean_bleu4": 0.0,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.6033908128738403,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5705303628411131,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.500677037132057,
+          "mean_bleu4": 0.06187734757106636,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.5396900847554207,
+          "mean_cosine": 0.5396900784480612,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -1672,44 +3518,44 @@
     {
       "generator_a": "phi-3.5-mini",
       "generator_b": "qwen2.5-0.5b",
-      "mean_output_cosine": 0.498236870990447,
-      "std_output_cosine": 0.1977657276544515,
+      "mean_output_cosine": 0.4982368657534031,
+      "std_output_cosine": 0.1977657291466183,
       "mean_bleu4": 0.006666128779355492,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.49705062827566,
-          "mean_bleu4": 0.0,
-          "n": 4
-        },
         "concise-rewrite": {
-          "mean_cosine": 0.2567222360521555,
+          "mean_cosine": 0.25672222301363945,
           "mean_bleu4": 0.02955366581057857,
           "n": 4
         },
-        "filler-removal": {
-          "mean_cosine": 0.41495515079378764,
+        "punctuation-restoration": {
+          "mean_cosine": 0.49705062827566004,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.6222673959916858,
-          "mean_bleu4": 0.02059027126676134,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5912840008887773,
+        "filler-removal": {
+          "mean_cosine": 0.4149551582443678,
           "mean_bleu4": 0.0,
-          "n": 5
+          "n": 4
         },
         "technical-term-preservation": {
           "mean_cosine": 0.5195103482780811,
           "mean_bleu4": 0.0,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5912839928768978,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6222673959916859,
+          "mean_bleu4": 0.02059027126676134,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.5989325547506172,
+          "mean_cosine": 0.5989325350033562,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -1718,20 +3564,20 @@
     {
       "generator_a": "phi-3.5-mini",
       "generator_b": "qwen2.5-1.5b",
-      "mean_output_cosine": 0.5142004700125762,
-      "std_output_cosine": 0.18303686628696184,
+      "mean_output_cosine": 0.514200471577106,
+      "std_output_cosine": 0.18303686794954063,
       "mean_bleu4": 0.005018253089039226,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.49975947245064944,
-          "mean_bleu4": 0.018310297161310028,
-          "n": 4
-        },
         "concise-rewrite": {
           "mean_cosine": 0.400731891307029,
           "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.49975947245064944,
+          "mean_bleu4": 0.018310297161310028,
           "n": 4
         },
         "filler-removal": {
@@ -1739,8 +3585,8 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.5658318255781646,
+        "technical-term-preservation": {
+          "mean_cosine": 0.6194716691970825,
           "mean_bleu4": 0.0,
           "n": 3
         },
@@ -1749,13 +3595,13 @@
           "mean_bleu4": 0.0124503289517638,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.6194716691970825,
+        "capitalization": {
+          "mean_cosine": 0.5658318255781646,
           "mean_bleu4": 0.0,
           "n": 3
         },
         "command-reformulation": {
-          "mean_cosine": 0.6691227652719075,
+          "mean_cosine": 0.6691227758324837,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -1764,20 +3610,20 @@
     {
       "generator_a": "phi-3.5-mini",
       "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.5601608081564377,
-      "std_output_cosine": 0.19556239359809732,
+      "mean_output_cosine": 0.5601608024299438,
+      "std_output_cosine": 0.19556239080493878,
       "mean_bleu4": 0.012064253828088829,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.36992727698990713,
+          "mean_bleu4": 0.027714500898167658,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.611025568763716,
           "mean_bleu4": 0.0,
-          "n": 4
-        },
-        "concise-rewrite": {
-          "mean_cosine": 0.3699272974126502,
-          "mean_bleu4": 0.027714500898167658,
           "n": 4
         },
         "filler-removal": {
@@ -1785,9 +3631,9 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.6451253214459677,
-          "mean_bleu4": 0.012710844258972,
+        "technical-term-preservation": {
+          "mean_cosine": 0.7070743419521769,
+          "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
@@ -1795,14 +3641,244 @@
           "mean_bleu4": 0.0,
           "n": 5
         },
+        "capitalization": {
+          "mean_cosine": 0.6451253214459677,
+          "mean_bleu4": 0.012710844258972,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.7499965421417006,
+          "mean_bleu4": 0.044186079247202935,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-3.5-mini",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.4667862600534016,
+      "std_output_cosine": 0.1586131369447246,
+      "mean_bleu4": 0.0017033390994454283,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2688020123267668,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.45695882259701137,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4058222287446297,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
         "technical-term-preservation": {
-          "mean_cosine": 0.7070743419521769,
+          "mean_cosine": 0.4968705368311461,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5186714360619977,
+          "mean_bleu4": 0.009198031137005314,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6314530124469524,
           "mean_bleu4": 0.0,
           "n": 3
         },
         "command-reformulation": {
-          "mean_cosine": 0.7499965603727909,
-          "mean_bleu4": 0.044186079247202935,
+          "mean_cosine": 0.5246422346559824,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-3.5-mini",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.4676976917230263,
+      "std_output_cosine": 0.16210842148123392,
+      "mean_bleu4": 0.0017626950864161588,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.29638683050870895,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5343253337187199,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3783817757082326,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5313605585511859,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.48255173898527276,
+          "mean_bleu4": 0.009518553466647258,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6190689385188531,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.4818536826606458,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-3.5-mini",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.4938118891271646,
+      "std_output_cosine": 0.20472837901476018,
+      "mean_bleu4": 0.000826820755192132,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.26258973218500614,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5195582945677811,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.33483592578911026,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7032584302348809,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5343395060724444,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5448266565799713,
+          "mean_bleu4": 0.007441386796729187,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6122581013647684,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-3.5-mini",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.49201879533993087,
+      "std_output_cosine": 0.18361606753668777,
+      "mean_bleu4": 0.0,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3428388621348245,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5807996088726894,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3247756555575248,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6424068508893684,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.46700331476383566,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.49669438375029556,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6346326725449518,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-3.5-mini",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.4750700613321413,
+      "std_output_cosine": 0.1905405022223404,
+      "mean_bleu4": 0.0033574477945958942,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.22593698945422275,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4676051316004028,
+          "mean_bleu4": 0.009331182074052246,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3556580362745545,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6176736611914243,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5971613386732729,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5324414372444153,
+          "mean_bleu4": 0.017775454052626722,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5484847594943024,
+          "mean_bleu4": 0.0,
           "n": 4
         }
       }
@@ -1810,39 +3886,39 @@
     {
       "generator_a": "phi-4-mini",
       "generator_b": "qwen2.5-0.5b",
-      "mean_output_cosine": 0.42079161796812237,
-      "std_output_cosine": 0.19312599741399283,
+      "mean_output_cosine": 0.4207916108917673,
+      "std_output_cosine": 0.19312600439310282,
       "mean_bleu4": 0.00341163382126408,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2808004438155364,
+          "mean_bleu4": 0.02302852829353254,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.34403854608535767,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.28080047734314906,
-          "mean_bleu4": 0.02302852829353254,
-          "n": 4
-        },
         "filler-removal": {
-          "mean_cosine": 0.47542842622636905,
+          "mean_cosine": 0.47542839642405016,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.39931360863780485,
+        "technical-term-preservation": {
+          "mean_cosine": 0.49519959557966625,
           "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
-          "mean_cosine": 0.5222687006935207,
+          "mean_cosine": 0.5222687131451489,
           "mean_bleu4": 0.0,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.49519959557966625,
+        "capitalization": {
+          "mean_cosine": 0.39931360863780485,
           "mean_bleu4": 0.0,
           "n": 3
         },
@@ -1856,19 +3932,19 @@
     {
       "generator_a": "phi-4-mini",
       "generator_b": "qwen2.5-1.5b",
-      "mean_output_cosine": 0.4665650414762101,
-      "std_output_cosine": 0.18734108973779506,
+      "mean_output_cosine": 0.4665650447700653,
+      "std_output_cosine": 0.18734109465143936,
       "mean_bleu4": 0.0050633634211903695,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.3239979096042628,
+        "concise-rewrite": {
+          "mean_cosine": 0.40072028533009557,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.40072028533009557,
+        "punctuation-restoration": {
+          "mean_cosine": 0.3239979096042628,
           "mean_bleu4": 0.0,
           "n": 4
         },
@@ -1877,23 +3953,23 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.268662598416086,
-          "mean_bleu4": 0.0,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.596372609339309,
-          "mean_bleu4": 0.0,
-          "n": 5
-        },
         "technical-term-preservation": {
           "mean_cosine": 0.6953777273495992,
           "mean_bleu4": 0.045570270790713324,
           "n": 3
         },
+        "instruction-following": {
+          "mean_cosine": 0.5963726271261267,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.268662598416086,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
         "command-reformulation": {
-          "mean_cosine": 0.5588526192809096,
+          "mean_cosine": 0.5588526192809095,
           "mean_bleu4": 0.0,
           "n": 4
         }
@@ -1902,19 +3978,19 @@
     {
       "generator_a": "phi-4-mini",
       "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.5246954803209869,
-      "std_output_cosine": 0.16541877651860531,
+      "mean_output_cosine": 0.5246954875729422,
+      "std_output_cosine": 0.1654187865629718,
       "mean_bleu4": 0.005933600368172195,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.39130770723094754,
+        "concise-rewrite": {
+          "mean_cosine": 0.5134649249462309,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.5134648990964417,
+        "punctuation-restoration": {
+          "mean_cosine": 0.3913077072309475,
           "mean_bleu4": 0.0,
           "n": 4
         },
@@ -1923,18 +3999,18 @@
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.37464221864592256,
+        "technical-term-preservation": {
+          "mean_cosine": 0.6531446052598461,
           "mean_bleu4": 0.0,
           "n": 3
         },
         "instruction-following": {
-          "mean_cosine": 0.6290684445158193,
+          "mean_cosine": 0.6290684629965464,
           "mean_bleu4": 0.03204144198812985,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.653144605259846,
+        "capitalization": {
+          "mean_cosine": 0.37464221864592256,
           "mean_bleu4": 0.0,
           "n": 3
         },
@@ -1946,42 +4022,272 @@
       }
     },
     {
+      "generator_a": "phi-4-mini",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.4218534441292914,
+      "std_output_cosine": 0.12329967594072273,
+      "mean_bleu4": 0.0010901060074784254,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3396264225078105,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.38933926962092413,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3848576003659112,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.3922496124704526,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5194331158425651,
+          "mean_bleu4": 0.0058865724403834975,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.4364977934218328,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.4628355061556508,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-4-mini",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.4335761043382139,
+      "std_output_cosine": 0.15162479386299527,
+      "mean_bleu4": 0.0023881994630603537,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4137211525214991,
+          "mean_bleu4": 0.008882895894289207,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4792282246053219,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.39148276642851865,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.4279971973894356,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4867388287300539,
+          "mean_bleu4": 0.005789960385094546,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.40134366677728983,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.41177737668999287,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-4-mini",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.4579402987055832,
+      "std_output_cosine": 0.1928957434609089,
+      "mean_bleu4": 0.007264495382212082,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4215592341883253,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.29128806202878715,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.34152870434041926,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6255217904033598,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.6233959805392993,
+          "mean_bleu4": 0.03922827506394524,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.36795329020002093,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.512369729578495,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-4-mini",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.4227478392764528,
+      "std_output_cosine": 0.16094209673078932,
+      "mean_bleu4": 2.552510035287605e-06,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3348752045897475,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.3737595557492538,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.38879545780152897,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6081153061182594,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4683135492356076,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.2525485914370455,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5252278372645378,
+          "mean_bleu4": 1.7229442738191334e-05,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "phi-4-mini",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.4358428870972085,
+      "std_output_cosine": 0.16436553110320634,
+      "mean_bleu4": 0.010663633967570644,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.37680273383061313,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.3658551739248479,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.33870196005095643,
+          "mean_bleu4": 0.004448393388198813,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6706644291880414,
+          "mean_bleu4": 0.07798157513437204,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5507203788893754,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.34034356676738403,
+          "mean_bleu4": 0.012059939389498668,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.41392314952145115,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
       "generator_a": "qwen2.5-0.5b",
       "generator_b": "qwen2.5-1.5b",
-      "mean_output_cosine": 0.5322035537547185,
-      "std_output_cosine": 0.21171692611121323,
+      "mean_output_cosine": 0.5322035543385819,
+      "std_output_cosine": 0.2117169257067299,
       "mean_bleu4": 0.02673199540226969,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3798841930466704,
+          "mean_bleu4": 0.009211560267703601,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.5317119076737674,
           "mean_bleu4": 0.0,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.37988420049725147,
-          "mean_bleu4": 0.009211560267703601,
-          "n": 4
-        },
         "filler-removal": {
-          "mean_cosine": 0.3422697506852793,
+          "mean_cosine": 0.3422697506852802,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.7080725029025846,
-          "mean_bleu4": 0.03572682306636789,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5288309335011511,
-          "mean_bleu4": 0.06750321138948966,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.6650049944272252,
           "mean_bleu4": 0.08007370288130511,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5288309426144782,
+          "mean_bleu4": 0.06750321138948966,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7080725029025846,
+          "mean_bleu4": 0.03572682306636789,
           "n": 3
         },
         "command-reformulation": {
@@ -1994,40 +4300,40 @@
     {
       "generator_a": "qwen2.5-0.5b",
       "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.5587467507590053,
-      "std_output_cosine": 0.19580226711856766,
+      "mean_output_cosine": 0.5587467445755367,
+      "std_output_cosine": 0.19580228302305258,
       "mean_bleu4": 0.00918000580681999,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.42713222693248826,
+          "mean_bleu4": 0.018237167207013485,
+          "n": 4
+        },
         "punctuation-restoration": {
           "mean_cosine": 0.56185830287063,
           "mean_bleu4": 0.030480555658132003,
           "n": 4
         },
-        "concise-rewrite": {
-          "mean_cosine": 0.42713223790548205,
-          "mean_bleu4": 0.018237167207013485,
-          "n": 4
-        },
         "filler-removal": {
-          "mean_cosine": 0.41215417545300526,
+          "mean_cosine": 0.41215416800242555,
           "mean_bleu4": 0.0,
           "n": 4
-        },
-        "capitalization": {
-          "mean_cosine": 0.7143927804221036,
-          "mean_bleu4": 0.017663088441185925,
-          "n": 3
-        },
-        "instruction-following": {
-          "mean_cosine": 0.5265973098786246,
-          "mean_bleu4": 0.0,
-          "n": 5
         },
         "technical-term-preservation": {
           "mean_cosine": 0.699218168268258,
           "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5265972912267538,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7143927804221036,
+          "mean_bleu4": 0.017663088441185925,
           "n": 3
         },
         "command-reformulation": {
@@ -2038,22 +4344,252 @@
       }
     },
     {
-      "generator_a": "qwen2.5-1.5b",
-      "generator_b": "qwen2.5-3b",
-      "mean_output_cosine": 0.585288447372294,
-      "std_output_cosine": 0.2016199067512182,
-      "mean_bleu4": 0.026200712596366457,
+      "generator_a": "qwen2.5-0.5b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.4374364317886312,
+      "std_output_cosine": 0.17680233863659162,
+      "mean_bleu4": 0.01259219827850374,
       "exact_match_rate": 0.0,
       "n_prompts": 27,
       "per_category": {
-        "punctuation-restoration": {
-          "mean_cosine": 0.4509892049940145,
+        "concise-rewrite": {
+          "mean_cosine": 0.2271658068132956,
           "mean_bleu4": 0.0,
           "n": 4
         },
+        "punctuation-restoration": {
+          "mean_cosine": 0.46061362890928936,
+          "mean_bleu4": 0.02159944083611964,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.40679710183598095,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.44586190358062794,
+          "mean_bleu4": 0.04152832389375843,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.42717300623531074,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6883854651336504,
+          "mean_bleu4": 0.043002206164615704,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.4734675926848475,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-0.5b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.4276947665435242,
+      "std_output_cosine": 0.20361981999997988,
+      "mean_bleu4": 0.010691741012196658,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
         "concise-rewrite": {
-          "mean_cosine": 0.46810100911332997,
+          "mean_cosine": 0.27178108878433704,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.46927502006292343,
+          "mean_bleu4": 0.01913062536496237,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.35505622485757204,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.4829648902367308,
+          "mean_bleu4": 0.03838516188656163,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.37299534974201387,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.7177829909093566,
+          "mean_bleu4": 0.0323330067365918,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.424022242426873,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-0.5b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.454267435978185,
+      "std_output_cosine": 0.23598424725783237,
+      "mean_bleu4": 0.027755276707396772,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3510834574699402,
+          "mean_bleu4": 0.028757909336531846,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.3128321317462909,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3139727255722752,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6619807819693497,
+          "mean_bleu4": 0.21145361125119513,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5045234937223932,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5341563556137874,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5606596577238983,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-0.5b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.4658984900441135,
+      "std_output_cosine": 0.18991728836242752,
+      "mean_bleu4": 0.02665952643709242,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.35398119673081174,
+          "mean_bleu4": 0.07996627426755068,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.43319454569372273,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3855963373058753,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5772594947613313,
+          "mean_bleu4": 0.12500763055889766,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.46805901842051634,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.4692651672538086,
+          "mean_bleu4": 0.008306408351533233,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6020754585303562,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-0.5b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.4606427622377101,
+      "std_output_cosine": 0.19211530763339196,
+      "mean_bleu4": 0.011478013707506753,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2655191005171013,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.47759549237276844,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3385830390669702,
+          "mean_bleu4": 0.010674119393825645,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5753632722418579,
+          "mean_bleu4": 0.07631385620223304,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5319782807125104,
+          "mean_bleu4": 0.007653664784136127,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.591609159132592,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.487438838726228,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-1.5b",
+      "generator_b": "qwen2.5-3b",
+      "mean_output_cosine": 0.5852884532273052,
+      "std_output_cosine": 0.20161990869521887,
+      "mean_bleu4": 0.026200712596366454,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.46810104863465474,
           "mean_bleu4": 0.023748702661337107,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4509892049940145,
+          "mean_bleu4": 0.0,
           "n": 4
         },
         "filler-removal": {
@@ -2061,9 +4597,9 @@
           "mean_bleu4": 0.016371298203506215,
           "n": 4
         },
-        "capitalization": {
-          "mean_cosine": 0.6965782726856157,
-          "mean_bleu4": 0.046251374133382823,
+        "technical-term-preservation": {
+          "mean_cosine": 0.8084744762974557,
+          "mean_bleu4": 0.13606170474745752,
           "n": 3
         },
         "instruction-following": {
@@ -2071,13 +4607,933 @@
           "mean_bleu4": 0.0,
           "n": 5
         },
-        "technical-term-preservation": {
-          "mean_cosine": 0.8084744762974557,
-          "mean_bleu4": 0.13606170474745752,
+        "capitalization": {
+          "mean_cosine": 0.6965782726856157,
+          "mean_bleu4": 0.046251374133382823,
           "n": 3
         },
         "command-reformulation": {
           "mean_cosine": 0.7130623984334024,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-1.5b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.4529230415519046,
+      "std_output_cosine": 0.14070165353352565,
+      "mean_bleu4": 0.00831877673149017,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3151348540016279,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.520557718401615,
+          "mean_bleu4": 0.011644239593976933,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.34889390077265486,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.49475643040447004,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.44655431679835705,
+          "mean_bleu4": 0.013260680522137944,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5420066743636417,
+          "mean_bleu4": 0.03724220358787905,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5368788327254286,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-1.5b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.4671741509338602,
+      "std_output_cosine": 0.15757314971595265,
+      "mean_bleu4": 0.00570525818083406,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3981183977851094,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5594733786738509,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3584585822354515,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5187410425389434,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4098608432798363,
+          "mean_bleu4": 0.008044645961197801,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5880750628368888,
+          "mean_bleu4": 0.03793958035884354,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.4949370269774751,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-1.5b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.5513381203099125,
+      "std_output_cosine": 0.21247735064556567,
+      "mean_bleu4": 0.0024475153427337146,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4795887393981997,
+          "mean_bleu4": 0.014792018749413062,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.40968720784042645,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.40477273355162763,
+          "mean_bleu4": 0.0017287098140395132,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.790018911104642,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.6413051162829758,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.48041821208086727,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6730243935588045,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-1.5b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.4993552511571711,
+      "std_output_cosine": 0.19842188348857703,
+      "mean_bleu4": 0.0077026079160750546,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3538148361457228,
+          "mean_bleu4": 0.01845701566263333,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.45270718028827317,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.36305472436163144,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6980289138044967,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4708481179650025,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5109413068434002,
+          "mean_bleu4": 0.04471411702783105,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.7057833915731019,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-1.5b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.49975646421596015,
+      "std_output_cosine": 0.20882932866390636,
+      "mean_bleu4": 0.0,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.28117808627088164,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4866940019620196,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3087758307012083,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7419904380650792,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5793203432821497,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5679206593295857,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5901244623749353,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-3b",
+      "generator_b": "qwen3-1.7b",
+      "mean_output_cosine": 0.503067292318002,
+      "std_output_cosine": 0.14962145216149605,
+      "mean_bleu4": 0.008058332419187736,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4181094937953916,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.502279077373336,
+          "mean_bleu4": 0.007739358689663284,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.46699765693400797,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5597210295866475,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4577781456962522,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.6665819698869199,
+          "mean_bleu4": 0.062205846853138576,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5163680633182869,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-3b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.5171343529538586,
+      "std_output_cosine": 0.15953155743939593,
+      "mean_bleu4": 0.009327794618619968,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4292622827271145,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.5648859568451148,
+          "mean_bleu4": 0.007985357988412104,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.47494464181214424,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5945872334593411,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.45661340812078804,
+          "mean_bleu4": 0.021746142925020216,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.704512102874269,
+          "mean_bleu4": 0.03705943604132988,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.4764727386529795,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-3b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.5650005056037704,
+      "std_output_cosine": 0.18886510710960028,
+      "mean_bleu4": 0.010028778122719493,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.6247206824296457,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4252553481096122,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.4042744551587064,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.8479849752849212,
+          "mean_bleu4": 0.051383549925035854,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.5393174061481203,
+          "mean_bleu4": 0.023325271907663744,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.650787586109621,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5612767483964278,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-3b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.5009324629277239,
+      "std_output_cosine": 0.1839445855275856,
+      "mean_bleu4": 0.0030699912343402536,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4752867334065631,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.45053916706822517,
+          "mean_bleu4": 0.015834939144396758,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.37014551804208823,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7388108064025696,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.43247498696597886,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.47057125121417914,
+          "mean_bleu4": 0.006516668916533275,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6376924293252246,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen2.5-3b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.5065402975630902,
+      "std_output_cosine": 0.19353377627731078,
+      "mean_bleu4": 0.0023636530435553697,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4649887892930418,
+          "mean_bleu4": 0.013028155396305256,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4799003902143112,
+          "mean_bleu4": 0.0029265026476934888,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3566393774776646,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7666479406472718,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4984024454594385,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5108351433644228,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5365030817327713,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen3-1.7b",
+      "generator_b": "qwen3-4b",
+      "mean_output_cosine": 0.8007670467989283,
+      "std_output_cosine": 0.11316188014532465,
+      "mean_bleu4": 0.20931721493729277,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.6618599838682566,
+          "mean_bleu4": 0.13741386778087028,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.7823976040506815,
+          "mean_bleu4": 0.2395884436654212,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.7222989558152098,
+          "mean_bleu4": 0.14407587634688013,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.8837328461071393,
+          "mean_bleu4": 0.25964238101023135,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.862235585601759,
+          "mean_bleu4": 0.21749638299361274,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.854769521524866,
+          "mean_bleu4": 0.2537424732032138,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.8569497644324149,
+          "mean_bleu4": 0.23490389363145486,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen3-1.7b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.42722151830496663,
+      "std_output_cosine": 0.1596976291190928,
+      "mean_bleu4": 0.0008412435290325204,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.36135975399778425,
+          "mean_bleu4": 0.0011361946628213305,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.37219934434380514,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3147960639211297,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5023714019693991,
+          "mean_bleu4": 0.0030797028525299526,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.42975021298315513,
+          "mean_bleu4": 0.00012249588147636523,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.47244136808561726,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5670927425255995,
+          "mean_bleu4": 0.0020793021669052616,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen3-1.7b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.3951535727984841,
+      "std_output_cosine": 0.15467016469352315,
+      "mean_bleu4": 0.007898600025776017,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.3502516456575216,
+          "mean_bleu4": 0.013603713368306961,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.42190710743389703,
+          "mean_bleu4": 0.010030377182719874,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.32870436691680216,
+          "mean_bleu4": 0.011528528897321338,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.4148422427202556,
+          "mean_bleu4": 0.0008486127890925928,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.32824498070114644,
+          "mean_bleu4": 0.011445707313955101,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.4284388628174416,
+          "mean_bleu4": 0.0042791159885021525,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5236564413518414,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen3-1.7b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.44815867014250377,
+      "std_output_cosine": 0.16513412037672176,
+      "mean_bleu4": 0.0016552114572969026,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.29838594135909113,
+          "mean_bleu4": 0.010459485497515238,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4800610638021661,
+          "mean_bleu4": 0.000153776211535115,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.32028588956500065,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5549468240169779,
+          "mean_bleu4": 0.0007458875036049852,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.46892985645215546,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5180556003026379,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5354239899307365,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen3-4b",
+      "generator_b": "smollm2-1.7b",
+      "mean_output_cosine": 0.4535374691534721,
+      "std_output_cosine": 0.17342921517984153,
+      "mean_bleu4": 0.0012554126580880472,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.40465543419122696,
+          "mean_bleu4": 0.0013587135026633906,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.45170195288246945,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3158490004902091,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.5594050351427041,
+          "mean_bleu4": 0.003345133080057039,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.3970859795562352,
+          "mean_bleu4": 8.176638953375114e-05,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5368398388623187,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.57063039927297,
+          "mean_bleu4": 0.00450426414247096,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen3-4b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.39361161743138207,
+      "std_output_cosine": 0.15632929557512926,
+      "mean_bleu4": 0.0063891525301313125,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.2952135325869155,
+          "mean_bleu4": 0.018574345793510007,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.46083418090610373,
+          "mean_bleu4": 0.009254723244112126,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3574027019773415,
+          "mean_bleu4": 0.011167150527545107,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.4587692481348234,
+          "mean_bleu4": 0.0005449880575946974,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.31776345892182434,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.43954585660071466,
+          "mean_bleu4": 0.004962425293364124,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.4724873499875345,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "qwen3-4b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.4482391099480145,
+      "std_output_cosine": 0.18070399588161384,
+      "mean_bleu4": 0.0023194733843063075,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.31305515329890343,
+          "mean_bleu4": 0.015138438383344562,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4779172217756085,
+          "mean_bleu4": 0.0001334002336874945,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.26041321250553906,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.587883795029895,
+          "mean_bleu4": 0.0005128089693806909,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.46878859400503037,
+          "mean_bleu4": 0.0,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.538628854967044,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5433581745650545,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "smollm2-1.7b",
+      "generator_b": "smollm2-360m",
+      "mean_output_cosine": 0.4766842169054693,
+      "std_output_cosine": 0.18329464282167035,
+      "mean_bleu4": 0.029912344316324214,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.4020055470338435,
+          "mean_bleu4": 0.03538553892463792,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4210352966952068,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.36923190102779957,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.7313803473636181,
+          "mean_bleu4": 0.15155657456639043,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.4608695858151878,
+          "mean_bleu4": 0.042284283428606156,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.39199917098479203,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6067240983247757,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "smollm2-1.7b",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.48548876407484415,
+      "std_output_cosine": 0.2173457771179447,
+      "mean_bleu4": 0.01269844795588357,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.420953436790417,
+          "mean_bleu4": 0.027857733062568557,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.30268103389296575,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.45065468369608286,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.709343384513366,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.556550700878126,
+          "mean_bleu4": 0.04628543251171643,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.3276757448911667,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.6293072799746758,
+          "mean_bleu4": 0.0,
+          "n": 4
+        }
+      }
+    },
+    {
+      "generator_a": "smollm2-360m",
+      "generator_b": "tinyllama-1.1b",
+      "mean_output_cosine": 0.42558911860839005,
+      "std_output_cosine": 0.172833628154208,
+      "mean_bleu4": 0.014072054220481004,
+      "exact_match_rate": 0.0,
+      "n_prompts": 27,
+      "per_category": {
+        "concise-rewrite": {
+          "mean_cosine": 0.31820009036265656,
+          "mean_bleu4": 0.028339726275502783,
+          "n": 4
+        },
+        "punctuation-restoration": {
+          "mean_cosine": 0.4195495192445379,
+          "mean_bleu4": 0.014295650654520063,
+          "n": 4
+        },
+        "filler-removal": {
+          "mean_cosine": 0.3022669768663559,
+          "mean_bleu4": 0.0,
+          "n": 4
+        },
+        "technical-term-preservation": {
+          "mean_cosine": 0.6241625510276626,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "instruction-following": {
+          "mean_cosine": 0.36964770479505826,
+          "mean_bleu4": 0.041880791246579153,
+          "n": 5
+        },
+        "capitalization": {
+          "mean_cosine": 0.5112659415956294,
+          "mean_bleu4": 0.0,
+          "n": 3
+        },
+        "command-reformulation": {
+          "mean_cosine": 0.5190789636717904,
           "mean_bleu4": 0.0,
           "n": 4
         }

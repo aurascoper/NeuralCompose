@@ -1,0 +1,199 @@
+{
+  "generated_at": "2026-07-14T12:13:19.930732+00:00",
+  "tolerances": {
+    "quality_abs": 0.005,
+    "perf_rel": 0.2
+  },
+  "status": "FAIL",
+  "targets": [
+    {
+      "target": "all-MiniLM-L6-v2 (python)",
+      "kind": "embedding",
+      "canonical": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/embeddings/all-MiniLM-L6-v2/python/benchmark.json",
+      "repro": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/repro/all-MiniLM-L6-v2/python/benchmark.json",
+      "status": "FAIL",
+      "comparisons": [
+        {
+          "metric": "paraphrase_mean",
+          "canonical": 0.6507806155580269,
+          "repro": 0.6507806155580269,
+          "delta": 0.0,
+          "kind": "abs",
+          "status": "PASS",
+          "detail": "|\u0394|=0.000000 vs abs tol 0.005"
+        },
+        {
+          "metric": "antonym_mean",
+          "canonical": 0.7343569570172013,
+          "repro": 0.7343569570172013,
+          "delta": 0.0,
+          "kind": "abs",
+          "status": "PASS",
+          "detail": "|\u0394|=0.000000 vs abs tol 0.005"
+        },
+        {
+          "metric": "separation_ratio",
+          "canonical": 3.710331289531752,
+          "repro": 3.710331289531752,
+          "delta": 0.0,
+          "kind": "rel",
+          "status": "PASS",
+          "detail": "|\u0394|/canonical=0.000 vs rel tol 0.2"
+        },
+        {
+          "metric": "retrieval_top1",
+          "canonical": 0.9639349102973938,
+          "repro": 0.9639349102973938,
+          "delta": 0.0,
+          "kind": "abs",
+          "status": "PASS",
+          "detail": "|\u0394|=0.000000 vs abs tol 0.005"
+        },
+        {
+          "metric": "stability_mean",
+          "canonical": 0.8680338074231745,
+          "repro": 0.8687634430655408,
+          "delta": 0.0007296356423662775,
+          "kind": "abs",
+          "status": "PASS",
+          "detail": "|\u0394|=0.000730 vs abs tol 0.005"
+        },
+        {
+          "metric": "semantic_stability_mean",
+          "canonical": 0.9194588393918096,
+          "repro": 0.919458842261128,
+          "delta": 2.86931833848314e-09,
+          "kind": "abs",
+          "status": "PASS",
+          "detail": "|\u0394|=0.000000 vs abs tol 0.005"
+        },
+        {
+          "metric": "nn_consistency",
+          "canonical": 1.0,
+          "repro": 1.0,
+          "delta": 0.0,
+          "kind": "abs",
+          "status": "PASS",
+          "detail": "|\u0394|=0.000000 vs abs tol 0.005"
+        },
+        {
+          "metric": "cold_load_time",
+          "canonical": 7.5738890171051025,
+          "repro": 6.973886013031006,
+          "delta": -0.6000030040740967,
+          "kind": "rel",
+          "status": "PASS",
+          "detail": "|\u0394|/canonical=0.079 vs rel tol 0.2"
+        },
+        {
+          "metric": "warm_encode_time_ms",
+          "canonical": 95.43204307556152,
+          "repro": 34.46483612060547,
+          "delta": -60.967206954956055,
+          "kind": "rel",
+          "status": "FAIL",
+          "detail": "|\u0394|/canonical=0.639 vs rel tol 0.2"
+        },
+        {
+          "metric": "embeddings_per_second",
+          "canonical": 1015.1475097379268,
+          "repro": 2538.372743520156,
+          "delta": 1523.225233782229,
+          "kind": "rel",
+          "status": "FAIL",
+          "detail": "|\u0394|/canonical=1.500 vs rel tol 0.2"
+        },
+        {
+          "metric": "peak_rss_mb",
+          "canonical": 505.6875,
+          "repro": 507.25,
+          "delta": 1.5625,
+          "kind": "rel",
+          "status": "PASS",
+          "detail": "|\u0394|/canonical=0.003 vs rel tol 0.2"
+        }
+      ]
+    },
+    {
+      "target": "qwen2.5-0.5b",
+      "kind": "generation",
+      "canonical": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/candidates/qwen2.5-0.5b/raw.json",
+      "repro": "/Users/aurascoper/Developer/NeuralCompose/Evaluation/results/repro/qwen2.5-0.5b/raw.json",
+      "status": "FAIL",
+      "comparisons": [
+        {
+          "metric": "meaning_cosine_mean",
+          "canonical": 0.7307376577095552,
+          "repro": 0.7443223324688998,
+          "delta": 0.01358467475934455,
+          "kind": "abs",
+          "status": "FAIL",
+          "detail": "|\u0394|=0.013585 vs abs tol 0.005"
+        },
+        {
+          "metric": "stability",
+          "canonical": 0.962962962962963,
+          "repro": 0.9012345679012346,
+          "delta": -0.06172839506172845,
+          "kind": "abs",
+          "status": "FAIL",
+          "detail": "|\u0394|=0.061728 vs abs tol 0.005"
+        },
+        {
+          "metric": "instruction_following",
+          "canonical": 0.6,
+          "repro": 0.4,
+          "delta": -0.19999999999999996,
+          "kind": "abs",
+          "status": "FAIL",
+          "detail": "|\u0394|=0.200000 vs abs tol 0.005"
+        },
+        {
+          "metric": "word_count_ratio_mean",
+          "canonical": 3.4762967947821606,
+          "repro": 4.216661558921434,
+          "delta": 0.7403647641392732,
+          "kind": "rel",
+          "status": "FAIL",
+          "detail": "|\u0394|/canonical=0.213 vs rel tol 0.2"
+        },
+        {
+          "metric": "cold_load_time",
+          "canonical": 2.396273970603943,
+          "repro": 2.6987119913101196,
+          "delta": 0.30243802070617676,
+          "kind": "rel",
+          "status": "PASS",
+          "detail": "|\u0394|/canonical=0.126 vs rel tol 0.2"
+        },
+        {
+          "metric": "peak_rss_mb",
+          "canonical": 706.90625,
+          "repro": 702.8125,
+          "delta": -4.09375,
+          "kind": "rel",
+          "status": "PASS",
+          "detail": "|\u0394|/canonical=0.006 vs rel tol 0.2"
+        },
+        {
+          "metric": "generate_time_mean",
+          "canonical": 1.2280743696071483,
+          "repro": 1.5124852966379236,
+          "delta": 0.2844109270307753,
+          "kind": "rel",
+          "status": "FAIL",
+          "detail": "|\u0394|/canonical=0.232 vs rel tol 0.2"
+        },
+        {
+          "metric": "tokens_per_second_mean",
+          "canonical": 37.548719546131665,
+          "repro": 39.6260745565949,
+          "delta": 2.0773550104632363,
+          "kind": "rel",
+          "status": "PASS",
+          "detail": "|\u0394|/canonical=0.055 vs rel tol 0.2"
+        }
+      ]
+    }
+  ]
+}

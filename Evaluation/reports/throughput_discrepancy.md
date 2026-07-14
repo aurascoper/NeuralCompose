@@ -51,3 +51,27 @@ Future benchmarks should:
 3. Store the streaming benchmark's per-model benchmark.json separately
    (not overwrite the canonical benchmark.json).
 4. Document the batch size used for the reported throughput.
+## Resolution — 2026-07-14 (controlled reproducibility rerun)
+
+A controlled rerun on a quiescent machine (07:10 local, no concurrent
+benchmarks or builds; `Evaluation/results/repro/all-MiniLM-L6-v2/python/`,
+provenance-stamped) measured **2538 emb/s** (warm encode 34.5 ms) against
+the canonical checkpoint's 1015 emb/s (95.4 ms) — the rerun does NOT
+reproduce the canonical throughput and is 2.5× faster. It also does not
+match the orphaned leaderboard value of 1980 emb/s, which lies between
+the two.
+
+Every quality metric reproduced within |Δ| ≤ 0.0008 in the same run pair
+(retrieval and nn-consistency identical, stability Δ0.00073 — see
+`Evaluation/results/repro/repro_report.md`).
+
+Conclusion: MiniLM throughput on this hardware varies by more than 2×
+with machine load and thermal state, while quality metrics are robust to
+it. The canonical 1015 was measured mid-campaign with other work on the
+machine; the orphaned 1980 plausibly came from an intermediate load
+state whose source JSON was lost. The leaderboard now re-derives
+mechanically from the on-disk checkpoint (1015), which the validator
+enforces. Absolute embeddings-per-second values in this evidence base
+should be read as load-dependent lower bounds; cross-model throughput
+comparisons are only meaningful within a single campaign context, and
+the quality rankings are unaffected.

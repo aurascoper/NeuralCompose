@@ -1,0 +1,686 @@
+{
+  "generated_at": "2026-07-14T12:12:08.061276+00:00",
+  "fixture_version": 1,
+  "candidates": [
+    {
+      "name": "bge-small-en-v1.5",
+      "repo_id": "BAAI/bge-small-en-v1.5",
+      "classification": "both",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 66898960,
+        "likes": 509,
+        "pipeline_tag": "feature-extraction",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": true,
+        "reasons": []
+      },
+      "mlx": {
+        "supported": true,
+        "reasons": [
+          "mlx-community/bge-small-en-v1.5-4bit exists"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "coreml",
+        "mlx",
+        "python"
+      ],
+      "family": "BGE",
+      "dimension": 384,
+      "size_category": "small",
+      "estimated_size_mb": 130,
+      "license": "mit",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "bge-base-en-v1.5",
+      "repo_id": "BAAI/bge-base-en-v1.5",
+      "classification": "coreml_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 8793628,
+        "likes": 450,
+        "pipeline_tag": "feature-extraction",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": true,
+        "reasons": []
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "coreml",
+        "python"
+      ],
+      "family": "BGE",
+      "dimension": 768,
+      "size_category": "base",
+      "estimated_size_mb": 440,
+      "license": "mit",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "bge-m3",
+      "repo_id": "BAAI/bge-m3",
+      "classification": "python_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 34986108,
+        "likes": 3227,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "python"
+      ],
+      "family": "BGE",
+      "dimension": 1024,
+      "size_category": "large",
+      "estimated_size_mb": 2270,
+      "license": "mit",
+      "languages": [
+        "multilingual"
+      ]
+    },
+    {
+      "name": "multilingual-e5-small",
+      "repo_id": "intfloat/multilingual-e5-small",
+      "classification": "coreml_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 14961642,
+        "likes": 360,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": true,
+        "reasons": []
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "coreml",
+        "python"
+      ],
+      "family": "E5",
+      "dimension": 384,
+      "size_category": "small",
+      "estimated_size_mb": 470,
+      "license": "mit",
+      "languages": [
+        "multilingual"
+      ]
+    },
+    {
+      "name": "multilingual-e5-base",
+      "repo_id": "intfloat/multilingual-e5-base",
+      "classification": "coreml_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 7191179,
+        "likes": 373,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": true,
+        "reasons": []
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "coreml",
+        "python"
+      ],
+      "family": "E5",
+      "dimension": 768,
+      "size_category": "base",
+      "estimated_size_mb": 1180,
+      "license": "mit",
+      "languages": [
+        "multilingual"
+      ]
+    },
+    {
+      "name": "multilingual-e5-large",
+      "repo_id": "intfloat/multilingual-e5-large",
+      "classification": "mlx_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 12919662,
+        "likes": 1223,
+        "pipeline_tag": "feature-extraction",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": true,
+        "reasons": [
+          "mlx-community/multilingual-e5-large exists"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "mlx",
+        "python"
+      ],
+      "family": "E5",
+      "dimension": 1024,
+      "size_category": "large",
+      "estimated_size_mb": 2240,
+      "license": "mit",
+      "languages": [
+        "multilingual"
+      ]
+    },
+    {
+      "name": "nomic-embed-text-v1.5",
+      "repo_id": "nomic-ai/nomic-embed-text-v1.5",
+      "classification": "python_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 15143301,
+        "likes": 865,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "python"
+      ],
+      "family": "Nomic",
+      "dimension": 768,
+      "size_category": "base",
+      "estimated_size_mb": 547,
+      "license": "cc-by-nc-4.0",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "jina-embeddings-v3",
+      "repo_id": "jinaai/jina-embeddings-v3",
+      "classification": "python_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 3062398,
+        "likes": 1149,
+        "pipeline_tag": "feature-extraction",
+        "library_name": "transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "marked mlx_available=false in fixture"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "python"
+      ],
+      "family": "Jina",
+      "dimension": 1024,
+      "size_category": "base",
+      "estimated_size_mb": 570,
+      "license": "cc-by-nc-4.0",
+      "languages": [
+        "multilingual"
+      ]
+    },
+    {
+      "name": "all-MiniLM-L6-v2",
+      "repo_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "classification": "both",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 254155897,
+        "likes": 5066,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": true,
+        "reasons": []
+      },
+      "mlx": {
+        "supported": true,
+        "reasons": [
+          "mlx-community/all-MiniLM-L6-v2-4bit exists"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "coreml",
+        "mlx",
+        "python"
+      ],
+      "family": "MiniLM",
+      "dimension": 384,
+      "size_category": "small",
+      "estimated_size_mb": 91,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "gte-base-en-v1.5",
+      "repo_id": "Alibaba-NLP/gte-base-en-v1.5",
+      "classification": "coreml_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 370343,
+        "likes": 71,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": true,
+        "reasons": []
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "coreml",
+        "python"
+      ],
+      "family": "GTE",
+      "dimension": 768,
+      "size_category": "base",
+      "estimated_size_mb": 440,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "gte-large-en-v1.5",
+      "repo_id": "Alibaba-NLP/gte-large-en-v1.5",
+      "classification": "python_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 1473276,
+        "likes": 238,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "python"
+      ],
+      "family": "GTE",
+      "dimension": 1024,
+      "size_category": "large",
+      "estimated_size_mb": 1340,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "Qwen3-Embedding-0.6B",
+      "repo_id": "Qwen/Qwen3-Embedding-0.6B",
+      "classification": "python_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 11137957,
+        "likes": 1111,
+        "pipeline_tag": "feature-extraction",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "python"
+      ],
+      "family": "Qwen",
+      "dimension": 1024,
+      "size_category": "base",
+      "estimated_size_mb": 1200,
+      "license": "apache-2.0",
+      "languages": [
+        "multilingual"
+      ]
+    },
+    {
+      "name": "stella_en_400M_v5",
+      "repo_id": "dunzhang/stella_en_400M_v5",
+      "classification": "python_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 75015,
+        "likes": 233,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "python"
+      ],
+      "family": "Stella",
+      "dimension": 1024,
+      "size_category": "base",
+      "estimated_size_mb": 800,
+      "license": "mit",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "snowflake-arctic-embed",
+      "repo_id": "Snowflake/snowflake-arctic-embed-l",
+      "classification": "python_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 26460,
+        "likes": 103,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": false,
+        "reasons": [
+          "no mlx-community conversion found, but architecture is MLX-compatible"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "python"
+      ],
+      "family": "Arctic",
+      "dimension": 1024,
+      "size_category": "base",
+      "estimated_size_mb": 670,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "mxbai-embed-large-v1",
+      "repo_id": "mixedbread-ai/mxbai-embed-large-v1",
+      "classification": "mlx_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 4876936,
+        "likes": 814,
+        "pipeline_tag": "feature-extraction",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": true,
+        "reasons": [
+          "mlx-community/mxbai-embed-large-v1 exists"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "mlx",
+        "python"
+      ],
+      "family": "MixedBread",
+      "dimension": 1024,
+      "size_category": "base",
+      "estimated_size_mb": 670,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "bge-small-en-v1.5-mlx",
+      "repo_id": "mlx-community/bge-small-en-v1.5-4bit",
+      "classification": "mlx_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 191,
+        "likes": 1,
+        "pipeline_tag": "feature-extraction",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": true,
+        "reasons": [
+          "candidate is already mlx-community"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "mlx",
+        "python"
+      ],
+      "family": "BGE",
+      "dimension": 384,
+      "size_category": "small",
+      "estimated_size_mb": 130,
+      "license": "mit",
+      "languages": [
+        "en"
+      ]
+    },
+    {
+      "name": "all-MiniLM-L6-v2-mlx",
+      "repo_id": "mlx-community/all-MiniLM-L6-v2-4bit",
+      "classification": "mlx_only",
+      "hf_available": true,
+      "hf_info": {
+        "downloads": 969,
+        "likes": 6,
+        "pipeline_tag": "sentence-similarity",
+        "library_name": "sentence-transformers",
+        "gated": false
+      },
+      "coreml": {
+        "supported": false,
+        "reasons": [
+          "marked not coreml_convertible in fixture"
+        ]
+      },
+      "mlx": {
+        "supported": true,
+        "reasons": [
+          "candidate is already mlx-community"
+        ]
+      },
+      "python": {
+        "supported": true,
+        "reasons": []
+      },
+      "runtimes": [
+        "mlx",
+        "python"
+      ],
+      "family": "MiniLM",
+      "dimension": 384,
+      "size_category": "small",
+      "estimated_size_mb": 91,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ]
+    }
+  ]
+}

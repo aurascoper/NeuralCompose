@@ -1,0 +1,188 @@
+{
+  "candidates": [
+    {
+      "cold_load_time": 2.641042947769165,
+      "decoder_loop_rate": 0.0,
+      "first_token_latency_mean": 0.024434601819073712,
+      "first_token_latency_median": 0.023378968238830566,
+      "first_token_latency_std": 0.003068344323284504,
+      "generate_time_ci_hi": 1.5434991439183554,
+      "generate_time_ci_lo": 0.7783973416796437,
+      "generate_time_mean": 1.148481218903153,
+      "generate_time_median": 0.9130220413208008,
+      "generate_time_std": 1.02656875088333,
+      "meaning_cosine_ci_hi": 0.7944480408999053,
+      "meaning_cosine_ci_lo": 0.6895451019433413,
+      "meaning_cosine_mean": 0.7436335411938754,
+      "meaning_cosine_median": 0.7819966077804565,
+      "meaning_cosine_n": 22,
+      "meaning_cosine_std": 0.12925430838396135,
+      "model_identifier": "Qwen2.5-0.5B-Instruct-4bit",
+      "n_prompts": 27,
+      "name": "qwen-0.5b",
+      "peak_rss_mb": 708.421875,
+      "per_category": {
+        "capitalization": {
+          "generate_time_mean": 2.3573073148727417,
+          "meaning_cosine_mean": 0.7798836827278137,
+          "n": 3,
+          "tokens_per_second_mean": 41.029797739112944,
+          "word_count_ratio_mean": 7.466666666666666
+        },
+        "command-reformulation": {
+          "generate_time_mean": 0.22112923860549927,
+          "meaning_cosine_mean": 0.7926414012908936,
+          "n": 4,
+          "tokens_per_second_mean": 37.95559215309891,
+          "word_count_ratio_mean": 0.5711538461538461
+        },
+        "concise-rewrite": {
+          "generate_time_mean": 0.8761244714260101,
+          "meaning_cosine_mean": 0.7501320391893387,
+          "n": 4,
+          "tokens_per_second_mean": 40.63513641887161,
+          "word_count_ratio_mean": 1.748611111111111
+        },
+        "filler-removal": {
+          "generate_time_mean": 1.7490257322788239,
+          "meaning_cosine_mean": 0.5559104233980179,
+          "n": 4,
+          "tokens_per_second_mean": 41.45113169045723,
+          "word_count_ratio_mean": 4.857051282051282
+        },
+        "instruction-following": {
+          "generate_time_mean": 0.45121657848358154,
+          "meaning_cosine_mean": null,
+          "n": 5,
+          "tokens_per_second_mean": 44.33875102034419,
+          "word_count_ratio_mean": 2.4536134453781515
+        },
+        "punctuation-restoration": {
+          "generate_time_mean": 2.2836515307426453,
+          "meaning_cosine_mean": 0.7736863195896149,
+          "n": 4,
+          "tokens_per_second_mean": 41.56551203166675,
+          "word_count_ratio_mean": 6.136217948717948
+        },
+        "technical-term-preservation": {
+          "generate_time_mean": 0.3870880603790283,
+          "meaning_cosine_mean": 0.8436020414034525,
+          "n": 3,
+          "tokens_per_second_mean": 37.85294317341564,
+          "word_count_ratio_mean": 0.5407608695652174
+        }
+      },
+      "prompt_echo_rate": 0.0,
+      "status": "evaluated",
+      "stop_eos_rate": 0.0,
+      "stop_maxTokens_rate": 0.0,
+      "tokens_per_second_ci_hi": 41.876805862541744,
+      "tokens_per_second_ci_lo": 39.925383517383864,
+      "tokens_per_second_mean": 40.91746174132166,
+      "tokens_per_second_median": 41.526040690144654,
+      "tokens_per_second_std": 2.6734668384921774,
+      "warm_load_time": 2.507431983947754,
+      "word_count_ratio_mean": 3.3163883921378954,
+      "word_count_ratio_median": 1.8888888888888888,
+      "word_count_ratio_std": 3.22864195749113,
+      "words_per_second_mean": 0.0,
+      "words_per_second_median": 0.0
+    },
+    {
+      "cold_load_time": 11.769589066505432,
+      "decoder_loop_rate": 0.0,
+      "first_token_latency_mean": 0.1553174478036386,
+      "first_token_latency_median": 0.14164197444915771,
+      "first_token_latency_std": 0.025992717223764197,
+      "generate_time_ci_hi": 14.483188534003716,
+      "generate_time_ci_lo": 10.863160667485662,
+      "generate_time_mean": 12.766463579954925,
+      "generate_time_median": 15.289501070976257,
+      "generate_time_std": 4.936365104965192,
+      "meaning_cosine_ci_hi": 0.8041999027132988,
+      "meaning_cosine_ci_lo": 0.7367721930146217,
+      "meaning_cosine_mean": 0.7713391238992865,
+      "meaning_cosine_median": 0.7882160544395447,
+      "meaning_cosine_n": 22,
+      "meaning_cosine_std": 0.0830947127744205,
+      "model_identifier": "gemma-3n-E2B-it-lm-4bit",
+      "n_prompts": 27,
+      "name": "gemma-3n-e2b",
+      "peak_rss_mb": 858.359375,
+      "per_category": {
+        "capitalization": {
+          "generate_time_mean": 16.46590030193329,
+          "meaning_cosine_mean": 0.7963651220003763,
+          "n": 3,
+          "tokens_per_second_mean": 7.165835227443491,
+          "word_count_ratio_mean": 7.833333333333333
+        },
+        "command-reformulation": {
+          "generate_time_mean": 11.412861973047256,
+          "meaning_cosine_mean": 0.8060189485549927,
+          "n": 4,
+          "tokens_per_second_mean": 7.074803148559296,
+          "word_count_ratio_mean": 4.773076923076923
+        },
+        "concise-rewrite": {
+          "generate_time_mean": 16.53532177209854,
+          "meaning_cosine_mean": 0.7386403679847717,
+          "n": 4,
+          "tokens_per_second_mean": 7.092217125327043,
+          "word_count_ratio_mean": 4.648611111111111
+        },
+        "filler-removal": {
+          "generate_time_mean": 14.722891479730606,
+          "meaning_cosine_mean": 0.6527700126171112,
+          "n": 4,
+          "tokens_per_second_mean": 7.359491790554895,
+          "word_count_ratio_mean": 5.723076923076923
+        },
+        "instruction-following": {
+          "generate_time_mean": 7.316025567054749,
+          "meaning_cosine_mean": null,
+          "n": 5,
+          "tokens_per_second_mean": 7.372765087808129,
+          "word_count_ratio_mean": 2.8248459383753497
+        },
+        "punctuation-restoration": {
+          "generate_time_mean": 11.069485753774643,
+          "meaning_cosine_mean": 0.7923631221055984,
+          "n": 4,
+          "tokens_per_second_mean": 7.246207667891284,
+          "word_count_ratio_mean": 4.208333333333334
+        },
+        "technical-term-preservation": {
+          "generate_time_mean": 14.584814667701721,
+          "meaning_cosine_mean": 0.8737318515777588,
+          "n": 3,
+          "tokens_per_second_mean": 6.918362977573253,
+          "word_count_ratio_mean": 3.2699275362318843
+        }
+      },
+      "prompt_echo_rate": 0.0,
+      "status": "evaluated",
+      "stop_eos_rate": 0.0,
+      "stop_maxTokens_rate": 0.0,
+      "tokens_per_second_ci_hi": 7.3117344276976395,
+      "tokens_per_second_ci_lo": 7.071458406462427,
+      "tokens_per_second_mean": 7.1928629253118865,
+      "tokens_per_second_median": 7.153574737658912,
+      "tokens_per_second_std": 0.3207678275526223,
+      "warm_load_time": 11.962244033813477,
+      "word_count_ratio_mean": 4.6239409430728,
+      "word_count_ratio_median": 4.6923076923076925,
+      "word_count_ratio_std": 2.203555230542892,
+      "words_per_second_mean": 0.0,
+      "words_per_second_median": 0.0
+    }
+  ],
+  "generated_at": "2026-07-14T12:12:09.738151+00:00",
+  "provenance": {
+    "candidates_fixture_version": 1,
+    "device": "Apple M4",
+    "git_commit": "377d6738af33a9fa34ab28e6edddd3d0561ee45c",
+    "macos_version": "26.5.2",
+    "prompts_fixture_version": 1
+  }
+}

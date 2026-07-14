@@ -1,0 +1,205 @@
+candidate,prompt_id,category,first_token_latency,generate_time,tokens_per_second,words_per_second,word_count_ratio,stop_reason,decoder_loop_period,decoder_loop_repeat_count,prompt_echo_detected,meaning_preservation_cosine,prompt_text,generated_text,meaning_preserved,grammar,no_hallucination,no_added_commentary,conciseness,instruction_followed
+"gemma-3n-e4b","instr-say-yes","instruction-following","0.11167407035827637","1.5384849309921265","9.74985175209153","6.49990116806102","2.5","eos","0","1","false","","Say the word yes","Yes! 😊 
+
+Is there anything I can help you with?",,,,,,
+"gemma-3n-e4b","instr-avoid-very","instruction-following","0.12182700634002686","4.205671072006226","9.03541892587261","6.419902921014749","1.8","eos","0","1","false","","I will not use the word 'very' again in this or any future sentences transcribed","Understood! I will do my best to assist you while avoiding the word ""very"" in our communication. Please proceed with your request. I'm ready to help! 😊",,,,,,
+"gemma-3n-e4b","instr-rewrite-formal","instruction-following","0.11214900016784668","13.204375982284546","9.087896327777717","5.982865082453663","7.9","maxTokens","0","1","false","","Rewrite this more formally: ""Hey can you send that over.""","Here are a few options for rewriting ""Hey can you send that over,"" ranging in formality:
+
+* **Option 1 (Slightly more formal):** ""Could you please send that to me?""
+* **Option 2 (More formal, common in professional settings):** ""Please send that at your convenience.""
+* **Option 3 (Formal, but still polite):** ""Would you be able to send that over?""
+* **Option 4 (Direct but polite):** ""Please send that.""
+
+
+
+The best option depends on your relationship with the person you'",,,,,,
+"gemma-3n-e4b","instr-rewrite-clearer","instruction-following","0.12443792819976807","13.69301700592041","8.7635909564792","6.207543594172766","5.0","maxTokens","0","1","false","","Rewrite this sentence in a clearer way:
+
+The test passed even though several setup steps failed initially.","Here are a few options to rewrite the sentence, making it clearer, depending on the nuance you want to emphasize:
+
+* **Option 1 (Most straightforward):** The test passed, despite some initial setup steps failing.
+* **Option 2 (Emphasizes the successful outcome):** Although some setup steps initially failed, the test ultimately passed.
+* **Option 3 (More detail if needed):** The test was successful even though there were problems with the initial setup.
+* **Option 4 (If you want to be more formal):** The test completed successfully,",,,,,,
+"gemma-3n-e4b","instr-sequence-letters","instruction-following","0.11750292778015137","0.22444403171539307","8.910907475303715","4.455453737651857","0.14285714285714285","eos","0","1","false","","Continue the sequence:
+A
+B
+C
+D","E",,,,,,
+"gemma-3n-e4b","filler-second-option","filler-removal","0.1204230785369873","11.217782020568848","8.557841454217515","6.150948545218839","5.3076923076923075","eos","0","1","false","0.6933543682098389","Um, so, I think we should, like, probably go with the second option.","Okay! So you're leaning towards the second option. That's good to know. 
+
+Is there anything I can do to help you think through that further? For example, would it be helpful to:
+
+* **Review the pros and cons of both options?**
+* **Explore potential risks associated with option two?**
+* **Consider what factors are most important for making this decision?**
+
+Just let me know how I can assist! 😊",,,,,,
+"gemma-3n-e4b","filler-try-tomorrow","filler-removal","0.13516604900360107","8.33340299129486","8.51992878229544","6.479945834421883","3.6","eos","0","1","false","0.6800682544708252","You know, uh, I was kind of thinking maybe we could, um, try again tomorrow.","Okay! I understand you're suggesting we revisit something tomorrow. 
+
+Is there anything specific I can do to help prepare for that? Just let me know what we're talking about and how I can be ready to try again. 😊 
+
+I want to make sure I'm helpful! Let me know what you have in mind.",,,,,,
+"gemma-3n-e4b","filler-need-more-time","filler-removal","0.13772892951965332","13.4427410364151","8.182854947664358","5.579219282498426","5.0","eos","0","1","false","0.6608249545097351","So basically what I'm trying to say is, like, we need more time, you know?","Okay, I understand! You're saying that the situation requires a longer timeframe. 
+
+To help me be more helpful, could you tell me *what* specifically needs more time? Knowing the context will allow me to offer relevant suggestions or help you articulate your need for a longer timeframe more effectively. 😊 
+
+For example, are we talking about:
+
+* **A project?**
+* **A decision?**
+* **A task?** 
+
+Let me know, and I'll do my best to assist!",,,,,,
+"gemma-3n-e4b","filler-its-fine","filler-removal","0.12545204162597656","9.71778392791748","8.23232957157795","6.071343059038738","5.9","eos","0","1","false","0.6127489805221558","Uh, well, I guess, I mean, it's fine I suppose.","It sounds like you might be feeling a little uncertain or hesitant! It's okay to not be completely sure. 
+
+Is there something you're trying to express or ask about? I'm here to listen and try my best to help. 😊 
+
+Just let me know if you want to elaborate on what ""it's fine"" refers to. No pressure at all!",,,,,,
+"gemma-3n-e4b","punct-milk-eggs-bread","punctuation-restoration","0.12631404399871826","6.238782048225403","8.174672493088094","4.167480094515499","2.0","eos","0","1","false","0.8284775614738464","we need three things milk eggs and bread also dont forget the coffee","Okay, got it! Here's a reminder of our shopping list:
+
+*   **Milk**
+*   **Eggs**
+*   **Bread** 
+*   **Coffee**
+
+Anything else I can help you with? 😊",,,,,,
+"gemma-3n-e4b","punct-she-said-yes","punctuation-restoration","0.1279979944229126","7.933384895324707","8.193224059796433","5.798281642317476","3.5384615384615383","eos","0","1","false","0.7079513072967529","can you believe it she said yes right there in front of everyone","Oh my gosh, I can't believe it either! That's amazing news! It sounds like a really special moment. 🎉 What a wonderful surprise! 😊 
+
+Tell me everything! How did she say yes? Where were you? I'm so happy for you (or whoever this is for!). ✨",,,,,,
+"gemma-3n-e4b","punct-meeting-nine","punctuation-restoration","0.13499999046325684","7.192607998847961","8.063834426857387","5.283201865872081","3.1666666666666665","eos","0","1","false","0.7742763161659241","the meeting starts at nine but bring your laptop and the report","Okay, got it! 
+
+Just to confirm: The meeting is at **9:00 AM**, and I need to bring both my **laptop** AND the **report**. 
+
+Thanks for the reminder! 👍
+
+
+
+Is there anything else I can help you with? 😊",,,,,,
+"gemma-3n-e4b","punct-go-now-or-wait","punctuation-restoration","0.12397003173828125","14.858271956443787","8.076309301093254","5.586113933256167","6.384615384615385","maxTokens","0","1","false","0.7928137183189392","im not sure if we should go now or wait until tomorrow morning","Okay, I understand you're trying to decide whether to go now or wait until tomorrow morning. To help me give you the *best* advice, could you tell me a little more about **what ""go"" refers to?** 
+
+Knowing what you're planning to do will help me give more specific suggestions.  For example:
+
+* **Are you talking about going on a trip?**
+* **Are you referring to starting a project?**
+* **Is it about attending an event?** 
+* **Something else entirely?**
+
+Once I know what",,,,,,
+"gemma-3n-e4b","cap-dr-smith","capitalization","0.16194796562194824","12.008448004722595","7.411449003651323","5.0797571822778735","6.1","eos","0","1","false","0.725722074508667","i met dr smith on jan 5 in st louis","Okay, noted! I understand you met Dr. Smith on January 5th in St. Louis. 
+
+Is there anything else I can help you with regarding this information? For example, would you like me to:
+
+* **Add it to a list or calendar?**
+* **Help you remember details about the meeting?** 
+* **Store this information for future reference?**
+
+Just let me know! 😊",,,,,,
+"gemma-3n-e4b","cap-london-paris","capitalization","0.2185230255126953","15.798097014427185","7.595851569363908","5.443693624710801","8.6","maxTokens","0","1","false","0.7658848166465759","were flying to london on friday then paris on monday","Okay, great! You're planning a trip to London and Paris. That sounds wonderful! 
+
+Just to make sure I can help you best, is there anything specific you'd like me to do with this information? For example:
+
+*   **Do you want help brainstorming things to do in London and Paris?**
+*   **Are you looking for information about flights or accommodation?** 
+*   **Do you need help planning an itinerary?**
+*  **Just letting me know so I can remember this for future conversations.**
+
+
+
+Let me know how I can",,,,,,
+"gemma-3n-e4b","cap-email-sarah-david","capitalization","0.12765204906463623","15.025430917739868","7.986459799853145","5.590521859897201","8.4","maxTokens","0","1","false","0.7905214428901672","please email sarah and david before the meeting on tuesday","Okay, I can help with that! To make sure the emails are effective, could you please provide a little more context? Specifically:
+
+* **What is the meeting about?** (Knowing the topic helps me tailor the email.)
+* **What information do you want to include in the emails?** (e.g., agenda, documents needed, reminders)
+* **What is your relationship to Sarah and David?** (e.g., are you organizing the meeting, a colleague coordinating with them?)
+
+In the meantime, here's a template you can adapt and I can",,,,,,
+"gemma-3n-e4b","concise-wondering-help","concise-rewrite","0.13526701927185059","8.50640094280243","7.758863054279726","5.99548508739797","2.8333333333333335","eos","0","1","false","0.7787607908248901","I was wondering if maybe you might possibly have some time available to help me with this task.","Yes, I absolutely do! I'm ready to help in any way I can. Please tell me about the task you need assistance with. The more information you give me, the better I can assist you! 😊 
+
+Just let me know what's on your mind. I look forward to hearing about it!",,,,,,
+"gemma-3n-e4b","concise-most-people-agree","concise-rewrite","0.13433492183685303","15.644663095474243","7.670347342584458","5.688840945750139","4.45","maxTokens","0","1","false","0.6982869505882263","It is my belief that, in general, most people would probably agree that this is likely the better option overall.","Okay, I understand your statement! You're expressing a belief that something is generally considered the preferred choice by most people. 
+
+Is there anything specific you'd like to discuss about this statement? For example:
+
+* **What ""this"" refers to:** What is the option you're talking about?
+* **Why you believe that:** What are the reasons behind your belief that most people would agree?
+* **Context:** Is this in response to a previous conversation or question?
+
+I'm ready to help you explore your thought further! Just let me know what you",,,,,,
+"gemma-3n-e4b","concise-still-waiting","concise-rewrite","0.13881099224090576","13.760134100914001","7.6307395865441086","5.159833434710778","3.9444444444444446","eos","0","1","false","0.6896986961364746","At this point in time, we are currently still waiting for a response regarding the matter in question.","Okay, I understand. That's a clear and professional way to state the situation. 
+
+Is there anything I can do to help while we're waiting? For example, could I:
+
+* **Help draft a follow-up email?**
+* **Research potential next steps we could take in the meantime?** (Depending on what ""the matter"" is, of course!)
+* **Help organize information related to the situation?**
+
+Just let me know how I can be of assistance.",,,,,,
+"gemma-3n-e4b","concise-consider-looking","concise-rewrite","0.1331019401550293","11.106855988502502","7.652930774288381","5.942275660035684","3.6666666666666665","eos","0","1","false","0.7390328645706177","There is a possibility that we could perhaps consider looking into this a bit further if that's alright.","That sounds good! I understand you're exploring the possibility of further investigation. I'm here to help in any way I can, so please let me know what you have in mind. 😊 
+
+Just to confirm, is there anything specific I can do to assist with that further consideration? Perhaps you have questions or need information on a particular aspect? 
+
+I'm ready to help move things forward.",,,,,,
+"gemma-3n-e4b","command-close-windows","command-reformulation","0.1379009485244751","4.325590014457703","7.397834721516442","5.317193706089943","2.3","eos","0","1","false","0.8369967341423035","Rewrite this as a clear, complete command: ""close your windows""","Please close all of the windows. 
+
+(This is a slightly more polite and complete phrasing, though ""close your windows"" is perfectly acceptable too!)",,,,,,
+"gemma-3n-e4b","command-open-emails","command-reformulation","0.1370830535888672","9.131194949150085","6.023308045254176","3.7234995188843993","2.6153846153846154","eos","0","1","false","0.7841402292251587","Rewrite this as a clear, complete command: ""open the thing with the emails""","**Open the email application.** 
+
+(This is clearer because ""the thing"" is ambiguous. Specifying ""email application"" removes the ambiguity.)
+
+
+
+Alternatively, depending on context:
+
+**Open the email program.** (If you are referring to a specific application)",,,,,,
+"gemma-3n-e4b","command-music-down","command-reformulation","0.19327199459075928","7.1512229442596436","5.873121328669218","4.4747591075575","2.4615384615384617","eos","0","1","false","0.8192166090011597","Rewrite this as a clear, complete command: ""turn that music down a bit""","Please **reduce the volume of the music slightly.** 
+
+(This is a more formal and complete way to phrase it, but you could also say something like: ""Lower the music volume a little."")",,,,,,
+"gemma-3n-e4b","command-get-doc","command-reformulation","0.16522502899169922","17.51691997051239","6.850519395076614","4.79536357655363","6.461538461538462","maxTokens","0","1","false","0.8338925838470459","Rewrite this as a clear, complete command: ""get me the doc from yesterday""","Please retrieve the document from yesterday. 
+
+(This is a slightly more formal and complete way to phrase it, ensuring clarity.)
+
+
+
+Alternatively, depending on the context, here are a few other options that might be suitable:
+
+* **Find the document created yesterday.** (If emphasizing creation date)
+* **Show me the document from yesterday's date.** (If needing to clarify ""yesterday"")
+* **Access the document dated yesterday.**  (More formal)
+
+
+
+The best option depends on who/what is receiving the command. But all are clearer than just ""get me...""",,,,,,
+"gemma-3n-e4b","tech-brainflow-reconnect","technical-term-preservation","0.14917993545532227","21.890289068222046","5.481882839738422","3.6545885598256147","3.4782608695652173","maxTokens","0","1","false","0.8905965089797974","Rewrite this sentence in a clearer way, but keep the technical term ""BrainFlow"" unchanged: The BrainFlow stream needs to reconnect if it drops.","Here are a few options for rewriting the sentence, keeping ""BrainFlow"" and aiming for clarity:
+
+**Option 1 (Most Direct):**
+
+> If the BrainFlow connection is lost, it must automatically reconnect.
+
+**Option 2 (Slightly more detail):**
+
+> The BrainFlow data stream requires automatic reconnection if the connection is interrupted.
+
+**Option 3 (Emphasizing reliability):**
+
+> To ensure reliable operation, the BrainFlow stream will automatically attempt to reconnect if it becomes disconnected.
+
+
+
+I think Option 1 is the clearest and most concise while",,,,,,
+"gemma-3n-e4b","tech-ane-classifier","technical-term-preservation","0.13903093338012695","1.9912630319595337","7.532907385539626","5.524132082729059","0.4583333333333333","eos","0","1","false","0.8701051473617554","Rewrite this more concisely, but keep the term ""ANE"" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible.","Whenever possible, the classifier runs on ANE instead of the GPU.",,,,,,
+"gemma-3n-e4b","tech-eeg-stream","technical-term-preservation","0.15110993385314941","16.07175302505493","7.466515930958306","5.164340185579495","5.1875","maxTokens","0","1","false","0.8699911236763","Rewrite this more politely, but keep the term ""EEG"" unchanged: Turn on the EEG stream now.","Here are a few options for rewriting ""Turn on the EEG stream now"" more politely, while keeping ""EEG"" unchanged:
+
+**Option 1 (Slightly more formal):**
+
+> Please activate the EEG stream.
+
+**Option 2 (A bit softer, good for a colleague):**
+
+> Could you please turn on the EEG stream?
+
+**Option 3 (If there's a sense of urgency but still polite):**
+
+> Please initiate the EEG stream at your earliest convenience.
+
+The best option depends on the context and your relationship with the person you'",,,,,,

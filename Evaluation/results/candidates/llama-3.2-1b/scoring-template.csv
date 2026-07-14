@@ -1,0 +1,149 @@
+candidate,prompt_id,category,first_token_latency,generate_time,tokens_per_second,words_per_second,word_count_ratio,stop_reason,decoder_loop_period,decoder_loop_repeat_count,prompt_echo_detected,meaning_preservation_cosine,prompt_text,generated_text,meaning_preserved,grammar,no_hallucination,no_added_commentary,conciseness,instruction_followed
+"llama-3.2-1b","instr-say-yes","instruction-following","0.014845013618469238","0.22361505031585693","76.02350546614572","58.13562182705261","3.25","eos","0","1","false","","Say the word yes","I'll give you a nice ""yes"". What else would I do for you?",,,,,,
+"llama-3.2-1b","instr-avoid-very","instruction-following","0.013633966445922852","1.6712520122528076","38.294643495285634","32.90945925376109","3.6666666666666665","eos","0","1","false","","I will not use the word 'very' again in this or any future sentences transcribed","I'll make sure to avoid the word ""very"" in our conversation from now on. I want to assure you that we can have a respectful and effective discussion without resorting to repetitive or loaded language. Let's focus on creating a clear and concise dialogue that meets your needs. What would you like to talk about?",,,,,,
+"llama-3.2-1b","instr-rewrite-formal","instruction-following","0.02522099018096924","0.7831380367279053","35.75359475194073","33.199766555373536","2.6","eos","0","1","false","","Rewrite this more formally: ""Hey can you send that over.""","""I would appreciate it if we could confirm the details via email or message. Is there a specific step I can take to facilitate this process?""",,,,,,
+"llama-3.2-1b","instr-rewrite-clearer","instruction-following","0.03576099872589111","1.0950419902801514","40.18110756533017","33.78865863448219","2.176470588235294","eos","0","1","false","","Rewrite this sentence in a clearer way:
+
+The test passed even though several setup steps failed initially.","Here's a rewritten version of the sentence:
+
+The test was successful, despite some technical setup issues that arose at first.
+
+This version makes it clear what ""passed"" means and how the technical setup issues affected the test.",,,,,,
+"llama-3.2-1b","instr-sequence-letters","instruction-following","0.02788090705871582","0.897596001625061","42.33530444788362","31.1944348563353","4.0","eos","0","1","false","","Continue the sequence:
+A
+B
+C
+D","The pattern appears to be alternating between two letters. If that's correct:
+
+A
+B
+C
+D
+
+The next letter would be E.
+
+So, the continued sequence is:
+E",,,,,,
+"llama-3.2-1b","filler-second-option","filler-removal","0.02446901798248291","1.8205139636993408","43.94363437753453","37.35208922090435","5.230769230769231","eos","0","1","false","0.6828919649124146","Um, so, I think we should, like, probably go with the second option.","It seems you're considering a different direction for our conversation than I initially had in mind. You want to explore the second option, but it seems we're not quite there yet.
+
+To clarify, what exactly do you think the second option is? Is it a new idea or direction we could take, like learning more about [topic]? I'm here to listen and help in any way I can!",,,,,,
+"llama-3.2-1b","filler-try-tomorrow","filler-removal","0.017691969871520996","2.905456066131592","39.92488523650118","33.3854643787984","6.466666666666667","eos","0","1","false","0.5598002076148987","You know, uh, I was kind of thinking maybe we could, um, try again tomorrow.","It seems like you're looking for a chance to continue the conversation or try again another day. That's completely okay! I'm here to listen and help in any way I can.
+
+If you'd like, we could start fresh with a new topic or continue where we left off. Just let me know what's on your mind, and I'll do my best to assist you.
+
+Also, please keep in mind that our conversation has been going well so far. I'm happy to chat with you, and we can explore all sorts of topics together! What do you say?",,,,,,
+"llama-3.2-1b","filler-need-more-time","filler-removal","0.023598074913024902","2.5817359685897827","39.508300322327415","32.92358360193951","5.666666666666667","eos","0","1","false","0.772473156452179","So basically what I'm trying to say is, like, we need more time, you know?","I think I do. You're suggesting that we need a bit more time to figure things out or make decisions, huh? That's absolutely reasonable. We all get caught up in the moment and before we know it, time slips away.
+
+It's like when you're trying to plan a project and things just keep falling into place. You might need an extra day or two, right?
+
+What's on your mind? Is there something specific that you're trying to accomplish or timeline you need more time for?",,,,,,
+"llama-3.2-1b","filler-its-fine","filler-removal","0.015596985816955566","2.2253650426864624","44.93644776556745","35.94915821245396","8.0","eos","0","1","false","0.7082614898681641","Uh, well, I guess, I mean, it's fine I suppose.","It seems like you're trying to make a non-committal statement, but it's not coming out as well as we'd like. Let me try to help clarify things for you.
+
+To start, ""it's fine I suppose"" is a bit of an ambiguous phrase. Are you saying that it's okay because something was said, or is there a different meaning to the sentence?
+
+If you could provide more context or clarify what's going on, I'd be happy to try and help further.",,,,,,
+"llama-3.2-1b","punct-milk-eggs-bread","punctuation-restoration","0.01494598388671875","2.8442360162734985","42.19059153790736","28.127061025271573","6.153846153846154","maxTokens","0","1","false","0.7723084092140198","we need three things milk eggs and bread also dont forget the coffee","It seems like you're planning a delicious breakfast or brunch! Here's what I've got for you:
+
+1. **Eggs**: Scrambled, fried, or poached - eggs are a great addition to any meal.
+2. **Milk**: Fresh from the fridge, milk can be used in cereal, smoothies, or baking.
+3. **Bread**: Freshly baked loaf with your choice of spreads (e.g., jam, butter) - perfect for toast or sandwiches.
+4. **Coffee**: Strong and rich coffee to start your day off right! There are many",,,,,,
+"llama-3.2-1b","punct-she-said-yes","punctuation-restoration","0.014696002006530762","2.672787070274353","44.89695469369447","40.781400513439145","8.384615384615385","maxTokens","0","1","false","0.7227140665054321","can you believe it she said yes right there in front of everyone","It seems like the scene you're describing is from a romantic movie. The phrase ""right there in front of everyone"" suggests that the moment was public and might have been caught on camera or video by many people in attendance.
+
+It's likely that the character is getting married, and she says yes to her partner right there in front of their friends and family. The emotion on the faces of everyone present is probably priceless, making this a memorable moment for them.
+
+The whole scene might be quite emotional and sentimental - maybe the two people getting married share a tear of joy, or their loved ones are all",,,,,,
+"llama-3.2-1b","punct-meeting-nine","punctuation-restoration","0.01580202579498291","2.779000997543335","43.18098485969642","36.70383713074196","8.5","maxTokens","0","1","false","0.7848552465438843","the meeting starts at nine but bring your laptop and the report","I'll make sure to be on time for our meeting. I've packed my laptop and all the necessary reports with me.
+
+As we arrive at the conference room, I take a deep breath and introduce myself. ""Good morning everyone, my name is Emily, and this is my laptop with the latest report on our current project. I've prepared a comprehensive document that outlines all key points, recommendations, and timelines for our discussion today.""
+
+I take my seat at the table with all team members present. I'm excited to dive into our discussion and work together as a cohesive unit.
+
+Here's the laptop",,,,,,
+"llama-3.2-1b","punct-go-now-or-wait","punctuation-restoration","0.0335160493850708","3.6180659532546997","33.16689124808566","28.468248321273524","7.923076923076923","maxTokens","0","1","false","0.786026120185852","im not sure if we should go now or wait until tomorrow morning","It's hard to say for sure without knowing more about your plans and the weather forecast. Here are a few things you might want to consider:
+
+* If it's raining or there will be heavy rain in the next few hours, you might want to wait until tomorrow morning before setting out.
+* If there's a strong headwind or gusty winds, it might be better to wait until tomorrow morning before venturing out.
+* On the other hand, if it's a beautiful day with plenty of sunshine and not too windy, you might want to head out now.
+
+You know your location best.",,,,,,
+"llama-3.2-1b","cap-dr-smith","capitalization","0.0343860387802124","3.725929021835327","32.2067326824412","26.57055446301399","9.9","maxTokens","0","1","false","0.7326958179473877","i met dr smith on jan 5 in st louis","That's quite a specific and interesting piece of information. Dr. Smith is likely short for Donald J. Smith, an American physicist who has made notable contributions to the field of condensed matter physics.
+
+Given that you met him on January 5th in St. Louis, I'm going to take a guess that you might be referring to some sort of conference or event related to physics. 
+
+However, without more context (like what specific meeting you attended), it's difficult for me to pinpoint the exact Dr. Smith or event that might have been relevant.
+
+If you're willing, could I ask a",,,,,,
+"llama-3.2-1b","cap-london-paris","capitalization","0.03570294380187988","3.195531964302063","37.55243300350126","28.164324752625944","9.0","maxTokens","0","1","false","0.8475229740142822","were flying to london on friday then paris on monday","Let's break down the flights:
+
+* Flying to London (UK) on Friday:
+You can fly from [City] or other major airports in the US, Canada, Europe to London Heathrow (LHR) on Friday.
+* Paris is not typically a common UK airport for flights to the US. Typically you would have flown from one of Europe's major airports like Paris Charles de Gaulle (CDG), Amsterdam Schiphol or Brussels Airport.
+
+However, if we assume a more common scenario:
+
+* Flying to London (UK) on Friday:
+You can fly from [City] or other",,,,,,
+"llama-3.2-1b","cap-email-sarah-david","capitalization","0.02987992763519287","2.206802010536194","40.78299710182537","31.72010885697529","7.0","eos","0","1","false","0.8465032577514648","please email sarah and david before the meeting on tuesday","I can help you draft an email to Sarah and David. Here's a sample:
+
+Subject: Meeting Invitation - Tuesday
+
+Dear Sarah, 
+
+Please find below the details of our meeting on Tuesday. I would be happy to discuss this with you upon your return.
+
+Date: [Insert Date]
+Time: [Insert Time or proposed time for the meeting]
+
+If you have any questions beforehand, feel free to reach out.
+
+Best regards,
+[Your Name]",,,,,,
+"llama-3.2-1b","concise-wondering-help","concise-rewrite","0.015305042266845703","1.626979947090149","43.02450077838691","36.878143524331634","3.3333333333333335","eos","0","1","false","0.8333305716514587","I was wondering if maybe you might possibly have some time available to help me with this task.","I'm happy to try and assist you, but I want to clarify that this will be a gentle nudge rather than an official meeting. We can definitely chat and help each other out with the task you have in mind.
+
+What specific area are you trying to tackle? Is there a particular project, problem, or question that's got your attention?",,,,,,
+"llama-3.2-1b","concise-most-people-agree","concise-rewrite","0.017352938652038574","3.114305019378662","38.53187123717937","33.07318947857895","5.15","maxTokens","0","1","false","0.6225258111953735","It is my belief that, in general, most people would probably agree that this is likely the better option overall.","I think there may be some controversy surrounding your statement.
+
+It's possible that you're referring to a specific situation or topic, but without more context, it's difficult for me to say whether you're correct.
+
+For example, some people might argue that limiting individual freedom in the name of public safety or national security is often a better option than prioritizing personal freedoms. However, other people might counter that such restrictions can be overly broad and infringe on civil liberties.
+
+Or perhaps you're thinking of a specific scenario where one option seems more beneficial or effective than the other? I'd love to hear more",,,,,,
+"llama-3.2-1b","concise-still-waiting","concise-rewrite","0.035076022148132324","4.808382034301758","21.836867214575935","18.50934459140246","4.944444444444445","eos","0","1","false","0.679796040058136","At this point in time, we are currently still waiting for a response regarding the matter in question.","I can provide you with general information and guidance on a wide range of topics. However, please note that I may not have the most up-to-date or detailed information on very recent developments.
+
+If you could provide more context about what's currently being discussed, I'd be happy to try and assist further.
+
+Additionally, if you're willing to share what's on your mind regarding the matter in question that we've been waiting for a response about, I'll do my best to help and keep you updated on any new developments.",,,,,,
+"llama-3.2-1b","concise-consider-looking","concise-rewrite","0.0279160737991333","2.866863965988159","21.277605328920565","17.789473307786047","2.8333333333333335","eos","0","1","false","0.6456820368766785","There is a possibility that we could perhaps consider looking into this a bit further if that's alright.","Not at all! I'd be happy to help you explore this idea further. Go ahead and share more about what's on your mind, whether it's a topic you're interested in learning more about or just want to bounce ideas off me. I'm here to listen and help whenever you need it!",,,,,,
+"llama-3.2-1b","command-close-windows","command-reformulation","0.026653051376342773","5.657262921333313","21.211671026899737","16.96933682151979","9.6","maxTokens","0","1","false","0.7491748929023743","Rewrite this as a clear, complete command: ""close your windows""","To close the window(s) on a computer or device. If you are asking about closing windows from another person, I can provide that as well.
+
+To close the window(s) on a computer:
+
+1. Log in to your device.
+2. Click or tap the ""Windows"" icon (this may vary depending on what operating system you are using).
+3. Locate the closed window(s) and click or tap to open them.
+
+To close windows from another person:
+
+1. Ask the other party if they want you to open their window.
+2. If agreed, click or tap your device and",,,,,,
+"llama-3.2-1b","command-open-emails","command-reformulation","0.0291290283203125","4.387146949768066","21.426225534790774","16.86745414440976","5.6923076923076925","eos","0","1","false","0.7491228580474854","Rewrite this as a clear, complete command: ""open the thing with the emails""","Here is a rewritten version of your command as an all-encompassing instruction:
+
+""Open the email client and navigate to the inbox section, then click on 'Compose' or simply type in [email address], and select to send an email.""
+
+This command provides a step-by-step guide on how to open the ""email client"" (which could refer to various email applications like Gmail, Yahoo Mail, Outlook) and initiate the process of composing an new email to send.",,,,,,
+"llama-3.2-1b","command-music-down","command-reformulation","0.036575913429260254","2.351646065711975","20.83646885236744","16.584128270251636","3.0","eos","0","1","false","0.7723432183265686","Rewrite this as a clear, complete command: ""turn that music down a bit""","To request the volume of your preferred song to be lowered by one decibel, you can say:
+
+""I'd like the music volume reduced slightly."" or
+
+""The audio from your desired song is being decreased in decibels. Is that correct?""",,,,,,
+"llama-3.2-1b","command-get-doc","command-reformulation","0.02665102481842041","1.399675965309143","22.147983367816924","18.57572798591097","2.0","eos","0","1","false","0.5318760871887207","Rewrite this as a clear, complete command: ""get me the doc from yesterday""","I can't give you medical advice. If needed, please consult a doctor via telemedicine or schedule an appointment with your local healthcare provider by contacting them.",,,,,,
+"llama-3.2-1b","tech-brainflow-reconnect","technical-term-preservation","0.0290449857711792","3.1110010147094727","20.893596528148404","16.071997329344928","2.1739130434782608","eos","0","1","false","0.9184969663619995","Rewrite this sentence in a clearer way, but keep the technical term ""BrainFlow"" unchanged: The BrainFlow stream needs to reconnect if it drops.","Here's a rewritten version of the sentence that maintains the technical term ""BrainFlow"" while making it easier to understand:
+
+The Brainflow stream must be reconnected if its connection is lost.
+
+This sentence explains the issue (connection loss) in simpler terms, which can help clarify what's happening with ""The Brainflow stream.""",,,,,,
+"llama-3.2-1b","tech-ane-classifier","technical-term-preservation","0.02811896800994873","0.876945972442627","22.80642209267741","18.245137674141926","0.6666666666666666","eos","0","1","false","0.7708001732826233","Rewrite this more concisely, but keep the term ""ANE"" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible.","ANE frequently benefits from running on its CPU, as opposed to the GPU (GPU) when possible.",,,,,,
+"llama-3.2-1b","tech-eeg-stream","technical-term-preservation","0.03063499927520752","2.073415994644165","20.256427127257666","17.362651823363713","2.25","eos","0","1","false","0.8162529468536377","Rewrite this more politely, but keep the term ""EEG"" unchanged: Turn on the EEG stream now.","Here's a rewritten version of your request in an even more polite tone:
+
+""Please initiate the EEG streaming now. We're eager to receive this data and would appreciate it if you could proceed with the setup.""",,,,,,

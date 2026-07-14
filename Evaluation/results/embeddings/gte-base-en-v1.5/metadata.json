@@ -1,0 +1,63 @@
+{
+  "name": "gte-base-en-v1.5",
+  "candidate": {
+    "name": "gte-base-en-v1.5",
+    "repo_id": "Alibaba-NLP/gte-base-en-v1.5",
+    "family": "GTE",
+    "dimension": 768,
+    "max_seq_length": 512,
+    "pooling": "mean",
+    "size_category": "base",
+    "estimated_size_mb": 440,
+    "gated": false,
+    "license": "apache-2.0",
+    "languages": [
+      "en"
+    ],
+    "coreml_convertible": true,
+    "mlx_available": true,
+    "priority": 5,
+    "notes": "GTE base-en-v1.5. Apache 2.0. Original gte-small was deprecated."
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/gte-base-en-v1.5",
+  "downloaded": true,
+  "eval_completed": false,
+  "runtimes_tested": [],
+  "elapsed_seconds": 357.84982109069824,
+  "timestamp": "2026-07-14T09:26:50.860266+00:00",
+  "error": null,
+  "provenance": {
+    "provenance_schema_version": 1,
+    "timestamp": "2026-07-14T09:26:50.866325+00:00",
+    "git_commit": "7afc85dd0b5e6b1cb306dee7b717a2654593bb6c",
+    "git_branch": "feat/generation-eval-harness",
+    "git_dirty": true,
+    "device": "Apple M4",
+    "macos_version": "26.5.2",
+    "ram_gb": 16.0,
+    "python_version": "3.11.15",
+    "packages": {
+      "sentence-transformers": "5.6.0",
+      "torch": "2.13.0",
+      "transformers": "5.13.1",
+      "numpy": "1.26.4",
+      "huggingface_hub": "1.23.0",
+      "mlx": "0.32.0",
+      "mlx-lm": "0.31.3",
+      "einops": "0.8.2",
+      "psutil": "7.2.2"
+    },
+    "corpus_fixtures": {
+      "embedding_bench_candidates": {
+        "path": "Evaluation/corpora/embedding_bench_candidates_v1.json",
+        "sha256": "bec8adbd455c4ffb9d78910aa075f6389c3fa285b254268ae8b0f9aa7f95cc0f",
+        "version": 1
+      },
+      "embedding_bench_corpus": {
+        "path": "Evaluation/corpora/embedding_bench_corpus_v1.json",
+        "sha256": "437aaab15656b50c1d6b536c5d8005b267dc281b795c6446daaeaf725fe026ba",
+        "version": 1
+      }
+    }
+  }
+}

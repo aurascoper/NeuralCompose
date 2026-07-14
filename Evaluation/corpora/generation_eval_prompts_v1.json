@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "prompts": [
+    {
+      "id": "instr-say-yes",
+      "category": "instruction-following",
+      "text": "Say the word yes"
+    },
+    {
+      "id": "instr-avoid-very",
+      "category": "instruction-following",
+      "text": "I will not use the word 'very' again in this or any future sentences transcribed"
+    },
+    {
+      "id": "instr-rewrite-formal",
+      "category": "instruction-following",
+      "text": "Rewrite this more formally: \"Hey can you send that over.\""
+    },
+    {
+      "id": "instr-rewrite-clearer",
+      "category": "instruction-following",
+      "text": "Rewrite this sentence in a clearer way:\n\nThe test passed even though several setup steps failed initially."
+    },
+    {
+      "id": "instr-sequence-letters",
+      "category": "instruction-following",
+      "text": "Continue the sequence:\nA\nB\nC\nD"
+    },
+    {
+      "id": "filler-second-option",
+      "category": "filler-removal",
+      "text": "Um, so, I think we should, like, probably go with the second option."
+    },
+    {
+      "id": "filler-try-tomorrow",
+      "category": "filler-removal",
+      "text": "You know, uh, I was kind of thinking maybe we could, um, try again tomorrow."
+    },
+    {
+      "id": "filler-need-more-time",
+      "category": "filler-removal",
+      "text": "So basically what I'm trying to say is, like, we need more time, you know?"
+    },
+    {
+      "id": "filler-its-fine",
+      "category": "filler-removal",
+      "text": "Uh, well, I guess, I mean, it's fine I suppose."
+    },
+    {
+      "id": "punct-milk-eggs-bread",
+      "category": "punctuation-restoration",
+      "text": "we need three things milk eggs and bread also dont forget the coffee"
+    },
+    {
+      "id": "punct-she-said-yes",
+      "category": "punctuation-restoration",
+      "text": "can you believe it she said yes right there in front of everyone"
+    },
+    {
+      "id": "punct-meeting-nine",
+      "category": "punctuation-restoration",
+      "text": "the meeting starts at nine but bring your laptop and the report"
+    },
+    {
+      "id": "punct-go-now-or-wait",
+      "category": "punctuation-restoration",
+      "text": "im not sure if we should go now or wait until tomorrow morning"
+    },
+    {
+      "id": "cap-dr-smith",
+      "category": "capitalization",
+      "text": "i met dr smith on jan 5 in st louis"
+    },
+    {
+      "id": "cap-london-paris",
+      "category": "capitalization",
+      "text": "were flying to london on friday then paris on monday"
+    },
+    {
+      "id": "cap-email-sarah-david",
+      "category": "capitalization",
+      "text": "please email sarah and david before the meeting on tuesday"
+    },
+    {
+      "id": "concise-wondering-help",
+      "category": "concise-rewrite",
+      "text": "I was wondering if maybe you might possibly have some time available to help me with this task."
+    },
+    {
+      "id": "concise-most-people-agree",
+      "category": "concise-rewrite",
+      "text": "It is my belief that, in general, most people would probably agree that this is likely the better option overall."
+    },
+    {
+      "id": "concise-still-waiting",
+      "category": "concise-rewrite",
+      "text": "At this point in time, we are currently still waiting for a response regarding the matter in question."
+    },
+    {
+      "id": "concise-consider-looking",
+      "category": "concise-rewrite",
+      "text": "There is a possibility that we could perhaps consider looking into this a bit further if that's alright."
+    },
+    {
+      "id": "command-close-windows",
+      "category": "command-reformulation",
+      "text": "Rewrite this as a clear, complete command: \"close your windows\""
+    },
+    {
+      "id": "command-open-emails",
+      "category": "command-reformulation",
+      "text": "Rewrite this as a clear, complete command: \"open the thing with the emails\""
+    },
+    {
+      "id": "command-music-down",
+      "category": "command-reformulation",
+      "text": "Rewrite this as a clear, complete command: \"turn that music down a bit\""
+    },
+    {
+      "id": "command-get-doc",
+      "category": "command-reformulation",
+      "text": "Rewrite this as a clear, complete command: \"get me the doc from yesterday\""
+    },
+    {
+      "id": "tech-brainflow-reconnect",
+      "category": "technical-term-preservation",
+      "text": "Rewrite this sentence in a clearer way, but keep the technical term \"BrainFlow\" unchanged: The BrainFlow stream needs to reconnect if it drops."
+    },
+    {
+      "id": "tech-ane-classifier",
+      "category": "technical-term-preservation",
+      "text": "Rewrite this more concisely, but keep the term \"ANE\" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible."
+    },
+    {
+      "id": "tech-eeg-stream",
+      "category": "technical-term-preservation",
+      "text": "Rewrite this more politely, but keep the term \"EEG\" unchanged: Turn on the EEG stream now."
+    }
+  ]
+}

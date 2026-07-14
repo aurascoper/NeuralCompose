@@ -1,0 +1,54 @@
+{
+  "name": "qwen3-1.7b",
+  "candidate": {
+    "name": "qwen3-1.7b",
+    "directory": "Qwen3-1.7B-4bit",
+    "extraEOSTokens": [
+      "<|im_end|>"
+    ],
+    "repetitionPenalty": 1.3
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/Qwen3-1.7B-4bit",
+  "downloaded": true,
+  "smoke_test_passed": true,
+  "eval_completed": true,
+  "elapsed_seconds": 129.38859510421753,
+  "timestamp": "2026-07-14T11:32:07.018685+00:00",
+  "error": null,
+  "provenance": {
+    "provenance_schema_version": 1,
+    "timestamp": "2026-07-14T11:32:07.026970+00:00",
+    "git_commit": "ceb982675f80fa055deca8022b29544f960d2f24",
+    "git_branch": "research/lit-review-methodology",
+    "git_dirty": true,
+    "device": "Apple M4",
+    "macos_version": "26.5.2",
+    "ram_gb": 16.0,
+    "python_version": "3.11.15",
+    "packages": {
+      "sentence-transformers": "5.6.0",
+      "torch": "2.13.0",
+      "transformers": "5.13.1",
+      "numpy": "1.26.4",
+      "huggingface_hub": "1.23.0",
+      "mlx": "0.32.0",
+      "mlx-lm": "0.31.3",
+      "einops": "0.8.2",
+      "psutil": "7.2.2"
+    },
+    "corpus_fixtures": {
+      "generation_eval_candidates": {
+        "path": "Evaluation/corpora/generation_eval_candidates_v3.json",
+        "sha256": "744a476cb09aadf14210203fc3f55f670f0a0114290ae970f6c29f4155b52ee9",
+        "version": 3
+      },
+      "generation_eval_prompts": {
+        "path": "Evaluation/corpora/generation_eval_prompts_v1.json",
+        "sha256": "55b886b3b95efdbc73939b83898da18413c4f9f5b718ecd790478caec990b2f7",
+        "version": 1
+      }
+    },
+    "eval_binary_path": "/Users/aurascoper/Developer/NeuralCompose/.build/xcode/Build/Products/Debug/GenerationEval",
+    "eval_binary_sha256": "3ae8bf84e1102fbfd215aafbcd6e7800773c97cace5f138ec9dddb47edd5380d"
+  }
+}

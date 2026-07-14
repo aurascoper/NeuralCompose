@@ -71,3 +71,4 @@ Each entry:
 - **Confidence:** Low — no evidence yet
 - **Status:** Pending Stage 3.5-D
 <!-- Last updated: 2026-07-14T06:42:04Z (Stage 3.4 run) -->
+<!-- Last updated: 2026-07-14T12:12:53Z (Stage 3.4 run) -->

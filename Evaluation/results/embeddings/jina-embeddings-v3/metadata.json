@@ -1,0 +1,63 @@
+{
+  "name": "jina-embeddings-v3",
+  "candidate": {
+    "name": "jina-embeddings-v3",
+    "repo_id": "jinaai/jina-embeddings-v3",
+    "family": "Jina",
+    "dimension": 1024,
+    "max_seq_length": 8192,
+    "pooling": "mean",
+    "size_category": "base",
+    "estimated_size_mb": 570,
+    "gated": true,
+    "license": "cc-by-nc-4.0",
+    "languages": [
+      "multilingual"
+    ],
+    "coreml_convertible": false,
+    "mlx_available": false,
+    "priority": 11,
+    "notes": "Gated model. Non-commercial. Requires HF token."
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/jina-embeddings-v3",
+  "downloaded": false,
+  "eval_completed": false,
+  "runtimes_tested": [],
+  "elapsed_seconds": 14.70596194267273,
+  "timestamp": "2026-07-14T11:10:17.247405+00:00",
+  "error": null,
+  "provenance": {
+    "provenance_schema_version": 1,
+    "timestamp": "2026-07-14T11:10:17.252882+00:00",
+    "git_commit": "ceb982675f80fa055deca8022b29544f960d2f24",
+    "git_branch": "research/lit-review-methodology",
+    "git_dirty": true,
+    "device": "Apple M4",
+    "macos_version": "26.5.2",
+    "ram_gb": 16.0,
+    "python_version": "3.11.15",
+    "packages": {
+      "sentence-transformers": "5.6.0",
+      "torch": "2.13.0",
+      "transformers": "5.13.1",
+      "numpy": "1.26.4",
+      "huggingface_hub": "1.23.0",
+      "mlx": "0.32.0",
+      "mlx-lm": "0.31.3",
+      "einops": "0.8.2",
+      "psutil": "7.2.2"
+    },
+    "corpus_fixtures": {
+      "embedding_bench_candidates": {
+        "path": "Evaluation/corpora/embedding_bench_candidates_v1.json",
+        "sha256": "bec8adbd455c4ffb9d78910aa075f6389c3fa285b254268ae8b0f9aa7f95cc0f",
+        "version": 1
+      },
+      "embedding_bench_corpus": {
+        "path": "Evaluation/corpora/embedding_bench_corpus_v1.json",
+        "sha256": "437aaab15656b50c1d6b536c5d8005b267dc281b795c6446daaeaf725fe026ba",
+        "version": 1
+      }
+    }
+  }
+}

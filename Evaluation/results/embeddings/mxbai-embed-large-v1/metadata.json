@@ -1,0 +1,65 @@
+{
+  "name": "mxbai-embed-large-v1",
+  "candidate": {
+    "name": "mxbai-embed-large-v1",
+    "repo_id": "mixedbread-ai/mxbai-embed-large-v1",
+    "family": "MixedBread",
+    "dimension": 1024,
+    "max_seq_length": 512,
+    "pooling": "mean",
+    "size_category": "base",
+    "estimated_size_mb": 670,
+    "gated": false,
+    "license": "apache-2.0",
+    "languages": [
+      "en"
+    ],
+    "coreml_convertible": false,
+    "mlx_available": true,
+    "priority": 12,
+    "notes": "MixedBread. Apache 2.0. Strong MTEB scores."
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/mxbai-embed-large-v1",
+  "downloaded": true,
+  "eval_completed": true,
+  "runtimes_tested": [
+    "python"
+  ],
+  "elapsed_seconds": 507.2910010814667,
+  "timestamp": "2026-07-14T09:13:15.035039+00:00",
+  "error": null,
+  "provenance": {
+    "provenance_schema_version": 1,
+    "timestamp": "2026-07-14T09:13:15.042776+00:00",
+    "git_commit": "7afc85dd0b5e6b1cb306dee7b717a2654593bb6c",
+    "git_branch": "feat/generation-eval-harness",
+    "git_dirty": true,
+    "device": "Apple M4",
+    "macos_version": "26.5.2",
+    "ram_gb": 16.0,
+    "python_version": "3.11.15",
+    "packages": {
+      "sentence-transformers": "5.6.0",
+      "torch": "2.13.0",
+      "transformers": "5.13.1",
+      "numpy": "1.26.4",
+      "huggingface_hub": "1.23.0",
+      "mlx": "not_installed",
+      "mlx-lm": "not_installed",
+      "einops": "not_installed",
+      "psutil": "7.2.2"
+    },
+    "corpus_fixtures": {
+      "embedding_bench_candidates": {
+        "path": "Evaluation/corpora/embedding_bench_candidates_v1.json",
+        "sha256": "bec8adbd455c4ffb9d78910aa075f6389c3fa285b254268ae8b0f9aa7f95cc0f",
+        "version": 1
+      },
+      "embedding_bench_corpus": {
+        "path": "Evaluation/corpora/embedding_bench_corpus_v1.json",
+        "sha256": "437aaab15656b50c1d6b536c5d8005b267dc281b795c6446daaeaf725fe026ba",
+        "version": 1
+      }
+    }
+  }
+}

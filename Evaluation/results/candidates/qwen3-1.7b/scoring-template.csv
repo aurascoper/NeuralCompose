@@ -1,0 +1,151 @@
+candidate,prompt_id,category,first_token_latency,generate_time,tokens_per_second,words_per_second,word_count_ratio,stop_reason,decoder_loop_period,decoder_loop_repeat_count,prompt_echo_detected,meaning_preservation_cosine,prompt_text,generated_text,meaning_preserved,grammar,no_hallucination,no_added_commentary,conciseness,instruction_followed
+"qwen3-1.7b","instr-say-yes","instruction-following","0.024484992027282715","3.763758063316345","31.883027012173272","24.975037826202396","23.5","maxTokens","0","1","false","","Say the word yes","<think>
+Okay, so I need to say ""yes"" in the context of a user's query. Let me think about how best to respond.
+
+First, ""yes"" is the answer to a question. The user might be asking for confirmation or agreement. Since I can't see the actual query, maybe they're testing if I know how to respond? Or perhaps it's a simple ""yes"" in the context of some other task?
+
+Wait, maybe they just want to confirm that I can respond with ""yes"". But the user's message is straightforward: say the word yes. So maybe",,,,,,
+"qwen3-1.7b","instr-avoid-very","instruction-following","0.035266995429992676","3.7434279918670654","32.056179592798586","23.50786503471896","5.866666666666666","maxTokens","0","1","false","","I will not use the word 'very' again in this or any future sentences transcribed","<think>
+Okay, the user wants me to avoid using the word ""very"" in any sentences I generate. Let me make sure I understand that correctly. So, no matter what the sentence is about, ""very"" can't be there.
+
+First, I need to think of synonyms for ""very"" that might work in different contexts. Words like 'extremely', 'remarkably', 'truly', or even some adverbs that could replace ""very"". But I have to be careful with the context because different words can change the meaning.
+
+For example, if someone says ""I'm feeling",,,,,,
+"qwen3-1.7b","instr-rewrite-formal","instruction-following","0.03176701068878174","3.880429983139038","30.924407996385778","23.966416197198978","9.3","maxTokens","0","1","false","","Rewrite this more formally: ""Hey can you send that over.""","<think>
+Okay, the user said, ""Hey can you send that over."" I need to rewrite this more formally. Let me think about how to rephrase it.
+
+First, ""Hey"" is informal and can be replaced with something like ""Could you please..."" to make it more formal. Then, the original sentence is a bit short and direct. Maybe ""Could you please send that over?"" would work? Or maybe use a more formal structure.
+
+Wait, ""send that over"" is the action. So instead of ""Hey can you send..."", maybe start with a formal greeting like ""Could",,,,,,
+"qwen3-1.7b","instr-rewrite-clearer","instruction-following","0.02592909336090088","3.835734009742737","31.28475532849798","25.28851055720253","5.705882352941177","maxTokens","0","1","false","","Rewrite this sentence in a clearer way:
+
+The test passed even though several setup steps failed initially.","<think>
+Okay, the user wants me to rephrase this sentence: ""The test passed even though several setup steps failed initially."" Let me think about how to make this clearer.
+
+First, the original sentence is a bit wordy. ""Passed even though"" might be confusing because it's like saying the test went through despite some issues. Maybe I can restructure that part. ""Even though"" is usually used to contrast two things, but in this case, the test still passed despite some setup steps failing. So maybe I can rephrase it to focus on why the test succeeded, but that",,,,,,
+"qwen3-1.7b","instr-sequence-letters","instruction-following","0.026112914085388184","3.9172589778900146","30.633665192245367","23.48580998072145","13.142857142857142","maxTokens","0","1","false","","Continue the sequence:
+A
+B
+C
+D","<think>
+Okay, let's see. The user provided the sequence A, B, C, D and wants me to continue it. Hmm, where do I start? Well, the pattern here is straightforward: each letter is one step ahead of the previous. A is followed by B, then C, D... So continuing that pattern would be E, F, G. But wait, maybe the user expects a different kind of continuation? Let me think.
+
+Alternatively, sometimes these sequences can be related to numbers or something else. For example, if it's letters in order, then yes, E",,,,,,
+"qwen3-1.7b","filler-second-option","filler-removal","0.02605307102203369","3.8023959398269653","31.55904905722701","25.773223396735393","7.538461538461538","maxTokens","0","1","false","0.7622756958007812","Um, so, I think we should, like, probably go with the second option.","<think>
+Okay, the user mentioned they think we should go with the second option. But I need to figure out what exactly is at stake here. Maybe they're talking about a decision between two options, like in some project or discussion? Let me think. They might be referring to something specific that's been discussed, but since the context isn't clear here... Hmm. Wait, maybe they're talking about a previous conversation where there were two options presented? But without more information... Maybe I should ask for clarification. Alternatively, if they're confident in the second option, perhaps there's a reason",,,,,,
+"qwen3-1.7b","filler-try-tomorrow","filler-removal","0.026947975158691406","3.92645001411438","30.561957892915206","24.958932279214086","6.533333333333333","maxTokens","0","1","false","0.6405797600746155","You know, uh, I was kind of thinking maybe we could, um, try again tomorrow.","<think>
+Okay, the user said they were thinking about trying again tomorrow. I need to respond in a friendly and supportive way.
+
+First, the user might be looking for some encouragement or agreement. They used ""um"" and ""uh,"" which shows they're a bit nervous or unsure, maybe not confident in their suggestion. So I should acknowledge that.
+
+I can start by validating their thought, like ""That sounds good."" Then maybe offer some support. Maybe ask if they mean something specific, to show I'm paying attention.
+
+They might want confirmation that their idea is okay. So a response like",,,,,,
+"qwen3-1.7b","filler-need-more-time","filler-removal","0.027752995491027832","3.877695083618164","30.94621867174546","25.272745248592127","6.533333333333333","maxTokens","0","1","false","0.7512181997299194","So basically what I'm trying to say is, like, we need more time, you know?","<think>
+Okay, the user is saying they need more time. I should respond in a way that's friendly and helpful.
+
+First, maybe acknowledge their statement. They might be feeling stuck or need some extra time for something. 
+
+I should ask how they want to use that additional time. Are they looking for more rest, a break from work, or something else? 
+
+Also, it's important to be open and empathetic. Let them know I'm here for any needs they might have.
+
+Maybe suggest some ways to use the extra time, like taking a break or doing something they enjoy.",,,,,,
+"qwen3-1.7b","filler-its-fine","filler-removal","0.027325034141540527","3.872303009033203","30.98931042329778","25.049692592165705","9.7","maxTokens","0","1","false","0.6503223180770874","Uh, well, I guess, I mean, it's fine I suppose.","<think>
+Okay, the user said ""Uh, well, I guess, I mean, it's fine I suppose."" Hmm. They seem a bit uncertain or hesitant in their response. Maybe they're trying to be polite but not sure how to proceed.
+
+I should acknowledge their hesitation and offer support. They might need validation or reassurance that everything is okay. Let me make sure to keep the tone friendly and open-ended so they feel comfortable continuing.
+
+Also, maybe they're dealing with a situation where they need help but aren't sure how to start. I should ask if there's anything specific they",,,,,,
+"qwen3-1.7b","punct-milk-eggs-bread","punctuation-restoration","0.02606499195098877","3.915895104408264","30.644334641372716","24.260098257753402","7.3076923076923075","maxTokens","0","1","false","0.7898476123809814","we need three things milk eggs and bread also dont forget the coffee","<think>
+Okay, let's see. The user mentioned three things: milk, eggs, and bread, plus coffee. So I need to list these items in order of their importance or maybe the user wants them sorted? Wait, but they just listed three things and added coffee. Maybe I should present the list as is? Or maybe there's a specific order they want?
+
+Wait, the original request was ""we need three things milk eggs and bread also dont forget the coffee"". Hmm, maybe it's a list where ""three things"" are milk, eggs, bread. But then coffee is mentioned",,,,,,
+"qwen3-1.7b","punct-she-said-yes","punctuation-restoration","0.02577793598175049","3.973338007926941","30.201306750293085","25.41943318149668","7.769230769230769","maxTokens","0","1","false","0.7438008785247803","can you believe it she said yes right there in front of everyone","<think>
+Okay, the user is asking if I can believe that ""she said yes right there in front of everyone."" Let me break this down. First, the user is probably referring to a situation where someone confidently says ""yes"" in front of others. But the question is whether I can believe that statement.
+
+Hmm, but wait, maybe they're asking if it's possible for me to have a belief in that scenario. But the user might be confused about whether I can believe something like ""she said yes"" in front of everyone. However, since the user is asking as a test or",,,,,,
+"qwen3-1.7b","punct-meeting-nine","punctuation-restoration","0.025828957557678223","3.946974039077759","30.40303757053313","25.84258193495316","8.5","maxTokens","0","1","false","0.8292810320854187","the meeting starts at nine but bring your laptop and the report","<think>
+Okay, let me try to figure out how to approach this. The user mentioned that the meeting starts at nine and they need to bring their laptop and the report. So, first I should check if there's a typo or something missing here.
+
+Wait, the user wrote ""the meeting starts at nine but bring your laptop and the report."" The phrase is a bit confusing. ""But"" here might be an error because if they're supposed to bring the laptop and report, maybe there's a missing word. Maybe it should be ""the meeting starts at nine but you need to bring your",,,,,,
+"qwen3-1.7b","punct-go-now-or-wait","punctuation-restoration","0.025990962982177734","3.839587092399597","31.25336061201428","26.565356520212138","7.846153846153846","maxTokens","0","1","false","0.8390049338340759","im not sure if we should go now or wait until tomorrow morning","<think>
+Okay, the user is unsure whether to go now or wait until tomorrow morning. Let me think about how to approach this.
+
+First, I need to consider the context in which they're asking. Are there specific reasons for going now versus tomorrow? Maybe it's a schedule, an important meeting, or something that requires immediate action. Since the user hasn't provided details about what's at stake, I should ask for more information.
+
+But since the user is asking me to help them decide between now and tomorrow, I need to figure out what factors are important here. Maybe the user is uncertain",,,,,,
+"qwen3-1.7b","cap-dr-smith","capitalization","0.02553999423980713","3.878944993019104","30.93624689598917","26.03800780412422","10.1","maxTokens","0","1","false","0.7491055130958557","i met dr smith on jan 5 in st louis","<think>
+Okay, the user mentioned meeting Dr. Smith on January 5th in St Louis. I need to figure out how this information can be used or what the user might want next.
+
+First, I should check if there's any context missing. The date and location are given but no details about the meeting, like purpose or what was discussed. Maybe they want to know how to contact Dr. Smith? Or perhaps they need help with something related to the meeting?
+
+Wait, maybe there's a previous conversation or some background I should consider? But since this is just the user providing information,",,,,,,
+"qwen3-1.7b","cap-london-paris","capitalization","0.02962493896484375","3.966986060142517","30.249665156546808","24.703893211179892","9.8","maxTokens","0","1","false","0.8407823443412781","were flying to london on friday then paris on monday","<think>
+Okay, the user mentioned they're flying to London on Friday and then Paris on Monday. Let me break this down.
+
+First, they're traveling from somewhere to London on Friday. Then, after arriving in London, they'll go to Paris on Monday. Wait, but if they're flying to London on Friday and then to Paris on Monday, that would mean their trip is going from a starting point (maybe somewhere else) to London on Friday, then leaving for Paris on Monday. But that doesn't make much sense because if they're in London, how would they go to Paris on",,,,,,
+"qwen3-1.7b","cap-email-sarah-david","capitalization","0.025776982307434082","3.8584059476852417","31.100926555431816","26.435787572117043","10.2","maxTokens","0","1","false","0.8445497155189514","please email sarah and david before the meeting on tuesday","<think>
+Okay, so I need to help the user draft an email to Sarah and David before a meeting on Tuesday. Let me think about how to approach this.
+
+First, the user is asking for an email template that would be appropriate. The key points here are to address both Sarah and David, mention the meeting on Tuesday, and perhaps include some details about when it's happening. But wait, maybe I should confirm the specific time? The user didn't mention a particular time, so perhaps it's better to keep that part generic. 
+
+I should start with the subject line. Maybe something like",,,,,,
+"qwen3-1.7b","concise-wondering-help","concise-rewrite","0.025857925415039062","3.964547038078308","30.26827500025483","25.728033750216607","5.666666666666667","maxTokens","0","1","false","0.764539897441864","I was wondering if maybe you might possibly have some time available to help me with this task.","<think>
+Okay, the user is asking if I can help with a task. They mentioned ""maybe you might possibly have some time available."" Hmm, that wording is a bit confusing. The user probably means they're asking if I can help with something, but the phrasing is a bit awkward. Maybe it's meant to be ""maybe you might have some time available"" or something similar.
+
+I need to respond politely. The user is probably looking for confirmation that I can assist them with a task, but they might be unsure if I have time. Since the original message is in Chinese and translated",,,,,,
+"qwen3-1.7b","concise-most-people-agree","concise-rewrite","0.02670598030090332","3.9813250303268433","30.140719254501235","25.61961136632605","5.1","maxTokens","0","1","false","0.7156816124916077","It is my belief that, in general, most people would probably agree that this is likely the better option overall.","<think>
+Okay, let me break down what's going on here. The user is saying that most people would agree this is the better option overall.
+
+First, I need to understand what ""this"" refers to. The original statement is a bit vague because it's not specified which option or situation they're referring to. But since the user is making a general statement about people's beliefs, maybe it's something like choosing between two options or considering an alternative approach.
+
+The user is likely trying to present a view that most people would agree with, but the problem could be in how they phrase it.",,,,,,
+"qwen3-1.7b","concise-still-waiting","concise-rewrite","0.03668403625488281","3.95183789730072","30.365618003199295","25.05163485263942","5.5","maxTokens","0","1","false","0.7430393099784851","At this point in time, we are currently still waiting for a response regarding the matter in question.","<think>
+Okay, let's see what the user is saying here. They mentioned that we're still waiting for a response regarding some matter. Hmm, I need to figure out how to respond appropriately.
+
+First, the user might be concerned about progress on a matter they're interested in. Maybe there's an issue that needs to be addressed, and the assistant hasn't provided a response yet. The user is probably expecting some kind of update or action.
+
+But wait, the original message from the assistant was in Chinese. The user is now responding to that. They mentioned ""At this point in time,",,,,,,
+"qwen3-1.7b","concise-consider-looking","concise-rewrite","0.03245401382446289","3.926280975341797","30.563273681541236","25.724088681963874","5.611111111111111","maxTokens","0","1","false","0.7007049322128296","There is a possibility that we could perhaps consider looking into this a bit further if that's alright.","<think>
+Okay, the user is asking about considering further investigation into something. They mentioned ""if that's alright,"" which might be a way of saying they're open to discussing it more. I need to respond in a helpful and friendly manner.
+
+First, I should acknowledge their suggestion without being too formal. Maybe say something like ""That sounds reasonable"" to show agreement. Then, I can ask how they'd like to proceed or if there's a specific direction they want to take. It might also be good to invite them to share more details or ask questions so we can explore the possibilities together.",,,,,,
+"qwen3-1.7b","command-close-windows","command-reformulation","0.04394793510437012","4.015745997428894","29.882368077271504","23.158835259885414","9.3","maxTokens","0","1","false","0.862389862537384","Rewrite this as a clear, complete command: ""close your windows""","<think>
+Okay, the user wants me to rewrite ""close your windows"" as a clear and complete command. Let me think about how to phrase that.
+
+First, the original sentence is ""close your windows."" The verb here is ""close,"" and the object is ""your windows."" But maybe I can make it more formal or precise. The phrase ""close your windows"" is a bit vague. Maybe the user wants it in imperative form, which is common for commands.
+
+So ""close your windows"" could be rephrased as ""Close all windows."" But wait, does that make sense",,,,,,
+"qwen3-1.7b","command-open-emails","command-reformulation","0.02806997299194336","3.834106922149658","31.298031702444003","24.516791500247802","7.230769230769231","maxTokens","0","1","false","0.8424224257469177","Rewrite this as a clear, complete command: ""open the thing with the emails""","<think>
+Okay, let's see. The user wants me to rewrite the phrase ""open the thing with the emails"" into a clear and complete command. Hmm, first I need to understand what exactly they mean by ""the thing with the emails."" Maybe it's a specific email-related task?
+
+Wait, maybe they mean opening an email or managing emails. The phrase is a bit unclear. Let me break it down: ""open"" could be to open an email, and ""the thing with the emails"" might refer to something related to emails. But it's a bit vague.
+
+Possible interpretations:",,,,,,
+"qwen3-1.7b","command-music-down","command-reformulation","0.02804696559906006","3.9361770153045654","30.48643379945017","23.372932579578464","7.076923076923077","maxTokens","0","1","false","0.827467143535614","Rewrite this as a clear, complete command: ""turn that music down a bit""","<think>
+Okay, the user wants to rewrite ""turn that music down a bit"" as a clear and complete command. Let me think about the best way to phrase that.
+
+First, ""turn down"" is a common verb in music context. The original sentence uses ""that,"" which refers to the current volume level of the music. So, in commands, we usually use ""the"" instead of ""that,"" like ""lower the volume.""
+
+The phrase is a bit informal, but maybe they want to be more formal. ""Lower the volume"" sounds better than just ""turn down."" Also,",,,,,,
+"qwen3-1.7b","command-get-doc","command-reformulation","0.028862953186035156","4.0347830057144165","29.74137638382173","23.54525630385887","7.3076923076923075","maxTokens","0","1","false","0.7636864185333252","Rewrite this as a clear, complete command: ""get me the doc from yesterday""","<think>
+Okay, let's see. The user said ""get me the doc from yesterday."" Hmm, first I need to understand what they mean by ""doc"" and ""from yesterday.""
+
+So, ""doc"" could refer to a document or file. The user is asking for that specific document from yesterday's date. But the problem here might be in how they phrase it.
+
+The original sentence is a bit vague because ""from yesterday"" could mean either from the previous day or specifically on a date that's one year ago. But since it says ""yesterday,"" maybe they mean the document from",,,,,,
+"qwen3-1.7b","tech-brainflow-reconnect","technical-term-preservation","0.033753037452697754","4.1429829597473145","28.964637597089936","20.9993622578902","3.782608695652174","maxTokens","0","1","false","0.8959422707557678","Rewrite this sentence in a clearer way, but keep the technical term ""BrainFlow"" unchanged: The BrainFlow stream needs to reconnect if it drops.","<think>
+Okay, the user wants me to rewrite the sentence ""The BrainFlow stream needs to reconnect if it drops."" but keep ""BrainFlow"" unchanged. Let me think about how to make this clearer.
+
+Original sentence: The BrainFlow stream needs to reconnect if it drops. 
+
+Hmm, ""reconnect"" might be a bit vague here. Maybe the user is referring to reinitializing or restarting? Or perhaps ""reconnect"" in a different context. Wait, maybe the original sentence is about when the stream stops or loses connection? So ""reconnect"" could be phrased more",,,,,,
+"qwen3-1.7b","tech-ane-classifier","technical-term-preservation","0.0282900333404541","4.040845036506653","29.696758701675204","21.530150058714522","3.625","maxTokens","0","1","false","0.8688985705375671","Rewrite this more concisely, but keep the term ""ANE"" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible.","<think>
+Okay, let's see. The user wants to make this sentence more concise while keeping the term ""ANE"" unchanged. Original: ""The classifier prefers to run on the ANE rather than the GPU whenever possible."" 
+
+First, I need to remove some words without changing ""ANE"". The phrase ""prefers to run on"" can be simplified. Maybe ""prefer ANE over GPU""? That's shorter. Then the rest: ""rather than the GPU whenever possible"" can be shortened to ""whenever possible"". So putting it together: ""The classifier prefers ANE over GPU whenever possible",,,,,,
+"qwen3-1.7b","tech-eeg-stream","technical-term-preservation","0.027289986610412598","3.9434499740600586","30.430207252369826","22.82265543927737","5.625","maxTokens","0","1","false","0.8153530359268188","Rewrite this more politely, but keep the term ""EEG"" unchanged: Turn on the EEG stream now.","<think>
+Okay, let's see. The user wants to rewrite ""Turn on the EEG stream now"" more politely while keeping ""EEG"" as is. The original sentence is direct and maybe a bit informal.
+
+First, I need to think of more formal language. Instead of ""turn on,"" maybe use ""activate"" or ""start."" But the original is in a command format, so perhaps ""Please activate the EEG stream"" sounds more polite. But maybe ""Start the EEG stream now"" is better? Wait, but the original has a colon after ""now,"" so maybe it's part",,,,,,

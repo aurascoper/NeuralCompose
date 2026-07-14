@@ -1,0 +1,48 @@
+{
+  "model_name": "bge-small-en-v1.5-mlx",
+  "repo_id": "mlx-community/bge-small-en-v1.5-4bit",
+  "runtime": "mlx",
+  "timestamp": "2026-07-14T09:17:42.869799+00:00",
+  "status": "failed: Model type bert not supported.",
+  "schema_version": 2,
+  "provenance": {
+    "provenance_schema_version": 1,
+    "timestamp": "2026-07-14T09:17:42.876883+00:00",
+    "git_commit": "7afc85dd0b5e6b1cb306dee7b717a2654593bb6c",
+    "git_branch": "feat/generation-eval-harness",
+    "git_dirty": true,
+    "device": "Apple M4",
+    "macos_version": "26.5.2",
+    "ram_gb": 16.0,
+    "python_version": "3.11.15",
+    "packages": {
+      "sentence-transformers": "5.6.0",
+      "torch": "2.13.0",
+      "transformers": "5.13.1",
+      "numpy": "1.26.4",
+      "huggingface_hub": "1.23.0",
+      "mlx": "0.32.0",
+      "mlx-lm": "0.31.3",
+      "einops": "0.8.2",
+      "psutil": "7.2.2"
+    },
+    "corpus_fixtures": {
+      "embedding_bench_corpus": {
+        "path": "Evaluation/corpora/embedding_bench_corpus_v1.json",
+        "sha256": "437aaab15656b50c1d6b536c5d8005b267dc281b795c6446daaeaf725fe026ba",
+        "version": 1
+      }
+    }
+  },
+  "measurement_context": {
+    "device": "cpu",
+    "throughput_measurement": "warm_batch_encode",
+    "throughput_batch_size": 128
+  },
+  "error": "Model type bert not supported.",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/mlx_lm/utils.py\", line 188, in _get_classes\n    arch = importlib.import_module(f\"mlx_lm.models.{model_type}\")\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/importlib/__init__.py\", line 126, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen importlib._bootstrap>\", line 1204, in _gcd_import\n  File \"<frozen importlib._bootstrap>\", line 1176, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 1140, in _find_and_load_unlocked\nModuleNotFoundError: No module named 'mlx_lm.models.bert'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 541, in run_benchmark\n    backend = load_backend(repo_id, model_path, runtime, hf_token)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 157, in load_backend\n    return MLXEmbeddingBackend(model_path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 120, in __init__\n    self.model, self.tokenizer = load(model_path)\n                                 ^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/mlx_lm/utils.py\", line 491, in load\n    model, config = load_model(model_path, lazy, model_config=model_config)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/mlx_lm/utils.py\", line 334, in load_model\n    model_class, model_args_class = get_model_classes(config=config)\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/mlx_lm/utils.py\", line 191, in _get_classes\n    raise ValueError(msg)\nValueError: Model type bert not supported.\n",
+  "failure_class": "unknown",
+  "failure_reason": "Model type bert not supported.",
+  "failure_rate": 1.0,
+  "crash_rate": 0.0
+}

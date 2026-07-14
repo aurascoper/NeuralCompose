@@ -1,0 +1,22 @@
+{
+  "batch_sizes" : {
+    "1" : 7.040208,
+    "128" : 958.717416,
+    "32" : 231.588958,
+    "8" : 56.856875
+  },
+  "build_sha" : "ceb982675f80fa055deca8022b29544f960d2f24",
+  "cold_load_ms" : 25.156166,
+  "coreml_sha256" : "",
+  "device" : "Apple M4",
+  "dimension" : 384,
+  "embeddings_per_second" : 133.5117083134328,
+  "macos" : "26.5.2",
+  "model_id" : "all-MiniLM-L6-v2",
+  "pooling" : "mean",
+  "rss_mb" : 446.90625,
+  "runtime" : "mlx-swift",
+  "schema_version" : 1,
+  "tokenizer_sha256" : "be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037",
+  "warm_encode_ms" : 7.614583
+}

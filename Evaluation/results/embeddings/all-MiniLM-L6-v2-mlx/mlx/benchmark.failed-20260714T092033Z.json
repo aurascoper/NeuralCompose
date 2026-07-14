@@ -1,0 +1,11 @@
+{
+  "model_name": "all-MiniLM-L6-v2-mlx",
+  "repo_id": "mlx-community/all-MiniLM-L6-v2-4bit",
+  "runtime": "mlx",
+  "timestamp": "2026-07-14T04:19:16.623958+00:00",
+  "status": "failed: No module named 'mlx'",
+  "error": "No module named 'mlx'",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 395, in run_benchmark\n    backend = load_backend(repo_id, model_path, runtime, hf_token)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 152, in load_backend\n    return MLXEmbeddingBackend(model_path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 111, in __init__\n    import mlx.core as mx\nModuleNotFoundError: No module named 'mlx'\n",
+  "failure_rate": 1.0,
+  "crash_rate": 0.0
+}
