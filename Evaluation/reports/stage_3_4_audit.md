@@ -268,16 +268,20 @@ The generation leaderboard has 10 evaluated models, 8 failed/incomplete
 
 ## Anomalies and Issues
 
-### 1. Embedding stability scores are all 0.000
+### 1. Embedding stability scores in the leaderboard (resolved)
 
-Every model in the embedding leaderboard has `stability_score: 0.000`.
-This is almost certainly a calculation error, not a real finding:
-MiniLM has a documented stability of 0.868 in the Stage 3.3 report
-(`final_recommendation.md`). The streaming benchmark's stability
-calculation appears to be broken or using a different definition.
+The audit initially reported "all stability scores are 0.000." This was
+a field name confusion. The leaderboard has two stability fields:
 
-This affects the overall_score calculation if stability is a
-component, meaning the leaderboard rankings may be partially wrong.
+- `stability_mean`: the raw stability score (0.868 for MiniLM, 0.969
+  for e5-small, etc.) -- all correct and non-zero.
+- `norm_stability`: the min-max normalized version used in scoring.
+  MiniLM has the lowest stability_mean of the 7 models, so its
+  norm_stability is 0.0. This is correct behavior, not a bug.
+
+The leaderboard has been updated to include a `stability_score` field
+(= `stability_mean`) for clarity, and a note explaining the
+normalization. The overall_score rankings are unchanged.
 
 ### 2. MiniLM throughput discrepancy
 
@@ -374,13 +378,16 @@ generation leaderboard is incomplete, and the missing models (SmolLM2,
 OpenELM, Qwen3, TinyLlama, gemma-3-4b) may include viable candidates
 that were never tested.
 
-### Observation 5: Embedding stability metric is broken [Observation]
+### Observation 5 -- Embedding stability normalization [Observation]
 
-All 7 evaluated embedding models have `stability_score: 0.000` in the
-leaderboard. The Stage 3.3 report documents MiniLM stability at 0.868.
-The streaming benchmark's stability calculation is either not running
-or computing on a different metric definition. This is a data
-integrity issue, not a scientific finding.
+The leaderboard's `norm_stability` field maps MiniLM to 0.0 because it
+has the lowest stability_mean (0.868) of the 7 evaluated models. This is
+correct min-max normalization, but it means the overall_score penalizes
+MiniLM for being the least stable model in a field of 7, even though its
+raw stability (0.868) is good in absolute terms. The scoring weight on
+stability is 0.25, so this costs MiniLM 0.25 points relative to the most
+stable model (e5-small at 0.969). This is not a bug but a design choice
+that may warrant revisiting: absolute thresholds vs relative ranking.
 
 ---
 

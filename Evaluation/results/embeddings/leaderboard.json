@@ -1,0 +1,558 @@
+{
+  "updated_at": "2026-07-14T07:12:13.864334+00:00",
+  "n_candidates": 7,
+  "pareto_frontier": [
+    "all-MiniLM-L6-v2 (python)",
+    "multilingual-e5-small (python)",
+    "bge-base-en-v1.5 (python)",
+    "multilingual-e5-base (python)",
+    "Qwen3-Embedding-0.6B (python)",
+    "bge-m3 (python)"
+  ],
+  "weights": {
+    "quality": 0.3,
+    "stability": 0.25,
+    "latency": 0.2,
+    "throughput": 0.1,
+    "memory": 0.1,
+    "consistency": 0.05
+  },
+  "candidates": [
+    {
+      "name": "all-MiniLM-L6-v2",
+      "runtime": "python",
+      "repo_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "dimension": 384,
+      "model_size_mb": 931.7002325057983,
+      "cold_load_time": 8.099495887756348,
+      "warm_encode_ms": 129.12511825561523,
+      "embeddings_per_second": 1980.0724799640034,
+      "peak_rss_mb": 497.28125,
+      "stability_mean": 0.867922547738479,
+      "stability_median": 0.9550905240093477,
+      "stability_std": 0.18532959018106837,
+      "stability_ci_95_lo": 0.39091992567782025,
+      "stability_ci_95_hi": 1.0000001192092896,
+      "stability_n": 160,
+      "paraphrase_mean": 0.6507806155580269,
+      "antonym_mean": 0.7343569570172013,
+      "separation_ratio": 3.710331289531752,
+      "retrieval_top1": 0.9639349102973938,
+      "retrieval_top5": 0.7849415590572708,
+      "nn_consistency": 1.0,
+      "quality_score": 0.7335988394268111,
+      "failure_rate": 0.0,
+      "stability_by_type": {
+        "asr": {
+          "mean": 0.805319546842392,
+          "median": 0.968161638755992,
+          "std": 0.22818508230378562
+        },
+        "typo": {
+          "mean": 0.5664937329466179,
+          "median": 0.5228070168391001,
+          "std": 0.2380527339185991
+        },
+        "hesitation": {
+          "mean": 0.8852149452056697,
+          "median": 0.8930872317008514,
+          "std": 0.05859333393927433
+        },
+        "filler": {
+          "mean": 0.827067556690411,
+          "median": 0.831814219463719,
+          "std": 0.049401336814477496
+        },
+        "punctuation": {
+          "mean": 0.8940305202623151,
+          "median": 0.9279269258632911,
+          "std": 0.13395852165048155
+        },
+        "capitalization": {
+          "mean": 1.0000000536441804,
+          "median": 1.0000000298023242,
+          "std": 5.623090962651994e-08
+        },
+        "no_punctuation": {
+          "mean": 1.0000000536441804,
+          "median": 1.0000000298023242,
+          "std": 5.623090962651994e-08
+        },
+        "doubled_word": {
+          "mean": 0.9652539726720647,
+          "median": 0.9694902002811432,
+          "std": 0.02073095811148789
+        }
+      },
+      "overall_score": 0.6062058890516099,
+      "norm_latency": 0.4060294452580492,
+      "norm_warm_latency": 1.0,
+      "norm_throughput": 1.0,
+      "norm_memory": 1.0,
+      "norm_stability": 0.0,
+      "norm_quality": 1.0,
+      "norm_consistency": 0.5,
+      "stability_score": 0.867922547738479
+    },
+    {
+      "name": "multilingual-e5-small",
+      "runtime": "python",
+      "repo_id": "intfloat/multilingual-e5-small",
+      "dimension": 384,
+      "model_size_mb": 2174.5813608169556,
+      "cold_load_time": 8.543530941009521,
+      "warm_encode_ms": 155.19189834594727,
+      "embeddings_per_second": 1490.711804167222,
+      "peak_rss_mb": 1070.203125,
+      "stability_mean": 0.9690654748165037,
+      "stability_median": 0.9695319831371307,
+      "stability_std": 0.027367092993714596,
+      "stability_ci_95_lo": 0.9114071305587724,
+      "stability_ci_95_hi": 1.0000001192092896,
+      "stability_n": 160,
+      "paraphrase_mean": 0.9325077643032508,
+      "antonym_mean": 0.9180955261141747,
+      "separation_ratio": 1.090377800294586,
+      "retrieval_top1": 0.9898535964821746,
+      "retrieval_top5": 0.954414076560264,
+      "nn_consistency": 1.0,
+      "quality_score": 0.6503215236418852,
+      "failure_rate": 0.0,
+      "stability_by_type": {
+        "asr": {
+          "mean": 0.9719020867558166,
+          "median": 0.993142157384284,
+          "std": 0.0343648398609595
+        },
+        "typo": {
+          "mean": 0.9520973056049715,
+          "median": 0.9522604019797087,
+          "std": 0.030817417016853237
+        },
+        "hesitation": {
+          "mean": 0.9636981335802357,
+          "median": 0.967450230307886,
+          "std": 0.017661711098719512
+        },
+        "filler": {
+          "mean": 0.9349295528030425,
+          "median": 0.9372707586329109,
+          "std": 0.011781748303380944
+        },
+        "punctuation": {
+          "mean": 0.9608745207294321,
+          "median": 0.9610099769240604,
+          "std": 0.006780516272471847
+        },
+        "capitalization": {
+          "mean": 0.9826125137802011,
+          "median": 0.9857545776074603,
+          "std": 0.017949624524135618
+        },
+        "no_punctuation": {
+          "mean": 1.000000044703483,
+          "median": 1.0,
+          "std": 6.495265676345002e-08
+        },
+        "doubled_word": {
+          "mean": 0.9864096405748489,
+          "median": 0.9870827794075012,
+          "std": 0.006609116190859779
+        }
+      },
+      "norm_latency": 0.31806293417812614,
+      "norm_warm_latency": 0.9921418802735694,
+      "norm_throughput": 0.7515041023529888,
+      "norm_memory": 0.6503775887715015,
+      "norm_stability": 1.0,
+      "norm_quality": 0.0663916236339144,
+      "norm_consistency": 0.5,
+      "overall_score": 0.49871824303824863,
+      "stability_score": 0.9690654748165037
+    },
+    {
+      "name": "bge-base-en-v1.5",
+      "runtime": "python",
+      "repo_id": "BAAI/bge-base-en-v1.5",
+      "dimension": 768,
+      "model_size_mb": 1251.992343902588,
+      "cold_load_time": 5.101266860961914,
+      "warm_encode_ms": 775.050163269043,
+      "embeddings_per_second": 567.4772288614114,
+      "peak_rss_mb": 808.625,
+      "stability_mean": 0.9293200760096998,
+      "stability_median": 0.9701643586158821,
+      "stability_std": 0.09059826772429169,
+      "stability_ci_95_lo": 0.6659439588420144,
+      "stability_ci_95_hi": 1.0000001192092896,
+      "stability_n": 160,
+      "paraphrase_mean": 0.8205583820203411,
+      "antonym_mean": 0.7773770363412941,
+      "separation_ratio": 1.3865417324320504,
+      "retrieval_top1": 0.9759237170219404,
+      "retrieval_top5": 0.8905214116920194,
+      "nn_consistency": 1.0,
+      "quality_score": 0.6443994300244781,
+      "failure_rate": 0.0,
+      "stability_by_type": {
+        "asr": {
+          "mean": 0.8997761350094396,
+          "median": 0.9940616782940364,
+          "std": 0.12849242737044836
+        },
+        "typo": {
+          "mean": 0.802998766860159,
+          "median": 0.7902867446004946,
+          "std": 0.11303934163417997
+        },
+        "hesitation": {
+          "mean": 0.9175087797292811,
+          "median": 0.9121973968902399,
+          "std": 0.04954675977139006
+        },
+        "filler": {
+          "mean": 0.8873109523673308,
+          "median": 0.9046593549644563,
+          "std": 0.04458987665436792
+        },
+        "punctuation": {
+          "mean": 0.9519571963326088,
+          "median": 0.9562889635562964,
+          "std": 0.022126223427772415
+        },
+        "capitalization": {
+          "mean": 1.0000000208616215,
+          "median": 1.0,
+          "std": 3.897159620164778e-08
+        },
+        "no_punctuation": {
+          "mean": 1.0000000208616215,
+          "median": 1.0,
+          "std": 3.897159620164778e-08
+        },
+        "doubled_word": {
+          "mean": 0.9750087360555348,
+          "median": 0.9779320074356332,
+          "std": 0.010866054273877324
+        }
+      },
+      "norm_latency": 1.0,
+      "norm_warm_latency": 0.8052787371349273,
+      "norm_throughput": 0.28268832724839776,
+      "norm_memory": 0.8100041954307945,
+      "norm_stability": 0.6070372891606832,
+      "norm_quality": 0.0,
+      "norm_consistency": 0.5,
+      "overall_score": 0.48602857455809007,
+      "stability_score": 0.9293200760096998
+    },
+    {
+      "name": "multilingual-e5-base",
+      "runtime": "python",
+      "repo_id": "intfloat/multilingual-e5-base",
+      "dimension": 768,
+      "model_size_mb": 5076.23447227478,
+      "cold_load_time": 7.811299800872803,
+      "warm_encode_ms": 939.6700859069824,
+      "embeddings_per_second": 544.8480320370545,
+      "peak_rss_mb": 1292.359375,
+      "stability_mean": 0.9594574716405015,
+      "stability_median": 0.9616202734741994,
+      "stability_std": 0.03350458968828988,
+      "stability_ci_95_lo": 0.8947005119741268,
+      "stability_ci_95_hi": 1.0000001192092896,
+      "stability_n": 160,
+      "paraphrase_mean": 0.9290618800213628,
+      "antonym_mean": 0.9155871100927766,
+      "separation_ratio": 1.1048395777393305,
+      "retrieval_top1": 0.9858863661099357,
+      "retrieval_top5": 0.948017252648331,
+      "nn_consistency": 1.0,
+      "quality_score": 0.6492161374944717,
+      "failure_rate": 0.0,
+      "stability_by_type": {
+        "asr": {
+          "mean": 0.9651950166444216,
+          "median": 0.9916957020759511,
+          "std": 0.04037949302538492
+        },
+        "typo": {
+          "mean": 0.9319126633287471,
+          "median": 0.9259065985297841,
+          "std": 0.04000813241197591
+        },
+        "hesitation": {
+          "mean": 0.9466822685108303,
+          "median": 0.9431934077804301,
+          "std": 0.020608740294174727
+        },
+        "filler": {
+          "mean": 0.9256129254394245,
+          "median": 0.9304224190510779,
+          "std": 0.01477478217258235
+        },
+        "punctuation": {
+          "mean": 0.9606693591731352,
+          "median": 0.9617204368114471,
+          "std": 0.011791697906006211
+        },
+        "capitalization": {
+          "mean": 0.9652290169590195,
+          "median": 0.960299907775557,
+          "std": 0.023988364483348987
+        },
+        "no_punctuation": {
+          "mean": 1.0000000387430183,
+          "median": 1.0,
+          "std": 5.083895474842093e-08
+        },
+        "doubled_word": {
+          "mean": 0.9803584843254146,
+          "median": 0.9848530897054316,
+          "std": 0.013273262412532133
+        }
+      },
+      "norm_latency": 0.46312314559611045,
+      "norm_warm_latency": 0.7556522371620955,
+      "norm_throughput": 0.27119728831531714,
+      "norm_memory": 0.5148079636904535,
+      "norm_stability": 0.905005684000125,
+      "norm_quality": 0.053999320200293244,
+      "norm_consistency": 0.5,
+      "overall_score": 0.43867637137991844,
+      "stability_score": 0.9594574716405015
+    },
+    {
+      "name": "bge-small-en-v1.5",
+      "runtime": "python",
+      "repo_id": "BAAI/bge-small-en-v1.5",
+      "dimension": 384,
+      "model_size_mb": 382.53126525878906,
+      "cold_load_time": 10.149040699005127,
+      "warm_encode_ms": 227.8590202331543,
+      "embeddings_per_second": 1207.670013114356,
+      "peak_rss_mb": 547.390625,
+      "stability_mean": 0.9404027472850629,
+      "stability_median": 0.9791988128000728,
+      "stability_std": 0.07881042196475284,
+      "stability_ci_95_lo": 0.7131749406456948,
+      "stability_ci_95_hi": 1.0000001192092896,
+      "stability_n": 160,
+      "paraphrase_mean": 0.8424992013526855,
+      "antonym_mean": 0.8165254704313636,
+      "separation_ratio": 1.3432468418541932,
+      "retrieval_top1": 0.9834690585791973,
+      "retrieval_top5": 0.9052004003441081,
+      "nn_consistency": 1.0,
+      "quality_score": 0.6467327414476801,
+      "failure_rate": 0.0,
+      "stability_by_type": {
+        "asr": {
+          "mean": 0.9102690215750961,
+          "median": 0.9892903858000253,
+          "std": 0.11115968690850832
+        },
+        "typo": {
+          "mean": 0.8284904434200172,
+          "median": 0.8161694352300423,
+          "std": 0.1023804811810952
+        },
+        "hesitation": {
+          "mean": 0.941933468206534,
+          "median": 0.9433978182044366,
+          "std": 0.03513438897059496
+        },
+        "filler": {
+          "mean": 0.9050157158453722,
+          "median": 0.9061495985594457,
+          "std": 0.028288991543347044
+        },
+        "punctuation": {
+          "mean": 0.9514076191104033,
+          "median": 0.9528700425379293,
+          "std": 0.02758959373457643
+        },
+        "capitalization": {
+          "mean": 1.0000000447034836,
+          "median": 1.0,
+          "std": 5.289387569069664e-08
+        },
+        "no_punctuation": {
+          "mean": 1.0000000447034836,
+          "median": 1.0,
+          "std": 5.289387569069664e-08
+        },
+        "doubled_word": {
+          "mean": 0.9861056207161146,
+          "median": 0.9884358658270995,
+          "std": 0.007349700892048844
+        }
+      },
+      "norm_latency": 0.0,
+      "norm_warm_latency": 0.9702355710943782,
+      "norm_throughput": 0.6077763215606722,
+      "norm_memory": 0.9694210305503642,
+      "norm_stability": 0.7166116469090367,
+      "norm_quality": 0.026158373007579627,
+      "norm_consistency": 0.5,
+      "overall_score": 0.3697201588406367,
+      "stability_score": 0.9404027472850629
+    },
+    {
+      "name": "Qwen3-Embedding-0.6B",
+      "runtime": "python",
+      "repo_id": "Qwen/Qwen3-Embedding-0.6B",
+      "dimension": 1024,
+      "model_size_mb": 1151.5542573928833,
+      "cold_load_time": 6.350430965423584,
+      "warm_encode_ms": 596.4329242706299,
+      "embeddings_per_second": 10.781717297494561,
+      "peak_rss_mb": 1438.515625,
+      "stability_mean": 0.9127790882021355,
+      "stability_median": 0.9356566140492033,
+      "stability_std": 0.08782177190483842,
+      "stability_ci_95_lo": 0.6797163669794762,
+      "stability_ci_95_hi": 1.0000000124802213,
+      "stability_n": 160,
+      "paraphrase_mean": 0.8007435024875781,
+      "antonym_mean": 0.7645193877067201,
+      "separation_ratio": 1.4771666402979184,
+      "retrieval_top1": 0.9817341200502346,
+      "retrieval_top5": 0.8820769271756788,
+      "nn_consistency": 1.0,
+      "quality_score": 0.6469213464085468,
+      "failure_rate": 0.0,
+      "stability_by_type": {
+        "asr": {
+          "mean": 0.8845502251080758,
+          "median": 0.9706596654200986,
+          "std": 0.13634397773623533
+        },
+        "typo": {
+          "mean": 0.8330648727868308,
+          "median": 0.8364641486664195,
+          "std": 0.11623273087886525
+        },
+        "hesitation": {
+          "mean": 0.8877001252007002,
+          "median": 0.8880766083301471,
+          "std": 0.05721446736719275
+        },
+        "filler": {
+          "mean": 0.8699392686898717,
+          "median": 0.8651706286055502,
+          "std": 0.04946111411013881
+        },
+        "punctuation": {
+          "mean": 0.9490494523559574,
+          "median": 0.9557440349831229,
+          "std": 0.02624599610967024
+        },
+        "capitalization": {
+          "mean": 0.9430034643641129,
+          "median": 0.9439715888682829,
+          "std": 0.040771764375326154
+        },
+        "no_punctuation": {
+          "mean": 0.999996986826692,
+          "median": 0.9999999641938672,
+          "std": 1.3023762256690507e-05
+        },
+        "doubled_word": {
+          "mean": 0.9349283102848431,
+          "median": 0.9436060648149192,
+          "std": 0.03985552851510511
+        }
+      },
+      "norm_latency": 0.7525316813825572,
+      "norm_warm_latency": 0.8591248832408125,
+      "norm_throughput": 0.0,
+      "norm_memory": 0.42561691902818566,
+      "norm_stability": 0.4434965623355234,
+      "norm_quality": 0.02827279239813859,
+      "norm_consistency": 0.5,
+      "overall_score": 0.33742400648265247,
+      "stability_score": 0.9127790882021355
+    },
+    {
+      "name": "bge-m3",
+      "runtime": "python",
+      "repo_id": "BAAI/bge-m3",
+      "dimension": 1024,
+      "model_size_mb": 4374.81477355957,
+      "cold_load_time": 8.103271007537842,
+      "warm_encode_ms": 3446.302890777588,
+      "embeddings_per_second": 156.69701112495227,
+      "peak_rss_mb": 2135.96875,
+      "stability_mean": 0.9213136971785634,
+      "stability_median": 0.9393032491254742,
+      "stability_std": 0.08157938987688472,
+      "stability_ci_95_lo": 0.7251147076350799,
+      "stability_ci_95_hi": 1.0000001192092896,
+      "stability_n": 160,
+      "paraphrase_mean": 0.82506881482147,
+      "antonym_mean": 0.7706621238590046,
+      "separation_ratio": 1.513016127300587,
+      "retrieval_top1": 0.9710707500441538,
+      "retrieval_top5": 0.8873286900547386,
+      "nn_consistency": 1.0,
+      "quality_score": 0.652556624711822,
+      "failure_rate": 0.0,
+      "stability_by_type": {
+        "asr": {
+          "mean": 0.9167705244107196,
+          "median": 0.977707803249352,
+          "std": 0.10822114274063124
+        },
+        "typo": {
+          "mean": 0.8232456445392756,
+          "median": 0.8052293542504294,
+          "std": 0.11209069993651484
+        },
+        "hesitation": {
+          "mean": 0.9114666675536821,
+          "median": 0.9135357457306068,
+          "std": 0.03179993957343289
+        },
+        "filler": {
+          "mean": 0.8685207204957504,
+          "median": 0.8718365430832034,
+          "std": 0.030392628326485045
+        },
+        "punctuation": {
+          "mean": 0.9313123580865348,
+          "median": 0.9369467793538226,
+          "std": 0.04008577384960774
+        },
+        "capitalization": {
+          "mean": 0.9497510737892914,
+          "median": 0.9577122658615448,
+          "std": 0.05677579329256614
+        },
+        "no_punctuation": {
+          "mean": 1.0000000357627787,
+          "median": 1.0,
+          "std": 5.462855572461561e-08
+        },
+        "doubled_word": {
+          "mean": 0.9694425527904755,
+          "median": 0.9767199782466914,
+          "std": 0.016170841445648603
+        }
+      },
+      "norm_latency": 0.40528156710371455,
+      "norm_warm_latency": 0.0,
+      "norm_throughput": 0.07409535280096566,
+      "norm_memory": 0.0,
+      "norm_stability": 0.5278782311579416,
+      "norm_quality": 0.09144897642260091,
+      "norm_consistency": 0.5,
+      "overall_score": 0.2728700994171052,
+      "stability_score": 0.9213136971785634
+    }
+  ],
+  "notes": {
+    "stability_score": "Raw stability mean (0-1). norm_stability is the min-max normalized version used in scoring.",
+    "throughput_discrepancy": "embeddings_per_second may differ between benchmark.json and leaderboard due to multiple benchmark runs. The leaderboard value is from the streaming benchmark run; benchmark.json may have been overwritten by a subsequent non-streaming run."
+  }
+}

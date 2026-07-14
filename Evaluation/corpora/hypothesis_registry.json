@@ -11,8 +11,9 @@
         "cosine_drift": "< 0.001",
         "latency_diff": "CoreML >= 2x faster than Python"
       },
-      "status": "evaluated",
-      "work_package": "A"
+      "status": "blocked",
+      "work_package": "A",
+      "status_note": "No multi-runtime data: Python embedding benchmark failed for -mlx variants (ignore_mismatched_sizes), MLX runtime failed (No module named 'mlx'). The script ran and produced a valid report with 0 comparisons. This hypothesis has NOT been tested."
     },
     {
       "id": "3.4-B-joint-embeddings",
@@ -39,7 +40,8 @@
         "svcca": "0.3-0.7"
       },
       "status": "evaluated",
-      "work_package": "C"
+      "work_package": "C",
+      "status_note": "Pilot study: N=10 stored samples. CKA biased high at small N. Needs full-corpus analysis for strong conclusions."
     },
     {
       "id": "3.4-D-cross-model-agreement",
@@ -51,7 +53,8 @@
         "jaccard": "0.3-0.6 cross-family, 0.6-0.9 same-family"
       },
       "status": "evaluated",
-      "work_package": "D"
+      "work_package": "D",
+      "status_note": "Pilot study: only 2 models with stored samples (bge-base lacked embedding_sample). N=10 texts, k=5 from pool of 9. Needs 3+ models and full corpus."
     },
     {
       "id": "3.4-E-generator-comparison",
@@ -64,7 +67,8 @@
         "bleu4": "0.1-0.4 (low, rewrites are paraphrastic not exact)"
       },
       "status": "evaluated",
-      "work_package": "E"
+      "work_package": "E",
+      "status_note": "Strong evidence: 10 generators, 45 pairs, 27 prompts. Mean cosine ~0.55 (divergent). Per-category breakdown available."
     },
     {
       "id": "3.4-F-offline-fusion",
