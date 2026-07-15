@@ -1,0 +1,31 @@
+{
+  "name": "Qwen3-Embedding-0.6B",
+  "candidate": {
+    "name": "Qwen3-Embedding-0.6B",
+    "repo_id": "Qwen/Qwen3-Embedding-0.6B",
+    "family": "Qwen",
+    "dimension": 1024,
+    "max_seq_length": 32768,
+    "pooling": "last",
+    "size_category": "base",
+    "estimated_size_mb": 1200,
+    "gated": false,
+    "license": "apache-2.0",
+    "languages": [
+      "multilingual"
+    ],
+    "coreml_convertible": false,
+    "mlx_available": true,
+    "priority": 9,
+    "notes": "Qwen3 embedding. Apache 2.0. Very long context."
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/Qwen3-Embedding-0.6B",
+  "downloaded": true,
+  "eval_completed": true,
+  "runtimes_tested": [
+    "python"
+  ],
+  "elapsed_seconds": 597.0852859020233,
+  "timestamp": "2026-07-14T05:01:55.557961+00:00",
+  "error": null
+}

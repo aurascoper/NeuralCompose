@@ -1,0 +1,31 @@
+{
+  "name": "all-MiniLM-L6-v2",
+  "candidate": {
+    "name": "all-MiniLM-L6-v2",
+    "repo_id": "sentence-transformers/all-MiniLM-L6-v2",
+    "family": "MiniLM",
+    "dimension": 384,
+    "max_seq_length": 256,
+    "pooling": "mean",
+    "size_category": "small",
+    "estimated_size_mb": 91,
+    "gated": false,
+    "license": "apache-2.0",
+    "languages": [
+      "en"
+    ],
+    "coreml_convertible": true,
+    "mlx_available": true,
+    "priority": 4,
+    "notes": "Very small, very fast. Apache 2.0. Good latency baseline."
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/all-MiniLM-L6-v2",
+  "downloaded": true,
+  "eval_completed": true,
+  "runtimes_tested": [
+    "python"
+  ],
+  "elapsed_seconds": 11.533639907836914,
+  "timestamp": "2026-07-14T04:06:31.057260+00:00",
+  "error": null
+}

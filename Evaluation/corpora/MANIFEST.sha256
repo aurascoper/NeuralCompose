@@ -1,0 +1,10 @@
+# Evaluation corpora manifest — versioned-immutable.
+# Verify: cd Evaluation/corpora && shasum -a 256 -c MANIFEST.sha256
+# hypothesis_registry.json excluded by design (live registry).
+bec8adbd455c4ffb9d78910aa075f6389c3fa285b254268ae8b0f9aa7f95cc0f  embedding_bench_candidates_v1.json
+437aaab15656b50c1d6b536c5d8005b267dc281b795c6446daaeaf725fe026ba  embedding_bench_corpus_v1.json
+3ffbef06d63d0914172bdd7d08a00698095b675b942684bd761a9b487b2d7854  generation_eval_candidates_v1.json
+e19c64a91a896fa481dc798e269ef90fcf43d1f2b3b0d3d21cc5b42ac2a72f55  generation_eval_candidates_v2.json
+744a476cb09aadf14210203fc3f55f670f0a0114290ae970f6c29f4155b52ee9  generation_eval_candidates_v3.json
+55b886b3b95efdbc73939b83898da18413c4f9f5b718ecd790478caec990b2f7  generation_eval_prompts_v1.json
+b3c9b3e6dc814de195490fa98c00d26f46ca11c4c916db7b07761a5b2e6207cb  semantic_eval_v1.json

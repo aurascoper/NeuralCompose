@@ -1,0 +1,124 @@
+candidate,prompt_id,category,first_token_latency,generate_time,tokens_per_second,words_per_second,word_count_ratio,stop_reason,decoder_loop_period,decoder_loop_repeat_count,prompt_echo_detected,meaning_preservation_cosine,prompt_text,generated_text,meaning_preserved,grammar,no_hallucination,no_added_commentary,conciseness,instruction_followed
+"qwen2.5-0.5b","instr-say-yes","instruction-following","0.022649049758911133","0.5753099918365479","38.24025362356378","29.54928689093565","4.25","eos","0","1","false","","Say the word yes","Yes, please tell me anything you're curious about! I'm here to help with any question or inquiry.",,,,,,
+"qwen2.5-0.5b","instr-avoid-very","instruction-following","0.023391008377075195","0.7074990272521973","39.576026144865686","29.682019608649266","1.4","eos","0","1","false","","I will not use the word 'very' again in this or any future sentences transcribed","Understood. I will not use the word 'very' again in this or any future sentences transcribed.
+
+Keep up your good work!",,,,,,
+"qwen2.5-0.5b","instr-rewrite-formal","instruction-following","0.024055957794189453","0.24930095672607422","44.1233765985364","40.112160544124","1.0","eos","0","1","false","","Rewrite this more formally: ""Hey can you send that over.""","Please provide me with the document or file for verification.",,,,,,
+"qwen2.5-0.5b","instr-rewrite-clearer","instruction-following","0.022922992706298828","1.4827109575271606","40.4664170689525","31.698693370679457","2.764705882352941","eos","0","1","false","","Rewrite this sentence in a clearer way:
+
+The test passed even though several setup steps failed initially.","Even with initial failures due to many setups, the test passed successfully.
+
+Explanation of changes made:
+1. Changed ""passed"" to ""passed even though""
+2. Added a comma after the last sentence
+
+This clarifies that despite initial failures from many setup steps, part of the test passed successfully.",,,,,,
+"qwen2.5-0.5b","instr-sequence-letters","instruction-following","0.023820996284484863","2.9809399843215942","40.25575846248033","27.508101616028224","11.714285714285714","maxTokens","0","1","false","","Continue the sequence:
+A
+B
+C
+D","Sure, I'm happy to continue the sequence with ""A"".
+
+Here is an example of a sentence created using Python code:
+
+```
+def create_sentence(length):
+    if length == 1:
+        return 'A'
+    else: 
+       first_word = ""a""
+       remaining_words = []
+       
+   # Add code to generate rest of the sentence
+```
+
+In this example, we use a conditional statement and an indentation level to define what happens when `length == 1`. We then return a string ""A"". If the length is not one, we define `remaining_words` to",,,,,,
+"qwen2.5-0.5b","filler-second-option","filler-removal","0.023277997970581055","1.1521179676055908","41.66240033540735","36.45460029348143","3.230769230769231","eos","0","1","false","0.6812167167663574","Um, so, I think we should, like, probably go with the second option.","I understand you're sharing your thoughts on this topic, but I don't have enough information to make a definitive judgment. Can you provide me with more details about your situation and why it's important for everyone involved to follow the second option?",,,,,,
+"qwen2.5-0.5b","filler-try-tomorrow","filler-removal","0.02361297607421875","0.4904741048812866","42.815716040876","38.738028798887804","1.2666666666666666","eos","0","1","false","0.6905331015586853","You know, uh, I was kind of thinking maybe we could, um, try again tomorrow.","That sounds like a good idea! Do you have any ideas on what we could do differently this time?",,,,,,
+"qwen2.5-0.5b","filler-need-more-time","filler-removal","0.022871017456054688","2.9049179553985596","41.309256179503976","34.76862395108251","6.733333333333333","maxTokens","0","1","false","0.6108828783035278","So basically what I'm trying to say is, like, we need more time, you know?","Surely! That's a great point. It sounds like there is indeed more time, so I'm happy to help you think through how we can manage our resources and responsibilities in a way that maximizes productivity while minimizing the impact on your schedule.
+
+How can we think through this? Let's break it down:
+
+1. Identify the long-term goal: Are you aiming for a certain outcome or set of outcomes? For instance, are you trying to reach the top rankings in your industry for a long-term objective like becoming an ""industry leader""? This will guide you on which type of resources and activities",,,,,,
+"qwen2.5-0.5b","filler-its-fine","filler-removal","0.023115038871765137","2.8555219173431396","42.02384134093829","36.42066249547985","10.4","maxTokens","0","1","false","0.47709935903549194","Uh, well, I guess, I mean, it's fine I suppose.","It’s completely okay to feel this way about something for you, and it doesn't mean I'm judging or commenting on your feelings. It’s important to remember that you’re not alone in this experience and there is support available if needed.
+
+If someone tells me they feel like something happened to them in the past, it’s natural and expected that I would listen attentively without judgment. Let me know if you need anything from here, or let’s have an open conversation about it.
+
+Remember that the conversations are important to me and I will continue my efforts towards understanding you better if needed.
+
+If this",,,,,,
+"qwen2.5-0.5b","punct-milk-eggs-bread","punctuation-restoration","0.022982001304626465","2.8466579914093018","42.15469521176701","33.72375616941361","7.384615384615385","maxTokens","0","1","false","0.8034407496452332","we need three things milk eggs and bread also dont forget the coffee","Sure, I can help with that. Here are three different ways to prepare the ingredients you mentioned:
+
+1. Milk, Eggs and Bread
+
+2. Coffee with bread
+3. A combination of the above mentioned ingredients.
+
+Note that I am not sure what you mean by ""bread"", but assuming a typical bread like bagel or white sandwich, I would prepare it as follows:
+
+1. Milk and Eggs
+2. Bread 
+3) Coffee & Bread
+
+I hope this helps convey the idea of combining these ingredients together to create a meal. Let me know if you have any other questions",,,,,,
+"qwen2.5-0.5b","punct-she-said-yes","punctuation-restoration","0.02301204204559326","0.9620139598846436","41.57943820773293","36.38200843176631","2.6923076923076925","eos","0","1","false","0.8920053243637085","can you believe it she said yes right there in front of everyone","Yes, I can absolutely believe it. Her words echoed true in her eyes and everyone present saw the truth of what she was about to say.
+
+She said yes, right there in front of everyone.",,,,,,
+"qwen2.5-0.5b","punct-meeting-nine","punctuation-restoration","0.022939085960388184","0.8886319398880005","41.637035919126795","38.26106003379219","2.8333333333333335","eos","0","1","false","0.765701174736023","the meeting starts at nine but bring your laptop and the report","Thank you for bringing me a laptop so that I can help with our meeting. If the report is important, please keep it on your own device until we start to discuss its contents.",,,,,,
+"qwen2.5-0.5b","punct-go-now-or-wait","punctuation-restoration","0.02348792552947998","2.9077030420303345","41.26968891438403","36.45489187437256","8.153846153846153","maxTokens","0","1","false","0.8689860701560974","im not sure if we should go now or wait until tomorrow morning","It's difficult to give you a definite answer without knowing more details about the situation. However, here are some things that might help you decide whether to go now or wait until tomorrow morning:
+
+1. Schedule Your Time: Make a plan for how you will be able to get ready and go about your plans. Do not wait until the last minute.
+
+2. Consider Your Goals: Think what you want to achieve for this day or week and decide if going now is a good plan.
+
+3. Check Your Schedule: Make sure that you have all the necessary tasks on your to-do list so it won",,,,,,
+"qwen2.5-0.5b","cap-dr-smith","capitalization","0.022885918617248535","2.8564990758895874","42.00946571727103","36.758282502612154","10.5","maxTokens","0","1","false","0.7863031625747681","i met dr smith on jan 5 in st louis","It sounds like you had a nice meeting with Dr. Smith on January 5 in St. Louis! Let me know if you need any more information or have additional questions about the meeting.
+
+Dr. Smith is a well-known figure in your field, so you can expect to learn about his research and achievements through the conversation. Do you have any specific questions or topics that Dr. Smith would like to discuss? I'm here to help answer them for you.
+
+Good luck with your search or visit Dr. Smith's website on the occasion of his birthday to learn more about him and what he does for",,,,,,
+"qwen2.5-0.5b","cap-london-paris","capitalization","0.023019075393676758","2.880622982978821","41.65765555196304","24.64744620157813","7.1","maxTokens","0","1","false","0.8264631628990173","were flying to london on friday then paris on monday","Sure! I can help you with that.
+
+To answer your question, let's start by assuming the current time is now and we're planning to fly from London (GMT+01:35) to Paris on Monday, April 24th.
+
+Here's a summary of the flight itinerary:
+
+1. **Flight from London (GMT+01:35) to Paris**
+   - Take the plane at 9 AM BST
+       * Destination: London (GMT+01:35)
+   - Passengers board the plane at 9 AM BST
+       * Destination",,,,,,
+"qwen2.5-0.5b","cap-email-sarah-david","capitalization","0.022850990295410156","2.8719359636306763","41.7836614463705","35.51611222941492","10.2","maxTokens","0","1","false","0.8175414204597473","please email sarah and david before the meeting on tuesday","Sure, I'll send Sara a message. To start with:
+
+Subject: Important Appointment Reminder
+
+Dear Sarah and David,
+
+I hope this email finds you well.
+
+As of now, I need to arrange a meeting with Sara and David about the project we've been working on for some time now. I need to confirm their availability first.
+
+Could you please schedule your arrival and departure date for the meeting? If not, I'll need to find out if they have any other commitments or tasks that might interfere with this meeting.
+
+If you could confirm their availability, I'll send Sara and David a copy of",,,,,,
+"qwen2.5-0.5b","concise-wondering-help","concise-rewrite","0.022702932357788086","1.041653037071228","42.240552692778536","35.52046476438195","2.0555555555555554","eos","0","1","false","0.8094288110733032","I was wondering if maybe you might possibly have some time available to help me with this task.","Of course, I'm here and ready for your request! What's the task you would like me to help with? Please provide more details about what kind of assistance you need and I'll do my best to help.",,,,,,
+"qwen2.5-0.5b","concise-most-people-agree","concise-rewrite","0.023334026336669922","2.4732229709625244","41.2417324266982","37.198425326041516","4.6","eos","0","1","false","0.5171414613723755","It is my belief that, in general, most people would probably agree that this is likely the better option overall.","I'm sorry, I did not understand your question properly before now.
+
+In general terms of the most important thing that a person needs to have in life, there are many things one can enjoy and experience such as living with someone special who you love deeply. 
+
+It is also important to remember that the things one enjoys may not be available every day, but it should always come first in everything a person does.
+
+Is there anything that you would like to know more about? I am here for help if needed.",,,,,,
+"qwen2.5-0.5b","concise-still-waiting","concise-rewrite","0.024359941482543945","1.4067950248718262","39.80679417394314","36.252616122698214","2.8333333333333335","eos","0","1","false","0.5382322072982788","At this point in time, we are currently still waiting for a response regarding the matter in question.","I'm sorry, I am not sure what you are asking for as it could be referring to a lot of things such as seeking advice, requesting help or guidance on something. If you have any specific question that I can assist with then please feel free to ask me my query.",,,,,,
+"qwen2.5-0.5b","concise-consider-looking","concise-rewrite","0.023988962173461914","2.458590030670166","40.2669817924115","36.60634708401045","5.0","eos","0","1","false","0.6473904252052307","There is a possibility that we could perhaps consider looking into this a bit further if that's alright.","It seems like you are making an important decision by considering this opportunity for further consideration. It is always advisable to take a step back and think about what we have done so far, identify the areas that need improvement or enhancement in order to achieve a better outcome and/or status.
+
+Remember, there are many things we can learn from each other through collaboration. It is important to approach the situation with a sense of humility and openness.
+
+It's great that you are taking this step towards considering the possibility.",,,,,,
+"qwen2.5-0.5b","command-close-windows","command-reformulation","0.02358102798461914","0.5069119930267334","39.45458043038497","29.59093532278873","1.5","eos","0","1","false","0.8360646367073059","Rewrite this as a clear, complete command: ""close your windows""","Press the 'Close' button on your computer's taskbar or desktop to close all open windows.",,,,,,
+"qwen2.5-0.5b","command-open-emails","command-reformulation","0.04050099849700928","0.23329901695251465","30.004412755090048","25.71806807579147","0.46153846153846156","eos","0","1","false","0.7772940397262573","Rewrite this as a clear, complete command: ""open the thing with the emails""","Open all messages containing email addresses.",,,,,,
+"qwen2.5-0.5b","command-music-down","command-reformulation","0.03257405757904053","0.6985599994659424","32.92487405174041","22.904260209906372","1.2307692307692308","eos","0","1","false","0.7343474626541138","Rewrite this as a clear, complete command: ""turn that music down a bit""","""This song's volume is going to be reduced by about 20%"" or ""Maintain the current level.""",,,,,,
+"qwen2.5-0.5b","command-get-doc","command-reformulation","0.03324007987976074","0.9757189750671387","35.87098426326256","33.82121373393326","2.5384615384615383","eos","0","1","false","0.7625811100006104","Rewrite this as a clear, complete command: ""get me the doc from yesterday""","I need to retrieve your document for that day ago. Please provide the name or identifier of this particular file so I can fetch it from your storage system on a specific date.",,,,,,
+"qwen2.5-0.5b","tech-brainflow-reconnect","technical-term-preservation","0.027717947959899902","0.5280040502548218","34.09064758369365","28.408872986411374","0.6521739130434783","eos","0","1","false","0.8407030701637268","Rewrite this sentence in a clearer way, but keep the technical term ""BrainFlow"" unchanged: The BrainFlow stream needs to reconnect if it drops.","The BrainFlow stream should be reconnected when the connection is lost to ensure continuous operation.",,,,,,
+"qwen2.5-0.5b","tech-ane-classifier","technical-term-preservation","0.024590015411376953","0.4152020215988159","38.53545784384406","31.310059498123294","0.5416666666666666","eos","0","1","false","0.9044176936149597","Rewrite this more concisely, but keep the term ""ANE"" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible.","The classifier prefers to run on ANE, rather than the GPU whenever possible.",,,,,,
+"qwen2.5-0.5b","tech-eeg-stream","technical-term-preservation","0.028007030487060547","0.48628807067871094","32.90230825047557","26.733125453511406","0.8125","eos","0","1","false","0.7873172760009766","Rewrite this more politely, but keep the term ""EEG"" unchanged: Turn on the EEG stream now.","Turn it up! Now listen to my data with a high-end EEG stream.",,,,,,

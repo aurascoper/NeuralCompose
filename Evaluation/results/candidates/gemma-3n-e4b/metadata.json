@@ -1,0 +1,18 @@
+{
+  "name": "gemma-3n-e4b",
+  "candidate": {
+    "name": "gemma-3n-e4b",
+    "directory": "gemma-3n-E4B-it-lm-4bit",
+    "extraEOSTokens": [
+      "<end_of_turn>"
+    ],
+    "repetitionPenalty": 1.3
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/gemma-3n-E4B-it-lm-4bit",
+  "downloaded": true,
+  "smoke_test_passed": true,
+  "eval_completed": true,
+  "elapsed_seconds": 355.64569425582886,
+  "timestamp": "2026-07-14T04:07:36.722775+00:00",
+  "error": null
+}

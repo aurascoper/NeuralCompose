@@ -1,0 +1,1687 @@
+{
+  "model_name": "multilingual-e5-base",
+  "repo_id": "intfloat/multilingual-e5-base",
+  "runtime": "python",
+  "timestamp": "2026-07-14T04:25:45.556750+00:00",
+  "status": "evaluated",
+  "cold_load_time": 7.811299800872803,
+  "dimension": 768,
+  "model_size_mb": 5076.23447227478,
+  "peak_rss_after_load_mb": 955.828125,
+  "warm_encode_time_ms": 939.6700859069824,
+  "batch_metrics": {
+    "1": {
+      "total_ms": 30.936002731323242,
+      "per_text_ms": 30.936002731323242,
+      "embeddings_per_second": 32.324796732303184
+    },
+    "8": {
+      "total_ms": 30.926942825317383,
+      "per_text_ms": 3.865867853164673,
+      "embeddings_per_second": 258.6741290655812
+    },
+    "32": {
+      "total_ms": 59.391021728515625,
+      "per_text_ms": 1.8559694290161133,
+      "embeddings_per_second": 538.8019782901921
+    },
+    "128": {
+      "total_ms": 234.92789268493652,
+      "per_text_ms": 1.8353741616010666,
+      "embeddings_per_second": 544.8480320370545
+    }
+  },
+  "embeddings_per_second": 544.8480320370545,
+  "peak_rss_mb": 1292.359375,
+  "paraphrase_pairs": {
+    "pairs": [
+      {
+        "a": "start recording",
+        "b": "begin recording",
+        "cosine_similarity": 0.9919776916503906
+      },
+      {
+        "a": "stop recording",
+        "b": "end recording",
+        "cosine_similarity": 0.9336612781084346
+      },
+      {
+        "a": "speak",
+        "b": "say it",
+        "cosine_similarity": 0.9022300185102236
+      },
+      {
+        "a": "refine it",
+        "b": "improve it",
+        "cosine_similarity": 0.9323861043223147
+      },
+      {
+        "a": "begin sleep protocol",
+        "b": "start sleep protocol",
+        "cosine_similarity": 0.9909690629280731
+      },
+      {
+        "a": "reset composition",
+        "b": "clear composition",
+        "cosine_similarity": 0.876091718673706
+      },
+      {
+        "a": "start dictation",
+        "b": "begin dictation",
+        "cosine_similarity": 0.9905120730400085
+      },
+      {
+        "a": "start calibration",
+        "b": "begin calibration",
+        "cosine_similarity": 0.988142192363739
+      },
+      {
+        "a": "read it",
+        "b": "read aloud",
+        "cosine_similarity": 0.8955578145717272
+      },
+      {
+        "a": "open phase b",
+        "b": "open the phase b debug window",
+        "cosine_similarity": 0.920433328229188
+      },
+      {
+        "a": "save composition",
+        "b": "save the text",
+        "cosine_similarity": 0.896697998046875
+      },
+      {
+        "a": "delete last word",
+        "b": "remove last word",
+        "cosine_similarity": 0.9816193558715971
+      },
+      {
+        "a": "insert space",
+        "b": "add a space",
+        "cosine_similarity": 0.9457790320183
+      },
+      {
+        "a": "new line",
+        "b": "new paragraph",
+        "cosine_similarity": 0.917195374798499
+      },
+      {
+        "a": "iniciar grabaci\u00f3n",
+        "b": "commencer l'enregistrement",
+        "cosine_similarity": 0.9230291247367859
+      },
+      {
+        "a": "detener grabaci\u00f3n",
+        "b": "arr\u00eater l'enregistrement",
+        "cosine_similarity": 0.9328610301017761
+      },
+      {
+        "a": "inicia calibraci\u00f3n",
+        "b": "commencer la calibration",
+        "cosine_similarity": 0.9615875459663598
+      },
+      {
+        "a": "limpiar composici\u00f3n",
+        "b": "r\u00e9initialiser la composition",
+        "cosine_similarity": 0.9037702198302484
+      },
+      {
+        "a": "refine the composition",
+        "b": "improve the text",
+        "cosine_similarity": 0.8767747209533883
+      },
+      {
+        "a": "make it clearer",
+        "b": "make it more concise",
+        "cosine_similarity": 0.9438071880455569
+      },
+      {
+        "a": "I need help",
+        "b": "I want to communicate",
+        "cosine_similarity": 0.861199140548706
+      },
+      {
+        "a": "start rec",
+        "b": "begin rec",
+        "cosine_similarity": 0.9851142168045184
+      },
+      {
+        "a": "stop rec",
+        "b": "end rec",
+        "cosine_similarity": 0.9416583776473999
+      },
+      {
+        "a": "deep sleep",
+        "b": "slow-wave sleep",
+        "cosine_similarity": 0.8910894329005142
+      },
+      {
+        "a": "REM sleep",
+        "b": "rapid eye movement sleep",
+        "cosine_similarity": 0.8958834533830341
+      },
+      {
+        "a": "EEG signal",
+        "b": "brainwave activity",
+        "cosine_similarity": 0.8717721853527802
+      },
+      {
+        "a": "sleep onset",
+        "b": "falling asleep",
+        "cosine_similarity": 0.8647486567497253
+      },
+      {
+        "a": "I'm in pain",
+        "b": "I feel pain",
+        "cosine_similarity": 0.9520407347654926
+      },
+      {
+        "a": "adjust the bed",
+        "b": "change the bed position",
+        "cosine_similarity": 0.9517594633389159
+      },
+      {
+        "a": "turn on the light",
+        "b": "switch on the light",
+        "cosine_similarity": 0.9515078663825989
+      }
+    ],
+    "mean": 0.9290618800213628,
+    "median": 0.9326235672120454,
+    "std": 0.040065021638278894,
+    "min": 0.861199140548706,
+    "max": 0.9919776916503906,
+    "n": 30
+  },
+  "antonym_pairs": {
+    "pairs": [
+      {
+        "a": "start recording",
+        "b": "stop recording",
+        "cosine_similarity": 0.9375954233166828
+      },
+      {
+        "a": "begin calibration",
+        "b": "stop recording",
+        "cosine_similarity": 0.8462817577291583
+      },
+      {
+        "a": "start dictation",
+        "b": "stop dictation",
+        "cosine_similarity": 0.9412649238863542
+      },
+      {
+        "a": "start command listening",
+        "b": "stop command listening",
+        "cosine_similarity": 0.9449546965983758
+      },
+      {
+        "a": "don't stop recording",
+        "b": "do stop recording",
+        "cosine_similarity": 0.9132650597971607
+      },
+      {
+        "a": "don't start calibration",
+        "b": "do start calibration",
+        "cosine_similarity": 0.9054974913597107
+      },
+      {
+        "a": "don't reset the composition",
+        "b": "do reset the composition",
+        "cosine_similarity": 0.9179146387678815
+      },
+      {
+        "a": "don't begin sleep protocol",
+        "b": "do begin sleep protocol",
+        "cosine_similarity": 0.9337530811127328
+      },
+      {
+        "a": "turn on the light",
+        "b": "turn off the light",
+        "cosine_similarity": 0.9650470018386841
+      },
+      {
+        "a": "increase the volume",
+        "b": "decrease the volume",
+        "cosine_similarity": 0.9444642133159383
+      },
+      {
+        "a": "never stop recording",
+        "b": "always stop recording",
+        "cosine_similarity": 0.9512299241101652
+      },
+      {
+        "a": "deep sleep",
+        "b": "wake",
+        "cosine_similarity": 0.8555383682250977
+      },
+      {
+        "a": "save composition",
+        "b": "clear composition",
+        "cosine_similarity": 0.8913905620574951
+      },
+      {
+        "a": "undo last word",
+        "b": "insert space",
+        "cosine_similarity": 0.8222903225075814
+      },
+      {
+        "a": "open phase b",
+        "b": "close phase b",
+        "cosine_similarity": 0.9633191867686287
+      }
+    ],
+    "mean": 0.9155871100927766,
+    "median": 0.9337530811127328,
+    "std": 0.042407986212938044,
+    "min": 0.8222903225075814,
+    "max": 0.9650470018386841,
+    "n": 15
+  },
+  "command_groups": {
+    "intra_group": {
+      "startRecording": {
+        "mean": 0.9075874564150375,
+        "std": 0.03888612425778251,
+        "n": 10,
+        "phrases": [
+          "start recording",
+          "begin recording",
+          "start rec",
+          "iniciar grabaci\u00f3n",
+          "commencer l'enregistrement"
+        ]
+      },
+      "stopRecording": {
+        "mean": 0.8987751757819451,
+        "std": 0.026552464000178477,
+        "n": 10,
+        "phrases": [
+          "stop recording",
+          "end recording",
+          "stop rec",
+          "detener grabaci\u00f3n",
+          "arr\u00eater l'enregistrement"
+        ]
+      },
+      "beginCalibration": {
+        "mean": 0.9134936602929485,
+        "std": 0.034961774753388596,
+        "n": 10,
+        "phrases": [
+          "begin calibration",
+          "start calibration",
+          "calibrate",
+          "begin cal",
+          "inicia calibraci\u00f3n"
+        ]
+      },
+      "beginSleepProtocol": {
+        "mean": 0.9291055858474385,
+        "std": 0.02986977033243289,
+        "n": 10,
+        "phrases": [
+          "begin sleep protocol",
+          "start sleep protocol",
+          "run sleep protocol",
+          "begin sleep proto",
+          "iniciar protocolo de sue\u00f1o"
+        ]
+      },
+      "resetComposition": {
+        "mean": 0.8584441610226128,
+        "std": 0.0417929022348638,
+        "n": 15,
+        "phrases": [
+          "reset composition",
+          "clear composition",
+          "reset",
+          "clear",
+          "reset comp",
+          "limpiar composici\u00f3n"
+        ]
+      },
+      "speak": {
+        "mean": 0.8727778793987689,
+        "std": 0.03001100994985111,
+        "n": 15,
+        "phrases": [
+          "speak",
+          "read it",
+          "read aloud",
+          "say it",
+          "say",
+          "speak pls"
+        ]
+      },
+      "refine": {
+        "mean": 0.9098172179324597,
+        "std": 0.03597351525118997,
+        "n": 10,
+        "phrases": [
+          "refine",
+          "refine it",
+          "improve it",
+          "improve",
+          "refine it pls"
+        ]
+      },
+      "startDictation": {
+        "mean": 0.9269392949708104,
+        "std": 0.04529287696876203,
+        "n": 3,
+        "phrases": [
+          "start dictation",
+          "begin dictation",
+          "start dict"
+        ]
+      },
+      "stopDictation": {
+        "mean": 0.9717879891395569,
+        "std": 0.0,
+        "n": 1,
+        "phrases": [
+          "stop dictation",
+          "end dictation"
+        ]
+      },
+      "startCommand": {
+        "mean": 0.9398276754386461,
+        "std": 0.01321734743952565,
+        "n": 3,
+        "phrases": [
+          "start command listening",
+          "start commanding",
+          "start command"
+        ]
+      },
+      "stopCommand": {
+        "mean": 0.9503255928202842,
+        "std": 0.01099554234642223,
+        "n": 3,
+        "phrases": [
+          "stop command listening",
+          "stop commanding",
+          "stop command"
+        ]
+      },
+      "saveText": {
+        "mean": 0.9134907095387405,
+        "std": 0.021638930368362598,
+        "n": 3,
+        "phrases": [
+          "save composition",
+          "save the text",
+          "save txt"
+        ]
+      },
+      "undoAction": {
+        "mean": 0.9406678057322204,
+        "std": 0.001246513141338967,
+        "n": 3,
+        "phrases": [
+          "undo last word",
+          "undo last selection",
+          "undo last wd"
+        ]
+      },
+      "deleteAction": {
+        "mean": 0.9371834769314161,
+        "std": 0.015606488526649882,
+        "n": 3,
+        "phrases": [
+          "delete last word",
+          "delete last character",
+          "del last char"
+        ]
+      },
+      "insertAction": {
+        "mean": 0.8777544927816078,
+        "std": 0.03606280881098013,
+        "n": 3,
+        "phrases": [
+          "insert space",
+          "insert period",
+          "ins space"
+        ]
+      },
+      "newLineAction": {
+        "mean": 0.8988753805256642,
+        "std": 0.012959048157018625,
+        "n": 3,
+        "phrases": [
+          "new line",
+          "new paragraph",
+          "new para"
+        ]
+      },
+      "openDebug": {
+        "mean": 0.9406506805657582,
+        "std": 0.019897830157384364,
+        "n": 6,
+        "phrases": [
+          "open phase b",
+          "open the phase b debug window",
+          "open phase b debug",
+          "open phase b dbg"
+        ]
+      },
+      "sleepDeep": {
+        "mean": 0.8159845603179666,
+        "std": 0.053345025451277506,
+        "n": 3,
+        "phrases": [
+          "deep sleep",
+          "slow-wave sleep",
+          "N3"
+        ]
+      },
+      "sleepRem": {
+        "mean": 0.8832329511642456,
+        "std": 0.013584016536411102,
+        "n": 3,
+        "phrases": [
+          "REM sleep",
+          "uncertain REM",
+          "lucid dream"
+        ]
+      },
+      "needHelp": {
+        "mean": 0.8630170856995494,
+        "std": 0.030355712809231824,
+        "n": 6,
+        "phrases": [
+          "I need help",
+          "I'm uncomfortable",
+          "I'm in pain",
+          "call the nurse"
+        ]
+      }
+    },
+    "cross_group_mean": 0.8213743966999624,
+    "cross_group_std": 0.027034825811092254,
+    "cross_group_n": 2803,
+    "intra_group_mean": 0.9074869416158838,
+    "separation_ratio": 1.1048395777393305
+  },
+  "retrieval": {
+    "queries": {
+      "start recording": [
+        {
+          "text": "start recording",
+          "cosine_similarity": 1.0000001192092896
+        },
+        {
+          "text": "start recording",
+          "cosine_similarity": 1.0000001192092896
+        },
+        {
+          "text": "start recording",
+          "cosine_similarity": 1.0000001192092896
+        },
+        {
+          "text": "begin recording",
+          "cosine_similarity": 0.9919776916503906
+        },
+        {
+          "text": "commencer the recording",
+          "cosine_similarity": 0.9746432900428772
+        }
+      ],
+      "begin calibration": [
+        {
+          "text": "begin calibration",
+          "cosine_similarity": 1.0
+        },
+        {
+          "text": "begin calibration",
+          "cosine_similarity": 1.0
+        },
+        {
+          "text": "begin calibration",
+          "cosine_similarity": 1.0
+        },
+        {
+          "text": "start calibration",
+          "cosine_similarity": 0.9881422519683838
+        },
+        {
+          "text": "begin calibrations",
+          "cosine_similarity": 0.9833914041519165
+        }
+      ],
+      "sleep": [
+        {
+          "text": "light sleep",
+          "cosine_similarity": 0.9006829380174949
+        },
+        {
+          "text": "dreaming",
+          "cosine_similarity": 0.900641679763794
+        },
+        {
+          "text": "deep sleep",
+          "cosine_similarity": 0.9001168012619019
+        },
+        {
+          "text": "wake",
+          "cosine_similarity": 0.893461240117402
+        },
+        {
+          "text": "slow-wave sleep",
+          "cosine_similarity": 0.891267233566477
+        }
+      ],
+      "refine the composition": [
+        {
+          "text": "refine the composition",
+          "cosine_similarity": 1.0
+        },
+        {
+          "text": "refine la composition",
+          "cosine_similarity": 0.9753682584009479
+        },
+        {
+          "text": "refine it",
+          "cosine_similarity": 0.9443306393229199
+        },
+        {
+          "text": "refine it",
+          "cosine_similarity": 0.9443306393229199
+        },
+        {
+          "text": "refine it",
+          "cosine_similarity": 0.9443306393229199
+        }
+      ],
+      "I need help": [
+        {
+          "text": "I need help",
+          "cosine_similarity": 1.0
+        },
+        {
+          "text": "I need water",
+          "cosine_similarity": 0.9228719380941317
+        },
+        {
+          "text": "I want to sleep",
+          "cosine_similarity": 0.8948975926759729
+        },
+        {
+          "text": "I'm in pain",
+          "cosine_similarity": 0.888175262430279
+        },
+        {
+          "text": "I'm uncomfortable",
+          "cosine_similarity": 0.8877804808485794
+        }
+      ],
+      "stop recording": [
+        {
+          "text": "stop recording",
+          "cosine_similarity": 1.0000000596046483
+        },
+        {
+          "text": "stop recording",
+          "cosine_similarity": 1.0000000596046483
+        },
+        {
+          "text": "stop recording",
+          "cosine_similarity": 1.0000000596046483
+        },
+        {
+          "text": "stop recordng",
+          "cosine_similarity": 0.9628426410462047
+        },
+        {
+          "text": "arr\u00eater the recording",
+          "cosine_similarity": 0.9571613618327777
+        }
+      ],
+      "read aloud": [
+        {
+          "text": "read aloud",
+          "cosine_similarity": 1.0000000596046483
+        },
+        {
+          "text": "read aloud",
+          "cosine_similarity": 1.0000000596046483
+        },
+        {
+          "text": "read aloud",
+          "cosine_similarity": 1.0000000596046483
+        },
+        {
+          "text": "uh read aloud",
+          "cosine_similarity": 0.9750779837462883
+        },
+        {
+          "text": "read a loud",
+          "cosine_similarity": 0.954121765740023
+        }
+      ],
+      "reset": [
+        {
+          "text": "reset",
+          "cosine_similarity": 1.000000178813945
+        },
+        {
+          "text": "reset composition",
+          "cosine_similarity": 0.9091827869415283
+        },
+        {
+          "text": "reset composition",
+          "cosine_similarity": 0.9091827869415283
+        },
+        {
+          "text": "reset composition",
+          "cosine_similarity": 0.9091827219237519
+        },
+        {
+          "text": "reset comp",
+          "cosine_similarity": 0.9075877180590965
+        }
+      ],
+      "EEG signal quality": [
+        {
+          "text": "electroencephalogram signal quality",
+          "cosine_similarity": 0.958180305849332
+        },
+        {
+          "text": "EEG signal",
+          "cosine_similarity": 0.9544197889816636
+        },
+        {
+          "text": "EEG theta waves",
+          "cosine_similarity": 0.9208720828142232
+        },
+        {
+          "text": "EEG delta waves",
+          "cosine_similarity": 0.920782144116291
+        },
+        {
+          "text": "EEG alpha rhythm",
+          "cosine_similarity": 0.906764334037052
+        }
+      ],
+      "I want to communicate": [
+        {
+          "text": "I want to communicate",
+          "cosine_similarity": 1.0
+        },
+        {
+          "text": "I want to sleep",
+          "cosine_similarity": 0.8612864182846047
+        },
+        {
+          "text": "I need help",
+          "cosine_similarity": 0.861199140548706
+        },
+        {
+          "text": "uh speak it please",
+          "cosine_similarity": 0.8536231517791748
+        },
+        {
+          "text": "speak pls",
+          "cosine_similarity": 0.8529846247452945
+        }
+      ]
+    },
+    "top_k": 5,
+    "mean_top1_similarity": 0.9858863661099357,
+    "mean_top5_similarity": 0.948017252648331
+  },
+  "nn_consistency": {
+    "mean_consistency": 1.0,
+    "std_consistency": 0.0,
+    "per_query": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "top_k": 5
+  },
+  "trajectories": {
+    "sleep-to-lucid-dream": {
+      "phrases": [
+        "sleep",
+        "deep sleep",
+        "REM sleep",
+        "dream",
+        "lucid dream"
+      ],
+      "step_cosine_similarities": [
+        0.9001167416572571,
+        0.9063423871994019,
+        0.8435120769128708,
+        0.9104691850579757
+      ],
+      "mean_step_similarity": 0.8901100977068763,
+      "total_drift": 0.1340271234512329
+    },
+    "aasm-stage-transitions": {
+      "phrases": [
+        "wake",
+        "N1",
+        "N2",
+        "N3",
+        "uncertain REM"
+      ],
+      "step_cosine_similarities": [
+        0.797891425960745,
+        0.9325244386508726,
+        0.9097375869750977,
+        0.7908623218536377
+      ],
+      "mean_step_similarity": 0.8577539433600883,
+      "total_drift": 0.16580593585968018
+    },
+    "refinement-progression": {
+      "phrases": [
+        "write text",
+        "refine it",
+        "improve it",
+        "polish the composition",
+        "make it more concise"
+      ],
+      "step_cosine_similarities": [
+        0.830552339553833,
+        0.9323860962621031,
+        0.8487580834338734,
+        0.8449351602715415
+      ],
+      "mean_step_similarity": 0.8641579198803377,
+      "total_drift": 0.17497260421351224
+    },
+    "recording-lifecycle": {
+      "phrases": [
+        "start recording",
+        "begin calibration",
+        "start dictation",
+        "stop dictation",
+        "stop recording"
+      ],
+      "step_cosine_similarities": [
+        0.8873257637023926,
+        0.892707460684029,
+        0.9412649238863542,
+        0.9073996488690167
+      ],
+      "mean_step_similarity": 0.907174449285448,
+      "total_drift": 0.062404576683317226
+    },
+    "communication-escalation": {
+      "phrases": [
+        "I want to communicate",
+        "I need help",
+        "I'm uncomfortable",
+        "I'm in pain",
+        "call the nurse"
+      ],
+      "step_cosine_similarities": [
+        0.8611992597579956,
+        0.8877804808485794,
+        0.9007195771169411,
+        0.8397797250616387
+      ],
+      "mean_step_similarity": 0.8723697606962887,
+      "total_drift": 0.18999416768516109
+    }
+  },
+  "stability": {
+    "per_text": [
+      {
+        "text": "start recording",
+        "variants": {
+          "asr": {
+            "variant_text": "start reccording",
+            "cosine_similarity": 0.9559131860733032
+          },
+          "typo": {
+            "variant_text": "start recoding",
+            "cosine_similarity": 0.8991881608963013
+          },
+          "hesitation": {
+            "variant_text": "hmm let me think start recording",
+            "cosine_similarity": 0.9106649160385132
+          },
+          "filler": {
+            "variant_text": "so start recording then",
+            "cosine_similarity": 0.9111517018766225
+          },
+          "punctuation": {
+            "variant_text": "start recording!",
+            "cosine_similarity": 0.961072797903156
+          },
+          "capitalization": {
+            "variant_text": "START recording",
+            "cosine_similarity": 0.9476200907003933
+          },
+          "no_punctuation": {
+            "variant_text": "start recording",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "doubled_word": {
+            "variant_text": "start start recording",
+            "cosine_similarity": 0.9934530258178711
+          }
+        }
+      },
+      {
+        "text": "begin calibration",
+        "variants": {
+          "asr": {
+            "variant_text": "begin calibrations",
+            "cosine_similarity": 0.9833914041519165
+          },
+          "typo": {
+            "variant_text": "begin calibation",
+            "cosine_similarity": 0.9893349409103394
+          },
+          "hesitation": {
+            "variant_text": "uh begin calibration",
+            "cosine_similarity": 0.9823565472576944
+          },
+          "filler": {
+            "variant_text": "so begin calibration then",
+            "cosine_similarity": 0.9460713170894355
+          },
+          "punctuation": {
+            "variant_text": "begin calibration!",
+            "cosine_similarity": 0.9692473411560059
+          },
+          "capitalization": {
+            "variant_text": "BEGIN calibration",
+            "cosine_similarity": 0.9828830977817657
+          },
+          "no_punctuation": {
+            "variant_text": "begin calibration",
+            "cosine_similarity": 1.0
+          },
+          "doubled_word": {
+            "variant_text": "begin begin calibration",
+            "cosine_similarity": 0.9857445972270253
+          }
+        }
+      },
+      {
+        "text": "stop recording",
+        "variants": {
+          "asr": {
+            "variant_text": "stop reccording",
+            "cosine_similarity": 0.9560726232615226
+          },
+          "typo": {
+            "variant_text": "stop recoding",
+            "cosine_similarity": 0.9160423824812401
+          },
+          "hesitation": {
+            "variant_text": "er stop recording",
+            "cosine_similarity": 0.9304307657736997
+          },
+          "filler": {
+            "variant_text": "so stop recording then",
+            "cosine_similarity": 0.9085628335811397
+          },
+          "punctuation": {
+            "variant_text": "stop recording!",
+            "cosine_similarity": 0.9635499141484619
+          },
+          "capitalization": {
+            "variant_text": "stop recording",
+            "cosine_similarity": 1.0000000596046483
+          },
+          "no_punctuation": {
+            "variant_text": "stop recording",
+            "cosine_similarity": 1.0000000596046483
+          },
+          "doubled_word": {
+            "variant_text": "stop stop recording",
+            "cosine_similarity": 0.9911726111872561
+          }
+        }
+      },
+      {
+        "text": "refine the composition",
+        "variants": {
+          "asr": {
+            "variant_text": "define the composition",
+            "cosine_similarity": 0.9009231328964233
+          },
+          "typo": {
+            "variant_text": "refine the comopsition",
+            "cosine_similarity": 0.9262268631187841
+          },
+          "hesitation": {
+            "variant_text": "er refine the composition",
+            "cosine_similarity": 0.9619442865914957
+          },
+          "filler": {
+            "variant_text": "well refine the composition I guess",
+            "cosine_similarity": 0.9413458178823211
+          },
+          "punctuation": {
+            "variant_text": "refine the composition?",
+            "cosine_similarity": 0.964792013168335
+          },
+          "capitalization": {
+            "variant_text": "REFINE the COMPOSITION",
+            "cosine_similarity": 0.9440506100654602
+          },
+          "no_punctuation": {
+            "variant_text": "refine the composition",
+            "cosine_similarity": 1.0
+          },
+          "doubled_word": {
+            "variant_text": "refine refine the composition",
+            "cosine_similarity": 0.9669833183288574
+          }
+        }
+      },
+      {
+        "text": "begin sleep protocol",
+        "variants": {
+          "asr": {
+            "variant_text": "begin sleeve protocols",
+            "cosine_similarity": 0.9297528266906738
+          },
+          "typo": {
+            "variant_text": "begin slep prtoocol",
+            "cosine_similarity": 0.9255863339407842
+          },
+          "hesitation": {
+            "variant_text": "um begin sleep protocol",
+            "cosine_similarity": 0.9851269125938416
+          },
+          "filler": {
+            "variant_text": "like begin sleep protocol you know",
+            "cosine_similarity": 0.9298681616783142
+          },
+          "punctuation": {
+            "variant_text": "begin sleep protocol?",
+            "cosine_similarity": 0.9783976078033447
+          },
+          "capitalization": {
+            "variant_text": "begin sleep protocol",
+            "cosine_similarity": 1.0
+          },
+          "no_punctuation": {
+            "variant_text": "begin sleep protocol",
+            "cosine_similarity": 1.0
+          },
+          "doubled_word": {
+            "variant_text": "begin begin sleep protocol",
+            "cosine_similarity": 0.9839615821838379
+          }
+        }
+      },
+      {
+        "text": "reset composition",
+        "variants": {
+          "asr": {
+            "variant_text": "reset composition",
+            "cosine_similarity": 1.0
+          },
+          "typo": {
+            "variant_text": "reset compoition",
+            "cosine_similarity": 0.9278112010843278
+          },
+          "hesitation": {
+            "variant_text": "uh reset composition",
+            "cosine_similarity": 0.9718219041824341
+          },
+          "filler": {
+            "variant_text": "just reset composition okay",
+            "cosine_similarity": 0.9313700199127197
+          },
+          "punctuation": {
+            "variant_text": "reset composition!",
+            "cosine_similarity": 0.9612962603569031
+          },
+          "capitalization": {
+            "variant_text": "Reset Composition",
+            "cosine_similarity": 0.9323324440120061
+          },
+          "no_punctuation": {
+            "variant_text": "reset composition",
+            "cosine_similarity": 1.0
+          },
+          "doubled_word": {
+            "variant_text": "reset reset composition",
+            "cosine_similarity": 0.9862654805183411
+          }
+        }
+      },
+      {
+        "text": "speak it",
+        "variants": {
+          "asr": {
+            "variant_text": "speek it",
+            "cosine_similarity": 0.9167719483375549
+          },
+          "typo": {
+            "variant_text": "speak it",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "hesitation": {
+            "variant_text": "um speak it",
+            "cosine_similarity": 0.9369925781479571
+          },
+          "filler": {
+            "variant_text": "just speak it okay",
+            "cosine_similarity": 0.9051582756732867
+          },
+          "punctuation": {
+            "variant_text": "speak it!",
+            "cosine_similarity": 0.9621446132659912
+          },
+          "capitalization": {
+            "variant_text": "Speak It",
+            "cosine_similarity": 0.9485455751419067
+          },
+          "no_punctuation": {
+            "variant_text": "speak it",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "doubled_word": {
+            "variant_text": "speak speak it",
+            "cosine_similarity": 0.9741131067276001
+          }
+        }
+      },
+      {
+        "text": "read aloud",
+        "variants": {
+          "asr": {
+            "variant_text": "read a loud",
+            "cosine_similarity": 0.9541216437961597
+          },
+          "typo": {
+            "variant_text": "read alud",
+            "cosine_similarity": 0.9277424855385795
+          },
+          "hesitation": {
+            "variant_text": "er read aloud",
+            "cosine_similarity": 0.9656984189569008
+          },
+          "filler": {
+            "variant_text": "like read aloud you know",
+            "cosine_similarity": 0.9303647238233521
+          },
+          "punctuation": {
+            "variant_text": "read aloud!",
+            "cosine_similarity": 0.9720111472613303
+          },
+          "capitalization": {
+            "variant_text": "read aloud",
+            "cosine_similarity": 0.9999999999999964
+          },
+          "no_punctuation": {
+            "variant_text": "read aloud",
+            "cosine_similarity": 0.9999999999999964
+          },
+          "doubled_word": {
+            "variant_text": "read read aloud",
+            "cosine_similarity": 0.9883591525768729
+          }
+        }
+      },
+      {
+        "text": "save the text",
+        "variants": {
+          "asr": {
+            "variant_text": "save the text",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "typo": {
+            "variant_text": "save the txet",
+            "cosine_similarity": 0.8808326579132865
+          },
+          "hesitation": {
+            "variant_text": "uh save the text",
+            "cosine_similarity": 0.9541244561523847
+          },
+          "filler": {
+            "variant_text": "just save the text okay",
+            "cosine_similarity": 0.9318847019603671
+          },
+          "punctuation": {
+            "variant_text": "save the text?",
+            "cosine_similarity": 0.9509677886962891
+          },
+          "capitalization": {
+            "variant_text": "SAVE the TEXT",
+            "cosine_similarity": 0.9344358522372422
+          },
+          "no_punctuation": {
+            "variant_text": "save the text",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "doubled_word": {
+            "variant_text": "save save the text",
+            "cosine_similarity": 0.9737250804901123
+          }
+        }
+      },
+      {
+        "text": "I need help",
+        "variants": {
+          "asr": {
+            "variant_text": "I need help",
+            "cosine_similarity": 1.0
+          },
+          "typo": {
+            "variant_text": "I need hlep",
+            "cosine_similarity": 0.8763607887791647
+          },
+          "hesitation": {
+            "variant_text": "hmm I need help",
+            "cosine_similarity": 0.925291895866394
+          },
+          "filler": {
+            "variant_text": "like I need help you know",
+            "cosine_similarity": 0.8992303609848022
+          },
+          "punctuation": {
+            "variant_text": "I need help?",
+            "cosine_similarity": 0.9656438827514648
+          },
+          "capitalization": {
+            "variant_text": "I need HELP",
+            "cosine_similarity": 0.9746109843254089
+          },
+          "no_punctuation": {
+            "variant_text": "I need help",
+            "cosine_similarity": 1.0
+          },
+          "doubled_word": {
+            "variant_text": "I I need help",
+            "cosine_similarity": 0.939943790435791
+          }
+        }
+      },
+      {
+        "text": "deep sleep",
+        "variants": {
+          "asr": {
+            "variant_text": "deep sleeve",
+            "cosine_similarity": 0.8933960731861635
+          },
+          "typo": {
+            "variant_text": "deep slep",
+            "cosine_similarity": 0.9514918385157778
+          },
+          "hesitation": {
+            "variant_text": "er deep sleep",
+            "cosine_similarity": 0.9407233666511337
+          },
+          "filler": {
+            "variant_text": "like deep sleep you know",
+            "cosine_similarity": 0.9044692516326904
+          },
+          "punctuation": {
+            "variant_text": "deep sleep!",
+            "cosine_similarity": 0.9564722776412964
+          },
+          "capitalization": {
+            "variant_text": "Deep Sleep",
+            "cosine_similarity": 0.9491477073254934
+          },
+          "no_punctuation": {
+            "variant_text": "deep sleep",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "doubled_word": {
+            "variant_text": "deep deep sleep",
+            "cosine_similarity": 0.9871548429542967
+          }
+        }
+      },
+      {
+        "text": "start dictation",
+        "variants": {
+          "asr": {
+            "variant_text": "start diction",
+            "cosine_similarity": 0.9157572338436385
+          },
+          "typo": {
+            "variant_text": "start dicttion",
+            "cosine_similarity": 0.9476210443747666
+          },
+          "hesitation": {
+            "variant_text": "hmm let me think start dictation",
+            "cosine_similarity": 0.9291385369979464
+          },
+          "filler": {
+            "variant_text": "just start dictation okay",
+            "cosine_similarity": 0.9426240852623053
+          },
+          "punctuation": {
+            "variant_text": "start dictation!",
+            "cosine_similarity": 0.9760983572064851
+          },
+          "capitalization": {
+            "variant_text": "start dictation",
+            "cosine_similarity": 1.0000000596046483
+          },
+          "no_punctuation": {
+            "variant_text": "start dictation",
+            "cosine_similarity": 1.0000000596046483
+          },
+          "doubled_word": {
+            "variant_text": "start start dictation",
+            "cosine_similarity": 0.9927148218580975
+          }
+        }
+      },
+      {
+        "text": "open phase b",
+        "variants": {
+          "asr": {
+            "variant_text": "open phase b",
+            "cosine_similarity": 1.0
+          },
+          "typo": {
+            "variant_text": "open phse b",
+            "cosine_similarity": 0.9090333526750417
+          },
+          "hesitation": {
+            "variant_text": "um let me think open phase b",
+            "cosine_similarity": 0.9183168411254883
+          },
+          "filler": {
+            "variant_text": "like open phase b you know",
+            "cosine_similarity": 0.9165258407592773
+          },
+          "punctuation": {
+            "variant_text": "open phase b?",
+            "cosine_similarity": 0.9639211275530534
+          },
+          "capitalization": {
+            "variant_text": "Open Phase B",
+            "cosine_similarity": 0.9738836319585286
+          },
+          "no_punctuation": {
+            "variant_text": "open phase b",
+            "cosine_similarity": 1.0
+          },
+          "doubled_word": {
+            "variant_text": "open open phase b",
+            "cosine_similarity": 0.9920056462287903
+          }
+        }
+      },
+      {
+        "text": "improve the text",
+        "variants": {
+          "asr": {
+            "variant_text": "improve the text",
+            "cosine_similarity": 0.9999999999999964
+          },
+          "typo": {
+            "variant_text": "improve the txet",
+            "cosine_similarity": 0.8947339591225362
+          },
+          "hesitation": {
+            "variant_text": "um improve the text",
+            "cosine_similarity": 0.9507486165462241
+          },
+          "filler": {
+            "variant_text": "like improve the text you know",
+            "cosine_similarity": 0.9304801142788036
+          },
+          "punctuation": {
+            "variant_text": "improve the text?",
+            "cosine_similarity": 0.9512008966446958
+          },
+          "capitalization": {
+            "variant_text": "improve the text",
+            "cosine_similarity": 0.9999999999999964
+          },
+          "no_punctuation": {
+            "variant_text": "improve the text",
+            "cosine_similarity": 0.9999999999999964
+          },
+          "doubled_word": {
+            "variant_text": "improve improve the text",
+            "cosine_similarity": 0.9774588319610122
+          }
+        }
+      },
+      {
+        "text": "clear the composition",
+        "variants": {
+          "asr": {
+            "variant_text": "cleer the composition",
+            "cosine_similarity": 0.8978000222325339
+          },
+          "typo": {
+            "variant_text": "clear the comopsition",
+            "cosine_similarity": 0.9176781724499566
+          },
+          "hesitation": {
+            "variant_text": "uh let me think clear the composition",
+            "cosine_similarity": 0.9267202659416106
+          },
+          "filler": {
+            "variant_text": "well clear the composition I guess",
+            "cosine_similarity": 0.9405314957778821
+          },
+          "punctuation": {
+            "variant_text": "clear the composition?",
+            "cosine_similarity": 0.9595264720069946
+          },
+          "capitalization": {
+            "variant_text": "Clear The Composition",
+            "cosine_similarity": 0.946650680699985
+          },
+          "no_punctuation": {
+            "variant_text": "clear the composition",
+            "cosine_similarity": 1.0000000596046483
+          },
+          "doubled_word": {
+            "variant_text": "clear clear the composition",
+            "cosine_similarity": 0.9792847024968089
+          }
+        }
+      },
+      {
+        "text": "iniciar grabaci\u00f3n",
+        "variants": {
+          "asr": {
+            "variant_text": "iniciar grabaci\u00f3n",
+            "cosine_similarity": 1.0
+          },
+          "typo": {
+            "variant_text": "iniciar grabci\u00f3n",
+            "cosine_similarity": 0.9656597416806529
+          },
+          "hesitation": {
+            "variant_text": "uh iniciar grabaci\u00f3n",
+            "cosine_similarity": 0.9706032276153564
+          },
+          "filler": {
+            "variant_text": "well iniciar grabaci\u00f3n I guess",
+            "cosine_similarity": 0.9426503743320926
+          },
+          "punctuation": {
+            "variant_text": "iniciar grabaci\u00f3n!",
+            "cosine_similarity": 0.9760437607765198
+          },
+          "capitalization": {
+            "variant_text": "Iniciar Grabaci\u00f3n",
+            "cosine_similarity": 0.9655386209487915
+          },
+          "no_punctuation": {
+            "variant_text": "iniciar grabaci\u00f3n",
+            "cosine_similarity": 1.0
+          },
+          "doubled_word": {
+            "variant_text": "iniciar iniciar grabaci\u00f3n",
+            "cosine_similarity": 0.991561770439148
+          }
+        }
+      },
+      {
+        "text": "turn on the light",
+        "variants": {
+          "asr": {
+            "variant_text": "turn on the light",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "typo": {
+            "variant_text": "turn on the light",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "hesitation": {
+            "variant_text": "uh turn on the light",
+            "cosine_similarity": 0.9456634489097266
+          },
+          "filler": {
+            "variant_text": "like turn on the light you know",
+            "cosine_similarity": 0.9135863184928894
+          },
+          "punctuation": {
+            "variant_text": "turn on the light?",
+            "cosine_similarity": 0.9305515289306641
+          },
+          "capitalization": {
+            "variant_text": "Turn On The Light",
+            "cosine_similarity": 0.9550611946023223
+          },
+          "no_punctuation": {
+            "variant_text": "turn on the light",
+            "cosine_similarity": 1.0000001192092896
+          },
+          "doubled_word": {
+            "variant_text": "turn turn on the light",
+            "cosine_similarity": 0.9815517663955688
+          }
+        }
+      },
+      {
+        "text": "I'm in pain",
+        "variants": {
+          "asr": {
+            "variant_text": "I'm in pain",
+            "cosine_similarity": 0.9999999999999858
+          },
+          "typo": {
+            "variant_text": "I'm in pian",
+            "cosine_similarity": 0.8751375824049017
+          },
+          "hesitation": {
+            "variant_text": "hmm I'm in pain",
+            "cosine_similarity": 0.93807173513511
+          },
+          "filler": {
+            "variant_text": "well I'm in pain I guess",
+            "cosine_similarity": 0.9127364262656658
+          },
+          "punctuation": {
+            "variant_text": "I'm in pain?",
+            "cosine_similarity": 0.9375223554657552
+          },
+          "capitalization": {
+            "variant_text": "I'M in PAIN",
+            "cosine_similarity": 0.9675929623620463
+          },
+          "no_punctuation": {
+            "variant_text": "I'm in pain",
+            "cosine_similarity": 1.0
+          },
+          "doubled_word": {
+            "variant_text": "I'm I'm in pain",
+            "cosine_similarity": 0.9545824527740614
+          }
+        }
+      },
+      {
+        "text": "EEG signal quality",
+        "variants": {
+          "asr": {
+            "variant_text": "EEG signal quality",
+            "cosine_similarity": 0.9999999999999964
+          },
+          "typo": {
+            "variant_text": "EEG sigal qulaity",
+            "cosine_similarity": 0.9077715222699357
+          },
+          "hesitation": {
+            "variant_text": "er let me think EEG signal quality",
+            "cosine_similarity": 0.9365383348785838
+          },
+          "filler": {
+            "variant_text": "so EEG signal quality then",
+            "cosine_similarity": 0.9315766732945107
+          },
+          "punctuation": {
+            "variant_text": "EEG signal quality?",
+            "cosine_similarity": 0.9612417197967601
+          },
+          "capitalization": {
+            "variant_text": "Eeg Signal Quality",
+            "cosine_similarity": 0.9363264999584258
+          },
+          "no_punctuation": {
+            "variant_text": "EEG signal quality",
+            "cosine_similarity": 0.9999999999999964
+          },
+          "doubled_word": {
+            "variant_text": "EEG EEG signal quality",
+            "cosine_similarity": 0.98820447781139
+          }
+        }
+      },
+      {
+        "text": "adjust the bed",
+        "variants": {
+          "asr": {
+            "variant_text": "adjust the bed",
+            "cosine_similarity": 0.9999999999999858
+          },
+          "typo": {
+            "variant_text": "adjust the bed",
+            "cosine_similarity": 0.9999999999999858
+          },
+          "hesitation": {
+            "variant_text": "er adjust the bed",
+            "cosine_similarity": 0.9526683148541075
+          },
+          "filler": {
+            "variant_text": "just adjust the bed okay",
+            "cosine_similarity": 0.9420700142300112
+          },
+          "punctuation": {
+            "variant_text": "adjust the bed?",
+            "cosine_similarity": 0.9516853209291988
+          },
+          "capitalization": {
+            "variant_text": "ADJUST the BED",
+            "cosine_similarity": 0.9459002678513208
+          },
+          "no_punctuation": {
+            "variant_text": "adjust the bed",
+            "cosine_similarity": 0.9999999999999858
+          },
+          "doubled_word": {
+            "variant_text": "adjust adjust the bed",
+            "cosine_similarity": 0.9789286280955519
+          }
+        }
+      }
+    ],
+    "per_variant_type": {
+      "asr": {
+        "mean": 0.9651950166444216,
+        "median": 0.9916957020759511,
+        "std": 0.04037949302538492,
+        "variance": 0.0016305034569871091,
+        "min": 0.8933960731861635,
+        "max": 1.0000001192092896,
+        "ci_95_lo": 0.8954879489831894,
+        "ci_95_hi": 1.0000001192092896,
+        "n": 20
+      },
+      "typo": {
+        "mean": 0.9319126633287471,
+        "median": 0.9259065985297841,
+        "std": 0.04000813241197591,
+        "variance": 0.0016006506590941973,
+        "min": 0.8751375824049017,
+        "max": 1.0000001192092896,
+        "ci_95_lo": 0.8757186054326767,
+        "ci_95_hi": 1.0000001192092896,
+        "n": 20
+      },
+      "hesitation": {
+        "mean": 0.9466822685108303,
+        "median": 0.9431934077804301,
+        "std": 0.020608740294174727,
+        "variance": 0.000424720176512741,
+        "min": 0.9106649160385132,
+        "max": 0.9851269125938416,
+        "ci_95_lo": 0.9142995804548264,
+        "ci_95_hi": 0.9838109890591716,
+        "n": 20
+      },
+      "filler": {
+        "mean": 0.9256129254394245,
+        "median": 0.9304224190510779,
+        "std": 0.01477478217258235,
+        "variance": 0.0002182941882472572,
+        "min": 0.8992303609848022,
+        "max": 0.9460713170894355,
+        "ci_95_lo": 0.9017188340425492,
+        "ci_95_hi": 0.9444463692796976,
+        "n": 20
+      },
+      "punctuation": {
+        "mean": 0.9606693591731352,
+        "median": 0.9617204368114471,
+        "std": 0.011791697906006211,
+        "variance": 0.00013904413950651127,
+        "min": 0.9305515289306641,
+        "max": 0.9783976078033447,
+        "ci_95_lo": 0.9338626715348324,
+        "ci_95_hi": 0.9773054637698364,
+        "n": 20
+      },
+      "capitalization": {
+        "mean": 0.9652290169590195,
+        "median": 0.960299907775557,
+        "std": 0.023988364483348987,
+        "variance": 0.0005754416305859991,
+        "min": 0.9323324440120061,
+        "max": 1.0000000596046483,
+        "ci_95_lo": 0.9333315629189932,
+        "ci_95_hi": 1.0000000596046483,
+        "n": 20
+      },
+      "no_punctuation": {
+        "mean": 1.0000000387430183,
+        "median": 1.0,
+        "std": 5.083895474842093e-08,
+        "variance": 2.584599319911991e-15,
+        "min": 0.9999999999999858,
+        "max": 1.0000001192092896,
+        "ci_95_lo": 0.9999999999999909,
+        "ci_95_hi": 1.0000001192092896,
+        "n": 20
+      },
+      "doubled_word": {
+        "mean": 0.9803584843254146,
+        "median": 0.9848530897054316,
+        "std": 0.013273262412532133,
+        "variance": 0.00017617949507193833,
+        "min": 0.939943790435791,
+        "max": 0.9934530258178711,
+        "ci_95_lo": 0.9468971550464694,
+        "ci_95_hi": 0.9931023789369786,
+        "n": 20
+      }
+    },
+    "overall": {
+      "mean": 0.9594574716405015,
+      "median": 0.9616202734741994,
+      "std": 0.03350458968828988,
+      "variance": 0.0011225575301806606,
+      "min": 0.8751375824049017,
+      "max": 1.0000001192092896,
+      "ci_95_lo": 0.8947005119741268,
+      "ci_95_hi": 1.0000001192092896,
+      "n": 160
+    }
+  },
+  "failure_rate": 0.0,
+  "crash_rate": 0.0,
+  "unsupported_features": [],
+  "peak_rss_final_mb": 1074.15625
+}

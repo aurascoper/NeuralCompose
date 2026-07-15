@@ -1,0 +1,1314 @@
+{
+  "frozen_at": "2026-07-14T12:18:11.349501+00:00",
+  "stage": "3.4",
+  "n_files": 183,
+  "total_bytes": 7018592,
+  "hypothesis_registry_snapshot": {
+    "version": 1,
+    "stage_3_4": [
+      {
+        "id": "3.4-A-runtime-consistency",
+        "title": "Runtime consistency: Python vs CoreML vs MLX",
+        "question": "Do CoreML and MLX runtime conversions introduce cosine drift vs the Python reference?",
+        "metric": "Mean cosine similarity between embeddings of same text across runtimes",
+        "success_criterion": "Mean cosine >= 0.999 (no drift) for at least one non-Python runtime",
+        "expected_effect_size": {
+          "cosine_drift": "< 0.001",
+          "latency_diff": "CoreML >= 2x faster than Python"
+        },
+        "status": "evaluated",
+        "work_package": "A",
+        "status_note": "Evaluated 2026-07-14: 4 cross-runtime comparisons on identical weights (MiniLM python vs mlx-swift; bge-small python vs mlx-swift, python vs coreml, mlx-swift vs coreml), all mean cosine = 1.000000, drift = none (N=10 stored samples per model). Two Swift-harness defects were caught by this analysis and fixed before the final runs (MLXEmbedders omits the segment-0 token-type embedding when ids are nil; Pooling's cls prefers the tanh pooler head over the raw CLS state). python mlx_lm remains unable to load BERT encoders, so the MLX runtime evidence is Swift MLXEmbedders ('mlx-swift')."
+      },
+      {
+        "id": "3.4-B-joint-embeddings",
+        "title": "Joint embeddings: does combining top-K models improve retrieval?",
+        "question": "Does concatenating or fusing embeddings from 2+ top models improve separation_ratio vs the best single model?",
+        "metric": "separation_ratio (intra-group mean / cross-group mean cosine)",
+        "success_criterion": ">= 5% improvement in separation_ratio over best single model",
+        "expected_effect_size": {
+          "separation_ratio": "+5-15%",
+          "latency": "<25% increase",
+          "memory": "<2x baseline"
+        },
+        "status": "pre-registered",
+        "work_package": "B"
+      },
+      {
+        "id": "3.4-C-embedding-space",
+        "title": "Embedding-space analysis: are top models geometrically similar?",
+        "question": "How aligned are the embedding spaces of the top-K models?",
+        "metric": "CKA (Centered Kernel Alignment) + SVCCA + Procrustes distance",
+        "success_criterion": "CKA >= 0.7 between at least one pair (evidence of convergent representation)",
+        "expected_effect_size": {
+          "cka": "0.5-0.8 for same-family models, 0.2-0.5 cross-family",
+          "svcca": "0.3-0.7"
+        },
+        "status": "evaluated",
+        "work_package": "C",
+        "status_note": "Pilot study: N=10 stored samples. CKA biased high at small N. Needs full-corpus analysis for strong conclusions."
+      },
+      {
+        "id": "3.4-D-cross-model-agreement",
+        "title": "Cross-model agreement: do models agree on neighbors?",
+        "question": "How often do the top-K models retrieve the same top-k neighbors for the same query?",
+        "metric": "Mean Jaccard overlap of top-k neighbor sets across model pairs",
+        "success_criterion": "Mean Jaccard >= 0.5 for at least one pair (sufficient agreement for ensemble)",
+        "expected_effect_size": {
+          "jaccard": "0.3-0.6 cross-family, 0.6-0.9 same-family"
+        },
+        "status": "evaluated",
+        "work_package": "D",
+        "status_note": "Refreshed 2026-07-14: 3 models with stored samples (MiniLM, bge-small, bge-base), pairwise mean Jaccard@5 0.66-0.80, N=10 texts, k=5 from pool of 9. Still a pilot: needs the full corpus and more models for strong conclusions."
+      },
+      {
+        "id": "3.4-E-generator-comparison",
+        "title": "Generator comparison: same prompt, multiple generators",
+        "question": "How much do top-3 generators agree on rewrite quality for the same prompt?",
+        "metric": "Pairwise cosine similarity between generator outputs + BLEU-4",
+        "success_criterion": "Mean pairwise output cosine >= 0.8 (high agreement) OR < 0.6 (divergent, ensemble-worthy)",
+        "expected_effect_size": {
+          "output_cosine": "0.65-0.85",
+          "bleu4": "0.1-0.4 (low, rewrites are paraphrastic not exact)"
+        },
+        "status": "evaluated",
+        "work_package": "E",
+        "status_note": "Strong evidence: 10 generators, 45 pairs, 27 prompts. Mean cosine ~0.55 (divergent). Per-category breakdown available."
+      },
+      {
+        "id": "3.4-F-offline-fusion",
+        "title": "Offline fusion: which fusion strategy works best for joint embeddings?",
+        "question": "Which fusion method (concatenation, weighted, PCA, CCA, late fusion) yields the best retrieval quality?",
+        "metric": "retrieval_top1 + separation_ratio",
+        "success_criterion": "At least one fusion method improves retrieval_top1 by >= 2% over best single model",
+        "expected_effect_size": {
+          "retrieval_top1": "+2-5%",
+          "separation_ratio": "+5-10%",
+          "latency": "<25% increase"
+        },
+        "status": "pre-registered",
+        "work_package": "F"
+      }
+    ],
+    "stage_3_5": [
+      {
+        "id": "3.5-A-joint-embedding-selection",
+        "title": "Joint embedding selection for production",
+        "question": "Given Stage 3.4 evidence, which joint embedding configuration is best for production?",
+        "metric": "separation_ratio + retrieval_top1 + latency",
+        "success_criterion": "Identified configuration is Pareto-optimal on quality+latency vs all single models",
+        "expected_effect_size": {
+          "separation_ratio": "+5-15%",
+          "retrieval_top1": "+2-5%",
+          "latency": "<25% increase"
+        },
+        "status": "pre-registered",
+        "work_package": "A"
+      },
+      {
+        "id": "3.5-B-adaptive-routing",
+        "title": "Adaptive embedding routing by input type",
+        "question": "Does routing queries to different embedding models by input type improve overall retrieval vs fixed routing?",
+        "metric": "Weighted retrieval accuracy across input categories",
+        "success_criterion": ">= 3% improvement over best fixed model",
+        "expected_effect_size": {
+          "retrieval_accuracy": "+3-8%",
+          "latency_overhead": "<10% (routing is cheap)"
+        },
+        "status": "pre-registered",
+        "work_package": "B"
+      },
+      {
+        "id": "3.5-C-pipeline-benchmark",
+        "title": "Full pipeline benchmark: embedding x generator combinations",
+        "question": "Which embedding-generator pipeline has the best quality-latency Pareto frontier?",
+        "metric": "Pipeline score (rewrite cosine + retrieval accuracy + latency)",
+        "success_criterion": "At least one pipeline is Pareto-optimal that is NOT Pareto-optimal on either component axis alone",
+        "expected_effect_size": {
+          "pipeline_score_spread": "0.3-0.7 across 9 pipelines",
+          "novel_pareto_members": "1-2 pipelines"
+        },
+        "status": "pre-registered",
+        "work_package": "C"
+      },
+      {
+        "id": "3.5-D-cascaded-generation",
+        "title": "Cascaded generation: fast draft + quality edit",
+        "question": "Does a fast-model-draft + quality-model-edit cascade improve rewrite quality vs single-model, within latency budget?",
+        "metric": "Cosine similarity to reference + latency",
+        "success_criterion": "Cascade cosine >= single best model AND latency < 2x fast model alone",
+        "expected_effect_size": {
+          "cosine_improvement": "+1-5% over fast-only",
+          "latency": "1.3-1.8x fast-only"
+        },
+        "status": "pre-registered",
+        "work_package": "D"
+      },
+      {
+        "id": "3.5-E-confidence-consensus",
+        "title": "Confidence-based model selection",
+        "question": "Can embedding model confidence (entropy of similarity distribution) predict when a second model is needed?",
+        "metric": "Retrieval accuracy improvement when confidence-gated second model is added",
+        "success_criterion": "Gated second model improves retrieval by >= 2% on low-confidence queries without degrading high-confidence queries",
+        "expected_effect_size": {
+          "retrieval_improvement_low_conf": "+2-5%",
+          "retrieval_degradation_high_conf": "<0.5%",
+          "second_model_invocation_rate": "10-30%"
+        },
+        "status": "pre-registered",
+        "work_package": "E"
+      },
+      {
+        "id": "3.5-P-pipeline-policies",
+        "title": "Pipeline policy comparison: fast vs balanced vs quality vs adaptive",
+        "question": "Which pipeline policy yields the best Pareto position for NeuralCompose's use case?",
+        "metric": "Pareto rank across quality, latency, and memory",
+        "success_criterion": "Adaptive mode is Pareto-optimal OR within 5% of the best fixed mode on every axis",
+        "expected_effect_size": {
+          "adaptive_vs_best_fixed": "<5% gap on every axis",
+          "adaptive_pareto_probability": "60-80%"
+        },
+        "status": "pre-registered",
+        "work_package": "P"
+      }
+    ],
+    "policy_registry": {
+      "version": 1,
+      "description": "Named pipeline policies for Stage 3.5 comparison. Each policy maps to a concrete (embedding, generator) pair or routing logic. Reports compare named policies rather than opaque combinations.",
+      "policies": [
+        {
+          "name": "Fast",
+          "description": "Minimum latency for real-time EEG communication",
+          "embedding": "auto:fastest_available",
+          "generator": "auto:fastest_available",
+          "latency_budget_s": 2.0,
+          "use_case": "Short commands, high-frequency interaction"
+        },
+        {
+          "name": "Balanced",
+          "description": "Good quality at moderate latency",
+          "embedding": "auto:mid_tier",
+          "generator": "auto:mid_tier",
+          "latency_budget_s": 5.0,
+          "use_case": "General-purpose communication, filler removal"
+        },
+        {
+          "name": "Quality",
+          "description": "Best rewrite quality, latency permitting",
+          "embedding": "auto:best_overall",
+          "generator": "auto:best_quality",
+          "latency_budget_s": 15.0,
+          "use_case": "Complex rewrites, technical-term preservation, low-frequency high-stakes output"
+        },
+        {
+          "name": "Adaptive",
+          "description": "Route by query characteristics + confidence; short commands to fast pipeline, long/uncertain to quality pipeline",
+          "embedding": "routing:short_command->fastest, technical->best, uncertain->confidence_gated",
+          "generator": "routing:short_command->fastest, long->quality",
+          "latency_budget_s": "per_query: 2.0-15.0",
+          "use_case": "Production intent \u2014 maximizes real-world communication rate"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "Evaluation/results/embeddings/Qwen3-Embedding-0.6B/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 818,
+      "sha256": "5175696263aade4be21610795bbfeef0c646a98b755fa6de7f6a65d254a4eb04"
+    },
+    {
+      "path": "Evaluation/results/embeddings/Qwen3-Embedding-0.6B/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 370939,
+      "sha256": "a910240286a81807db9a82b40de82935f82328fc07829867cacc44c9d4ced059"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 817,
+      "sha256": "a74454feb4f3b02d59ec9d4aa1350468d11962aae6f64d9c3481800a5d917679"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2/mlx-swift/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 82810,
+      "sha256": "ded4b400b9c0c1c19181e302d6ac37a748aaf56bd33ed8ac1995c5fe8224f932"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2/mlx-swift/benchmark.superseded-20260714T120339Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 83315,
+      "sha256": "9d5fc95e2f3a9d33cdb17a9be88ffa0a9f0dfe227f11d9a6db9e767f2f80ac48"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 229115,
+      "sha256": "e0aac6b73f6a4d39c4929f0423c3daad44d86b838d48aacb5aefcfc16fb419b3"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2-mlx/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1924,
+      "sha256": "f2f80f765f6d0e988582213acd76eef816e109f19c571a1944d3d219254d7f87"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2-mlx/mlx/benchmark.failed-20260714T092033Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1006,
+      "sha256": "ed07dbe24947e84344404b07f26c6ec5d20a277a0640503d7ebac7fb34eb5b30"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2-mlx/mlx/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 3882,
+      "sha256": "c1b8d6651c1492191d9972abd7a8d5b7947f9ca33017140a0807791a83a7fec9"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2-mlx/python/benchmark.failed-20260714T092033Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 4528,
+      "sha256": "4d391d33ac14e0cdf2363aadc3a177db3071bcceefbc8031fe8245607903121a"
+    },
+    {
+      "path": "Evaluation/results/embeddings/all-MiniLM-L6-v2-mlx/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 5664,
+      "sha256": "f58ae805c176bda8c152cd293145d59398d8d93a479dd65b1d628903f07c3d0f"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-base-en-v1.5/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1889,
+      "sha256": "7b06188833724c23ca85c26d1cc0e8e2b5b50746b8c6ee4eb399376af7d082e1"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-base-en-v1.5/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 346990,
+      "sha256": "bd12cf4ba5eb8329f7d86aad2ec006bce92a44b17692c2762ff2d0d87e3bdbcb"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-base-en-v1.5/python/benchmark.superseded-20260714T041724Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 48091,
+      "sha256": "cbc8910cb20cab1c86d588ca7aa1c06a90c14a788047ff315ce765263f6e07df"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-m3/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 776,
+      "sha256": "2eabe922435e9ca7dd61f14c72e245b10f626117648a29824b11f6a6ead461fb"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-m3/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 424540,
+      "sha256": "882beed910ea822b0bc05fcef28c06def2ee30e055fd79d42441749f3c5adaac"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5/coreml/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 83046,
+      "sha256": "559ccaf406709615bf9fdae7b01293c159a7447f3da1fa3866e6bdd01a002df8"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5/mlx-swift/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 83127,
+      "sha256": "b3573153015a6c3b4f6b46771fcb355a5f964bb5a6abe3c349ca8acb7a57972d"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5/mlx-swift/benchmark.superseded-20260714T120339Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 82807,
+      "sha256": "12d223e54a53352ade9101e761137bfe697a10a1a5941dc7ea39325a9a705909"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 229790,
+      "sha256": "1e5819dc82863aea502ef6bb22682e22216b2a806d6c0a73c58a3aad65c4de99"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5-mlx/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1920,
+      "sha256": "2fe2afc7a30d7b980e1c02ec3ad4c5c9ebf2c2f6f50a43f4c9eaffec46d5565a"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5-mlx/mlx/benchmark.failed-20260714T091724Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1008,
+      "sha256": "0df3fd3061400f5bc35ae3fdc67e167a7024e913099617056eefffc96fcaee96"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5-mlx/mlx/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 3884,
+      "sha256": "1ef997dbbf3d3d587c90cb8cb8cb48443d60cc1c4e45982614b5d6711ee74f7c"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5-mlx/python/benchmark.failed-20260714T091724Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 4530,
+      "sha256": "6558028bfb49faaf3955e7112322a9a3eb15f627df141663b25dcf2b5a0d7c5c"
+    },
+    {
+      "path": "Evaluation/results/embeddings/bge-small-en-v1.5-mlx/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 5666,
+      "sha256": "37cce4983daa06a67e9f1ad5db245c22d3cbdea0df64224c2760b93ca058cf62"
+    },
+    {
+      "path": "Evaluation/results/embeddings/compatibility_matrix.json",
+      "category": "embedding-checkpoints",
+      "bytes": 16239,
+      "sha256": "a41391e98de46c9cee9e9b2cfe794a452c041b0df1a34a952b7489d2dcaf1c3c"
+    },
+    {
+      "path": "Evaluation/results/embeddings/gte-base-en-v1.5/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1909,
+      "sha256": "f0d3747f00277a873465d01f5f2a9953a0b97d9bb32fc98bc68f609582153907"
+    },
+    {
+      "path": "Evaluation/results/embeddings/gte-base-en-v1.5/python/benchmark.failed-20260714T092053Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 4506,
+      "sha256": "a59dc04837ebaca55ec9c8afe43cadfa240ccc4b8e486d608da4bf837c0c101c"
+    },
+    {
+      "path": "Evaluation/results/embeddings/gte-base-en-v1.5/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 5151,
+      "sha256": "245a1d2850c57bfb42bff2ab9f0f16a79ee4be363ee2c2fb364ccbcc8a68c4bb"
+    },
+    {
+      "path": "Evaluation/results/embeddings/gte-large-en-v1.5/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1892,
+      "sha256": "cd8d294bdba6002be09d30380ddfe5d1e26049e5e75ad6bc9a86d7c02d919ed2"
+    },
+    {
+      "path": "Evaluation/results/embeddings/gte-large-en-v1.5/python/benchmark.failed-20260714T093257Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 3971,
+      "sha256": "9ee170945e5d6c27337b336874aab22103b97c03a678204df2eca2e3bfa30cc1"
+    },
+    {
+      "path": "Evaluation/results/embeddings/gte-large-en-v1.5/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 5158,
+      "sha256": "d717ced75a8a383029c2fc211bae4c7369fd6c3981fa568e36bee921c5991d85"
+    },
+    {
+      "path": "Evaluation/results/embeddings/jina-embeddings-v3/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1915,
+      "sha256": "406aabac1daab2fb207024857ab85fe594d210234addd37408f940400abaccfc"
+    },
+    {
+      "path": "Evaluation/results/embeddings/jina-embeddings-v3/python/benchmark.failed-20260714T095125Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 4422,
+      "sha256": "0817aafd12852c46ac5ecdff9805e0c5b10d322129f7a57ae734e7371d76405f"
+    },
+    {
+      "path": "Evaluation/results/embeddings/jina-embeddings-v3/python/benchmark.failed-20260714T111002Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 6065,
+      "sha256": "5d936350dd333d1ebb5e7d7bd164d7cd753b05c3482e3f6bdde613029fbb620e"
+    },
+    {
+      "path": "Evaluation/results/embeddings/jina-embeddings-v3/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 5848,
+      "sha256": "1e472988949164665ac6f30c813c9e13166a4d7781058e31ea64e5ec11459fdb"
+    },
+    {
+      "path": "Evaluation/results/embeddings/leaderboard.json",
+      "category": "embedding-checkpoints",
+      "bytes": 37877,
+      "sha256": "ad938ab379d229ec8aa7421c300b1a9a0e5d76540376aa7c4364699ff76aef88"
+    },
+    {
+      "path": "Evaluation/results/embeddings/multilingual-e5-base/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1920,
+      "sha256": "c4ca236148388b9342b6e33428f63487835b7abde55793279581ed5a948bff12"
+    },
+    {
+      "path": "Evaluation/results/embeddings/multilingual-e5-base/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 346957,
+      "sha256": "4e2a5e6b02b8cf67a79ff65c0786c8ba7f898cca0c7f0571f70b10c1a058fdf2"
+    },
+    {
+      "path": "Evaluation/results/embeddings/multilingual-e5-base/python/benchmark.superseded-20260714T041724Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 48200,
+      "sha256": "8f47664ee67c90a08f1ae74edb1612845ff278b7ded11a44fa720b148b0bd161"
+    },
+    {
+      "path": "Evaluation/results/embeddings/multilingual-e5-large/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1936,
+      "sha256": "6258d57389afd0a0ea514e824546a5c6af9796cb24888b715277c8a7023fc0a3"
+    },
+    {
+      "path": "Evaluation/results/embeddings/multilingual-e5-large/python/benchmark.failed-20260714T105750Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 5735,
+      "sha256": "86888419b923fbf8885e589e29709fa8aa0b6c1567bf32dd2ae33a5fde34c1a7"
+    },
+    {
+      "path": "Evaluation/results/embeddings/multilingual-e5-large/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 424692,
+      "sha256": "c66285df098feaf629ef366f949a80eb98b31dd04d9756c524dbe0483e858e6c"
+    },
+    {
+      "path": "Evaluation/results/embeddings/multilingual-e5-small/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 230202,
+      "sha256": "137c46eaf0506082c3e49fdc23b9a5db8577e62ba166641863ed50127d075e21"
+    },
+    {
+      "path": "Evaluation/results/embeddings/mxbai-embed-large-v1/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1952,
+      "sha256": "1494cb7401641be35cc14f401e7d66475a4567f8a21648eceaa7936874cbf3a0"
+    },
+    {
+      "path": "Evaluation/results/embeddings/mxbai-embed-large-v1/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 401637,
+      "sha256": "4d7c48ffe715b40b8cae72118308ec6b1ff1b9432889c357e38acf2f8db1e831"
+    },
+    {
+      "path": "Evaluation/results/embeddings/nomic-embed-text-v1.5/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1943,
+      "sha256": "cb1678026f413aac7ba405a9be627a16fc19d6cc25645d9afcdcb8842088f194"
+    },
+    {
+      "path": "Evaluation/results/embeddings/nomic-embed-text-v1.5/python/benchmark.failed-20260714T094155Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 4703,
+      "sha256": "34790704851265a05fc322559166f7b72916b193d6d48d42af75212b3a95a21d"
+    },
+    {
+      "path": "Evaluation/results/embeddings/nomic-embed-text-v1.5/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 346753,
+      "sha256": "74ceba893ce29ce7e8998627b88fd11946ea1d8bc2a6620344cee26505b7d4d3"
+    },
+    {
+      "path": "Evaluation/results/embeddings/snowflake-arctic-embed/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1955,
+      "sha256": "857c943b718358f63ccc864cdba2d8e4c7301755846085fa80f23afb1a83b7fc"
+    },
+    {
+      "path": "Evaluation/results/embeddings/snowflake-arctic-embed/python/benchmark.failed-20260714T104943Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 5744,
+      "sha256": "7b3bda39a624b28e1ee5fe08e4cf8849ee506ef09f23e3d3b53ad9ee6e7ac37e"
+    },
+    {
+      "path": "Evaluation/results/embeddings/snowflake-arctic-embed/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 425333,
+      "sha256": "e22e12d1b3e1cb55aa22b5b84cf759b703bb6c93b4fbe1277c2f64bc27360f75"
+    },
+    {
+      "path": "Evaluation/results/embeddings/statistical_analysis.json",
+      "category": "embedding-checkpoints",
+      "bytes": 57031,
+      "sha256": "2ef1c43a839c1b117a186d2439f868f0e7e4bfc68bff46cc34857670f12fe501"
+    },
+    {
+      "path": "Evaluation/results/embeddings/stella_en_400M_v5/metadata.json",
+      "category": "embedding-checkpoints",
+      "bytes": 1894,
+      "sha256": "d7802738e6a5e0e7f8cf843bc34348c1a57faf83b1454641985e9375eafd5e1a"
+    },
+    {
+      "path": "Evaluation/results/embeddings/stella_en_400M_v5/python/benchmark.failed-20260714T094520Z.json",
+      "category": "embedding-checkpoints",
+      "bytes": 4643,
+      "sha256": "4edae7281f55f48ec5de9c6bc42c7123b6f3fbd8bbeafdce7ccb6807a9503acd"
+    },
+    {
+      "path": "Evaluation/results/embeddings/stella_en_400M_v5/python/benchmark.json",
+      "category": "embedding-checkpoints",
+      "bytes": 6436,
+      "sha256": "8df40f9469a38ea239f6713b5fb8dd3d3f33f850e44e397c5532c5ae00856b1f"
+    },
+    {
+      "path": "Evaluation/results/embeddings/summary.json",
+      "category": "embedding-checkpoints",
+      "bytes": 52832,
+      "sha256": "2b0fa669b9690d7b9029802a1a26b1d973f37c6212b0879e0febedeac944331e"
+    },
+    {
+      "path": "Evaluation/results/embeddings/streaming_benchmark.log",
+      "category": "embedding-logs",
+      "bytes": 12370,
+      "sha256": "8a4c5cab4a9c0e8b2f5e3b566fcd77a1b8cf40e655f169a141e76be0322c9e81"
+    },
+    {
+      "path": "Evaluation/results/embeddings/streaming_benchmark_20260714-0404.log",
+      "category": "embedding-logs",
+      "bytes": 8129,
+      "sha256": "b721591451ad677803d5d44af643481c9c919dc429ed799101d6d9435c1c7b36"
+    },
+    {
+      "path": "Evaluation/results/embeddings/streaming_benchmark_20260714-0417.log",
+      "category": "embedding-logs",
+      "bytes": 28821,
+      "sha256": "cbc7a5d05acbeb92717860cb69606c3f266aa0300d234f3f879089579cc0ad01"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3-1b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 468,
+      "sha256": "e1bfe4e40cc4ce2241c46ecebea4a4ef35b9b6720bf174e28cbbe6634b17a5b8"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3-1b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 24135,
+      "sha256": "849c24eee4c1e5cbf819f7d9293ac4a02a61a8c8a53900fe3e82d37458111762"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3-4b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 1815,
+      "sha256": "7d913afe69da93794cc90013a3fee8d067416a476ffe626d7f3af268403f7691"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3n-e2b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 481,
+      "sha256": "90ef985cc648bb5cdf91daecdfe17cf35974f4688d9c0197538653cd0a344e1d"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3n-e2b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 27208,
+      "sha256": "3aefe8b2e1572f28ccad1aee519f89432d37302c90a1afdc5f35dfbadb883ae1"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3n-e4b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 481,
+      "sha256": "416708d919a22dca9db3b12b95c43bdec84dd41e051680fb30a0f97bdd59e1fc"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3n-e4b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 25913,
+      "sha256": "fb9969b04f4405dca05222dfedd8d608d65a2a6df338033c447a00bffa49e13f"
+    },
+    {
+      "path": "Evaluation/results/candidates/llama-3.2-1b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 483,
+      "sha256": "75f6a27c1e0f23898947ae8b97c2fa9823c77d9355674f30b1a4f29d84b297af"
+    },
+    {
+      "path": "Evaluation/results/candidates/llama-3.2-1b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 27017,
+      "sha256": "ded78dc1925a0cbec80a4a52f048e1bc56e0fe612fb5db621788e59f17e6521a"
+    },
+    {
+      "path": "Evaluation/results/candidates/llama-3.2-3b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 483,
+      "sha256": "53d638807d67a18f9acfa6e92103249f621d68866f2724935ec1d52a0ed4d45f"
+    },
+    {
+      "path": "Evaluation/results/candidates/llama-3.2-3b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 23019,
+      "sha256": "d5c55cc79879dbd52ebd976fd7d5d1f6658fb94920febc5fdf684190cc611f00"
+    },
+    {
+      "path": "Evaluation/results/candidates/openelm-1.1b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 1813,
+      "sha256": "9e2b358fcfa833fbca3160ea0038f388eff0036a8bde805407a8ca3f5b06dfd3"
+    },
+    {
+      "path": "Evaluation/results/candidates/openelm-1.1b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 22740,
+      "sha256": "3a33041fe48fc444651317284e5efd2bccfda7a1132d017d260cc4493b2f3c04"
+    },
+    {
+      "path": "Evaluation/results/candidates/openelm-3b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 2178,
+      "sha256": "91fd8c40407561cccf40f95aab6fa248c63a0b526da31222e397bb2d962c9084"
+    },
+    {
+      "path": "Evaluation/results/candidates/phi-3.5-mini/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 481,
+      "sha256": "befc38b6856278871e3776986e447e06c27e43cb2bab58757168b90676c10691"
+    },
+    {
+      "path": "Evaluation/results/candidates/phi-3.5-mini/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 24521,
+      "sha256": "72beebb79e23d99f5974f924449634d898d94d90e2af32bde7a997c2bbf790c0"
+    },
+    {
+      "path": "Evaluation/results/candidates/phi-4-mini/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 473,
+      "sha256": "0be0ecaadbec03305d342c80333bbee5e23dd2d147104343397819e91d2b6489"
+    },
+    {
+      "path": "Evaluation/results/candidates/phi-4-mini/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 27388,
+      "sha256": "d20c657cf4a2128d5d1da6ae56454d00f53184ef0e1dc0960f3e1ece669c6c83"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-0.5b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 484,
+      "sha256": "4ce7a9140dee4668ec434382c53885ff72de1164fcad380bc6ddd00dddd94f6b"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-0.5b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 22702,
+      "sha256": "6c3858808ebef46b9f76fcb85fee89526d3378c222f82822ed810ad705e395b8"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-1.5b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 483,
+      "sha256": "cb86f36f3bc2a70dbf3de3ad3527e958929dbb17d8a78cbbe43f1e72e8b40dd8"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-1.5b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 23118,
+      "sha256": "aebc22b2ca87e45b20ff8ee084ec8170264f9f59fde2cd1d42ed89192a57a03e"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-3b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 475,
+      "sha256": "02ea4ff23d3d21da2a067dd9aed3ef22f05432eb593ee2aefc1698a20a7eefb7"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-3b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 22683,
+      "sha256": "9704ba30acfeda3351ced9b299df5e8ecff5e837acc5789d8d88e30e776d641e"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen3-1.7b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 1788,
+      "sha256": "091491a90b1e9b025e3e2f850dc07504f33a149548130cd8eebb5a2fd5ddd549"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen3-1.7b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 32072,
+      "sha256": "9de284d7b75790f1246ba9bdebc78e20b0dd2519c08a02657d4c618c1738c3be"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen3-4b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 1780,
+      "sha256": "d39c2b22f2953a19d6511f311e4b2774792b7aec50e958ca87233704dc1a7f82"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen3-4b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 32347,
+      "sha256": "560376ea9e7edc8376bf85d988c35058bd149c28d1f8ef2cadbcc7535a9f9bf7"
+    },
+    {
+      "path": "Evaluation/results/candidates/smollm2-1.7b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 1803,
+      "sha256": "8c07130d5fb4c55b104f77c51e61e3cdc2936ae6094e0cadfddad50e4d8bcc4d"
+    },
+    {
+      "path": "Evaluation/results/candidates/smollm2-1.7b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 20876,
+      "sha256": "882b4fa84c848cbc608f9de9a2ab85220dbe961c06ca2e6dfed48db570716fba"
+    },
+    {
+      "path": "Evaluation/results/candidates/smollm2-360m/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 1813,
+      "sha256": "4b648e7a535ca2fc3e34f694d6f302d0ba5d12fac6bd6d38067379907fc338a3"
+    },
+    {
+      "path": "Evaluation/results/candidates/smollm2-360m/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 22961,
+      "sha256": "354b816f21dd531330acb195f412f794e2f839679ecd1704f7cc48c94b7b8c64"
+    },
+    {
+      "path": "Evaluation/results/candidates/tinyllama-1.1b/metadata.json",
+      "category": "generation-checkpoints",
+      "bytes": 1818,
+      "sha256": "0086de339a28f133906090ddde8bd6f6b56793c5e8683a1f9d4aa8769ba5b2a5"
+    },
+    {
+      "path": "Evaluation/results/candidates/tinyllama-1.1b/raw.json",
+      "category": "generation-checkpoints",
+      "bytes": 23370,
+      "sha256": "8bf40c1243939840779e905f68627e12418b9c6816b1871f5ceb16eba973d6af"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3-1b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3-1b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 367,
+      "sha256": "75b8fc78a5f426402a891b07406c4a09e6e9981425cf563b74c68bac1e156b57"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3n-e2b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3n-e2b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 381,
+      "sha256": "7f8120cd99357574efda24429d86f864602101161c3f8972239dd2622828c25a"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3n-e4b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/gemma-3n-e4b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 381,
+      "sha256": "0bec5d083e5b9cfe764c0233da462443d390a60686061201a1bdb0568fd71a1d"
+    },
+    {
+      "path": "Evaluation/results/candidates/llama-3.2-1b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/llama-3.2-1b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 381,
+      "sha256": "d36b5e469fa686532d0390fe3d08cf730bb7991c993a14f6bd952d07ee3d77c0"
+    },
+    {
+      "path": "Evaluation/results/candidates/llama-3.2-3b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/llama-3.2-3b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 374,
+      "sha256": "fc50f3d84744eeb97ec31995b7f1c7b0f98c2a486cb1e648abd9decac303bfd4"
+    },
+    {
+      "path": "Evaluation/results/candidates/openelm-1.1b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/openelm-1.1b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 380,
+      "sha256": "ae763dfffccd5e3dd08f0d6aa7fd99139a9351a9f26094bbd214eb6a5b8e37ad"
+    },
+    {
+      "path": "Evaluation/results/candidates/phi-3.5-mini/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/phi-3.5-mini/stdout.log",
+      "category": "generation-logs",
+      "bytes": 380,
+      "sha256": "9ecb176c79b760dcafa99e7349a7f70dabaca15575c207ed69c3952aa931a1d6"
+    },
+    {
+      "path": "Evaluation/results/candidates/phi-4-mini/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/phi-4-mini/stdout.log",
+      "category": "generation-logs",
+      "bytes": 365,
+      "sha256": "d1f50ec148d3f70c751c6498b3740333f35ed6c77dbe898f82b459bdb70d6746"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-0.5b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-0.5b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 379,
+      "sha256": "0c45c97e1b767fb3acbc3608d334e4e659588264a91f0fa54ed323ff923f15f5"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-1.5b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-1.5b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 380,
+      "sha256": "138417d28cdac62aaf2dfd1f43f4e11f28a956d8f396992e5404a0d12e088f82"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-3b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen2.5-3b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 371,
+      "sha256": "2564b6849e65f5cd1182a54bce6a32d56f6bd70d60eb262046459f7c10aa67a7"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen3-1.7b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen3-1.7b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 371,
+      "sha256": "170d239b85da5e657a63696626496fdc357bcb9e1e2ee5be3a4a5361ecdb19d4"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen3-4b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/qwen3-4b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 360,
+      "sha256": "162e396bd278704cc1d95ecabb98a2ee8781fb21fe86e1782d7fde45dcbbe8f0"
+    },
+    {
+      "path": "Evaluation/results/candidates/smollm2-1.7b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/smollm2-1.7b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 373,
+      "sha256": "3a567d45c0fdcb57e455d032fba718cb27a5371e94315d544c04f9103ead428e"
+    },
+    {
+      "path": "Evaluation/results/candidates/smollm2-360m/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/smollm2-360m/stdout.log",
+      "category": "generation-logs",
+      "bytes": 381,
+      "sha256": "b264092b418a664c6b201b544d4e33ac4eea92672c38526c3a757628afb93879"
+    },
+    {
+      "path": "Evaluation/results/candidates/tinyllama-1.1b/stderr.log",
+      "category": "generation-logs",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Evaluation/results/candidates/tinyllama-1.1b/stdout.log",
+      "category": "generation-logs",
+      "bytes": 392,
+      "sha256": "c87e60b7c311cacea01026b3c4b675622f57c457a9923f76a37f3cfbbacfcd1a"
+    },
+    {
+      "path": "Evaluation/results/leaderboard.json",
+      "category": "aggregates",
+      "bytes": 15638,
+      "sha256": "1c8322758cce9c5c02342c9059c17ef06f449e45d12054397e20b68bd971eeb2"
+    },
+    {
+      "path": "Evaluation/results/statistical_analysis.json",
+      "category": "aggregates",
+      "bytes": 4125,
+      "sha256": "6760f5838da114b3701e53cbb4a10df7e8a28ce5ac57c0aba05f76ce4df77820"
+    },
+    {
+      "path": "Evaluation/results/summary.json",
+      "category": "aggregates",
+      "bytes": 7316,
+      "sha256": "392bfc322a3a2e74bc489dd2504935c0077bb765b1a94a1f456f8ece23d2a174"
+    },
+    {
+      "path": "Evaluation/results/summary.csv",
+      "category": "aggregates",
+      "bytes": 1720,
+      "sha256": "e5c2b66c1cddb115ce0aa932b8a803c200cb5b0b3f9976098256ffef9be91568"
+    },
+    {
+      "path": "Evaluation/results/leaderboard.md",
+      "category": "aggregates",
+      "bytes": 2404,
+      "sha256": "db8107fbcf7fce0ec5fcf0b2308dc5b9107ee13d146773be6d40390364ab4ab4"
+    },
+    {
+      "path": "Evaluation/results/summary.md",
+      "category": "aggregates",
+      "bytes": 2661,
+      "sha256": "c7954d6206d8e923d22572d38f1e84d39c271c42e188c1903f280b03737b1ec9"
+    },
+    {
+      "path": "Evaluation/results/embeddings/summary.csv",
+      "category": "aggregates",
+      "bytes": 1955,
+      "sha256": "8c09ef0f7c87fba86dc9231bfb00683a79b1c1d0f6e23454baf04982c445f510"
+    },
+    {
+      "path": "Evaluation/results/embeddings/compatibility_matrix.md",
+      "category": "aggregates",
+      "bytes": 6300,
+      "sha256": "e3479c739d8e9e47448a31cb21544ff0094845b02acf2dedda4a07fc622c613b"
+    },
+    {
+      "path": "Evaluation/results/embeddings/leaderboard.md",
+      "category": "aggregates",
+      "bytes": 4666,
+      "sha256": "393b3e8e14bc924124dda8c7841702c9f22ac0501034e94209aa2c638349467f"
+    },
+    {
+      "path": "Evaluation/results/embeddings/statistical_analysis.md",
+      "category": "aggregates",
+      "bytes": 7693,
+      "sha256": "638b3cc814af67499b67554ae9a04c5f5553f292bd88b351c41710cc00c578ac"
+    },
+    {
+      "path": "Evaluation/results/embeddings/summary.md",
+      "category": "aggregates",
+      "bytes": 1912,
+      "sha256": "f7e3f66bd0c61d4b1132a59282c171bae2522e9ab68eb254960b2a2ea7d0e719"
+    },
+    {
+      "path": "Evaluation/results/stage_3_4/cross_model_agreement.json",
+      "category": "stage-3-4-analyses",
+      "bytes": 2442,
+      "sha256": "1569ecc46ece951540f72e73f1e04945a6598f40801a9b9e69d1c0afe0f68c7e"
+    },
+    {
+      "path": "Evaluation/results/stage_3_4/cross_runtime_consistency.json",
+      "category": "stage-3-4-analyses",
+      "bytes": 2433,
+      "sha256": "e95b84b7bf00d403b20ebd704658b21ccfa21747899fa9993ab87f5f6a8aba73"
+    },
+    {
+      "path": "Evaluation/results/stage_3_4/embedding_space_analysis.json",
+      "category": "stage-3-4-analyses",
+      "bytes": 4270,
+      "sha256": "bcc90722489813b127df3aa64714df4be86082b8a4a83d40f908ccc3ce29e2ef"
+    },
+    {
+      "path": "Evaluation/results/stage_3_4/generator_comparison.json",
+      "category": "stage-3-4-analyses",
+      "bytes": 156115,
+      "sha256": "f2d3de11de7e61b6c252921cec6dc2dead1ed69c9e2c58ba313a03d541ad66eb"
+    },
+    {
+      "path": "Evaluation/results/stage_3_4/cross_model_agreement.md",
+      "category": "stage-3-4-analyses",
+      "bytes": 581,
+      "sha256": "89dd9a7ce94ffd1da5b19a9423ecefa1e23089611a89fa6dda0a012d96792758"
+    },
+    {
+      "path": "Evaluation/results/stage_3_4/cross_runtime_consistency.md",
+      "category": "stage-3-4-analyses",
+      "bytes": 711,
+      "sha256": "7d6d0b719fe320466aa2a3fd750ce7f75cea741f5984c5abc05bae9784d91dba"
+    },
+    {
+      "path": "Evaluation/results/stage_3_4/embedding_space_analysis.md",
+      "category": "stage-3-4-analyses",
+      "bytes": 1508,
+      "sha256": "41f4564f5286d7ffcae48757735a47ceddd74061910f851a5e1027232a576909"
+    },
+    {
+      "path": "Evaluation/results/stage_3_4/generator_comparison.md",
+      "category": "stage-3-4-analyses",
+      "bytes": 9195,
+      "sha256": "43e9f4e0505e9f85df59f863fe3ed412409236c52bfc1eb408fd1c708fff91c5"
+    },
+    {
+      "path": "Evaluation/results/repro/all-MiniLM-L6-v2/python/benchmark.json",
+      "category": "repro",
+      "bytes": 230476,
+      "sha256": "15fc33717d9fa6d3db457af413f8a899241ca4ea68c29f6698b7420f26dadb66"
+    },
+    {
+      "path": "Evaluation/results/repro/qwen2.5-0.5b/fixture_single.json",
+      "category": "repro",
+      "bytes": 219,
+      "sha256": "347bc652da3d50b4cb0fdfe1290fc2b328644111df3b7f00735300f8868a1905"
+    },
+    {
+      "path": "Evaluation/results/repro/qwen2.5-0.5b/raw.json",
+      "category": "repro",
+      "bytes": 24761,
+      "sha256": "b873b046cfde58c9b60d451c4348391415ecd5480ed31c6452c570a84756ba42"
+    },
+    {
+      "path": "Evaluation/results/repro/repro_report.json",
+      "category": "repro",
+      "bytes": 6314,
+      "sha256": "ddfe79699195e64e9b4d53319c818e2af247c4c721377476616c31b457b4bf77"
+    },
+    {
+      "path": "Evaluation/results/repro/repro_report.md",
+      "category": "repro",
+      "bytes": 2360,
+      "sha256": "2db882c097d7f2298c8f89844e5d90b645b26252dd1f5c9b014c7b6f8bdf8814"
+    },
+    {
+      "path": "Evaluation/plots/category_heatmap.png",
+      "category": "plots",
+      "bytes": 69226,
+      "sha256": "48609806db811953c894326d5f960a4091f4d797eeae82fc477d4fa319b51de4"
+    },
+    {
+      "path": "Evaluation/plots/failure_modes.png",
+      "category": "plots",
+      "bytes": 34743,
+      "sha256": "6952797bca265ba398759ca3925a38f13aabbbeff33322495d0b4ca23a6d08b9"
+    },
+    {
+      "path": "Evaluation/plots/latency.png",
+      "category": "plots",
+      "bytes": 52826,
+      "sha256": "e8643fb06bfa906b82c724c23d9d9a0f3cc909b6b4a5e9a7da2e7fe59a0497e1"
+    },
+    {
+      "path": "Evaluation/plots/memory.png",
+      "category": "plots",
+      "bytes": 38317,
+      "sha256": "e8515b357262901b8d2cc0250861c6df8d89c036782bd7414eae096c3942ccf0"
+    },
+    {
+      "path": "Evaluation/plots/memory_vs_latency.png",
+      "category": "plots",
+      "bytes": 38720,
+      "sha256": "98a9a12bc9189f027b45ac093a82e2ce5337cd47e2a0be650525cccf8ec16ed6"
+    },
+    {
+      "path": "Evaluation/plots/pareto_frontier.png",
+      "category": "plots",
+      "bytes": 55572,
+      "sha256": "e63b0c6466300a2eeb656df0afdbf1934c203d20f937b6cc3c3cd3b6a164489f"
+    },
+    {
+      "path": "Evaluation/plots/quality.png",
+      "category": "plots",
+      "bytes": 33482,
+      "sha256": "e14da91f61e7e178be0b66e931357b71397a3193caf760b7aebb32c7a516a22d"
+    },
+    {
+      "path": "Evaluation/plots/quality_vs_throughput.png",
+      "category": "plots",
+      "bytes": 41341,
+      "sha256": "bdc51d893aab264369d8b9ba534a0f0d898a21a5a9cee93977feeb22ca72625e"
+    },
+    {
+      "path": "Evaluation/plots/throughput.png",
+      "category": "plots",
+      "bytes": 28892,
+      "sha256": "7b339a81d2c2a876db84f6c89f87b87bc57a5cbf641342ab9f1618143941c869"
+    },
+    {
+      "path": "Evaluation/plots/verbosity.png",
+      "category": "plots",
+      "bytes": 36447,
+      "sha256": "915e2e881b943bcc1553bd019ffa761ef6a840b5518bc47733c9ba2aa485eb4f"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/01_quality_vs_latency.png",
+      "category": "plots",
+      "bytes": 98638,
+      "sha256": "e62b206a21be73aa488c2544bd7e960bf51ac7dd39aa50ba1c55d3d8586f27cb"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/02_stability_vs_latency.png",
+      "category": "plots",
+      "bytes": 101109,
+      "sha256": "c623377fad649523cd36d1ca2c28f32b36cc7414eaaeb3671746aac049291768"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/03_memory_vs_quality.png",
+      "category": "plots",
+      "bytes": 110251,
+      "sha256": "b3d2d8840510ff322da9ccaaed52c0e7e47c96ad5ffbc6cd94c1d5f9182c99aa"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/04_stability_by_type.png",
+      "category": "plots",
+      "bytes": 76916,
+      "sha256": "4950218fc281327d16f5f0b80303fe069d5903d4479241dd911f21b121ea4fff"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/05_pareto_frontier.png",
+      "category": "plots",
+      "bytes": 59505,
+      "sha256": "abe3bd0cbe9494fc50707c130bf4ca9c223cffdc0629139e318c6ea275edcc3d"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/06_score_bar.png",
+      "category": "plots",
+      "bytes": 100201,
+      "sha256": "b14dba1fc6a8a2ae6bfa1c5bea653a5512e7356bfbe5aff42f7711f28bb61084"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/07_radar_top5.png",
+      "category": "plots",
+      "bytes": 251721,
+      "sha256": "9d580c2eeb77fea316c3edc60af97bb0edf80b71345b3367c1a2da0c1e196497"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/08_runtime_comparison.png",
+      "category": "plots",
+      "bytes": 47250,
+      "sha256": "8bcd445d6b38d9e959fa8dcce8b1e3ccc3b6f96e2e306e1c46eb61c443ce03bf"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/09_dim_vs_latency.png",
+      "category": "plots",
+      "bytes": 64646,
+      "sha256": "a3f9772e297f716f003dc69d3fc28fd0805902185e4a19af87cf75cef1fd7d24"
+    },
+    {
+      "path": "Evaluation/results/embeddings/plots/10_throughput_vs_memory.png",
+      "category": "plots",
+      "bytes": 76331,
+      "sha256": "f927c9a52ce1980832d3062e95d660e815608e68c3dec67f74e0f4b40a208299"
+    },
+    {
+      "path": "Evaluation/corpora/embedding_bench_candidates_v1.json",
+      "category": "corpora",
+      "bytes": 8850,
+      "sha256": "bec8adbd455c4ffb9d78910aa075f6389c3fa285b254268ae8b0f9aa7f95cc0f"
+    },
+    {
+      "path": "Evaluation/corpora/embedding_bench_corpus_v1.json",
+      "category": "corpora",
+      "bytes": 19861,
+      "sha256": "437aaab15656b50c1d6b536c5d8005b267dc281b795c6446daaeaf725fe026ba"
+    },
+    {
+      "path": "Evaluation/corpora/generation_eval_candidates_v1.json",
+      "category": "corpora",
+      "bytes": 826,
+      "sha256": "3ffbef06d63d0914172bdd7d08a00698095b675b942684bd761a9b487b2d7854"
+    },
+    {
+      "path": "Evaluation/corpora/generation_eval_candidates_v2.json",
+      "category": "corpora",
+      "bytes": 2929,
+      "sha256": "e19c64a91a896fa481dc798e269ef90fcf43d1f2b3b0d3d21cc5b42ac2a72f55"
+    },
+    {
+      "path": "Evaluation/corpora/generation_eval_candidates_v3.json",
+      "category": "corpora",
+      "bytes": 3790,
+      "sha256": "744a476cb09aadf14210203fc3f55f670f0a0114290ae970f6c29f4155b52ee9"
+    },
+    {
+      "path": "Evaluation/corpora/generation_eval_prompts_v1.json",
+      "category": "corpora",
+      "bytes": 4961,
+      "sha256": "55b886b3b95efdbc73939b83898da18413c4f9f5b718ecd790478caec990b2f7"
+    },
+    {
+      "path": "Evaluation/corpora/hypothesis_registry.json",
+      "category": "corpora",
+      "bytes": 10394,
+      "sha256": "384b6d230979459f43bb285a3fc0762c92f4cd1740ac056ebde48c54cb4e3711"
+    },
+    {
+      "path": "Evaluation/corpora/semantic_eval_v1.json",
+      "category": "corpora",
+      "bytes": 2477,
+      "sha256": "b3c9b3e6dc814de195490fa98c00d26f46ca11c4c916db7b07761a5b2e6207cb"
+    },
+    {
+      "path": "Evaluation/corpora/MANIFEST.sha256",
+      "category": "corpora",
+      "bytes": 873,
+      "sha256": "0cea619028e4548f390069ec017072c088bdeb163fcf647999a1a18dcbfe3734"
+    },
+    {
+      "path": "Benchmarks/2026-07-12-bge-small-en-v1.5.json",
+      "category": "swift-benchmarks",
+      "bytes": 664,
+      "sha256": "3ce85a8b38ac6a9b2042d256096464a728f6d7de2d51ce02f47cd86e98d93cf9"
+    },
+    {
+      "path": "Benchmarks/2026-07-12-stub-hash-v1.json",
+      "category": "swift-benchmarks",
+      "bytes": 520,
+      "sha256": "a511b06f3c50868a989d23a598e4630c7bcf69dff8350712c86346bcaac85cd0"
+    },
+    {
+      "path": "Benchmarks/2026-07-14-all-MiniLM-L6-v2.json",
+      "category": "swift-benchmarks",
+      "bytes": 597,
+      "sha256": "65f9dc9668cd00500ad1c309e20b237e3c08450321c6462913318c6f60e558ae"
+    },
+    {
+      "path": "Benchmarks/2026-07-14-bge-small-en-v1.5.json",
+      "category": "swift-benchmarks",
+      "bytes": 602,
+      "sha256": "7528c681b5d8050d217f57d4b2e50ed917e5bc563999cb567c033ec9bdecadf0"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "model_name": "stella_en_400M_v5",
+  "repo_id": "dunzhang/stella_en_400M_v5",
+  "runtime": "python",
+  "timestamp": "2026-07-14T09:51:17.854047+00:00",
+  "status": "failed: please install xformers",
+  "schema_version": 2,
+  "provenance": {
+    "provenance_schema_version": 1,
+    "timestamp": "2026-07-14T09:51:17.861025+00:00",
+    "git_commit": "ceb982675f80fa055deca8022b29544f960d2f24",
+    "git_branch": "research/lit-review-methodology",
+    "git_dirty": true,
+    "device": "Apple M4",
+    "macos_version": "26.5.2",
+    "ram_gb": 16.0,
+    "python_version": "3.11.15",
+    "packages": {
+      "sentence-transformers": "5.6.0",
+      "torch": "2.13.0",
+      "transformers": "5.13.1",
+      "numpy": "1.26.4",
+      "huggingface_hub": "1.23.0",
+      "mlx": "0.32.0",
+      "mlx-lm": "0.31.3",
+      "einops": "0.8.2",
+      "psutil": "7.2.2"
+    },
+    "corpus_fixtures": {
+      "embedding_bench_corpus": {
+        "path": "Evaluation/corpora/embedding_bench_corpus_v1.json",
+        "sha256": "437aaab15656b50c1d6b536c5d8005b267dc281b795c6446daaeaf725fe026ba",
+        "version": 1
+      }
+    }
+  },
+  "measurement_context": {
+    "device": "cpu",
+    "throughput_measurement": "warm_batch_encode",
+    "throughput_batch_size": 128
+  },
+  "error": "please install xformers",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 541, in run_benchmark\n    backend = load_backend(repo_id, model_path, runtime, hf_token)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 160, in load_backend\n    return SentenceTransformersBackend(model_path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 83, in __init__\n    self.model = SentenceTransformer(\n                 ^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/util/decorators.py\", line 41, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/sentence_transformer/model.py\", line 188, in __init__\n    super().__init__(\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/model.py\", line 216, in __init__\n    modules, self.module_kwargs = self._load_modules(\n                                  ^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/model.py\", line 1002, in _load_modules\n    return self._load_config_modules(model_name_or_path, **load_kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/model.py\", line 1208, in _load_config_modules\n    module = module_class.load(\n             ^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/modules/transformer.py\", line 2030, in load\n    return cls(model_name_or_path=model_name_or_path, **init_kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/util/decorators.py\", line 87, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/modules/transformer.py\", line 654, in __init__\n    self.model = self._load_model(\n                 ^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/modules/transformer.py\", line 1736, in _load_model\n    return model_cls.from_pretrained(model_name_or_path, config=config, **model_kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/transformers/models/auto/auto_factory.py\", line 385, in from_pretrained\n    return model_class.from_pretrained(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/transformers/modeling_utils.py\", line 4324, in from_pretrained\n    model = cls(config, *model_args, **model_kwargs)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/.cache/huggingface/modules/transformers_modules/stella_en_400M_v5_hyphen_hf/bc5ebd35670d6096/modeling.py\", line 823, in __init__\n    self.encoder = NewEncoder(config)\n                   ^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/.cache/huggingface/modules/transformers_modules/stella_en_400M_v5_hyphen_hf/bc5ebd35670d6096/modeling.py\", line 696, in __init__\n    self.layer = nn.ModuleList([NewLayer(config) for _ in range(config.num_hidden_layers)])\n                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/.cache/huggingface/modules/transformers_modules/stella_en_400M_v5_hyphen_hf/bc5ebd35670d6096/modeling.py\", line 696, in <listcomp>\n    self.layer = nn.ModuleList([NewLayer(config) for _ in range(config.num_hidden_layers)])\n                                ^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/.cache/huggingface/modules/transformers_modules/stella_en_400M_v5_hyphen_hf/bc5ebd35670d6096/modeling.py\", line 630, in __init__\n    self.attention = NEW_ATTENTION_CLASSES[attn_implementation](\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/.cache/huggingface/modules/transformers_modules/stella_en_400M_v5_hyphen_hf/bc5ebd35670d6096/modeling.py\", line 451, in __init__\n    assert self.memory_efficient_attention is not None, 'please install xformers'\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: please install xformers\n",
+  "failure_class": "unknown",
+  "failure_reason": "please install xformers",
+  "failure_rate": 1.0,
+  "crash_rate": 0.0
+}

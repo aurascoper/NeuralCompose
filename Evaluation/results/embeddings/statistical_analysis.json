@@ -1,0 +1,1923 @@
+{
+  "generated_at": "2026-07-14T12:11:51.629153+00:00",
+  "n_candidates": 14,
+  "weights": {
+    "quality": 0.25,
+    "stability": 0.2,
+    "neighborhood": 0.15,
+    "semantic": 0.1,
+    "latency": 0.15,
+    "throughput": 0.05,
+    "memory": 0.05,
+    "consistency": 0.05
+  },
+  "rankings": {
+    "quality_score": [
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "value": 0.7335988394268111
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "value": 0.652556624711822
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "value": 0.6512086887412266
+      },
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "value": 0.6503215236418852
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "value": 0.6495851975076994
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "value": 0.6492161374944717
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "value": 0.6469213464085468
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "value": 0.6467327414476801
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "value": 0.6443994300244781
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "value": 0.6416741197739719
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "value": 0.6372662448876159
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "value": 0.1
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "value": 0.1
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "value": 0.1
+      }
+    ],
+    "stability_mean": [
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "value": 0.9692710050885422
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "value": 0.9602208973158829
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "value": 0.9545331337171664
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "value": 0.9525044371285848
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "value": 0.9408378012947308
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "value": 0.9298488787034562
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "value": 0.9284520706553192
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "value": 0.926879335138889
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "value": 0.9213136971785634
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "value": 0.9127790882021355
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "value": 0.8680338074231745
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "value": 0
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "value": 0
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "value": 0
+      }
+    ],
+    "cold_load_time": [
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "value": 0.025156166
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "value": 0.034176833999999996
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "value": 0.075326166
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "value": 6.263763904571533
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "value": 6.350430965423584
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "value": 6.5345542430877686
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "value": 7.317759037017822
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "value": 7.5738890171051025
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "value": 8.103271007537842
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "value": 8.131630897521973
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "value": 8.13814401626587
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "value": 8.257957220077515
+      },
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "value": 9.132958889007568
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "value": 11.31336784362793
+      }
+    ],
+    "embeddings_per_second": [
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "value": 1015.1475097379268
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "value": 556.7179053248302
+      },
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "value": 526.2852112607022
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "value": 511.19414146819406
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "value": 497.78530744474597
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "value": 429.0162314208087
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "value": 171.78461924399153
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "value": 170.2137161832904
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "value": 156.69701112495227
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "value": 133.5117083134328
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "value": 73.31843556565866
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "value": 25.03946118540312
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "value": 15.959776045769292
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "value": 10.781717297494561
+      }
+    ],
+    "peak_rss_mb": [
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "value": 282.125
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "value": 440.078125
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "value": 446.90625
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "value": 505.6875
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "value": 550.125
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "value": 780.125
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "value": 899.140625
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "value": 978.5625
+      },
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "value": 1036.640625
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "value": 1169.90625
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "value": 1438.515625
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "value": 1596.703125
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "value": 2091.4375
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "value": 2135.96875
+      }
+    ],
+    "overall_score": [
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "value": 0.8553254202790901
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "value": 0.8303106599728264
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "value": 0.8300664607506425
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "value": 0.7875727968395598
+      },
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "value": 0.783582227979399
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "value": 0.7737534940123476
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "value": 0.771760361395089
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "value": 0.7677942045169919
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "value": 0.7551978636121118
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "value": 0.7492071981801024
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "value": 0.743189657866655
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "value": 0.201665511986127
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "value": 0.19959110860426893
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "value": 0.19873322365774448
+      }
+    ]
+  },
+  "pareto_frontier": [
+    "all-MiniLM-L6-v2 (python)",
+    "bge-small-en-v1.5 (python)",
+    "bge-base-en-v1.5 (python)",
+    "multilingual-e5-base (python)",
+    "multilingual-e5-small (python)",
+    "mxbai-embed-large-v1 (python)",
+    "snowflake-arctic-embed (python)",
+    "Qwen3-Embedding-0.6B (python)",
+    "bge-m3 (python)",
+    "multilingual-e5-large (python)",
+    "all-MiniLM-L6-v2 (mlx-swift)"
+  ],
+  "pairwise": {
+    "pairwise": [
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "bge-small-en-v1.5 (python)",
+        "score_diff": 0.025014760306263706,
+        "quality_diff": 0.08686609797913103,
+        "stability_diff": -0.07280399387155634,
+        "latency_diff": 0.2561299800872803,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "bge-base-en-v1.5 (python)",
+        "score_diff": 0.02525895952844759,
+        "quality_diff": 0.08919940940233306,
+        "stability_diff": -0.06181507128028174,
+        "latency_diff": 1.3101251125335693,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "multilingual-e5-base (python)",
+        "score_diff": 0.06775262343953026,
+        "quality_diff": 0.08438270193233943,
+        "stability_diff": -0.09218708989270841,
+        "latency_diff": -0.6840682029724121,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "multilingual-e5-small (python)",
+        "score_diff": 0.07174319229969106,
+        "quality_diff": 0.08327731578492592,
+        "stability_diff": -0.10123719766536776,
+        "latency_diff": -1.5590698719024658,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "mxbai-embed-large-v1 (python)",
+        "score_diff": 0.08157192626674248,
+        "quality_diff": 0.08239015068558453,
+        "stability_diff": -0.06041826323214472,
+        "latency_diff": -0.5642549991607666,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "snowflake-arctic-embed (python)",
+        "score_diff": 0.08356505888400112,
+        "quality_diff": 0.09192471965283922,
+        "stability_diff": -0.0844706297054103,
+        "latency_diff": 1.039334774017334,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "Qwen3-Embedding-0.6B (python)",
+        "score_diff": 0.08753121576209821,
+        "quality_diff": 0.08667749301826433,
+        "stability_diff": -0.044745280778961005,
+        "latency_diff": 1.2234580516815186,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "nomic-embed-text-v1.5 (python)",
+        "score_diff": 0.10012755666697826,
+        "quality_diff": 0.0963325945391953,
+        "stability_diff": -0.058845527715714496,
+        "latency_diff": -3.739478826522827,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.10611822209898769,
+        "quality_diff": 0.08104221471498918,
+        "stability_diff": -0.05327988975538889,
+        "latency_diff": -0.5293819904327393,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.11213576241243506,
+        "quality_diff": 0.08401364191911176,
+        "stability_diff": -0.08649932629399193,
+        "latency_diff": -0.5577418804168701,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.653659908292963,
+        "quality_diff": 0.6335988394268112,
+        "stability_diff": 0.8680338074231745,
+        "latency_diff": 7.548732851105102,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.6557343116748211,
+        "quality_diff": 0.6335988394268112,
+        "stability_diff": 0.8680338074231745,
+        "latency_diff": 7.498562851105103,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.6565921966213456,
+        "quality_diff": 0.6335988394268112,
+        "stability_diff": 0.8680338074231745,
+        "latency_diff": 7.539712183105102,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "bge-base-en-v1.5 (python)",
+        "score_diff": 0.0002441992221838829,
+        "quality_diff": 0.0023333114232020336,
+        "stability_diff": 0.010988922591274597,
+        "latency_diff": 1.053995132446289,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "multilingual-e5-base (python)",
+        "score_diff": 0.04273786313326655,
+        "quality_diff": -0.002483396046791597,
+        "stability_diff": -0.01938309602115207,
+        "latency_diff": -0.9401981830596924,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "multilingual-e5-small (python)",
+        "score_diff": 0.046728431993427355,
+        "quality_diff": -0.003588782194205109,
+        "stability_diff": -0.028433203793811423,
+        "latency_diff": -1.815199851989746,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "mxbai-embed-large-v1 (python)",
+        "score_diff": 0.05655716596047877,
+        "quality_diff": -0.0044759472935465006,
+        "stability_diff": 0.012385730639411618,
+        "latency_diff": -0.8203849792480469,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "snowflake-arctic-embed (python)",
+        "score_diff": 0.058550298577737414,
+        "quality_diff": 0.005058621673708186,
+        "stability_diff": -0.011666635833853967,
+        "latency_diff": 0.7832047939300537,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "Qwen3-Embedding-0.6B (python)",
+        "score_diff": 0.06251645545583451,
+        "quality_diff": -0.00018860496086670064,
+        "stability_diff": 0.028058713092595333,
+        "latency_diff": 0.9673280715942383,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "nomic-embed-text-v1.5 (python)",
+        "score_diff": 0.07511279636071455,
+        "quality_diff": 0.009466496560064264,
+        "stability_diff": 0.013958466155841842,
+        "latency_diff": -3.9956088066101074,
+        "a_dominates_b": true,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.08110346179272399,
+        "quality_diff": -0.005823883264141849,
+        "stability_diff": 0.01952410411616745,
+        "latency_diff": -0.7855119705200195,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.08712100210617135,
+        "quality_diff": -0.0028524560600192705,
+        "stability_diff": -0.013695332422435591,
+        "latency_diff": -0.8138718605041504,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.6286451479866993,
+        "quality_diff": 0.5467327414476801,
+        "stability_diff": 0.9408378012947308,
+        "latency_diff": 7.292602871017822,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.6307195513685575,
+        "quality_diff": 0.5467327414476801,
+        "stability_diff": 0.9408378012947308,
+        "latency_diff": 7.242432871017822,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.6315774363150819,
+        "quality_diff": 0.5467327414476801,
+        "stability_diff": 0.9408378012947308,
+        "latency_diff": 7.283582203017822,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "multilingual-e5-base (python)",
+        "score_diff": 0.04249366391108267,
+        "quality_diff": -0.004816707469993631,
+        "stability_diff": -0.030372018612426666,
+        "latency_diff": -1.9941933155059814,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "multilingual-e5-small (python)",
+        "score_diff": 0.04648423277124347,
+        "quality_diff": -0.005922093617407143,
+        "stability_diff": -0.03942212638508602,
+        "latency_diff": -2.869194984436035,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "mxbai-embed-large-v1 (python)",
+        "score_diff": 0.05631296673829489,
+        "quality_diff": -0.006809258716748534,
+        "stability_diff": 0.0013968080481370215,
+        "latency_diff": -1.874380111694336,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "snowflake-arctic-embed (python)",
+        "score_diff": 0.05830609935555353,
+        "quality_diff": 0.002725310250506152,
+        "stability_diff": -0.022655558425128564,
+        "latency_diff": -0.27079033851623535,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "Qwen3-Embedding-0.6B (python)",
+        "score_diff": 0.062272256233650625,
+        "quality_diff": -0.002521916384068734,
+        "stability_diff": 0.017069790501320736,
+        "latency_diff": -0.08666706085205078,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "nomic-embed-text-v1.5 (python)",
+        "score_diff": 0.07486859713853067,
+        "quality_diff": 0.00713318513686223,
+        "stability_diff": 0.0029695435645672452,
+        "latency_diff": -5.0496039390563965,
+        "a_dominates_b": true,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.0808592625705401,
+        "quality_diff": -0.008157194687343883,
+        "stability_diff": 0.008535181524892854,
+        "latency_diff": -1.8395071029663086,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.08687680288398747,
+        "quality_diff": -0.005185767483221304,
+        "stability_diff": -0.024684255013710188,
+        "latency_diff": -1.8678669929504395,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.6284009487645155,
+        "quality_diff": 0.5443994300244781,
+        "stability_diff": 0.9298488787034562,
+        "latency_diff": 6.238607738571533,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.6304753521463735,
+        "quality_diff": 0.5443994300244781,
+        "stability_diff": 0.9298488787034562,
+        "latency_diff": 6.188437738571533,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-base-en-v1.5 (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.631333237092898,
+        "quality_diff": 0.5443994300244781,
+        "stability_diff": 0.9298488787034562,
+        "latency_diff": 6.229587070571533,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "multilingual-e5-small (python)",
+        "score_diff": 0.003990568860160804,
+        "quality_diff": -0.0011053861474135118,
+        "stability_diff": -0.009050107772659355,
+        "latency_diff": -0.8750016689300537,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "mxbai-embed-large-v1 (python)",
+        "score_diff": 0.013819302827212221,
+        "quality_diff": -0.0019925512467549034,
+        "stability_diff": 0.03176882666056369,
+        "latency_diff": 0.11981320381164551,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "snowflake-arctic-embed (python)",
+        "score_diff": 0.015812435444470863,
+        "quality_diff": 0.007542017720499783,
+        "stability_diff": 0.007716460187298102,
+        "latency_diff": 1.723402976989746,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "Qwen3-Embedding-0.6B (python)",
+        "score_diff": 0.019778592322567956,
+        "quality_diff": 0.0022947910859248966,
+        "stability_diff": 0.0474418091137474,
+        "latency_diff": 1.9075262546539307,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "nomic-embed-text-v1.5 (python)",
+        "score_diff": 0.032374933227448,
+        "quality_diff": 0.01194989260685586,
+        "stability_diff": 0.03334156217699391,
+        "latency_diff": -3.055410623550415,
+        "a_dominates_b": true,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.038365598659457434,
+        "quality_diff": -0.003340487217350252,
+        "stability_diff": 0.03890720013731952,
+        "latency_diff": 0.15468621253967285,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.0443831389729048,
+        "quality_diff": -0.00036906001322767334,
+        "stability_diff": 0.005687763598716478,
+        "latency_diff": 0.126326322555542,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.5859072848534328,
+        "quality_diff": 0.5492161374944717,
+        "stability_diff": 0.9602208973158829,
+        "latency_diff": 8.232801054077514,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.5879816882352908,
+        "quality_diff": 0.5492161374944717,
+        "stability_diff": 0.9602208973158829,
+        "latency_diff": 8.182631054077515,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-base (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.5888395731818153,
+        "quality_diff": 0.5492161374944717,
+        "stability_diff": 0.9602208973158829,
+        "latency_diff": 8.223780386077514,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "mxbai-embed-large-v1 (python)",
+        "score_diff": 0.009828733967051417,
+        "quality_diff": -0.0008871650993413915,
+        "stability_diff": 0.04081893443322304,
+        "latency_diff": 0.9948148727416992,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "snowflake-arctic-embed (python)",
+        "score_diff": 0.011821866584310059,
+        "quality_diff": 0.008647403867913295,
+        "stability_diff": 0.016766567959957457,
+        "latency_diff": 2.5984046459198,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "Qwen3-Embedding-0.6B (python)",
+        "score_diff": 0.015788023462407152,
+        "quality_diff": 0.0034001772333384084,
+        "stability_diff": 0.05649191688640676,
+        "latency_diff": 2.7825279235839844,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "nomic-embed-text-v1.5 (python)",
+        "score_diff": 0.028384364367287196,
+        "quality_diff": 0.013055278754269373,
+        "stability_diff": 0.042391669949653266,
+        "latency_diff": -2.1804089546203613,
+        "a_dominates_b": true,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.03437502979929663,
+        "quality_diff": -0.00223510106993674,
+        "stability_diff": 0.047957307909978875,
+        "latency_diff": 1.0296878814697266,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.040392570112744,
+        "quality_diff": 0.0007363261341858385,
+        "stability_diff": 0.014737871371375832,
+        "latency_diff": 1.0013279914855957,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.581916715993272,
+        "quality_diff": 0.5503215236418852,
+        "stability_diff": 0.9692710050885422,
+        "latency_diff": 9.107802723007568,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.5839911193751302,
+        "quality_diff": 0.5503215236418852,
+        "stability_diff": 0.9692710050885422,
+        "latency_diff": 9.057632723007568,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-small (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.5848490043216545,
+        "quality_diff": 0.5503215236418852,
+        "stability_diff": 0.9692710050885422,
+        "latency_diff": 9.098782055007568,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "mxbai-embed-large-v1 (python)",
+        "b": "snowflake-arctic-embed (python)",
+        "score_diff": 0.0019931326172586417,
+        "quality_diff": 0.009534568967254686,
+        "stability_diff": -0.024052366473265585,
+        "latency_diff": 1.6035897731781006,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "mxbai-embed-large-v1 (python)",
+        "b": "Qwen3-Embedding-0.6B (python)",
+        "score_diff": 0.005959289495355735,
+        "quality_diff": 0.0042873423326798,
+        "stability_diff": 0.015672982453183715,
+        "latency_diff": 1.7877130508422852,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "mxbai-embed-large-v1 (python)",
+        "b": "nomic-embed-text-v1.5 (python)",
+        "score_diff": 0.01855563040023578,
+        "quality_diff": 0.013942443853610764,
+        "stability_diff": 0.0015727355164302237,
+        "latency_diff": -3.1752238273620605,
+        "a_dominates_b": true,
+        "b_dominates_a": false
+      },
+      {
+        "a": "mxbai-embed-large-v1 (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.024546295832245213,
+        "quality_diff": -0.0013479359705953486,
+        "stability_diff": 0.007138373476755833,
+        "latency_diff": 0.034873008728027344,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "mxbai-embed-large-v1 (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.03056383614569258,
+        "quality_diff": 0.00162349123352723,
+        "stability_diff": -0.02608106306184721,
+        "latency_diff": 0.006513118743896484,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "mxbai-embed-large-v1 (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.5720879820262206,
+        "quality_diff": 0.5512086887412266,
+        "stability_diff": 0.9284520706553192,
+        "latency_diff": 8.112987850265869,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "mxbai-embed-large-v1 (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.5741623854080786,
+        "quality_diff": 0.5512086887412266,
+        "stability_diff": 0.9284520706553192,
+        "latency_diff": 8.06281785026587,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "mxbai-embed-large-v1 (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.5750202703546031,
+        "quality_diff": 0.5512086887412266,
+        "stability_diff": 0.9284520706553192,
+        "latency_diff": 8.103967182265869,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "snowflake-arctic-embed (python)",
+        "b": "Qwen3-Embedding-0.6B (python)",
+        "score_diff": 0.0039661568780970935,
+        "quality_diff": -0.005247226634574886,
+        "stability_diff": 0.0397253489264493,
+        "latency_diff": 0.18412327766418457,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "snowflake-arctic-embed (python)",
+        "b": "nomic-embed-text-v1.5 (python)",
+        "score_diff": 0.016562497782977137,
+        "quality_diff": 0.004407874886356078,
+        "stability_diff": 0.02562510198969581,
+        "latency_diff": -4.778813600540161,
+        "a_dominates_b": true,
+        "b_dominates_a": false
+      },
+      {
+        "a": "snowflake-arctic-embed (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.02255316321498657,
+        "quality_diff": -0.010882504937850035,
+        "stability_diff": 0.031190739950021418,
+        "latency_diff": -1.5687167644500732,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "snowflake-arctic-embed (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.02857070352843394,
+        "quality_diff": -0.007911077733727456,
+        "stability_diff": -0.0020286965885816244,
+        "latency_diff": -1.597076654434204,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "snowflake-arctic-embed (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.5700948494089619,
+        "quality_diff": 0.541674119773972,
+        "stability_diff": 0.9525044371285848,
+        "latency_diff": 6.509398077087768,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "snowflake-arctic-embed (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.57216925279082,
+        "quality_diff": 0.541674119773972,
+        "stability_diff": 0.9525044371285848,
+        "latency_diff": 6.459228077087769,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "snowflake-arctic-embed (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.5730271377373445,
+        "quality_diff": 0.541674119773972,
+        "stability_diff": 0.9525044371285848,
+        "latency_diff": 6.500377409087768,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "Qwen3-Embedding-0.6B (python)",
+        "b": "nomic-embed-text-v1.5 (python)",
+        "score_diff": 0.012596340904880043,
+        "quality_diff": 0.009655101520930964,
+        "stability_diff": -0.014100246936753491,
+        "latency_diff": -4.962936878204346,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "Qwen3-Embedding-0.6B (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.018587006336889478,
+        "quality_diff": -0.0056352783032751486,
+        "stability_diff": -0.008534608976427882,
+        "latency_diff": -1.7528400421142578,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "Qwen3-Embedding-0.6B (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.024604546650336845,
+        "quality_diff": -0.00266385109915257,
+        "stability_diff": -0.041754045515030924,
+        "latency_diff": -1.7811999320983887,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "Qwen3-Embedding-0.6B (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.5661286925308648,
+        "quality_diff": 0.5469213464085468,
+        "stability_diff": 0.9127790882021355,
+        "latency_diff": 6.325274799423584,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "Qwen3-Embedding-0.6B (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.5682030959127229,
+        "quality_diff": 0.5469213464085468,
+        "stability_diff": 0.9127790882021355,
+        "latency_diff": 6.275104799423584,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "Qwen3-Embedding-0.6B (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.5690609808592474,
+        "quality_diff": 0.5469213464085468,
+        "stability_diff": 0.9127790882021355,
+        "latency_diff": 6.316254131423584,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "nomic-embed-text-v1.5 (python)",
+        "b": "bge-m3 (python)",
+        "score_diff": 0.005990665432009434,
+        "quality_diff": -0.015290379824206113,
+        "stability_diff": 0.005565637960325609,
+        "latency_diff": 3.210096836090088,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "nomic-embed-text-v1.5 (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.012008205745456801,
+        "quality_diff": -0.012318952620083534,
+        "stability_diff": -0.027653798578277433,
+        "latency_diff": 3.181736946105957,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "nomic-embed-text-v1.5 (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.5535323516259848,
+        "quality_diff": 0.5372662448876159,
+        "stability_diff": 0.926879335138889,
+        "latency_diff": 11.28821167762793,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "nomic-embed-text-v1.5 (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.555606755007843,
+        "quality_diff": 0.5372662448876159,
+        "stability_diff": 0.926879335138889,
+        "latency_diff": 11.23804167762793,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "nomic-embed-text-v1.5 (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.5564646399543673,
+        "quality_diff": 0.5372662448876159,
+        "stability_diff": 0.926879335138889,
+        "latency_diff": 11.27919100962793,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-m3 (python)",
+        "b": "multilingual-e5-large (python)",
+        "score_diff": 0.006017540313447367,
+        "quality_diff": 0.0029714272041225787,
+        "stability_diff": -0.03321943653860304,
+        "latency_diff": -0.02835988998413086,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-m3 (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.5475416861939754,
+        "quality_diff": 0.552556624711822,
+        "stability_diff": 0.9213136971785634,
+        "latency_diff": 8.078114841537841,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-m3 (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.5496160895758335,
+        "quality_diff": 0.552556624711822,
+        "stability_diff": 0.9213136971785634,
+        "latency_diff": 8.027944841537842,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-m3 (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.5504739745223579,
+        "quality_diff": 0.552556624711822,
+        "stability_diff": 0.9213136971785634,
+        "latency_diff": 8.069094173537842,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-large (python)",
+        "b": "all-MiniLM-L6-v2 (mlx-swift)",
+        "score_diff": 0.541524145880528,
+        "quality_diff": 0.5495851975076994,
+        "stability_diff": 0.9545331337171664,
+        "latency_diff": 8.106474731521972,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-large (python)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.543598549262386,
+        "quality_diff": 0.5495851975076994,
+        "stability_diff": 0.9545331337171664,
+        "latency_diff": 8.056304731521973,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "multilingual-e5-large (python)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.5444564342089105,
+        "quality_diff": 0.5495851975076994,
+        "stability_diff": 0.9545331337171664,
+        "latency_diff": 8.097454063521973,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (mlx-swift)",
+        "b": "bge-small-en-v1.5 (coreml)",
+        "score_diff": 0.0020744033818580754,
+        "quality_diff": 0.0,
+        "stability_diff": 0,
+        "latency_diff": -0.05017,
+        "a_dominates_b": true,
+        "b_dominates_a": false
+      },
+      {
+        "a": "all-MiniLM-L6-v2 (mlx-swift)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.0029322883283825207,
+        "quality_diff": 0.0,
+        "stability_diff": 0,
+        "latency_diff": -0.009020667999999996,
+        "a_dominates_b": true,
+        "b_dominates_a": false
+      },
+      {
+        "a": "bge-small-en-v1.5 (coreml)",
+        "b": "bge-small-en-v1.5 (mlx-swift)",
+        "score_diff": 0.0008578849465244454,
+        "quality_diff": 0.0,
+        "stability_diff": 0,
+        "latency_diff": 0.041149332000000004,
+        "a_dominates_b": false,
+        "b_dominates_a": false
+      }
+    ]
+  },
+  "tradeoffs": {
+    "quality_vs_latency": [
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "quality": 0.7335988394268111,
+        "latency": 7.5738890171051025
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "quality": 0.6467327414476801,
+        "latency": 7.317759037017822
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "quality": 0.6443994300244781,
+        "latency": 6.263763904571533
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "quality": 0.6492161374944717,
+        "latency": 8.257957220077515
+      },
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "quality": 0.6503215236418852,
+        "latency": 9.132958889007568
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "quality": 0.6512086887412266,
+        "latency": 8.13814401626587
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "quality": 0.6416741197739719,
+        "latency": 6.5345542430877686
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "quality": 0.6469213464085468,
+        "latency": 6.350430965423584
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "quality": 0.6372662448876159,
+        "latency": 11.31336784362793
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "quality": 0.652556624711822,
+        "latency": 8.103271007537842
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "quality": 0.6495851975076994,
+        "latency": 8.131630897521973
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "quality": 0.1,
+        "latency": 0.025156166
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "quality": 0.1,
+        "latency": 0.075326166
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "quality": 0.1,
+        "latency": 0.034176833999999996
+      }
+    ],
+    "stability_vs_latency": [
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "stability": 0.8680338074231745,
+        "latency": 7.5738890171051025
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "stability": 0.9408378012947308,
+        "latency": 7.317759037017822
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "stability": 0.9298488787034562,
+        "latency": 6.263763904571533
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "stability": 0.9602208973158829,
+        "latency": 8.257957220077515
+      },
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "stability": 0.9692710050885422,
+        "latency": 9.132958889007568
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "stability": 0.9284520706553192,
+        "latency": 8.13814401626587
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "stability": 0.9525044371285848,
+        "latency": 6.5345542430877686
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "stability": 0.9127790882021355,
+        "latency": 6.350430965423584
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "stability": 0.926879335138889,
+        "latency": 11.31336784362793
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "stability": 0.9213136971785634,
+        "latency": 8.103271007537842
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "stability": 0.9545331337171664,
+        "latency": 8.131630897521973
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "stability": 0,
+        "latency": 0.025156166
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "stability": 0,
+        "latency": 0.075326166
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "stability": 0,
+        "latency": 0.034176833999999996
+      }
+    ],
+    "memory_vs_quality": [
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "memory": 505.6875,
+        "quality": 0.7335988394268111
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "python",
+        "memory": 550.125,
+        "quality": 0.6467327414476801
+      },
+      {
+        "name": "bge-base-en-v1.5",
+        "runtime": "python",
+        "memory": 780.125,
+        "quality": 0.6443994300244781
+      },
+      {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "memory": 1169.90625,
+        "quality": 0.6492161374944717
+      },
+      {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "memory": 1036.640625,
+        "quality": 0.6503215236418852
+      },
+      {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "memory": 978.5625,
+        "quality": 0.6512086887412266
+      },
+      {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "memory": 1596.703125,
+        "quality": 0.6416741197739719
+      },
+      {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "memory": 1438.515625,
+        "quality": 0.6469213464085468
+      },
+      {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "memory": 899.140625,
+        "quality": 0.6372662448876159
+      },
+      {
+        "name": "bge-m3",
+        "runtime": "python",
+        "memory": 2135.96875,
+        "quality": 0.652556624711822
+      },
+      {
+        "name": "multilingual-e5-large",
+        "runtime": "python",
+        "memory": 2091.4375,
+        "quality": 0.6495851975076994
+      },
+      {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "mlx-swift",
+        "memory": 446.90625,
+        "quality": 0.1
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "coreml",
+        "memory": 282.125,
+        "quality": 0.1
+      },
+      {
+        "name": "bge-small-en-v1.5",
+        "runtime": "mlx-swift",
+        "memory": 440.078125,
+        "quality": 0.1
+      }
+    ],
+    "correlations": {
+      "quality_latency": {
+        "rho": 0.5982398261552023,
+        "p_value": 0.023824268027055884
+      },
+      "stability_latency": {
+        "rho": 0.6688806912362595,
+        "p_value": 0.008904586067352761
+      },
+      "stability_quality": {
+        "rho": 0.41019955654102,
+        "p_value": 0.14518165845712452
+      },
+      "memory_quality": {
+        "rho": 0.5496742314119756,
+        "p_value": 0.041726712225407366
+      },
+      "throughput_latency": {
+        "rho": 0.4153846153846154,
+        "p_value": 0.13966594751752584
+      }
+    }
+  },
+  "runtime_comparison": {
+    "runtime_comparisons": [
+      {
+        "model": "all-MiniLM-L6-v2",
+        "runtime_a": "python",
+        "runtime_b": "mlx-swift",
+        "quality_diff": 0.6335988394268112,
+        "stability_diff": 0.8680338074231745,
+        "latency_diff": 7.548732851105102,
+        "throughput_diff": 881.635801424494,
+        "memory_diff": 58.78125,
+        "better_runtime": "python"
+      },
+      {
+        "model": "bge-small-en-v1.5",
+        "runtime_a": "python",
+        "runtime_b": "coreml",
+        "quality_diff": 0.5467327414476801,
+        "stability_diff": 0.9408378012947308,
+        "latency_diff": 7.242432871017822,
+        "throughput_diff": 540.7581292790609,
+        "memory_diff": 268.0,
+        "better_runtime": "python"
+      },
+      {
+        "model": "bge-small-en-v1.5",
+        "runtime_a": "python",
+        "runtime_b": "mlx-swift",
+        "quality_diff": 0.5467327414476801,
+        "stability_diff": 0.9408378012947308,
+        "latency_diff": 7.283582203017822,
+        "throughput_diff": 483.39946975917155,
+        "memory_diff": 110.046875,
+        "better_runtime": "python"
+      },
+      {
+        "model": "bge-small-en-v1.5",
+        "runtime_a": "coreml",
+        "runtime_b": "mlx-swift",
+        "quality_diff": 0.0,
+        "stability_diff": 0,
+        "latency_diff": 0.041149332000000004,
+        "throughput_diff": -57.35865951988937,
+        "memory_diff": -157.953125,
+        "better_runtime": "coreml"
+      }
+    ]
+  },
+  "stability_by_type": {
+    "asr": {
+      "mean_of_means": 0.9090813864560353,
+      "std_of_means": 0.04650639755736072,
+      "min": 0.8053195382812384,
+      "max": 0.9719020807953525,
+      "best_model": {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "mean": 0.9719020807953525
+      },
+      "worst_model": {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "mean": 0.8053195382812384
+      },
+      "n": 11
+    },
+    "typo": {
+      "mean_of_means": 0.82471933982711,
+      "std_of_means": 0.10336964939433214,
+      "min": 0.5664937445304288,
+      "max": 0.9520973082515942,
+      "best_model": {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "mean": 0.9520973082515942
+      },
+      "worst_model": {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "mean": 0.5664937445304288
+      },
+      "n": 11
+    },
+    "hesitation": {
+      "mean_of_means": 0.9266041247786383,
+      "std_of_means": 0.023781964673347356,
+      "min": 0.8852149420826425,
+      "max": 0.9636981361456455,
+      "best_model": {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "mean": 0.9636981361456455
+      },
+      "worst_model": {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "mean": 0.8852149420826425
+      },
+      "n": 11
+    },
+    "filler": {
+      "mean_of_means": 0.8991253007172509,
+      "std_of_means": 0.030902102078650313,
+      "min": 0.8279576831545155,
+      "max": 0.936057452696285,
+      "best_model": {
+        "name": "multilingual-e5-small",
+        "runtime": "python",
+        "mean": 0.936057452696285
+      },
+      "worst_model": {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "mean": 0.8279576831545155
+      },
+      "n": 11
+    },
+    "punctuation": {
+      "mean_of_means": 0.9478687538267241,
+      "std_of_means": 0.018905484233201722,
+      "min": 0.8940305043172959,
+      "max": 0.9611500104229274,
+      "best_model": {
+        "name": "mxbai-embed-large-v1",
+        "runtime": "python",
+        "mean": 0.9611500104229274
+      },
+      "worst_model": {
+        "name": "all-MiniLM-L6-v2",
+        "runtime": "python",
+        "mean": 0.8940305043172959
+      },
+      "n": 11
+    },
+    "capitalization": {
+      "mean_of_means": 0.9837089869498251,
+      "std_of_means": 0.020595164060483364,
+      "min": 0.9430034643641129,
+      "max": 1.0000000536441775,
+      "best_model": {
+        "name": "nomic-embed-text-v1.5",
+        "runtime": "python",
+        "mean": 1.0000000536441775
+      },
+      "worst_model": {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "mean": 0.9430034643641129
+      },
+      "n": 11
+    },
+    "no_punctuation": {
+      "mean_of_means": 0.9999997536404628,
+      "std_of_means": 8.751873983434741e-07,
+      "min": 0.999996986826692,
+      "max": 1.0000000536441807,
+      "best_model": {
+        "name": "multilingual-e5-base",
+        "runtime": "python",
+        "mean": 1.0000000536441807
+      },
+      "worst_model": {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "mean": 0.999996986826692
+      },
+      "n": 11
+    },
+    "doubled_word": {
+      "mean_of_means": 0.9741099187831861,
+      "std_of_means": 0.014111101762274187,
+      "min": 0.9349283102848431,
+      "max": 0.9872995021450442,
+      "best_model": {
+        "name": "snowflake-arctic-embed",
+        "runtime": "python",
+        "mean": 0.9872995021450442
+      },
+      "worst_model": {
+        "name": "Qwen3-Embedding-0.6B",
+        "runtime": "python",
+        "mean": 0.9349283102848431
+      },
+      "n": 11
+    }
+  },
+  "clusters": {
+    "n_clusters": 3,
+    "clusters": {
+      "2": [
+        "all-MiniLM-L6-v2 (python)",
+        "bge-small-en-v1.5 (python)",
+        "bge-base-en-v1.5 (python)",
+        "multilingual-e5-base (python)",
+        "multilingual-e5-small (python)",
+        "nomic-embed-text-v1.5 (python)"
+      ],
+      "0": [
+        "mxbai-embed-large-v1 (python)",
+        "snowflake-arctic-embed (python)",
+        "Qwen3-Embedding-0.6B (python)",
+        "bge-m3 (python)",
+        "multilingual-e5-large (python)"
+      ],
+      "1": [
+        "all-MiniLM-L6-v2 (mlx-swift)",
+        "bge-small-en-v1.5 (coreml)",
+        "bge-small-en-v1.5 (mlx-swift)"
+      ]
+    },
+    "features_used": [
+      "quality_score",
+      "stability_mean",
+      "cold_load_time",
+      "embeddings_per_second",
+      "peak_rss_mb"
+    ]
+  },
+  "cross_runtime_consistency": {
+    "cross_runtime_comparisons": [
+      {
+        "model": "all-MiniLM-L6-v2",
+        "runtime_a": "python",
+        "runtime_b": "mlx-swift",
+        "mean_cosine": 1.0,
+        "min_cosine": 0.9999998807907247,
+        "max_cosine": 1.0000001192092753,
+        "std_cosine": 5.331200864171302e-08,
+        "n_texts": 10,
+        "drift_detected": false
+      },
+      {
+        "model": "bge-small-en-v1.5",
+        "runtime_a": "python",
+        "runtime_b": "coreml",
+        "mean_cosine": 1.0000000417232584,
+        "min_cosine": 0.9999999403953659,
+        "max_cosine": 1.0000001192093038,
+        "std_cosine": 5.364418385056727e-08,
+        "n_texts": 10,
+        "drift_detected": false
+      },
+      {
+        "model": "bge-small-en-v1.5",
+        "runtime_a": "python",
+        "runtime_b": "mlx-swift",
+        "mean_cosine": 1.0000000476837179,
+        "min_cosine": 0.9999999403953659,
+        "max_cosine": 1.0000001192092753,
+        "std_cosine": 4.460402770416392e-08,
+        "n_texts": 10,
+        "drift_detected": false
+      },
+      {
+        "model": "bge-small-en-v1.5",
+        "runtime_a": "coreml",
+        "runtime_b": "mlx-swift",
+        "mean_cosine": 1.000000053644186,
+        "min_cosine": 0.9999999403953659,
+        "max_cosine": 1.0000001192093038,
+        "std_cosine": 5.6230909645350223e-08,
+        "n_texts": 10,
+        "drift_detected": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "model_name": "jina-embeddings-v3",
+  "repo_id": "jinaai/jina-embeddings-v3",
+  "runtime": "python",
+  "timestamp": "2026-07-14T10:49:33.368073+00:00",
+  "status": "failed: [Errno 2] No such file or directory: '/Users/aurascoper/.cache/huggingface/modules/transformers_modules/jinaai/xlm_hyphen_roberta_hyphen_flash_hyphen_implementation/845308d0fd72a8406a3e378450e1a09522790419/rotary.py'",
+  "schema_version": 2,
+  "provenance": {
+    "provenance_schema_version": 1,
+    "timestamp": "2026-07-14T10:49:33.377991+00:00",
+    "git_commit": "ceb982675f80fa055deca8022b29544f960d2f24",
+    "git_branch": "research/lit-review-methodology",
+    "git_dirty": true,
+    "device": "Apple M4",
+    "macos_version": "26.5.2",
+    "ram_gb": 16.0,
+    "python_version": "3.11.15",
+    "packages": {
+      "sentence-transformers": "5.6.0",
+      "torch": "2.13.0",
+      "transformers": "5.13.1",
+      "numpy": "1.26.4",
+      "huggingface_hub": "1.23.0",
+      "mlx": "0.32.0",
+      "mlx-lm": "0.31.3",
+      "einops": "0.8.2",
+      "psutil": "7.2.2"
+    },
+    "corpus_fixtures": {
+      "embedding_bench_corpus": {
+        "path": "Evaluation/corpora/embedding_bench_corpus_v1.json",
+        "sha256": "437aaab15656b50c1d6b536c5d8005b267dc281b795c6446daaeaf725fe026ba",
+        "version": 1
+      }
+    }
+  },
+  "measurement_context": {
+    "device": "cpu",
+    "throughput_measurement": "warm_batch_encode",
+    "throughput_batch_size": 128
+  },
+  "error": "[Errno 2] No such file or directory: '/Users/aurascoper/.cache/huggingface/modules/transformers_modules/jinaai/xlm_hyphen_roberta_hyphen_flash_hyphen_implementation/845308d0fd72a8406a3e378450e1a09522790419/rotary.py'",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 541, in run_benchmark\n    backend = load_backend(repo_id, model_path, runtime, hf_token)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 160, in load_backend\n    return SentenceTransformersBackend(model_path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/Evaluation/scripts/embedding_benchmark.py\", line 83, in __init__\n    self.model = SentenceTransformer(\n                 ^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/util/decorators.py\", line 41, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/sentence_transformer/model.py\", line 188, in __init__\n    super().__init__(\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/model.py\", line 216, in __init__\n    modules, self.module_kwargs = self._load_modules(\n                                  ^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/model.py\", line 1002, in _load_modules\n    return self._load_config_modules(model_name_or_path, **load_kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/sentence_transformers/base/model.py\", line 1189, in _load_config_modules\n    module = module_class(model_name_or_path, **init_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/.cache/huggingface/modules/transformers_modules/jina_hyphen_embeddings_hyphen_v3_hyphen_hf/a6e23cf2c148df25/custom_st.py\", line 87, in __init__\n    self.auto_model = AutoModel.from_pretrained(model_name_or_path, config=self.config, **model_args)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/transformers/models/auto/auto_factory.py\", line 378, in from_pretrained\n    model_class = get_class_from_dynamic_module(\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/transformers/dynamic_module_utils.py\", line 623, in get_class_from_dynamic_module\n    return get_class_in_module(class_name, final_module, force_reload=force_download)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/transformers/dynamic_module_utils.py\", line 297, in get_class_in_module\n    module_files: list[Path] = [module_file] + sorted(map(Path, get_relative_import_files(module_file)))\n                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/transformers/dynamic_module_utils.py\", line 164, in get_relative_import_files\n    new_imports.extend(get_relative_imports(f))\n                       ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/aurascoper/Developer/NeuralCompose/venv/lib/python3.11/site-packages/transformers/dynamic_module_utils.py\", line 133, in get_relative_imports\n    with open(module_file, encoding=\"utf-8\") as f:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/Users/aurascoper/.cache/huggingface/modules/transformers_modules/jinaai/xlm_hyphen_roberta_hyphen_flash_hyphen_implementation/845308d0fd72a8406a3e378450e1a09522790419/rotary.py'\n",
+  "failure_class": "unknown",
+  "failure_reason": "[Errno 2] No such file or directory: '/Users/aurascoper/.cache/huggingface/modules/transformers_modules/jinaai/xlm_hyphen_roberta_hyphen_flash_hyphen_implementation/845308d0fd72a8406a3e378450e1a095227",
+  "failure_rate": 1.0,
+  "crash_rate": 0.0
+}

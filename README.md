@@ -55,7 +55,9 @@ channel-health pipeline and checks the output against a committed reference.
 | ✅ | Phase B Sleep Validation Toolkit — 2D plotter + 3D live topography |
 | ✅ | Deterministic playback (`PlaybackEEGStream.normalized`) + CI regression against a golden recording |
 | ✅ | 3D workspace driven entirely by live classifier output (no manual controls) |
-| ✅ | Semantic embedding backend — `SentenceEmbedder` seam, golden replay, `EmbeddingBench` harness, and a real Core ML conversion of BGE-small-en-v1.5 |
+| ✅ | Semantic embedding backend — `SentenceEmbedder` seam, golden replay, `EmbeddingBench` harness, and a real Core ML conversion of BGE-small-en-v1.5 (the CoreML-converted backend; the frozen Stage 3.4 leaderboard ranks all-MiniLM-L6-v2 #1 overall) |
+| ✅ | Stage 3.4 offline interaction science — complete and frozen: 17/17 embedding + 18/18 generation candidates terminal, RQ1 runtime equivalence confirmed (4/4 cross-runtime comparisons, cosine 1.000000), evidence checksummed under `Evaluation/stage_3_4/frozen/` — see `Evaluation/reports/STAGE_3_4_EXIT_REPORT.md` |
+| 🧪 | Stage 3.5 pipeline engineering (routing/cascades/policies) — pre-registered in `hypothesis_registry.json`, not started |
 | 🚧 | Sleep-stage classifier (4-class: Wake / N1 / N2_N3 / Uncertain_REM) |
 | 🚧 | Dream-session controller + session FSM |
 | 🚧 | LLM primer generation + dream-report analogy extraction |

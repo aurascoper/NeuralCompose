@@ -1,0 +1,895 @@
+{
+  "version": 1,
+  "corpus": [
+    "refine the composition",
+    "refine it",
+    "improve it",
+    "improve the text",
+    "make it clearer",
+    "make it more concise",
+    "fix the grammar",
+    "edit the last sentence",
+    "rewrite that",
+    "clean up the text",
+    "polish the composition",
+    "simplify the wording",
+    "expand on that idea",
+    "change the tone",
+    "make it more formal",
+    "make it more casual",
+    "correct the spelling",
+    "rephrase that",
+    "tighten the paragraph",
+    "smooth out the transitions",
+    "start recording",
+    "begin recording",
+    "stop recording",
+    "end recording",
+    "begin sleep protocol",
+    "start sleep protocol",
+    "run sleep protocol",
+    "begin calibration",
+    "start calibration",
+    "calibrate",
+    "reset composition",
+    "clear composition",
+    "reset",
+    "clear",
+    "speak",
+    "read it",
+    "read aloud",
+    "say it",
+    "say",
+    "start dictation",
+    "begin dictation",
+    "stop dictation",
+    "end dictation",
+    "start command listening",
+    "stop command listening",
+    "open phase b",
+    "open the phase b debug window",
+    "close phase b",
+    "close the debug window",
+    "save composition",
+    "save the text",
+    "undo last word",
+    "undo last selection",
+    "delete last word",
+    "delete last character",
+    "insert space",
+    "insert period",
+    "new line",
+    "new paragraph",
+    "deep sleep",
+    "REM sleep",
+    "light sleep",
+    "slow-wave sleep",
+    "dreaming",
+    "lucid dream",
+    "wake",
+    "N1",
+    "N2",
+    "N3",
+    "uncertain REM",
+    "sleep onset",
+    "sleep spindle",
+    "K-complex",
+    "hypnagogic state",
+    "hypnopompic state",
+    "sleep efficiency",
+    "sleep architecture",
+    "EEG signal",
+    "brainwave activity",
+    "start recording",
+    "start reccording",
+    "start recording",
+    "begin calibration",
+    "begin calibrations",
+    "begin calibration",
+    "stop recording",
+    "stop reccording",
+    "stop recording",
+    "start dictation",
+    "start dictation",
+    "start diction",
+    "reset composition",
+    "reset composition",
+    "reset the composition",
+    "speak",
+    "speak it",
+    "speek",
+    "refine it",
+    "refine it",
+    "define it",
+    "start sleep protocol",
+    "start sleep protocol",
+    "start sleep protocols",
+    "clear composition",
+    "clear composition",
+    "cleer composition",
+    "read aloud",
+    "read aloud",
+    "read a loud",
+    "start recrding",
+    "begin calibraton",
+    "stop recordng",
+    "start dctation",
+    "reset compostion",
+    "speek it",
+    "refien it",
+    "improve the texr",
+    "begin slep protocol",
+    "clear the compisition",
+    "read alud",
+    "start comand listening",
+    "open phase b dbug",
+    "save the texr",
+    "undo last wrd",
+    "delete last charcter",
+    "insert spce",
+    "new paragrah",
+    "calibrat",
+    "read alod",
+    "um start recording",
+    "uh begin calibration",
+    "er stop recording",
+    "um can you start dictation",
+    "uh reset the composition",
+    "hmm let me think refine it",
+    "uh speak it please",
+    "um begin sleep protocol",
+    "er clear the composition",
+    "uh save the text",
+    "um undo last word",
+    "hmm open phase b",
+    "uh read aloud",
+    "um start command listening",
+    "er new line",
+    "like start recording you know",
+    "just begin calibration okay",
+    "so stop recording then",
+    "well start dictation I guess",
+    "like reset the composition you know",
+    "just refine it okay",
+    "so speak it then",
+    "well begin sleep protocol I guess",
+    "like clear the composition you know",
+    "just save the text okay",
+    "so undo last word then",
+    "well open phase b I guess",
+    "like read aloud you know",
+    "just new line okay",
+    "so improve the text then",
+    "don't stop recording",
+    "do stop recording",
+    "don't start calibration",
+    "do start calibration",
+    "don't reset the composition",
+    "do reset the composition",
+    "don't begin sleep protocol",
+    "do begin sleep protocol",
+    "don't clear the text",
+    "do clear the text",
+    "don't speak",
+    "do speak",
+    "don't start dictation",
+    "do start dictation",
+    "never stop recording",
+    "always start recording",
+    "start rec",
+    "begin cal",
+    "stop rec",
+    "start dict",
+    "reset comp",
+    "refine it pls",
+    "speak pls",
+    "begin sleep proto",
+    "clear comp",
+    "save txt",
+    "undo last wd",
+    "del last char",
+    "ins space",
+    "open phase b dbg",
+    "new para",
+    "iniciar grabación",
+    "detener grabación",
+    "commencer l'enregistrement",
+    "arrêter l'enregistrement",
+    "Aufnahme starten",
+    "Aufnahme stoppen",
+    "inicia calibración",
+    "calibración inicial",
+    "commencer la calibration",
+    "calibration de départ",
+    "Kalibrierung starten",
+    "Kalibrierung stoppen",
+    "iniciar protocolo de sueño",
+    "detener protocolo de sueño",
+    "commencer le protocole de sommeil",
+    "arrêter le protocole de sommeil",
+    "Schlafprotokoll starten",
+    "Schlafprotokoll stoppen",
+    "limpiar composición",
+    "réinitialiser la composition",
+    "start la grabación",
+    "stop the grabación",
+    "commencer the recording",
+    "arrêter the recording",
+    "begin die calibration",
+    "stop die calibration",
+    "iniciar the sleep protocol",
+    "detener the sleep protocol",
+    "refine la composition",
+    "clear la composition",
+    "electroencephalogram signal quality",
+    "polysomnography recording",
+    "REM sleep behavior disorder",
+    "obstructive sleep apnea",
+    "central sleep apnea",
+    "sleep onset latency",
+    "EEG alpha rhythm",
+    "EEG theta waves",
+    "EEG delta waves",
+    "muscle artifact contamination",
+    "electrode impedance check",
+    "photoplethysmography signal",
+    "actigraphy data",
+    "heart rate variability during sleep",
+    "cortical arousal index",
+    "I need help",
+    "I'm uncomfortable",
+    "change the channel",
+    "call the nurse",
+    "adjust the bed",
+    "turn on the light",
+    "turn off the light",
+    "increase the volume",
+    "decrease the volume",
+    "I need water",
+    "I need to use the bathroom",
+    "I'm in pain",
+    "I feel anxious",
+    "I want to sleep",
+    "I want to communicate",
+    "banana",
+    "the stock market closed lower today",
+    "a recipe for lasagna",
+    "the weather is nice today",
+    "I went to the store yesterday",
+    "my favorite color is blue",
+    "the cat sat on the mat",
+    "two plus two equals four",
+    "the earth revolves around the sun",
+    "music is my passion"
+  ],
+  "queries": [
+    "start recording",
+    "begin calibration",
+    "sleep",
+    "refine the composition",
+    "I need help",
+    "stop recording",
+    "read aloud",
+    "reset",
+    "EEG signal quality",
+    "I want to communicate"
+  ],
+  "categories": {
+    "eeg_refinement": [
+      "refine the composition",
+      "refine it",
+      "improve it",
+      "improve the text",
+      "make it clearer",
+      "make it more concise",
+      "fix the grammar",
+      "edit the last sentence",
+      "rewrite that",
+      "clean up the text",
+      "polish the composition",
+      "simplify the wording",
+      "expand on that idea",
+      "change the tone",
+      "make it more formal",
+      "make it more casual",
+      "correct the spelling",
+      "rephrase that",
+      "tighten the paragraph",
+      "smooth out the transitions"
+    ],
+    "core_commands": [
+      "start recording",
+      "begin recording",
+      "stop recording",
+      "end recording",
+      "begin sleep protocol",
+      "start sleep protocol",
+      "run sleep protocol",
+      "begin calibration",
+      "start calibration",
+      "calibrate",
+      "reset composition",
+      "clear composition",
+      "reset",
+      "clear",
+      "speak",
+      "read it",
+      "read aloud",
+      "say it",
+      "say",
+      "start dictation",
+      "begin dictation"
+    ],
+    "sleep_eeg": [
+      "deep sleep",
+      "REM sleep",
+      "light sleep",
+      "slow-wave sleep",
+      "dreaming",
+      "lucid dream",
+      "wake",
+      "N1",
+      "N2",
+      "N3",
+      "uncertain REM",
+      "sleep onset",
+      "sleep spindle",
+      "K-complex",
+      "hypnagogic state",
+      "hypnopompic state",
+      "sleep efficiency",
+      "sleep architecture",
+      "EEG signal",
+      "brainwave activity"
+    ],
+    "asr_substitutions": [
+      "start reccording",
+      "begin calibrations",
+      "stop reccording",
+      "start diction",
+      "reset the composition",
+      "speek",
+      "define it",
+      "start sleep protocols",
+      "cleer composition",
+      "read a loud"
+    ],
+    "spelling_mistakes": [
+      "start recrding",
+      "begin calibraton",
+      "stop recordng",
+      "start dctation",
+      "reset compostion",
+      "speek it",
+      "refien it",
+      "improve the texr",
+      "begin slep protocol",
+      "clear the compisition",
+      "read alud",
+      "start comand listening",
+      "open phase b dbug",
+      "save the texr",
+      "undo last wrd",
+      "delete last charcter",
+      "insert spce",
+      "new paragrah",
+      "calibrat",
+      "read alod"
+    ],
+    "hesitation": [
+      "um start recording",
+      "uh begin calibration",
+      "er stop recording",
+      "um can you start dictation",
+      "uh reset the composition",
+      "hmm let me think refine it",
+      "uh speak it please",
+      "um begin sleep protocol",
+      "er clear the composition",
+      "uh save the text",
+      "um undo last word",
+      "hmm open phase b",
+      "uh read aloud",
+      "um start command listening",
+      "er new line"
+    ],
+    "filler_words": [
+      "like start recording you know",
+      "just begin calibration okay",
+      "so stop recording then",
+      "well start dictation I guess",
+      "like reset the composition you know",
+      "just refine it okay",
+      "so speak it then",
+      "well begin sleep protocol I guess",
+      "like clear the composition you know",
+      "just save the text okay",
+      "so undo last word then",
+      "well open phase b I guess",
+      "like read aloud you know",
+      "just new line okay",
+      "so improve the text then"
+    ],
+    "negation": [
+      "don't stop recording",
+      "do stop recording",
+      "don't start calibration",
+      "do start calibration",
+      "don't reset the composition",
+      "do reset the composition",
+      "don't begin sleep protocol",
+      "do begin sleep protocol",
+      "don't clear the text",
+      "do clear the text",
+      "don't speak",
+      "do speak",
+      "don't start dictation",
+      "do start dictation",
+      "never stop recording",
+      "always start recording"
+    ],
+    "abbreviations": [
+      "start rec",
+      "begin cal",
+      "stop rec",
+      "start dict",
+      "reset comp",
+      "refine it pls",
+      "speak pls",
+      "begin sleep proto",
+      "clear comp",
+      "save txt",
+      "undo last wd",
+      "del last char",
+      "ins space",
+      "open phase b dbg",
+      "new para"
+    ],
+    "multilingual": [
+      "iniciar grabación",
+      "detener grabación",
+      "commencer l'enregistrement",
+      "arrêter l'enregistrement",
+      "Aufnahme starten",
+      "Aufnahme stoppen",
+      "inicia calibración",
+      "calibración inicial",
+      "commencer la calibration",
+      "calibration de départ",
+      "Kalibrierung starten",
+      "Kalibrierung stoppen",
+      "iniciar protocolo de sueño",
+      "detener protocolo de sueño",
+      "commencer le protocole de sommeil",
+      "arrêter le protocole de sommeil",
+      "Schlafprotokoll starten",
+      "Schlafprotokoll stoppen",
+      "limpiar composición",
+      "réinitialiser la composition"
+    ],
+    "code_switching": [
+      "start la grabación",
+      "stop the grabación",
+      "commencer the recording",
+      "arrêter the recording",
+      "begin die calibration",
+      "stop die calibration",
+      "iniciar the sleep protocol",
+      "detener the sleep protocol",
+      "refine la composition",
+      "clear la composition"
+    ],
+    "medical_terminology": [
+      "electroencephalogram signal quality",
+      "polysomnography recording",
+      "REM sleep behavior disorder",
+      "obstructive sleep apnea",
+      "central sleep apnea",
+      "sleep onset latency",
+      "EEG alpha rhythm",
+      "EEG theta waves",
+      "EEG delta waves",
+      "muscle artifact contamination",
+      "electrode impedance check",
+      "photoplethysmography signal",
+      "actigraphy data",
+      "heart rate variability during sleep",
+      "cortical arousal index"
+    ],
+    "communication_phrases": [
+      "I need help",
+      "I'm uncomfortable",
+      "change the channel",
+      "call the nurse",
+      "adjust the bed",
+      "turn on the light",
+      "turn off the light",
+      "increase the volume",
+      "decrease the volume",
+      "I need water",
+      "I need to use the bathroom",
+      "I'm in pain",
+      "I feel anxious",
+      "I want to sleep",
+      "I want to communicate"
+    ]
+  },
+  "commandGroups": {
+    "startRecording": [
+      "start recording",
+      "begin recording",
+      "start rec",
+      "iniciar grabación",
+      "commencer l'enregistrement"
+    ],
+    "stopRecording": [
+      "stop recording",
+      "end recording",
+      "stop rec",
+      "detener grabación",
+      "arrêter l'enregistrement"
+    ],
+    "beginCalibration": [
+      "begin calibration",
+      "start calibration",
+      "calibrate",
+      "begin cal",
+      "inicia calibración"
+    ],
+    "beginSleepProtocol": [
+      "begin sleep protocol",
+      "start sleep protocol",
+      "run sleep protocol",
+      "begin sleep proto",
+      "iniciar protocolo de sueño"
+    ],
+    "resetComposition": [
+      "reset composition",
+      "clear composition",
+      "reset",
+      "clear",
+      "reset comp",
+      "limpiar composición"
+    ],
+    "speak": [
+      "speak",
+      "read it",
+      "read aloud",
+      "say it",
+      "say",
+      "speak pls"
+    ],
+    "refine": [
+      "refine",
+      "refine it",
+      "improve it",
+      "improve",
+      "refine it pls"
+    ],
+    "startDictation": [
+      "start dictation",
+      "begin dictation",
+      "start dict"
+    ],
+    "stopDictation": [
+      "stop dictation",
+      "end dictation"
+    ],
+    "startCommand": [
+      "start command listening",
+      "start commanding",
+      "start command"
+    ],
+    "stopCommand": [
+      "stop command listening",
+      "stop commanding",
+      "stop command"
+    ],
+    "saveText": [
+      "save composition",
+      "save the text",
+      "save txt"
+    ],
+    "undoAction": [
+      "undo last word",
+      "undo last selection",
+      "undo last wd"
+    ],
+    "deleteAction": [
+      "delete last word",
+      "delete last character",
+      "del last char"
+    ],
+    "insertAction": [
+      "insert space",
+      "insert period",
+      "ins space"
+    ],
+    "newLineAction": [
+      "new line",
+      "new paragraph",
+      "new para"
+    ],
+    "openDebug": [
+      "open phase b",
+      "open the phase b debug window",
+      "open phase b debug",
+      "open phase b dbg"
+    ],
+    "sleepDeep": [
+      "deep sleep",
+      "slow-wave sleep",
+      "N3"
+    ],
+    "sleepRem": [
+      "REM sleep",
+      "uncertain REM",
+      "lucid dream"
+    ],
+    "needHelp": [
+      "I need help",
+      "I'm uncomfortable",
+      "I'm in pain",
+      "call the nurse"
+    ]
+  },
+  "paraphrasePairs": [
+    [
+      "start recording",
+      "begin recording"
+    ],
+    [
+      "stop recording",
+      "end recording"
+    ],
+    [
+      "speak",
+      "say it"
+    ],
+    [
+      "refine it",
+      "improve it"
+    ],
+    [
+      "begin sleep protocol",
+      "start sleep protocol"
+    ],
+    [
+      "reset composition",
+      "clear composition"
+    ],
+    [
+      "start dictation",
+      "begin dictation"
+    ],
+    [
+      "start calibration",
+      "begin calibration"
+    ],
+    [
+      "read it",
+      "read aloud"
+    ],
+    [
+      "open phase b",
+      "open the phase b debug window"
+    ],
+    [
+      "save composition",
+      "save the text"
+    ],
+    [
+      "delete last word",
+      "remove last word"
+    ],
+    [
+      "insert space",
+      "add a space"
+    ],
+    [
+      "new line",
+      "new paragraph"
+    ],
+    [
+      "iniciar grabación",
+      "commencer l'enregistrement"
+    ],
+    [
+      "detener grabación",
+      "arrêter l'enregistrement"
+    ],
+    [
+      "inicia calibración",
+      "commencer la calibration"
+    ],
+    [
+      "limpiar composición",
+      "réinitialiser la composition"
+    ],
+    [
+      "refine the composition",
+      "improve the text"
+    ],
+    [
+      "make it clearer",
+      "make it more concise"
+    ],
+    [
+      "I need help",
+      "I want to communicate"
+    ],
+    [
+      "start rec",
+      "begin rec"
+    ],
+    [
+      "stop rec",
+      "end rec"
+    ],
+    [
+      "deep sleep",
+      "slow-wave sleep"
+    ],
+    [
+      "REM sleep",
+      "rapid eye movement sleep"
+    ],
+    [
+      "EEG signal",
+      "brainwave activity"
+    ],
+    [
+      "sleep onset",
+      "falling asleep"
+    ],
+    [
+      "I'm in pain",
+      "I feel pain"
+    ],
+    [
+      "adjust the bed",
+      "change the bed position"
+    ],
+    [
+      "turn on the light",
+      "switch on the light"
+    ]
+  ],
+  "antonymPairs": [
+    [
+      "start recording",
+      "stop recording"
+    ],
+    [
+      "begin calibration",
+      "stop recording"
+    ],
+    [
+      "start dictation",
+      "stop dictation"
+    ],
+    [
+      "start command listening",
+      "stop command listening"
+    ],
+    [
+      "don't stop recording",
+      "do stop recording"
+    ],
+    [
+      "don't start calibration",
+      "do start calibration"
+    ],
+    [
+      "don't reset the composition",
+      "do reset the composition"
+    ],
+    [
+      "don't begin sleep protocol",
+      "do begin sleep protocol"
+    ],
+    [
+      "turn on the light",
+      "turn off the light"
+    ],
+    [
+      "increase the volume",
+      "decrease the volume"
+    ],
+    [
+      "never stop recording",
+      "always stop recording"
+    ],
+    [
+      "deep sleep",
+      "wake"
+    ],
+    [
+      "save composition",
+      "clear composition"
+    ],
+    [
+      "undo last word",
+      "insert space"
+    ],
+    [
+      "open phase b",
+      "close phase b"
+    ]
+  ],
+  "trajectories": [
+    {
+      "name": "sleep-to-lucid-dream",
+      "phrases": [
+        "sleep",
+        "deep sleep",
+        "REM sleep",
+        "dream",
+        "lucid dream"
+      ]
+    },
+    {
+      "name": "aasm-stage-transitions",
+      "phrases": [
+        "wake",
+        "N1",
+        "N2",
+        "N3",
+        "uncertain REM"
+      ]
+    },
+    {
+      "name": "refinement-progression",
+      "phrases": [
+        "write text",
+        "refine it",
+        "improve it",
+        "polish the composition",
+        "make it more concise"
+      ]
+    },
+    {
+      "name": "recording-lifecycle",
+      "phrases": [
+        "start recording",
+        "begin calibration",
+        "start dictation",
+        "stop dictation",
+        "stop recording"
+      ]
+    },
+    {
+      "name": "communication-escalation",
+      "phrases": [
+        "I want to communicate",
+        "I need help",
+        "I'm uncomfortable",
+        "I'm in pain",
+        "call the nurse"
+      ]
+    }
+  ],
+  "topK": 5,
+  "stabilityTestSet": [
+    "start recording",
+    "begin calibration",
+    "stop recording",
+    "refine the composition",
+    "begin sleep protocol",
+    "reset composition",
+    "speak it",
+    "read aloud",
+    "save the text",
+    "I need help",
+    "deep sleep",
+    "start dictation",
+    "open phase b",
+    "improve the text",
+    "clear the composition",
+    "iniciar grabación",
+    "turn on the light",
+    "I'm in pain",
+    "EEG signal quality",
+    "adjust the bed"
+  ]
+}

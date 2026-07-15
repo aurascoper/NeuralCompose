@@ -1,0 +1,22 @@
+{
+  "batch_sizes" : {
+    "1" : 12.996917,
+    "128" : 1745.809209,
+    "32" : 424.833292,
+    "8" : 105.365875
+  },
+  "build_sha" : "ceb982675f80fa055deca8022b29544f960d2f24",
+  "cold_load_ms" : 34.176834,
+  "coreml_sha256" : "",
+  "device" : "Apple M4",
+  "dimension" : 384,
+  "embeddings_per_second" : 73.31843556565866,
+  "macos" : "26.5.2",
+  "model_id" : "bge-small-en-v1.5",
+  "pooling" : "cls",
+  "rss_mb" : 440.078125,
+  "runtime" : "mlx-swift",
+  "schema_version" : 1,
+  "tokenizer_sha256" : "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+  "warm_encode_ms" : 13.264167
+}

@@ -4,8 +4,9 @@ Stage 3.4-C: Embedding-space analysis.
 
 Representation similarity metrics between embedding models:
   - CKA (Centered Kernel Alignment) — linear
-  - SVCCA (Singular Variable CCA) — top-K singular directions
-  - Procrustes alignment — orthogonal rotation + disparity
+  - SVCCA (Singular Variable CCA) — variance-threshold-truncated singular directions
+  - Procrustes alignment (scaled) — rescale to unit norm, then rotate; tolerant of scale
+  - Procrustes alignment (orthogonal) — rotation only, no rescaling; the stronger geometric claim
   - Neighborhood overlap — Jaccard of top-k neighbors
   - Cluster purity — do k-means clusters align across models?
   - Intrinsic dimensionality — via participation ratio
@@ -21,6 +22,7 @@ from itertools import combinations
 from pathlib import Path
 
 import numpy as np
+from scipy.linalg import orthogonal_procrustes as scipy_orthogonal_procrustes
 from scipy.spatial import procrustes as scipy_procrustes
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -49,30 +51,93 @@ def cka(X, Y):
     return float(hsic_xy / denom)
 
 
-def svcca(X, Y, n_directions=4):
+def _variance_threshold_k(singular_values, variance_threshold):
+    """Smallest k whose top-k singular directions explain >= variance_threshold
+    of total variance. Naturally capped at len(singular_values) (itself
+    min(n_samples, n_features), since svd(..., full_matrices=False) never
+    returns more singular values than that)."""
+    variance = singular_values ** 2
+    total = variance.sum()
+    if total < 1e-12:
+        return 1
+    cumulative = np.cumsum(variance) / total
+    k = int(np.searchsorted(cumulative, variance_threshold) + 1)
+    return max(1, min(k, len(singular_values)))
+
+
+def svcca(X, Y, variance_threshold=0.99):
+    """Raghu et al. 2017 (1706.05806): truncate each representation's SVD to
+    the directions accounting for variance_threshold of its variance
+    (adaptive, per the original method), not a fixed direction count -- a
+    fixed k=4 discards a large, unexamined fraction of the available
+    directions when n_samples is small (see methodology-review_v1.md
+    Pillar A)."""
     X = np.array(X, dtype=np.float64)
     Y = np.array(Y, dtype=np.float64)
     X = X - X.mean(axis=0)
     Y = Y - Y.mean(axis=0)
     Ux, Sx, _ = np.linalg.svd(X, full_matrices=False)
     Uy, Sy, _ = np.linalg.svd(Y, full_matrices=False)
-    k = min(n_directions, len(Sx), len(Sy))
-    X_proj = Ux[:, :k]
-    Y_proj = Uy[:, :k]
+    kx = _variance_threshold_k(Sx, variance_threshold)
+    ky = _variance_threshold_k(Sy, variance_threshold)
+    X_proj = Ux[:, :kx]
+    Y_proj = Uy[:, :ky]
     C = X_proj.T @ Y_proj
     s = np.linalg.svd(C, compute_uv=False)
-    return float(np.mean(s[:k]))
+    return float(np.mean(s))
+
+
+def _truncate_to_common_shape(X, Y):
+    """Truncate X, Y to the same (n_samples, n_dims), taking the smaller of
+    each dimension. Procrustes-family alignment requires point-to-point
+    correspondence and identical dimensionality on both axes; per-model
+    stored-sample counts can differ (some corpus texts fail to embed for
+    some models), so this guard is load-bearing, not defensive boilerplate
+    -- cluster_purity() elsewhere in this file already guards the same
+    row-count-mismatch condition."""
+    n = min(X.shape[0], Y.shape[0])
+    d = min(X.shape[1], Y.shape[1])
+    return X[:n, :d], Y[:n, :d]
 
 
 def procrustes_alignment(X, Y):
+    """Scaled Procrustes superimposition (scipy.spatial.procrustes): centers,
+    rescales both inputs to unit Frobenius norm, then rotates. Tolerant of
+    overall scale differences between the two embedding spaces -- see
+    orthogonal_procrustes_alignment() for the rotation-only variant that
+    does NOT tolerate scale."""
     X = np.array(X, dtype=np.float64)
     Y = np.array(Y, dtype=np.float64)
-    if X.shape[1] != Y.shape[1]:
-        min_dim = min(X.shape[1], Y.shape[1])
-        X = X[:, :min_dim]
-        Y = Y[:, :min_dim]
+    X, Y = _truncate_to_common_shape(X, Y)
     mtx1, mtx2, disparity = scipy_procrustes(X, Y)
     return {"disparity": float(disparity), "n_samples": X.shape[0], "n_dims": X.shape[1]}
+
+
+def orthogonal_procrustes_alignment(X, Y):
+    """Rotation-only Procrustes disparity, no rescaling (Schönemann 1966;
+    Gower & Dijksterhuis 2004): min_{R^T R = I} ||XR - Y||_F^2, closed form
+    R = UV^T from the SVD of X^T Y, reported as a relative residual
+    (normalized by ||Y||_F^2) so values are comparable across pairs with
+    different sample counts or raw embedding magnitudes -- the raw
+    unnormalized squared norm is not, since scipy.spatial.procrustes
+    normalizes internally (via its unit-norm rescale) but this rotation-only
+    variant deliberately skips that rescale. Distinct from
+    procrustes_alignment() above, which rescales both inputs before
+    rotating and so cannot detect a pure scale mismatch between
+    representations -- this metric is the stronger, more literal claim
+    about shared geometry that STAGE_3_4_3_5_DESIGN.md's RQ2 originally
+    meant by "orthogonal Procrustes" (methodology-review_v1.md/v2.md
+    Pillar A)."""
+    X = np.array(X, dtype=np.float64)
+    Y = np.array(Y, dtype=np.float64)
+    X, Y = _truncate_to_common_shape(X, Y)
+    X = X - X.mean(axis=0)
+    Y = Y - Y.mean(axis=0)
+    R, _ = scipy_orthogonal_procrustes(X, Y)
+    y_norm_sq = float(np.linalg.norm(Y) ** 2)
+    residual_sq = float(np.linalg.norm(X @ R - Y) ** 2)
+    disparity = residual_sq / y_norm_sq if y_norm_sq > 1e-12 else 0.0
+    return {"disparity": disparity, "n_samples": X.shape[0], "n_dims": X.shape[1]}
 
 
 def neighborhood_overlap(X, Y, top_k=5):
@@ -134,6 +199,7 @@ def analyze_pair(name_a, embs_a, name_b, embs_b):
         "cka": cka(embs_a, embs_b),
         "svcca": svcca(embs_a, embs_b),
         "procrustes_disparity": procrustes_alignment(embs_a, embs_b)["disparity"],
+        "orthogonal_procrustes_disparity": orthogonal_procrustes_alignment(embs_a, embs_b)["disparity"],
         "neighborhood_overlap": neighborhood_overlap(embs_a, embs_b),
         "cluster_purity": cluster_purity(embs_a, embs_b),
         "intrinsic_dim_a": intrinsic_dimensionality(embs_a),
@@ -166,6 +232,7 @@ def main():
         pair_results.append(result)
         print(f"    CKA={result['cka']:.4f} SVCCA={result['svcca']:.4f} "
               f"Procrustes={result['procrustes_disparity']:.4f} "
+              f"OrthogonalProcrustes={result['orthogonal_procrustes_disparity']:.4f} "
               f"NN_overlap={result['neighborhood_overlap']:.4f} "
               f"cluster_purity={result['cluster_purity']:.4f}")
     dims = {name: intrinsic_dimensionality(embs) for name, embs in model_embeddings.items()}
@@ -190,13 +257,17 @@ def main():
         lines.append(f"| {name} | {dim:.2f} |")
     lines.append("")
     lines.append("## Pairwise Analysis")
-    lines.append("| Pair | CKA | SVCCA | Procrustes | NN Overlap | Cluster Purity |")
-    lines.append("|------|-----|-------|------------|------------|-----------------|")
+    lines.append(
+        "| Pair | CKA | SVCCA | Procrustes (scaled) | Procrustes (orthogonal) "
+        "| NN Overlap | Cluster Purity |"
+    )
+    lines.append("|------|-----|-------|------------|------------|------------|-----------------|")
     for r in pair_results:
         lines.append(
             f"| {r['model_a']} vs {r['model_b']} "
             f"| {r['cka']:.4f} | {r['svcca']:.4f} "
             f"| {r['procrustes_disparity']:.4f} "
+            f"| {r['orthogonal_procrustes_disparity']:.4f} "
             f"| {r['neighborhood_overlap']:.4f} "
             f"| {r['cluster_purity']:.4f} |"
         )

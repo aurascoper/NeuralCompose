@@ -1,0 +1,18 @@
+{
+  "name": "qwen2.5-0.5b",
+  "candidate": {
+    "name": "qwen2.5-0.5b",
+    "directory": "Qwen2.5-0.5B-Instruct-4bit",
+    "extraEOSTokens": [
+      "<|im_end|>"
+    ],
+    "repetitionPenalty": 1.3
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/Qwen2.5-0.5B-Instruct-4bit",
+  "downloaded": false,
+  "smoke_test_passed": true,
+  "eval_completed": true,
+  "elapsed_seconds": 49.18834590911865,
+  "timestamp": "2026-07-14T03:03:00.729290+00:00",
+  "error": null
+}

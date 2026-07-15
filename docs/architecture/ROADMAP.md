@@ -62,10 +62,14 @@ specific tasks (files, PRs, tests) live in GitHub Issues.
   consumer with real `SentenceEmbeding` input, renderer source-agnostic
 - `✓` Stage 3.1–3.3: Individual component validity — EmbeddingBench
   harness, generation benchmark, per-model scientific validation
-- `~` Stage 3.4: Cross-model & cross-runtime **interaction science** —
-  RQ1 runtime equivalence, RQ2 geometry (CKA, SVCCA, Procrustes),
-  RQ3 agreement (Jaccard), RQ4 generator comparison, RQ5 joint
-  representations (deferred); results in `Evaluation/results/stage_3_4/`
+- `✓` Stage 3.4: Cross-model & cross-runtime **interaction science** —
+  complete 2026-07-14 and frozen (`Evaluation/stage_3_4/frozen/`,
+  checksummed + read-only). RQ1 runtime equivalence confirmed (4/4
+  cross-runtime comparisons at cosine 1.000000), RQ2 geometry / RQ3
+  agreement / RQ4 generator comparison evaluated with conditions, RQ5
+  joint representations deferred by design; verdicts + evidence map in
+  `Evaluation/reports/STAGE_3_4_EXIT_REPORT.md`, analyses in
+  `Evaluation/results/stage_3_4/`
 - `□` Stage 3.5: Pipeline **system engineering** — policy registry
   (Fast, Balanced, Quality, Adaptive), adaptive routing, cascaded
   generation, confidence-gated selection, pipeline policy comparison;

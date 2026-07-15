@@ -1,0 +1,31 @@
+{
+  "name": "bge-m3",
+  "candidate": {
+    "name": "bge-m3",
+    "repo_id": "BAAI/bge-m3",
+    "family": "BGE",
+    "dimension": 1024,
+    "max_seq_length": 8192,
+    "pooling": "cls",
+    "size_category": "large",
+    "estimated_size_mb": 2270,
+    "gated": false,
+    "license": "mit",
+    "languages": [
+      "multilingual"
+    ],
+    "coreml_convertible": false,
+    "mlx_available": true,
+    "priority": 10,
+    "notes": "Multilingual, long context. Large \u2014 last priority for SSD safety."
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/bge-m3",
+  "downloaded": true,
+  "eval_completed": true,
+  "runtimes_tested": [
+    "python"
+  ],
+  "elapsed_seconds": 1814.47168302536,
+  "timestamp": "2026-07-14T05:32:10.264437+00:00",
+  "error": null
+}

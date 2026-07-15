@@ -1,0 +1,113 @@
+{
+  "version": 2,
+  "candidates": [
+    {
+      "name": "qwen2.5-0.5b",
+      "directory": "Qwen2.5-0.5B-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "qwen2.5-1.5b",
+      "directory": "Qwen2.5-1.5B-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "qwen2.5-3b",
+      "directory": "Qwen2.5-3B-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "qwen3-1.7b",
+      "directory": "Qwen3-1.7B-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "qwen3-4b",
+      "directory": "Qwen3-4B-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "gemma-3n-e2b",
+      "directory": "gemma-3n-E2B-it-lm-4bit",
+      "extraEOSTokens": ["<end_of_turn>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "gemma-3n-e4b",
+      "directory": "gemma-3n-E4B-it-lm-4bit",
+      "extraEOSTokens": ["<end_of_turn>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "gemma-3-1b",
+      "directory": "gemma-3-1b-it-4bit",
+      "extraEOSTokens": ["<end_of_turn>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "gemma-3-4b",
+      "directory": "gemma-3-4b-it-4bit",
+      "extraEOSTokens": ["<end_of_turn>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "phi-3.5-mini",
+      "directory": "Phi-3.5-mini-instruct-4bit",
+      "extraEOSTokens": ["<|end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "phi-4-mini",
+      "directory": "Phi-4-mini-instruct-4bit",
+      "extraEOSTokens": ["<|end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "smollm2-360m",
+      "directory": "SmolLM2-360M-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "smollm2-1.7b",
+      "directory": "SmolLM2-1.7B-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "llama-3.2-1b",
+      "directory": "Llama-3.2-1B-Instruct-4bit",
+      "extraEOSTokens": ["<|eot_id|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "llama-3.2-3b",
+      "directory": "Llama-3.2-3B-Instruct-4bit",
+      "extraEOSTokens": ["<|eot_id|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "tinyllama-1.1b",
+      "directory": "TinyLlama-1.1B-Chat-v1.0-4bit",
+      "extraEOSTokens": ["</s>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "openelm-1.1b",
+      "directory": "OpenELM-1_1B-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    },
+    {
+      "name": "openelm-3b",
+      "directory": "OpenELM-3B-Instruct-4bit",
+      "extraEOSTokens": ["<|im_end|>"],
+      "repetitionPenalty": 1.3
+    }
+  ]
+}

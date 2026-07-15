@@ -1,0 +1,170 @@
+{
+  "candidates": [
+    {
+      "confidence_intervals": {
+        "generate_time": {
+          "hi": 1.5434991439183554,
+          "lo": 0.7783973416796437,
+          "n": 27
+        },
+        "meaning_cosine": {
+          "hi": 0.7944480408999053,
+          "lo": 0.6895451019433413,
+          "n": 22
+        },
+        "tokens_per_second": {
+          "hi": 41.876805862541744,
+          "lo": 39.925383517383864,
+          "n": 27
+        },
+        "word_count_ratio": {
+          "hi": 4.5455428586232784,
+          "lo": 2.1557053724964534,
+          "n": 27
+        }
+      },
+      "decoder_loop_rate": 0.0,
+      "echo_rate": 0.0,
+      "generate_time_mean": 1.148481218903153,
+      "maxTokens_rate": 0.0,
+      "meaning_cosine_mean": 0.7436335411938754,
+      "n_prompts": 27,
+      "name": "qwen-0.5b",
+      "tokens_per_second_mean": 40.91746174132166,
+      "word_count_ratio_mean": 3.3163883921378954
+    },
+    {
+      "confidence_intervals": {
+        "generate_time": {
+          "hi": 14.483188534003716,
+          "lo": 10.863160667485662,
+          "n": 27
+        },
+        "meaning_cosine": {
+          "hi": 0.8041999027132988,
+          "lo": 0.7367721930146217,
+          "n": 22
+        },
+        "tokens_per_second": {
+          "hi": 7.3117344276976395,
+          "lo": 7.071458406462427,
+          "n": 27
+        },
+        "word_count_ratio": {
+          "hi": 5.450547527374217,
+          "lo": 3.7914763344125375,
+          "n": 27
+        }
+      },
+      "decoder_loop_rate": 0.0,
+      "echo_rate": 0.0,
+      "generate_time_mean": 12.766463579954925,
+      "maxTokens_rate": 0.0,
+      "meaning_cosine_mean": 0.7713391238992865,
+      "n_prompts": 27,
+      "name": "gemma-3n-e2b",
+      "tokens_per_second_mean": 7.1928629253118865,
+      "word_count_ratio_mean": 4.6239409430728
+    }
+  ],
+  "cluster_analysis": {
+    "clusters": {
+      "0": [
+        "qwen-0.5b"
+      ],
+      "1": [
+        "gemma-3n-e2b"
+      ]
+    },
+    "feature_names": [
+      "generate_time",
+      "tokens_per_second",
+      "word_count_ratio",
+      "meaning_cosine",
+      "maxTokens_rate"
+    ],
+    "n_clusters": 2
+  },
+  "generated_at": "2026-07-14T12:12:12.869734+00:00",
+  "n_cosine_prompts": 22,
+  "n_evaluated": 2,
+  "pairwise_tests": [
+    {
+      "cohens_d": -3.2587027698074693,
+      "effect_size_r": 0.9482879105520615,
+      "metric": "generate_time",
+      "n_a": 27,
+      "n_b": 27,
+      "p_value": 1.5395895239435075e-08,
+      "p_value_bonferroni": 4.6187685718305226e-08,
+      "pair": "qwen-0.5b_vs_gemma-3n-e2b",
+      "u_statistic": 37.0
+    },
+    {
+      "cohens_d": 17.712639928431212,
+      "effect_size_r": -0.018867924528301883,
+      "metric": "tokens_per_second",
+      "n_a": 27,
+      "n_b": 27,
+      "p_value": 3.030868359795782e-10,
+      "p_value_bonferroni": 9.092605079387346e-10,
+      "pair": "qwen-0.5b_vs_gemma-3n-e2b",
+      "u_statistic": 729.0
+    },
+    {
+      "cohens_d": -0.4730592456784433,
+      "effect_size_r": 0.6352201257861636,
+      "metric": "word_count_ratio",
+      "n_a": 27,
+      "n_b": 27,
+      "p_value": 0.07475485667362454,
+      "p_value_bonferroni": 0.22426457002087363,
+      "pair": "qwen-0.5b_vs_gemma-3n-e2b",
+      "u_statistic": 261.0
+    }
+  ],
+  "pareto_frontier": [
+    "qwen-0.5b",
+    "gemma-3n-e2b"
+  ],
+  "provenance": {
+    "candidates_fixture_version": 1,
+    "device": "Apple M4",
+    "git_commit": "377d6738af33a9fa34ab28e6edddd3d0561ee45c",
+    "macos_version": "26.5.2",
+    "prompts_fixture_version": 1
+  },
+  "rankings": {
+    "conciseness": [
+      "qwen-0.5b",
+      "gemma-3n-e2b"
+    ],
+    "first_token_latency": [
+      "qwen-0.5b",
+      "gemma-3n-e2b"
+    ],
+    "latency": [
+      "qwen-0.5b",
+      "gemma-3n-e2b"
+    ],
+    "meaning_preservation": [
+      "gemma-3n-e2b",
+      "qwen-0.5b"
+    ],
+    "stability": [
+      "qwen-0.5b",
+      "gemma-3n-e2b"
+    ],
+    "throughput": [
+      "qwen-0.5b",
+      "gemma-3n-e2b"
+    ]
+  },
+  "total_prompts": 27,
+  "tradeoffs": {
+    "quality_vs_latency": {
+      "n": 2,
+      "note": "Insufficient data (n=2); need \u22653 for correlation"
+    }
+  }
+}

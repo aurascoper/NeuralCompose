@@ -12,7 +12,8 @@
         "latency_diff": "CoreML >= 2x faster than Python"
       },
       "status": "evaluated",
-      "work_package": "A"
+      "work_package": "A",
+      "status_note": "Evaluated 2026-07-14: 4 cross-runtime comparisons on identical weights (MiniLM python vs mlx-swift; bge-small python vs mlx-swift, python vs coreml, mlx-swift vs coreml), all mean cosine = 1.000000, drift = none (N=10 stored samples per model). Two Swift-harness defects were caught by this analysis and fixed before the final runs (MLXEmbedders omits the segment-0 token-type embedding when ids are nil; Pooling's cls prefers the tanh pooler head over the raw CLS state). python mlx_lm remains unable to load BERT encoders, so the MLX runtime evidence is Swift MLXEmbedders ('mlx-swift')."
     },
     {
       "id": "3.4-B-joint-embeddings",
@@ -39,7 +40,8 @@
         "svcca": "0.3-0.7"
       },
       "status": "evaluated",
-      "work_package": "C"
+      "work_package": "C",
+      "status_note": "Pilot study: N=10 stored samples. CKA biased high at small N. Needs full-corpus analysis for strong conclusions."
     },
     {
       "id": "3.4-D-cross-model-agreement",
@@ -51,7 +53,8 @@
         "jaccard": "0.3-0.6 cross-family, 0.6-0.9 same-family"
       },
       "status": "evaluated",
-      "work_package": "D"
+      "work_package": "D",
+      "status_note": "Refreshed 2026-07-14: 3 models with stored samples (MiniLM, bge-small, bge-base), pairwise mean Jaccard@5 0.66-0.80, N=10 texts, k=5 from pool of 9. Still a pilot: needs the full corpus and more models for strong conclusions."
     },
     {
       "id": "3.4-E-generator-comparison",
@@ -64,7 +67,8 @@
         "bleu4": "0.1-0.4 (low, rewrites are paraphrastic not exact)"
       },
       "status": "evaluated",
-      "work_package": "E"
+      "work_package": "E",
+      "status_note": "Strong evidence: 10 generators, 45 pairs, 27 prompts. Mean cosine ~0.55 (divergent). Per-category breakdown available."
     },
     {
       "id": "3.4-F-offline-fusion",

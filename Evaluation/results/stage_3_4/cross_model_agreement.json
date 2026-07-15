@@ -1,27 +1,42 @@
 {
-  "generated_at": "2026-07-14T06:42:03.125285+00:00",
+  "generated_at": "2026-07-14T12:12:44.322516+00:00",
   "models": [
     "all-MiniLM-L6-v2",
-    "multilingual-e5-small"
+    "bge-small-en-v1.5",
+    "bge-base-en-v1.5"
   ],
   "neighbors_k": 5,
   "pairwise_agreement": {
-    "all-MiniLM-L6-v2+multilingual-e5-small": {
-      "mean_jaccard": 0.6857142857142857,
-      "std": 0.18220120447341895,
+    "all-MiniLM-L6-v2+bge-small-en-v1.5": {
+      "mean_jaccard": 0.6619047619047619,
+      "std": 0.198005932250398,
       "min": 0.42857142857142855,
+      "max": 1.0,
+      "n": 10
+    },
+    "all-MiniLM-L6-v2+bge-base-en-v1.5": {
+      "mean_jaccard": 0.7761904761904762,
+      "std": 0.19523809523809527,
+      "min": 0.42857142857142855,
+      "max": 1.0,
+      "n": 10
+    },
+    "bge-small-en-v1.5+bge-base-en-v1.5": {
+      "mean_jaccard": 0.8,
+      "std": 0.16329931618554522,
+      "min": 0.6666666666666666,
       "max": 1.0,
       "n": 10
     }
   },
   "consensus": {
-    "mean_consensus_ratio": 0.6857142857142857,
-    "std": 0.18220120447341895,
+    "mean_consensus_ratio": 0.6380952380952382,
+    "std": 0.21946130708196024,
     "per_text": [
       {
         "text_idx": 0,
         "text": "refine the composition",
-        "consensus_ratio": 0.6666666666666666,
+        "consensus_ratio": 0.2857142857142857,
         "any_model_agreement": true
       },
       {
@@ -33,7 +48,7 @@
       {
         "text_idx": 2,
         "text": "improve it",
-        "consensus_ratio": 1.0,
+        "consensus_ratio": 0.5714285714285714,
         "any_model_agreement": true
       },
       {
@@ -45,7 +60,7 @@
       {
         "text_idx": 4,
         "text": "make it clearer",
-        "consensus_ratio": 0.42857142857142855,
+        "consensus_ratio": 0.6666666666666666,
         "any_model_agreement": true
       },
       {
@@ -69,13 +84,13 @@
       {
         "text_idx": 8,
         "text": "rewrite that",
-        "consensus_ratio": 0.6666666666666666,
+        "consensus_ratio": 0.42857142857142855,
         "any_model_agreement": true
       },
       {
         "text_idx": 9,
         "text": "clean up the text",
-        "consensus_ratio": 0.6666666666666666,
+        "consensus_ratio": 1.0,
         "any_model_agreement": true
       }
     ]

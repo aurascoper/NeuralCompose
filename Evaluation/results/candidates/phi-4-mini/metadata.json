@@ -1,0 +1,18 @@
+{
+  "name": "phi-4-mini",
+  "candidate": {
+    "name": "phi-4-mini",
+    "directory": "Phi-4-mini-instruct-4bit",
+    "extraEOSTokens": [
+      "<|end|>"
+    ],
+    "repetitionPenalty": 1.3
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/Phi-4-mini-instruct-4bit",
+  "downloaded": true,
+  "smoke_test_passed": true,
+  "eval_completed": true,
+  "elapsed_seconds": 172.50099110603333,
+  "timestamp": "2026-07-14T03:37:09.329285+00:00",
+  "error": null
+}

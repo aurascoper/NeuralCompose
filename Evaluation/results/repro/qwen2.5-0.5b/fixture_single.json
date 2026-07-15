@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "candidates": [
+    {
+      "name": "qwen2.5-0.5b",
+      "directory": "Qwen2.5-0.5B-Instruct-4bit",
+      "extraEOSTokens": [
+        "<|im_end|>"
+      ],
+      "repetitionPenalty": 1.3
+    }
+  ]
+}

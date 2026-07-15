@@ -1,5 +1,74 @@
 {
-  "generated_at": "2026-07-14T06:41:59.280036+00:00",
-  "n_comparisons": 0,
-  "comparisons": []
+  "generated_at": "2026-07-14T12:12:17.122820+00:00",
+  "n_comparisons": 4,
+  "comparisons": [
+    {
+      "model": "all-MiniLM-L6-v2",
+      "runtime_a": "python",
+      "runtime_b": "mlx-swift",
+      "mean_cosine": 1.0,
+      "min_cosine": 0.9999998807907247,
+      "max_cosine": 1.0000001192092753,
+      "std_cosine": 5.331200864171302e-08,
+      "ci_95_lo": 0.9999999642372174,
+      "ci_95_hi": 1.0000000357627825,
+      "n_texts": 10,
+      "drift_detected": false,
+      "per_dim_std_mean": 3.392191771922626e-08,
+      "per_dim_std_max": 8.559052133705336e-08,
+      "latency_diff_s": 7.548732851105102,
+      "throughput_ratio": 7.603434354646719
+    },
+    {
+      "model": "bge-small-en-v1.5",
+      "runtime_a": "python",
+      "runtime_b": "mlx-swift",
+      "mean_cosine": 1.0000000476837179,
+      "min_cosine": 0.9999999403953659,
+      "max_cosine": 1.0000001192092753,
+      "std_cosine": 4.460402770416392e-08,
+      "ci_95_lo": 1.0000000178813984,
+      "ci_95_hi": 1.0000000715255741,
+      "n_texts": 10,
+      "drift_detected": false,
+      "per_dim_std_mean": 2.338119919897963e-08,
+      "per_dim_std_max": 1.0498710878437123e-07,
+      "latency_diff_s": 7.283582203017822,
+      "throughput_ratio": 7.593150358838114
+    },
+    {
+      "model": "bge-small-en-v1.5",
+      "runtime_a": "python",
+      "runtime_b": "coreml",
+      "mean_cosine": 1.0000000417232584,
+      "min_cosine": 0.9999999403953659,
+      "max_cosine": 1.0000001192093038,
+      "std_cosine": 5.364418385056727e-08,
+      "ci_95_lo": 1.0000000059604741,
+      "ci_95_hi": 1.000000071525592,
+      "n_texts": 10,
+      "drift_detected": false,
+      "per_dim_std_mean": 2.1307242192847298e-08,
+      "per_dim_std_max": 5.1619135632563484e-08,
+      "latency_diff_s": 7.242432871017822,
+      "throughput_ratio": 34.882563748280674
+    },
+    {
+      "model": "bge-small-en-v1.5",
+      "runtime_a": "mlx-swift",
+      "runtime_b": "coreml",
+      "mean_cosine": 1.000000053644186,
+      "min_cosine": 0.9999999403953659,
+      "max_cosine": 1.0000001192093038,
+      "std_cosine": 5.6230909645350223e-08,
+      "ci_95_lo": 1.0000000178813984,
+      "ci_95_hi": 1.0000000894069676,
+      "n_texts": 10,
+      "drift_detected": false,
+      "per_dim_std_mean": 2.1647039716299332e-08,
+      "per_dim_std_max": 8.30196640322356e-08,
+      "latency_diff_s": -0.041149332000000004,
+      "throughput_ratio": 4.593951403540799
+    }
+  ]
 }

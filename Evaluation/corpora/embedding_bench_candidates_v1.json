@@ -1,0 +1,328 @@
+{
+  "version": 1,
+  "candidates": [
+    {
+      "name": "bge-small-en-v1.5",
+      "repo_id": "BAAI/bge-small-en-v1.5",
+      "family": "BGE",
+      "dimension": 384,
+      "max_seq_length": 512,
+      "pooling": "cls",
+      "size_category": "small",
+      "estimated_size_mb": 130,
+      "gated": false,
+      "license": "mit",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": true,
+      "mlx_available": true,
+      "priority": 1,
+      "notes": "Current NeuralCompose default. Core ML conversion already exists."
+    },
+    {
+      "name": "bge-base-en-v1.5",
+      "repo_id": "BAAI/bge-base-en-v1.5",
+      "family": "BGE",
+      "dimension": 768,
+      "max_seq_length": 512,
+      "pooling": "cls",
+      "size_category": "base",
+      "estimated_size_mb": 440,
+      "gated": false,
+      "license": "mit",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": true,
+      "mlx_available": true,
+      "priority": 2,
+      "notes": "Larger BGE variant, higher quality expected."
+    },
+    {
+      "name": "bge-m3",
+      "repo_id": "BAAI/bge-m3",
+      "family": "BGE",
+      "dimension": 1024,
+      "max_seq_length": 8192,
+      "pooling": "cls",
+      "size_category": "large",
+      "estimated_size_mb": 2270,
+      "gated": false,
+      "license": "mit",
+      "languages": [
+        "multilingual"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 10,
+      "notes": "Multilingual, long context. Large \u2014 last priority for SSD safety."
+    },
+    {
+      "name": "multilingual-e5-small",
+      "repo_id": "intfloat/multilingual-e5-small",
+      "family": "E5",
+      "dimension": 384,
+      "max_seq_length": 512,
+      "pooling": "mean",
+      "size_category": "small",
+      "estimated_size_mb": 470,
+      "gated": false,
+      "license": "mit",
+      "languages": [
+        "multilingual"
+      ],
+      "coreml_convertible": true,
+      "mlx_available": true,
+      "priority": 3,
+      "notes": "Multilingual, small. Good candidate for code-switching eval."
+    },
+    {
+      "name": "multilingual-e5-base",
+      "repo_id": "intfloat/multilingual-e5-base",
+      "family": "E5",
+      "dimension": 768,
+      "max_seq_length": 512,
+      "pooling": "mean",
+      "size_category": "base",
+      "estimated_size_mb": 1180,
+      "gated": false,
+      "license": "mit",
+      "languages": [
+        "multilingual"
+      ],
+      "coreml_convertible": true,
+      "mlx_available": true,
+      "priority": 6,
+      "notes": "Multilingual base. Higher quality than small."
+    },
+    {
+      "name": "multilingual-e5-large",
+      "repo_id": "intfloat/multilingual-e5-large",
+      "family": "E5",
+      "dimension": 1024,
+      "max_seq_length": 512,
+      "pooling": "mean",
+      "size_category": "large",
+      "estimated_size_mb": 2240,
+      "gated": false,
+      "license": "mit",
+      "languages": [
+        "multilingual"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 12,
+      "notes": "Multilingual large. Quality ceiling for E5 family."
+    },
+    {
+      "name": "nomic-embed-text-v1.5",
+      "repo_id": "nomic-ai/nomic-embed-text-v1.5",
+      "family": "Nomic",
+      "dimension": 768,
+      "max_seq_length": 8192,
+      "pooling": "mean",
+      "size_category": "base",
+      "estimated_size_mb": 547,
+      "gated": false,
+      "license": "cc-by-nc-4.0",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 8,
+      "notes": "Non-commercial license. Long context. Matryoshka embeddings."
+    },
+    {
+      "name": "jina-embeddings-v3",
+      "repo_id": "jinaai/jina-embeddings-v3",
+      "family": "Jina",
+      "dimension": 1024,
+      "max_seq_length": 8192,
+      "pooling": "mean",
+      "size_category": "base",
+      "estimated_size_mb": 570,
+      "gated": true,
+      "license": "cc-by-nc-4.0",
+      "languages": [
+        "multilingual"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": false,
+      "priority": 11,
+      "notes": "Gated model. Non-commercial. Requires HF token."
+    },
+    {
+      "name": "all-MiniLM-L6-v2",
+      "repo_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "family": "MiniLM",
+      "dimension": 384,
+      "max_seq_length": 256,
+      "pooling": "mean",
+      "size_category": "small",
+      "estimated_size_mb": 91,
+      "gated": false,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": true,
+      "mlx_available": true,
+      "priority": 4,
+      "notes": "Very small, very fast. Apache 2.0. Good latency baseline."
+    },
+    {
+      "name": "gte-base-en-v1.5",
+      "repo_id": "Alibaba-NLP/gte-base-en-v1.5",
+      "family": "GTE",
+      "dimension": 768,
+      "max_seq_length": 512,
+      "pooling": "mean",
+      "size_category": "base",
+      "estimated_size_mb": 440,
+      "gated": false,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": true,
+      "mlx_available": true,
+      "priority": 5,
+      "notes": "GTE base-en-v1.5. Apache 2.0. Original gte-small was deprecated."
+    },
+    {
+      "name": "gte-large-en-v1.5",
+      "repo_id": "Alibaba-NLP/gte-large-en-v1.5",
+      "family": "GTE",
+      "dimension": 1024,
+      "max_seq_length": 512,
+      "pooling": "mean",
+      "size_category": "large",
+      "estimated_size_mb": 1340,
+      "gated": false,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 7,
+      "notes": "GTE large-en-v1.5. Apache 2.0. 1024-dim."
+    },
+    {
+      "name": "Qwen3-Embedding-0.6B",
+      "repo_id": "Qwen/Qwen3-Embedding-0.6B",
+      "family": "Qwen",
+      "dimension": 1024,
+      "max_seq_length": 32768,
+      "pooling": "last",
+      "size_category": "base",
+      "estimated_size_mb": 1200,
+      "gated": false,
+      "license": "apache-2.0",
+      "languages": [
+        "multilingual"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 9,
+      "notes": "Qwen3 embedding. Apache 2.0. Very long context."
+    },
+    {
+      "name": "stella_en_400M_v5",
+      "repo_id": "dunzhang/stella_en_400M_v5",
+      "family": "Stella",
+      "dimension": 1024,
+      "max_seq_length": 8192,
+      "pooling": "mean",
+      "size_category": "base",
+      "estimated_size_mb": 800,
+      "gated": false,
+      "license": "mit",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 10,
+      "notes": "Stella 400M. MIT license. Matryoshka support."
+    },
+    {
+      "name": "snowflake-arctic-embed",
+      "repo_id": "Snowflake/snowflake-arctic-embed-l",
+      "family": "Arctic",
+      "dimension": 1024,
+      "max_seq_length": 512,
+      "pooling": "mean",
+      "size_category": "base",
+      "estimated_size_mb": 670,
+      "gated": false,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 11,
+      "notes": "Snowflake Arctic Embed L. Apache 2.0. Optimized for retrieval."
+    },
+    {
+      "name": "mxbai-embed-large-v1",
+      "repo_id": "mixedbread-ai/mxbai-embed-large-v1",
+      "family": "MixedBread",
+      "dimension": 1024,
+      "max_seq_length": 512,
+      "pooling": "mean",
+      "size_category": "base",
+      "estimated_size_mb": 670,
+      "gated": false,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 12,
+      "notes": "MixedBread. Apache 2.0. Strong MTEB scores."
+    },
+    {
+      "name": "bge-small-en-v1.5-mlx",
+      "repo_id": "mlx-community/bge-small-en-v1.5-4bit",
+      "family": "BGE",
+      "dimension": 384,
+      "max_seq_length": 512,
+      "pooling": "cls",
+      "size_category": "small",
+      "estimated_size_mb": 130,
+      "gated": false,
+      "license": "mit",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 1,
+      "notes": "MLX-converted BGE-small (4-bit) for MLX runtime comparison."
+    },
+    {
+      "name": "all-MiniLM-L6-v2-mlx",
+      "repo_id": "mlx-community/all-MiniLM-L6-v2-4bit",
+      "family": "MiniLM",
+      "dimension": 384,
+      "max_seq_length": 256,
+      "pooling": "mean",
+      "size_category": "small",
+      "estimated_size_mb": 91,
+      "gated": false,
+      "license": "apache-2.0",
+      "languages": [
+        "en"
+      ],
+      "coreml_convertible": false,
+      "mlx_available": true,
+      "priority": 4,
+      "notes": "MLX-converted MiniLM (4-bit) for MLX runtime comparison."
+    }
+  ]
+}

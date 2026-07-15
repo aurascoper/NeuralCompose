@@ -1,0 +1,77 @@
+candidate,prompt_id,category,first_token_latency,generate_time,tokens_per_second,words_per_second,word_count_ratio,stop_reason,decoder_loop_period,decoder_loop_repeat_count,prompt_echo_detected,meaning_preservation_cosine,prompt_text,generated_text,meaning_preserved,grammar,no_hallucination,no_added_commentary,conciseness,instruction_followed
+"qwen2.5-3b","instr-say-yes","instruction-following","0.03999006748199463","0.04133200645446777","24.194325071095243","24.194325071095243","0.25","eos","0","1","false","","Say the word yes","Yes",,,,,,
+"qwen2.5-3b","instr-avoid-very","instruction-following","0.04465901851654053","1.4653819799423218","20.47247776390755","16.37798221112604","1.6","eos","0","1","false","","I will not use the word 'very' again in this or any future sentences transcribed","Understood. Proceed without using the word 'very' in your sentences. Let me know if you need any assistance or have questions at any point.",,,,,,
+"qwen2.5-3b","instr-rewrite-formal","instruction-following","0.04250502586364746","0.489798903465271","22.458196460172253","20.41654223652023","1.0","eos","0","1","false","","Rewrite this more formally: ""Hey can you send that over.""","May I please request that you forward it to me?",,,,,,
+"qwen2.5-3b","instr-rewrite-clearer","instruction-following","0.04501998424530029","0.7541979551315308","21.214589473674227","15.910942105255671","0.7058823529411765","eos","0","1","false","","Rewrite this sentence in a clearer way:
+
+The test passed even though several setup steps failed initially.","Even though many of the initial set-up步骤 failed, the test succeeded nonetheless.",,,,,,
+"qwen2.5-3b","instr-sequence-letters","instruction-following","0.03859090805053711","1.4168540239334106","20.467881313200788","18.35051428080071","3.7142857142857144","eos","0","1","false","","Continue the sequence:
+A
+B
+C
+D","The given sequence is simply listing the first four letters of the English alphabet. Following this pattern, the next letter in the sequence would be:
+
+E",,,,,,
+"qwen2.5-3b","filler-second-option","filler-removal","0.045042991638183594","2.374253988265991","20.63806157309504","18.110951992716057","3.3076923076923075","eos","0","1","false","0.7728628516197205","Um, so, I think we should, like, probably go with the second option.","It seems you're indicating that both options have been discussed, and the second option is recommended. Is there anything specific you need help with regarding this decision? For example, if any further actions or preparations are needed after deciding on the second option.",,,,,,
+"qwen2.5-3b","filler-try-tomorrow","filler-removal","0.04640603065490723","4.010687947273254","20.694704023639932","18.201366189466448","4.866666666666666","eos","0","1","false","0.6490923762321472","You know, uh, I was kind of thinking maybe we could, um, try again tomorrow.","That sounds like a good idea to me! Sometimes it's nice for things to take some time apart before trying again. Are there any specific reasons you were thinking of stopping for tomorrow? I hope everything works out well when we do try again. If you need any time off or if something is bothering either of us, let's make sure we take care. Tomorrow works for me too! How does that sound?",,,,,,
+"qwen2.5-3b","filler-need-more-time","filler-removal","0.047448039054870605","2.3411070108413696","20.930269215839864","19.221675810465182","3.0","eos","0","1","false","0.6838164329528809","So basically what I'm trying to say is, like, we need more time, you know?","It sounds as though there might be an issue or task that requires more time than initially available. Could you please provide a bit more detail? Knowing the specifics will help in providing better assistance or guidance. What exactly do you need additional time for?",,,,,,
+"qwen2.5-3b","filler-its-fine","filler-removal","0.03614699840545654","4.497812032699585","20.454389674612887","17.564095481461067","7.9","eos","0","1","false","0.5702899694442749","Uh, well, I guess, I mean, it's fine I suppose.","It sounds like you're feeling okay about something, but perhaps simply need some reassurance or acknowledgment. Is there a specific situation you're referring to where things aren't going as well, and now they are? Or is this more of a casual response to something that happened earlier in the conversation?
+
+If you need some space or would like another perspective on a situation, feel free to explain more. I'm here if you need someone to talk things over with.",,,,,,
+"qwen2.5-3b","punct-milk-eggs-bread","punctuation-restoration","0.03645896911621094","2.4947760105133057","20.04187942696803","15.632665953035064","3.0","eos","0","1","false","0.8401548266410828","we need three things milk eggs and bread also dont forget the coffee","It sounds like you're planning a breakfast! You need three things: milk, eggs (or another type of protein for the egg), and bread. Don't forget to add a cup or two (or more) of coffee for that perfect start!",,,,,,
+"qwen2.5-3b","punct-she-said-yes","punctuation-restoration","0.03814101219177246","2.8146309852600098","19.89603620981485","16.343172600919342","3.5384615384615383","eos","0","1","false","0.7431473731994629","can you believe it she said yes right there in front of everyone","It sounds like an exciting and surprising moment! The phrase ""right there in front of everyone"" suggests the event was public or at least semi-public. Can you provide more context about what happened? Who said ""yes"" and in which situation? This would help me understand better.",,,,,,
+"qwen2.5-3b","punct-meeting-nine","punctuation-restoration","0.039176106452941895","3.2410539388656616","20.05520464208917","16.96978854330622","4.583333333333333","eos","0","1","false","0.8580074906349182","the meeting starts at nine but bring your laptop and the report","It seems like you're giving instructions for a meeting that starts at 9 o'clock. Here's how the message could be structured:
+
+---
+
+The meeting will start at nine o' clock, and please bring your laptop as well as the report.
+
+---
+
+Feel free to let me know if you need any adjustments or more details!",,,,,,
+"qwen2.5-3b","punct-go-now-or-wait","punctuation-restoration","0.04026997089385986","6.0307170152664185","19.898131465334355","14.757780836789646","6.846153846153846","maxTokens","0","1","false","0.7848064303398132","im not sure if we should go now or wait until tomorrow morning","That's understandable. Both options have their pros and cons, so let's weigh them:
+
+**Going Now:**
+- Pros:
+  - You can enjoy the activity without any delay.
+  - Avoid potential rush or inconvenience later on if you wait for tomorrow morning.
+
+- Cons:
+  - Might be tired from a long day or possibly stressed.
+  
+**Waiting Until Tomorrow Morning:**
+- Pros:
+  - You'll have more energy and freshness.
+  - No need to rush, which can reduce stress.
+
+- Cons:
+  - Might be tempted by other activities or obligations.
+  
+Consider your current",,,,,,
+"qwen2.5-3b","cap-dr-smith","capitalization","0.03691995143890381","5.620664000511169","20.282301163996337","15.834428101716439","8.9","eos","0","1","false","0.8226227760314941","i met dr smith on jan 5 in st louis","That's good to know! Meeting Dr. Smith on January 5th in St Louis seems like a significant event or opportunity for you.
+
+Could you provide more details? For example:
+
+1. How did your meeting with Dr. Smith go?
+2. What was the context of this encounter (e.g., professional meeting, social event)?
+3. Did you discuss any specific topics or objectives during your conversation?
+4. Have there been follow-up meetings since then?
+
+The more context you can provide, the better I'll be able to assist or help with your interaction.",,,,,,
+"qwen2.5-3b","cap-london-paris","capitalization","0.03774690628051758","5.84761905670166","20.52117260656268","17.27198694385692","10.1","maxTokens","0","1","false","0.8675265312194824","were flying to london on friday then paris on monday","It sounds like you were planning a trip and made some specific travel arrangements. Here is how we can break it down:
+
+1. **Flying to London on Friday:** This means you departed from your current location (presumably starting point) and flew directly to London on Friday.
+
+2. **Flying back from Paris in the future:** You mentioned that you were flying to a place called ""Paris on Monday."" However, it's not clear if this is from the same starting point or a different location. If you mean that after your trip to London, Paris was the next place where you flew from",,,,,,
+"qwen2.5-3b","cap-email-sarah-david","capitalization","0.03990805149078369","3.13585102558136","19.7713473931708","16.263527694382432","5.1","eos","0","1","false","0.7586073279380798","please email sarah and david before the meeting on tuesday","Certainly, I can draft an email to send. However, in order for me to complete this task accurately and efficiently with the specific people (Sara & David), I need their email addresses. Could you please provide those details? Once you have them, feel free to share and I'll send the email.",,,,,,
+"qwen2.5-3b","concise-wondering-help","concise-rewrite","0.047377943992614746","2.93161404132843","20.466541350310777","16.7143421027538","2.7222222222222223","eos","0","1","false","0.7744206786155701","I was wondering if maybe you might possibly have some time available to help me with this task.","Of course, I'm here to assist you! Please go ahead and let me know more about the task or question that needs help. Whether it's related to a specific topic, coding issue, academic problem-solving, or anything else you need assistance with, feel free to describe it in more detail.",,,,,,
+"qwen2.5-3b","concise-most-people-agree","concise-rewrite","0.03689992427825928","2.904776096343994","19.96711556288276","17.21303065765755","2.5","eos","0","1","false","0.7404562830924988","It is my belief that, in general, most people would probably agree that this is likely the better option overall.","It seems like you're suggesting a viewpoint that most individuals would likely agree on the better option. However, it's important to note that consensus can often be subjective and varies based on individual perspectives or circumstances. What specific option are you referring to, if it's not clear from your statement?",,,,,,
+"qwen2.5-3b","concise-still-waiting","concise-rewrite","0.047348976135253906","0.7338780164718628","21.801988397091396","19.07673984745497","0.7777777777777778","eos","0","1","false","0.9823994636535645","At this point in time, we are currently still waiting for a response regarding the matter in question.","At this moment, we are still awaiting a response regarding the matter in question.",,,,,,
+"qwen2.5-3b","concise-consider-looking","concise-rewrite","0.04649996757507324","2.0558149814605713","20.42985403781849","17.51130346098728","2.0","eos","0","1","false","0.735319197177887","There is a possibility that we could perhaps consider looking into this a bit further if that's alright.","Of course! I'd be happy to consider looking into this further if you think it's worth exploring. Please provide more details or context so I can better understand what we're discussing and how best to proceed.",,,,,,
+"qwen2.5-3b","command-close-windows","command-reformulation","0.03786897659301758","0.5043569803237915","19.827226330009577","17.844503697008616","0.9","eos","0","1","false","0.8305166959762573","Rewrite this as a clear, complete command: ""close your windows""","Please close all of the Windows on your screen.",,,,,,
+"qwen2.5-3b","command-open-emails","command-reformulation","0.03703892230987549","0.33280909061431885","21.03307931606971","18.028353699488324","0.46153846153846156","eos","0","1","false","0.7699072360992432","Rewrite this as a clear, complete command: ""open the thing with the emails""","Open and access the email inbox.",,,,,,
+"qwen2.5-3b","command-music-down","command-reformulation","0.046000003814697266","0.5352910757064819","20.549567327424807","18.68142484311346","0.7692307692307693","eos","0","1","false","0.8205614686012268","Rewrite this as a clear, complete command: ""turn that music down a bit""","Could you please lower the volume of that music slightly?",,,,,,
+"qwen2.5-3b","command-get-doc","command-reformulation","0.043228983879089355","0.7738170623779297","19.384426538625547","14.2152461283254","0.8461538461538461","eos","0","1","false","0.8682826161384583","Rewrite this as a clear, complete command: ""get me the doc from yesterday""","Please fetch and provide the document that was created/yesterday. Thank you.",,,,,,
+"qwen2.5-3b","tech-brainflow-reconnect","technical-term-preservation","0.053555965423583984","0.657122015953064","21.305023511797806","15.217873936998432","0.43478260869565216","eos","0","1","false","0.8622687458992004","Rewrite this sentence in a clearer way, but keep the technical term ""BrainFlow"" unchanged: The BrainFlow stream needs to reconnect if it drops.","The Brainflow stream must reestablish a connection if it disconnects.",,,,,,
+"qwen2.5-3b","tech-ane-classifier","technical-term-preservation","0.03835797309875488","0.7030580043792725","21.335366223791805","18.49065072728623","0.5416666666666666","eos","0","1","false","0.9084777235984802","Rewrite this more concisely, but keep the term ""ANE"" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible.","The classifier prefers running ON THE ANE instead of the GPU when feasible.",,,,,,
+"qwen2.5-3b","tech-eeg-stream","technical-term-preservation","0.03830897808074951","0.5783820152282715","20.74753309067525","17.289610908896044","0.625","eos","0","1","false","0.8237877488136292","Rewrite this more politely, but keep the term ""EEG"" unchanged: Turn on the EEG stream now.","Could you please turn on the EEG streaming? Thank you.",,,,,,

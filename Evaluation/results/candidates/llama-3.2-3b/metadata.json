@@ -1,0 +1,18 @@
+{
+  "name": "llama-3.2-3b",
+  "candidate": {
+    "name": "llama-3.2-3b",
+    "directory": "Llama-3.2-3B-Instruct-4bit",
+    "extraEOSTokens": [
+      "<|eot_id|>"
+    ],
+    "repetitionPenalty": 1.3
+  },
+  "model_dir": "/Users/aurascoper/Developer/NeuralCompose/Models/Llama-3.2-3B-Instruct-4bit",
+  "downloaded": true,
+  "smoke_test_passed": true,
+  "eval_completed": true,
+  "elapsed_seconds": 91.19127178192139,
+  "timestamp": "2026-07-14T03:52:50.482079+00:00",
+  "error": null
+}

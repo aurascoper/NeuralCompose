@@ -1,0 +1,70 @@
+candidate,prompt_id,category,first_token_latency,generate_time,tokens_per_second,words_per_second,word_count_ratio,stop_reason,decoder_loop_period,decoder_loop_repeat_count,prompt_echo_detected,meaning_preservation_cosine,prompt_text,generated_text,meaning_preserved,grammar,no_hallucination,no_added_commentary,conciseness,instruction_followed
+"openelm-1.1b","instr-say-yes","instruction-following","0.024580001831054688","2.9638079404830933","40.48845350634977","0.3374037792195814","0.25","maxTokens","0","1","false","","Say the word yes","To<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","instr-avoid-very","instruction-following","0.02407205104827881","2.9803799390792847","40.26332294971461","4.0263322949714615","0.8","maxTokens","0","1","false","","I will not use the word 'very' again in this or any future sentences transcribed","To transcribe the following sentence correctly would require a very skilled im<<|im_end|><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","instr-rewrite-formal","instruction-following","0.024306058883666992","3.163823962211609","37.928785366464055","2.844658902484804","0.9","maxTokens","0","1","false","","Rewrite this more formally: ""Hey can you send that over.""","Rewrite the following in a more formal way:
+
+""Hey<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<@<<<<<<<<",,,,,,
+"openelm-1.1b","instr-rewrite-clearer","instruction-following","0.03661298751831055","3.524060010910034","34.051633521703806","0.5675272253617301","0.11764705882352941","maxTokens","0","1","false","","Rewrite this sentence in a clearer way:
+
+The test passed even though several setup steps failed initially.","The Test<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","instr-sequence-letters","instruction-following","0.024757027626037598","3.4805179834365845","34.47762677022997","1.4365677820929152","0.7142857142857143","maxTokens","0","1","false","","Continue the sequence:
+A
+B
+C
+D","To complete the following sequence:<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","filler-second-option","filler-removal","0.02657794952392578","3.388774037361145","35.411036167358205","6.787115265410323","1.7692307692307692","maxTokens","0","1","false","0.45716392993927","Um, so, I think we should, like, probably go with the second option.","Absolutely! Here's a step-by-step guide to setting up an account with Imaginary Medical:
+
+1. Visit imaginarymedical.com and click on the ""Sign Up"" button.<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","filler-try-tomorrow","filler-removal","0.03152203559875488","3.2722580432891846","36.67192452810942","0.9167981132027356","0.2","maxTokens","0","1","false","0.441471129655838","You know, uh, I was kind of thinking maybe we could, um, try again tomorrow.","Of course!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","filler-need-more-time","filler-removal","0.025484919548034668","3.2603780031204224","36.805548278497504","27.60416120887313","6.0","maxTokens","0","1","false","0.6047276854515076","So basically what I'm trying to say is, like, we need more time, you know?","Of course! Here's some IM Start Improvisation to help you and your friend get along while waiting for that all-important extra time.
+
+*IM Start Improvisation is a collection of 10 short scenes, each designed to help you and a friend work together more effectively during waiting periods like this one.*
+
+*When acting out these scenes, remember that character is always the priority. Act naturally and with as much empathy for your partner as you can muster, using only the given lines. Listen carefully after each scene to see if there",,,,,,
+"openelm-1.1b","filler-its-fine","filler-removal","0.024644970893859863","3.2756330966949463","36.634139556434995","25.03332869689725","8.2","maxTokens","0","1","false","0.3540000021457672","Uh, well, I guess, I mean, it's fine I suppose.","Of course! As a system administrator, we're often called on to help users with various tasks that aren't strictly part of your job description. Here are some things we can help you with:
+
+* Installing new software (e.g., for schoolwork, a game you want to try out, or learning a new programming language).
+* Setting up your email (e.g., from Gmail to your UNH Email address).
+* Fixing problems with your computer (e.g., getting it to print, or troubleshooting a virus).
+*",,,,,,
+"openelm-1.1b","punct-milk-eggs-bread","punctuation-restoration","0.03367805480957031","3.3239879608154297","36.1012137873574","0.6016868964559566","0.15384615384615385","maxTokens","0","1","false","0.5152252316474915","we need three things milk eggs and bread also dont forget the coffee","Helpful Assistant<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","punct-she-said-yes","punctuation-restoration","0.024315953254699707","3.242488980293274","37.00860688480932","0.6168101147468219","0.15384615384615385","maxTokens","0","1","false","0.562762975692749","can you believe it she said yes right there in front of everyone","Yes, Immercial<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","punct-meeting-nine","punctuation-restoration","0.02411198616027832","3.2466360330581665","36.961334371369645","0.6160222395228274","0.16666666666666666","maxTokens","0","1","false","0.5691797733306885","the meeting starts at nine but bring your laptop and the report","the<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+<|im_start|>assistant<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","punct-go-now-or-wait","punctuation-restoration","0.029632925987243652","3.2534260749816895","36.884194456662236","3.3810511585273715","0.8461538461538461","maxTokens","0","1","false","0.4700518548488617","im not sure if we should go now or wait until tomorrow morning","Welcome to Im-Start, a helping hand for your Linux system management.<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","cap-dr-smith","capitalization","0.026380062103271484","3.2677019834518433","36.7230551034638","3.060254591955317","1.0","maxTokens","0","1","false","0.8055559396743774","i met dr smith on jan 5 in st louis","On January 5, 2018, you met Dr Smith at<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","cap-london-paris","capitalization","0.02783799171447754","3.332682967185974","36.007025325101566","0.9001756331275391","0.3","maxTokens","0","1","false","0.45425906777381897","were flying to london on friday then paris on monday","You're a<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+<<<<<<<<<<<",,,,,,
+"openelm-1.1b","cap-email-sarah-david","capitalization","0.024864912033081055","3.2916780710220337","36.45556989804327","1.215185663268109","0.4","maxTokens","0","1","false","0.5812439918518066","please email sarah and david before the meeting on tuesday","SUB: Tuesday, September 14<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","concise-wondering-help","concise-rewrite","0.03369605541229248","3.299173951148987","36.372741109394426","2.424849407292962","0.4444444444444444","maxTokens","0","1","false","0.7657026052474976","I was wondering if maybe you might possibly have some time available to help me with this task.","Of course I'd be happy to help you!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","concise-most-people-agree","concise-rewrite","0.02687704563140869","3.2803879976272583","36.581038610919606","5.182313803213611","0.85","maxTokens","0","1","false","0.5262030959129333","It is my belief that, in general, most people would probably agree that this is likely the better option overall.","It's my honor to address the System Administrator (<|im_start<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|>) community.
+
+I am a helpful System Administrator (<|im_start<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|<|",,,,,,
+"openelm-1.1b","concise-still-waiting","concise-rewrite","0.02577996253967285","3.337470054626465","35.95537878569238","26.666905932721853","4.944444444444445","maxTokens","0","1","false","0.5314938426017761","At this point in time, we are currently still waiting for a response regarding the matter in question.","To speed up the process of getting an individual's feedback, here is a brief step-by-step guide for you to follow:
+
+1. Get the individual's email address or phone number via their employee record (HR) system, if available.
+2. Send an email to the individual with a link to complete the Feedback Request Form, which asks for their details and feedback requirements.
+3. Wait for the individual to complete and submit the form, which includes their response. Ensure you have the form link prepared in advance for this purpose.
+4.",,,,,,
+"openelm-1.1b","concise-consider-looking","concise-rewrite","0.025346994400024414","3.2801660299301147","36.583514037110085","11.889642062060776","2.1666666666666665","maxTokens","0","1","false","0.7958359122276306","There is a possibility that we could perhaps consider looking into this a bit further if that's alright.","Of course, I'd be happy to help you and the team consider looking into this a bit further!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+It's always good to consider things that could cause issues or potential problems, and we can discuss this further if needed",,,,,,
+"openelm-1.1b","command-close-windows","command-reformulation","0.02799701690673828","3.483802914619446","34.44511728732744","4.018597016854868","1.4","maxTokens","0","1","false","0.8584113121032715","Rewrite this as a clear, complete command: ""close your windows""","To close all windows in your Microsoft Windows operating system, issue the following command:<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","command-open-emails","command-reformulation","0.03475189208984375","3.2652320861816406","36.750833273945894","3.062569439495491","0.7692307692307693","maxTokens","0","1","false","0.8724786043167114","Rewrite this as a clear, complete command: ""open the thing with the emails""","To open a thing with emails, write the following command:<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","command-music-down","command-reformulation","0.027104973793029785","3.2749210596084595","36.64210459300258","0.9160526148250644","0.23076923076923078","maxTokens","0","1","false","0.7128596305847168","Rewrite this as a clear, complete command: ""turn that music down a bit""","Turn Music<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+<<<<<<<<",,,,,,
+"openelm-1.1b","command-get-doc","command-reformulation","0.03143596649169922","3.2555960416793823","36.85960987288172","20.272785430084944","5.076923076923077","maxTokens","0","1","false","0.8356038928031921","Rewrite this as a clear, complete command: ""get me the doc from yesterday""","To get a document (such as a medical record or an office file) from a previous day, issue the following command:
+
+```
+get me THE_DOC_FROM_Yesterday
+```
+
+Remember to replace `""THE_DOC_FROM_Yesterday""` with the appropriate reference to your document(s) manager, such as `MyDesktopMedicalRecord` or `OfficeDocuments`.
+
+Tip: To configure your system so that you can easily retrieve information about the available document managers, run `gcloud auth config set-application-default docusaur",,,,,,
+"openelm-1.1b","tech-brainflow-reconnect","technical-term-preservation","0.049610018730163574","3.3758020401000977","35.547108087073084","4.443388510884136","0.6521739130434783","maxTokens","0","1","false","0.8386734127998352","Rewrite this sentence in a clearer way, but keep the technical term ""BrainFlow"" unchanged: The BrainFlow stream needs to reconnect if it drops.","Rewrite the following sentence in a clearer way while preserving the original technical term, ""BrainFlow<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","tech-ane-classifier","technical-term-preservation","0.026190996170043945","3.3499510288238525","35.821419169262086","1.7910709584631044","0.25","maxTokens","0","1","false","0.6596276164054871","Rewrite this more concisely, but keep the term ""ANE"" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible.","Title: Improved Neural Engine (IME) Classification<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,
+"openelm-1.1b","tech-eeg-stream","technical-term-preservation","0.026461005210876465","3.3581879138946533","35.733557226948086","1.7866778613474041","0.375","maxTokens","0","1","false","0.8141893148422241","Rewrite this more politely, but keep the term ""EEG"" unchanged: Turn on the EEG stream now.","Turn on the EEG stream<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+<|im_start<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",,,,,,

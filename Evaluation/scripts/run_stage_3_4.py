@@ -77,7 +77,19 @@ def update_decision_registry(evaluated_ids, registry, stage="3.4"):
         content = content.rstrip() + update_note
     with open(decision_path, "w") as f:
         f.write(content)
-    print(f"Decision registry updated ({len(updates)} entries revised).")
+    # The registry entries are hand-maintained prose — this function only
+    # stamps the run timestamp and surfaces which entries have new evidence
+    # to fold in. It must not claim revisions it doesn't make (found as a
+    # Gate B audit finding 2026-07-14: `updates` was computed and silently
+    # discarded while the log said "N entries revised").
+    if updates:
+        print(f"Decision registry timestamped. {len(updates)} entr"
+              f"{'y has' if len(updates) == 1 else 'ies have'} new evidence "
+              f"to fold in by hand: {sorted(updates)}")
+        for entry_id, fields in sorted(updates.items()):
+            print(f"  entry {entry_id}: {fields}")
+    else:
+        print("Decision registry timestamped (no new evidence addenda).")
 
 
 def main():
