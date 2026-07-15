@@ -156,9 +156,16 @@ between $X$ and $Y$ shows up as disparity rather than being silently
 absorbed:
 
 $$
-\min_{R^\top R = I} \|XR - Y\|_F^2, \qquad
-X^\top Y = U\Sigma V^\top \implies R = UV^\top
+\mathrm{disparity} = \frac{\min_{R^\top R = I} \|XR - Y\|_F^2}{\|Y\|_F^2},
+\qquad X^\top Y = U\Sigma V^\top \implies R = UV^\top
 $$
+
+reported as a relative residual (normalized by $\|Y\|_F^2$) rather than
+the raw squared norm, so that values are comparable across pairs with
+different sample counts or embedding magnitudes — scaled Procrustes gets
+this normalization for free from its unit-norm rescale; the rotation-only
+variant has to normalize explicitly since it deliberately skips that
+rescale.
 
 These answer different questions and are not interchangeable: a pair of
 embedding spaces can have near-zero scaled-Procrustes disparity (same

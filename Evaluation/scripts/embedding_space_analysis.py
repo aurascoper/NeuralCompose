@@ -87,6 +87,19 @@ def svcca(X, Y, variance_threshold=0.99):
     return float(np.mean(s))
 
 
+def _truncate_to_common_shape(X, Y):
+    """Truncate X, Y to the same (n_samples, n_dims), taking the smaller of
+    each dimension. Procrustes-family alignment requires point-to-point
+    correspondence and identical dimensionality on both axes; per-model
+    stored-sample counts can differ (some corpus texts fail to embed for
+    some models), so this guard is load-bearing, not defensive boilerplate
+    -- cluster_purity() elsewhere in this file already guards the same
+    row-count-mismatch condition."""
+    n = min(X.shape[0], Y.shape[0])
+    d = min(X.shape[1], Y.shape[1])
+    return X[:n, :d], Y[:n, :d]
+
+
 def procrustes_alignment(X, Y):
     """Scaled Procrustes superimposition (scipy.spatial.procrustes): centers,
     rescales both inputs to unit Frobenius norm, then rotates. Tolerant of
@@ -95,10 +108,7 @@ def procrustes_alignment(X, Y):
     does NOT tolerate scale."""
     X = np.array(X, dtype=np.float64)
     Y = np.array(Y, dtype=np.float64)
-    if X.shape[1] != Y.shape[1]:
-        min_dim = min(X.shape[1], Y.shape[1])
-        X = X[:, :min_dim]
-        Y = Y[:, :min_dim]
+    X, Y = _truncate_to_common_shape(X, Y)
     mtx1, mtx2, disparity = scipy_procrustes(X, Y)
     return {"disparity": float(disparity), "n_samples": X.shape[0], "n_dims": X.shape[1]}
 
@@ -106,22 +116,27 @@ def procrustes_alignment(X, Y):
 def orthogonal_procrustes_alignment(X, Y):
     """Rotation-only Procrustes disparity, no rescaling (Schönemann 1966;
     Gower & Dijksterhuis 2004): min_{R^T R = I} ||XR - Y||_F^2, closed form
-    R = UV^T from the SVD of X^T Y. Distinct from procrustes_alignment()
-    above, which rescales both inputs before rotating and so cannot detect
-    a pure scale mismatch between representations -- this metric is the
-    stronger, more literal claim about shared geometry that
-    STAGE_3_4_3_5_DESIGN.md's RQ2 originally meant by "orthogonal
-    Procrustes" (methodology-review_v1.md/v2.md Pillar A)."""
+    R = UV^T from the SVD of X^T Y, reported as a relative residual
+    (normalized by ||Y||_F^2) so values are comparable across pairs with
+    different sample counts or raw embedding magnitudes -- the raw
+    unnormalized squared norm is not, since scipy.spatial.procrustes
+    normalizes internally (via its unit-norm rescale) but this rotation-only
+    variant deliberately skips that rescale. Distinct from
+    procrustes_alignment() above, which rescales both inputs before
+    rotating and so cannot detect a pure scale mismatch between
+    representations -- this metric is the stronger, more literal claim
+    about shared geometry that STAGE_3_4_3_5_DESIGN.md's RQ2 originally
+    meant by "orthogonal Procrustes" (methodology-review_v1.md/v2.md
+    Pillar A)."""
     X = np.array(X, dtype=np.float64)
     Y = np.array(Y, dtype=np.float64)
-    if X.shape[1] != Y.shape[1]:
-        min_dim = min(X.shape[1], Y.shape[1])
-        X = X[:, :min_dim]
-        Y = Y[:, :min_dim]
+    X, Y = _truncate_to_common_shape(X, Y)
     X = X - X.mean(axis=0)
     Y = Y - Y.mean(axis=0)
     R, _ = scipy_orthogonal_procrustes(X, Y)
-    disparity = float(np.linalg.norm(X @ R - Y) ** 2)
+    y_norm_sq = float(np.linalg.norm(Y) ** 2)
+    residual_sq = float(np.linalg.norm(X @ R - Y) ** 2)
+    disparity = residual_sq / y_norm_sq if y_norm_sq > 1e-12 else 0.0
     return {"disparity": disparity, "n_samples": X.shape[0], "n_dims": X.shape[1]}
 
 
