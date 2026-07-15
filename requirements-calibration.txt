@@ -39,3 +39,9 @@ matplotlib>=3.8       # dev: 3.10.8, Agg backend for headless PNG output
 # ct.convert() source entirely), so no onnx/onnxruntime/onnxscript needed.
 transformers>=4.36    # dev: 4.40.2
 sentence-transformers>=2.3   # dev: 5.6.0
+
+# Track D — train_joint_embedding.py (Phase 3.6: EEG -> text-aligned spectral
+# embedding). MLX-native encoder trained in Python; exports an MLX weight dir.
+# Was previously installed ad hoc; pin a floor now that a script depends on it.
+mlx>=0.32            # dev: 0.32.0 (Apple-silicon only; the Swift app's MLX
+                     # runtime is separate — see CLAUDE.md "MLX isolation").
