@@ -32,7 +32,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eeg_channel_quality import substitute_bad_channels, summarize_substitutions
-from eeg_spectral import welch_band_powers, spectral_ratios, descriptor_for_ratios
+from eeg_spectral import welch_band_powers, spectral_ratios, descriptor_for_ratios, window_is_clean
 
 DEFAULT_LABELS = ["focus", "drowsy", "sleep"]
 DEFAULT_MODEL_DIR = "Models/EEGEncoder"
@@ -130,10 +130,16 @@ def _active_split_review(df, channels, fs, segments, window_s, stride_s, model_d
     y = []
     windows_by_label = {"focus": [], "drowsy": []}
     crosstab = {}
+    n_rejected = 0
     for seg in segments:
         if seg["label"] not in wanted:
             continue
         for w in _segment_windows(df, channels, fs, seg["start_s"], seg["end_s"], window_s, stride_s):
+            # Reject blink/EOG/movement artifacts before tuning — a blink during the
+            # focus block otherwise corrupts the delta/theta bands and skews the sweep.
+            if not window_is_clean(w):
+                n_rejected += 1
+                continue
             r = spectral_ratios(welch_band_powers(w, fs))
             feats["theta_alpha"].append(r["theta_alpha"])
             feats["beta_alpha"].append(r["beta_alpha"])
@@ -141,7 +147,8 @@ def _active_split_review(df, channels, fs, segments, window_s, stride_s, model_d
             windows_by_label[seg["label"]].append(w)
             crosstab.setdefault(seg["label"], Counter())[descriptor_for_ratios(r)] += 1
 
-    result = {"n_windows": len(y), "crosstab": {k: dict(v) for k, v in crosstab.items()}}
+    result = {"n_windows": len(y), "artifact_windows_rejected": n_rejected,
+              "crosstab": {k: dict(v) for k, v in crosstab.items()}}
     if len(set(y)) < 2:
         result["note"] = "need both a focus and a drowsy segment to tune thresholds"
         return result

@@ -147,6 +147,37 @@ def test_end_to_end_review():
     assert review["sleep_timeline"]["n_epochs"] >= 1
 
 
+def test_window_is_clean_rejects_blink():
+    import eeg_spectral as spec
+    t = np.arange(512) / FS
+    clean = np.stack([30 * np.sin(2 * np.pi * 20 * t) for _ in CHANNELS])  # tens of uV
+    assert spec.window_is_clean(clean) is True
+    blink = clean.copy()
+    blink[CHANNELS.index("AF7")] += 300 * np.exp(-0.5 * ((t - 1.0) / 0.05) ** 2)  # 300 uV EOG spike
+    assert spec.window_is_clean(blink) is False
+
+
+def test_active_split_rejects_artifact_windows():
+    # 8s focus (beta) + 8s drowsy (theta), with a 300 uV blink planted in the focus block.
+    def block(freq, amp, dur=8.0):
+        n = int(dur * FS)
+        tt = np.arange(n) / FS
+        return {ch: amp * np.sin(2 * np.pi * freq * tt) for ch in CHANNELS}, n
+
+    fb, nf = block(20.0, 35.0)
+    db, nd = block(6.0, 40.0)
+    data = {ch: np.concatenate([fb[ch], db[ch]]) for ch in CHANNELS}
+    tt = np.arange(nf + nd) / FS
+    data["AF7"] = data["AF7"] + 300 * np.exp(-0.5 * ((tt - 2.0) / 0.05) ** 2)  # blink in focus
+    df = pd.DataFrame(data)
+    df.insert(0, "t_seconds", 1.783e9 + tt)
+    segs = [{"label": "focus", "start_s": 0.0, "end_s": 8.0},
+            {"label": "drowsy", "start_s": 8.0, "end_s": 16.0}]
+    res = csm._active_split_review(df, CHANNELS, FS, segs, window_s=2.0, stride_s=1.0, model_dir=None)
+    assert res["artifact_windows_rejected"] >= 1, "the planted blink window must be rejected"
+    assert "threshold_suggestions" in res, "sweep should still run on the clean windows"
+
+
 def test_protocol_dry_run_writes_log():
     with tempfile.TemporaryDirectory() as tmp:
         out = proto.run_protocol([("focus", 600), ("drowsy", 600), ("sleep", 0)],

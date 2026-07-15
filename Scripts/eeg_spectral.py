@@ -61,14 +61,25 @@ def welch_band_powers(window: np.ndarray, fs: float) -> dict[str, float]:
     nperseg = min(n_samples, max(int(fs * 4), 8))
     powers = {name: 0.0 for name in BANDS}
     for ch in range(n_channels):
-        freqs, psd = signal.welch(window[ch], fs=fs, nperseg=nperseg)
+        # Welch already tapers each segment with a Hann window (limits the
+        # spectral leakage a finite epoch causes) and removes the segment mean
+        # (detrend="constant" — kills DC/baseline drift). Both are scipy defaults;
+        # stated explicitly so a future edit can't silently drop them.
+        freqs, psd = signal.welch(window[ch], fs=fs, nperseg=nperseg,
+                                  window="hann", detrend="constant")
         for name, band in BANDS.items():
             powers[name] += band_power(freqs, psd, band)
     return {name: p / max(n_channels, 1) for name, p in powers.items()}
 
 
 def spectral_ratios(band_powers: dict[str, float]) -> dict[str, float]:
-    """Derive interpretable, epsilon-guarded band ratios from mean band powers."""
+    """Derive interpretable, epsilon-guarded band ratios from mean band powers.
+
+    These are *relative* measures (band/band, band/total): a broadband amplitude
+    change — e.g. electrode-impedance drift multiplying every band by a common
+    gain — cancels in the ratio. (This does NOT cancel band-*specific* artifacts
+    like a blink dumping energy into delta; reject those with window_is_clean.)
+    """
     delta = band_powers.get("delta", 0.0)
     theta = band_powers.get("theta", 0.0)
     alpha = band_powers.get("alpha", 0.0)
@@ -83,6 +94,28 @@ def spectral_ratios(band_powers: dict[str, float]) -> dict[str, float]:
         # Fraction of low-frequency (delta + theta) power — a drowsiness proxy.
         "slow_fraction": (delta + theta) / total,
     }
+
+
+# Frontal blinks/EOG saccades and movement/EMG twitches produce voltage swings
+# far larger than cortical rhythms. A blink is band-SPECIFIC (a huge slow delta
+# transient), so it survives ratio normalization and would masquerade as
+# slow-wave/deep activity. Reject such windows on raw amplitude BEFORE any
+# spectral projection. ~150 uV cleanly separates real EEG (tens of uV) from
+# blink/movement artifacts (hundreds of uV), well under Muse ADC saturation.
+ARTIFACT_PEAK_UV = 150.0
+
+
+def window_is_clean(window: np.ndarray, threshold_uv: float = ARTIFACT_PEAK_UV) -> bool:
+    """True if no channel in the window swings beyond +/-threshold_uv.
+
+    `window` is [channels, samples]. Use to drop blink/EOG/movement artifacts
+    before computing spectral features — band ratios cancel a broadband gain
+    change (impedance drift) but NOT a band-specific spike like a blink.
+    """
+    w = np.asarray(window, dtype=np.float64)
+    if w.size == 0:
+        return False
+    return bool(np.max(np.abs(w)) <= threshold_uv)
 
 
 # The closed target vocabulary. Order is stable so it can be written to metadata
