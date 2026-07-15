@@ -5,6 +5,20 @@ bridging the Phase 3.6 spectral encoder (see
 [PHASE_3_6_JOINT_EMBEDDING.md](evaluation/PHASE_3_6_JOINT_EMBEDDING.md)) toward
 Phase 4.0 (state-modulated prompting) and Phase 5.0 (sequence modelling).
 
+## One-command ritual (quickest path)
+
+```sh
+./Scripts/dream-session.sh    # tonight: preflight → keep-awake → telemetry → blink-tag cues
+# (put on the Muse and start the app recording when it prompts you)
+/dream neuralcompose          # tomorrow, from this repo: full review + memory consolidation
+```
+
+`dream-session.sh` chains the support scripts and reminds you to start the recording — it can't
+drive BLE/UI. `/dream` (the NeuralCompose branch of the global dream command) runs
+`overnight-review.py` + `consume-session.py` on the latest `night-*` dir, then consolidates the
+project memory and reports. `./Scripts/dream-session.sh --dry-run` rehearses without waits. The
+manual equivalents are below.
+
 ## The protocol
 
 One continuous recording (the app streams to `~/Documents/NeuralCompose/Recordings/`),
@@ -66,6 +80,11 @@ Outputs `session-review.json` + a console summary:
   *sustained* delta. This is exploratory, not clinical staging, and one night cannot "prove" any
   downstream forecaster.
 - Thresholds are **not auto-applied** — one session, your brain, your call.
+- **Artifacts are rejected, not modelled.** Spectral features use Welch (Hann-tapered,
+  DC-detrended by default) and descriptors are *ratios* (which cancel broadband impedance
+  drift). But a blink is band-*specific* — it dumps huge energy into delta and survives ratio
+  normalization — so windows swinging beyond ±150 µV (`eeg_spectral.py::window_is_clean`) are
+  dropped before the focus/drowsy tuning.
 
 ## Reuse / provenance
 Reuses `analyze-eeg-session.py` (loaders + `detect_blinks` + band-power helpers, via importlib,
