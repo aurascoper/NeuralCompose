@@ -74,10 +74,32 @@ specific tasks (files, PRs, tests) live in GitHub Issues.
   (Fast, Balanced, Quality, Adaptive), adaptive routing, cascaded
   generation, confidence-gated selection, pipeline policy comparison;
   results in `Evaluation/results/stage_3_5/`
+  - **2026-07-16 decision**: a pasted external proposal asked for a
+    production `DynamicRouter`/`CascadeTier` that switches the LLM
+    backend/model at runtime based on BCI cognitive-load state. Not
+    built: `MLXNextWordPredictor` (`Sources/BCILLM/MLXNextWordPredictor.swift`)
+    is an actor holding one `ModelContainer` set once at init, and its
+    own doc comment warns that two resident models thrash the GPU;
+    `PredictorFactory.live()` resolves one backend behind a 20s
+    crash-safety probe, not something to repeat per request. Real
+    tier-switching is exactly this Stage 3.5 policy-registry work and
+    stays gated behind it — see `3.5-D-cascaded-generation` in
+    `Evaluation/corpora/hypothesis_registry.json`, still
+    `"pre-registered"`. `GenerationAdaptation`
+    (`Sources/BCICore/Composition/GenerationAdaptation.swift`, shipped
+    2026-07-16) — candidate count/temperature/prompt-style, applied to
+    the single resolved predictor — is the production adaptation
+    mechanism until this stage produces evidence for anything more.
 - `□` Stage 4: Deploy only what the evidence supports — adaptive
   routing, learned confidence estimation, online policy selection,
   production telemetry (privacy-preserving), continual evaluation.
   Stage 4 **consumes** evidence, not generates it.
+  - Note: this "production telemetry" is about instrumenting the
+    *routing/policy system* once Stage 3.5 has evidence to act on — a
+    different, narrower thing than the opt-in local interaction logger
+    landing alongside this note (`ADR-005-local-interaction-logging.md`),
+    which captures raw (state, commit) pairs for possible future
+    training data and doesn't inform any routing decision.
 
 ### Interface
 - `□` Playback-driven 2D + 3D visualization (the canonical demo path;
