@@ -48,7 +48,8 @@ struct ContentView: View {
                 detectedAdaptation: viewModel.detectedAdaptation,
                 appliedAdaptation: viewModel.appliedAdaptation,
                 detectedSpectralState: viewModel.detectedSpectralState,
-                adaptiveComplexityEnabled: $viewModel.adaptiveComplexityEnabled
+                adaptiveComplexityEnabled: $viewModel.adaptiveComplexityEnabled,
+                interactionLoggingEnabled: $viewModel.interactionLoggingEnabled
             )
             Divider()
 

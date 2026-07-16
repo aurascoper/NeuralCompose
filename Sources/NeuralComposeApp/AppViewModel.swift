@@ -98,6 +98,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// `applyAdaptiveGeneration()` falls back to `signalQuality` in that case.
     @Published public private(set) var detectedSpectralState: SpectralState?
 
+    /// Off by default, mirroring `adaptiveComplexityEnabled`'s opt-in shape:
+    /// no interaction is logged locally until the user explicitly turns
+    /// this on (see `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`).
+    @Published public var interactionLoggingEnabled: Bool = false
+
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
@@ -158,6 +163,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private let classifier: any IntentClassifying
     private let predictor: any NextWordPredicting
     private let spectralEstimator: any SpectralStateEstimating
+    private let interactionLogger: any InteractionLogging
     private let voiceOutput: any SpeechSynthesizing
     private let voiceInput: any DictationRecognizing
     private let voiceCommandInput: any VoiceCommandRecognizing
@@ -204,6 +210,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.classifier = container.classifierResolved.classifier
         self.predictor = container.predictorResolved.predictor
         self.spectralEstimator = container.spectralEstimatorResolved.estimator
+        self.interactionLogger = container.interactionLogger
         self.voiceOutput = container.voiceOutputResolved.synthesizer
         self.voiceInput = container.voiceInputResolved.recognizer
         // The voice command recognizer holds a parser closure that
@@ -978,11 +985,69 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     private func apply(snapshot snap: TextCompositionController.Snapshot) {
+        // Captured before overwriting: `self.composedText`/`lastCommittedWord`
+        // still hold the *previous* snapshot's values here, which is exactly
+        // "the context right before this commit" — TextCompositionController
+        // itself never exposes a pre-commit string, so this is reconstructed
+        // from the snapshot stream rather than threading a new parameter
+        // through BCICore.
+        let previousComposedText = self.composedText
+        let previousCommittedWord = self.lastCommittedWord
+
         self.composedText = snap.composedText
         self.candidates = snap.candidates
         self.highlightIndex = snap.highlightIndex
         self.isPredicting = snap.isPredicting
         self.lastCommittedWord = snap.lastCommittedWord
+
+        guard interactionLoggingEnabled else { return }
+        if let event = Self.telemetryEvent(
+            previousComposedText: previousComposedText,
+            previousCommittedWord: previousCommittedWord,
+            snapshot: snap,
+            signalQuality: signalQuality,
+            detectedSpectralState: detectedSpectralState,
+            appliedAdaptation: appliedAdaptation,
+            adaptiveComplexityEnabled: adaptiveComplexityEnabled
+        ) {
+            let logger = interactionLogger
+            Task { await logger.log(event) }
+        }
+    }
+
+    /// Pure: given the snapshot stream's before/after state plus the
+    /// currently-published BCI context, decides whether this snapshot
+    /// represents a genuine new word commit and, if so, builds the event to
+    /// log — `nil` on carousel ticks/prediction refreshes that don't change
+    /// `lastCommittedWord`. Kept free of `self`/`interactionLoggingEnabled`
+    /// so it's unit-testable with plain values, no pipeline or actor
+    /// required (see `Tests/NeuralComposeAppTests/AppViewModelTelemetryTests.swift`).
+    /// Logs the classified `SpectralState` badge label, never the raw
+    /// embedding (see `TelemetryEvent`'s doc comment), and whatever
+    /// adaptation was actually in effect (`appliedAdaptation`, `.raw` unless
+    /// `adaptiveComplexityEnabled`), not just what was detected.
+    nonisolated static func telemetryEvent(
+        previousComposedText: String,
+        previousCommittedWord: String?,
+        snapshot: TextCompositionController.Snapshot,
+        signalQuality: SignalQuality?,
+        detectedSpectralState: SpectralState?,
+        appliedAdaptation: GenerationAdaptation,
+        adaptiveComplexityEnabled: Bool
+    ) -> TelemetryEvent? {
+        guard let committed = snapshot.lastCommittedWord, committed != previousCommittedWord else {
+            return nil
+        }
+        return TelemetryEvent(
+            composedContextBeforeCommit: previousComposedText,
+            committedWord: committed,
+            signalQuality: signalQuality.map(String.init(describing:)),
+            detectedSpectralState: detectedSpectralState?.badgeLabel,
+            appliedMaxCandidates: appliedAdaptation.maxCandidates,
+            appliedTemperature: appliedAdaptation.temperature,
+            appliedStyleInstruction: appliedAdaptation.styleInstruction,
+            adaptiveComplexityEnabled: adaptiveComplexityEnabled
+        )
     }
 }
 

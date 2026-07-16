@@ -31,6 +31,15 @@ public struct AppContainer: Sendable {
     /// the already-built embedder for its honesty gate and to rebuild the
     /// anchor table (see `SpectralStateEstimator`'s doc comment).
     public let spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved
+    /// Sink for opt-in local interaction logging (see
+    /// `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`).
+    /// Defaults to a no-op here — same "stub-safe by default" shape as
+    /// `sentenceEmbedder`/`spectralEstimatorResolved` — so constructing an
+    /// `AppContainer` directly (tests, previews) never touches disk unless a
+    /// caller explicitly opts in. `makeDefault()` wires the real
+    /// `TelemetryLogger`; `AppViewModel.interactionLoggingEnabled` (off by
+    /// default) gates whether it's ever actually called.
+    public let interactionLogger: any InteractionLogging
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
@@ -75,7 +84,8 @@ public struct AppContainer: Sendable {
         sentenceEmbedder: any SentenceEmbedder = DeterministicSentenceEmbedder(),
         spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved = .init(
             estimator: StubSpectralStateEstimator(), kind: .stub, warning: nil
-        )
+        ),
+        interactionLogger: any InteractionLogging = NullInteractionLogger()
     ) {
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
@@ -88,6 +98,7 @@ public struct AppContainer: Sendable {
         self.smootherConfig = smootherConfig
         self.sentenceEmbedder = sentenceEmbedder
         self.spectralEstimatorResolved = spectralEstimatorResolved
+        self.interactionLogger = interactionLogger
     }
 
     /// Build a container from the environment. This is what the App entry
@@ -141,6 +152,11 @@ public struct AppContainer: Sendable {
         let spectralEstimator = await SpectralStateEstimatorFactory.live(sentenceEmbedder: sentenceEmbedder)
         BCILog.spectral.notice("spectral estimator backend: \(spectralEstimator.kind.rawValue, privacy: .public)")
 
+        // Always constructed — writes nothing until AppViewModel's opt-in
+        // interactionLoggingEnabled toggle (off by default) actually calls
+        // log(_:). See ADR-005-local-interaction-logging.md.
+        let interactionLogger = TelemetryLogger(directory: TelemetryLogger.defaultDirectory())
+
         return AppContainer(
             streamResolved: stream,
             classifierResolved: classifier,
@@ -151,7 +167,8 @@ public struct AppContainer: Sendable {
             metrics: metrics,
             windowingConfig: windowingConfig,
             sentenceEmbedder: sentenceEmbedder,
-            spectralEstimatorResolved: spectralEstimator
+            spectralEstimatorResolved: spectralEstimator,
+            interactionLogger: interactionLogger
         )
     }
 

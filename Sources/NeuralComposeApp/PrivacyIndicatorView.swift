@@ -30,6 +30,10 @@ struct PrivacyIndicatorView: View {
     /// `signalQuality` in that case (see `AdaptiveGenerationCombination`).
     var detectedSpectralState: SpectralState? = nil
     @Binding var adaptiveComplexityEnabled: Bool
+    /// Opt-in, off by default — see
+    /// `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`.
+    /// Never transmitted anywhere; written only to a local JSONL file.
+    @Binding var interactionLoggingEnabled: Bool
 
     @State private var expanded: Bool = false
 
@@ -42,6 +46,7 @@ struct PrivacyIndicatorView: View {
                 Spacer()
                 signalBadge
                 adaptiveBadge
+                interactionLogBadge
                 voiceBadge
                 cmdBadge
                 Button(action: { expanded.toggle() }) {
@@ -104,6 +109,26 @@ struct PrivacyIndicatorView: View {
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
+                        }
+                    }
+                    GridRow {
+                        Text("Interaction Log").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Log commits locally", isOn: $interactionLoggingEnabled)
+                                .toggleStyle(.switch)
+                            if interactionLoggingEnabled {
+                                Text("Recording each committed word + detected state to")
+                                    .foregroundStyle(.secondary)
+                                Text("~/Documents/NeuralCompose/InteractionLogs/")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Off — nothing is written")
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Local only, never transmitted — see ADR-005.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -212,6 +237,24 @@ struct PrivacyIndicatorView: View {
         case .none, .healthy: return "Standard"
         case .poor:           return "Simplified"
         case .lost:           return "Minimal"
+        }
+    }
+
+    /// Deliberately obvious while active — matching the universal hardware
+    /// convention for "something is being recorded right now" (a camera/mic
+    /// recording light), since this persists content to disk, unlike
+    /// `adaptiveBadge`'s preview/live distinction. Not shown at all when
+    /// off — there's nothing happening to indicate.
+    @ViewBuilder
+    private var interactionLogBadge: some View {
+        if interactionLoggingEnabled {
+            Label("Logging", systemImage: "record.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
         }
     }
 
