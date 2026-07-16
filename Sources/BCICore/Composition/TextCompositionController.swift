@@ -56,6 +56,13 @@ public actor TextCompositionController {
     private let config: Config
     private var stateMachine = IntentStateMachine()
 
+    /// Live, mutable override of `config`'s generation parameters — set via
+    /// `updateGenerationAdaptation(_:)`. Kept separate from `config` (which
+    /// stays construction-time-fixed) so the deterministic rule table
+    /// driving this can change per EEG window without touching `Config`'s
+    /// role as init-time defaults/seed context.
+    private var adaptation: GenerationAdaptation
+
     private var composed: String
     private var candidates: [PredictedWord] = []
     private var highlightIndex: Int = 0
@@ -75,12 +82,20 @@ public actor TextCompositionController {
         self.predictor = predictor
         self.metrics = metrics
         self.config = config
+        self.adaptation = GenerationAdaptation(maxCandidates: config.maxCandidates, temperature: config.temperature)
         self.composed = config.seedContext
         self.snapshotChannel = BoundedAsyncChannel<Snapshot>(capacity: 16, overflow: .dropOldest)
     }
 
     public func start() async {
         await requestPredictions()
+    }
+
+    /// Applies a new deterministic generation adaptation (see
+    /// `GenerationAdaptation`) — takes effect on the next
+    /// `requestPredictions()` call, not retroactively.
+    public func updateGenerationAdaptation(_ adaptation: GenerationAdaptation) async {
+        self.adaptation = adaptation
     }
 
     public func tick() async {
@@ -176,10 +191,16 @@ public actor TextCompositionController {
 
         let started = DispatchTime.now()
         do {
+            // `promptContext` is what the predictor sees; `composed` (what's
+            // displayed and what appendToken/appendExternalText operate on)
+            // is never touched by the style instruction.
+            let promptContext = adaptation.styleInstruction.isEmpty
+                ? composed
+                : "\(adaptation.styleInstruction)\n\(composed)"
             let words = try await predictor.predictNextWords(
-                context: composed,
-                maxCandidates: config.maxCandidates,
-                temperature: config.temperature,
+                context: promptContext,
+                maxCandidates: adaptation.maxCandidates,
+                temperature: adaptation.temperature,
                 cancellationID: id
             )
             // Bail if a newer commit happened while this call was outstanding.

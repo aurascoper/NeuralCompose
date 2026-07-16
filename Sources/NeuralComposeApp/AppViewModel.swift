@@ -62,6 +62,27 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var signalQuality: SignalQuality?
     @Published public private(set) var isReconnecting: Bool = false
 
+    /// Off by default ("shadow mode"): `detectedAdaptation` is always kept
+    /// current from live `signalQuality` so the badge is informative from
+    /// launch, but it only reaches the predictor (`appliedAdaptation`) once
+    /// the user explicitly opts in here — lets the detection be judged
+    /// against lived experience before it's trusted to change output.
+    @Published public var adaptiveComplexityEnabled: Bool = false {
+        didSet { applyAdaptiveGeneration() }
+    }
+    /// What the current `signalQuality` maps to via `SignalQualityGenerationRules`,
+    /// regardless of whether adaptive mode is enabled.
+    @Published public private(set) var detectedAdaptation: GenerationAdaptation = .raw
+    /// What's actually been pushed to the composition controller — equals
+    /// `.raw` whenever `adaptiveComplexityEnabled` is false.
+    @Published public private(set) var appliedAdaptation: GenerationAdaptation = .raw
+    /// Milestone B state source — always kept current regardless of the
+    /// toggle, same shadow-mode invariant as `detectedAdaptation`. `nil`
+    /// means the estimator has no opinion (stub, missing weights, wrong
+    /// shape, artifact-contaminated window, or untrusted anchor space) —
+    /// `applyAdaptiveGeneration()` falls back to `signalQuality` in that case.
+    @Published public private(set) var detectedSpectralState: SpectralState?
+
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
@@ -121,6 +142,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private let smoother: IntentSmoother
     private let classifier: any IntentClassifying
     private let predictor: any NextWordPredicting
+    private let spectralEstimator: any SpectralStateEstimating
     private let voiceOutput: any SpeechSynthesizing
     private let voiceInput: any DictationRecognizing
     private let voiceCommandInput: any VoiceCommandRecognizing
@@ -166,6 +188,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.metrics = container.metrics
         self.classifier = container.classifierResolved.classifier
         self.predictor = container.predictorResolved.predictor
+        self.spectralEstimator = container.spectralEstimatorResolved.estimator
         self.voiceOutput = container.voiceOutputResolved.synthesizer
         self.voiceInput = container.voiceInputResolved.recognizer
         // The voice command recognizer holds a parser closure that
@@ -223,6 +246,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.classifierChannel = classifications
         self.composition = composition
         await composition.start()
+        applyAdaptiveGeneration()
 
         // ── snapshots → UI (MainActor) ────────────────────────────────────
         snapshotTask = Task {
@@ -258,8 +282,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         //    back and keep going. Updates `pipelineMode` on the way.
         let initialResolved = container.streamResolved
         let containerRef = container
+        let spectralEstimatorRef = self.spectralEstimator
         streamTask = Task.detached(priority: .userInitiated) {
-            [weak self, windowing, metrics = metricsRef, channel, samples] in
+            [weak self, windowing, metrics = metricsRef, channel, samples, spectralEstimatorRef] in
             var current = initialResolved
             var calibrationSampleCounter = 0
             var calibrationLastLogTime = Date()
@@ -325,9 +350,23 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                 // window. Cheap and avoids needing the full CalibrationMetrics
                                 // struct when not recording.
                                 let quality = Self.signalQuality(of: window)
+                                // Milestone B state source — always run regardless of
+                                // adaptiveComplexityEnabled (shadow mode), same invariant as
+                                // signalQuality/detectedAdaptation. Stub estimator returns nil
+                                // immediately; the real one gates on shape/artifact internally.
+                                let spectral = await spectralEstimatorRef.estimate(window: window)
                                 await MainActor.run {
+                                    var changed = false
                                     if self?.signalQuality != quality {
                                         self?.signalQuality = quality
+                                        changed = true
+                                    }
+                                    if self?.detectedSpectralState != spectral {
+                                        self?.detectedSpectralState = spectral
+                                        changed = true
+                                    }
+                                    if changed {
+                                        self?.applyAdaptiveGeneration()
                                     }
                                 }
 
@@ -405,6 +444,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     await MainActor.run {
                         self?.isReconnecting = true
                         self?.signalQuality = .lost
+                        self?.applyAdaptiveGeneration()
                     }
                     try? await Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
                     await MainActor.run { self?.isReconnecting = false }
@@ -835,6 +875,22 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     // MARK: - Helpers
+
+    /// Recomputes `detectedAdaptation` from live `signalQuality`/
+    /// `detectedSpectralState` unconditionally (so the badge is informative
+    /// even in shadow mode), then pushes it to the composition controller
+    /// only if `adaptiveComplexityEnabled` and only if it actually changed.
+    /// Call after every `signalQuality`/`detectedSpectralState` write.
+    private func applyAdaptiveGeneration() {
+        let detected = AdaptiveGenerationCombination.adaptation(
+            signalQuality: signalQuality, spectralState: detectedSpectralState
+        )
+        detectedAdaptation = detected
+        let applied = adaptiveComplexityEnabled ? detected : .raw
+        guard applied != appliedAdaptation else { return }
+        appliedAdaptation = applied
+        Task { [composition] in await composition?.updateGenerationAdaptation(applied) }
+    }
 
     private func computeCalibrationMetrics(window: EEGWindow) -> CalibrationMetrics {
         let channelLabels = container.streamResolved.profile.channelLabels.isEmpty

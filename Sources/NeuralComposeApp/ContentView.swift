@@ -43,7 +43,11 @@ struct ContentView: View {
                 isReconnecting: viewModel.isReconnecting,
                 isDictating: viewModel.isDictating,
                 isSpeaking: viewModel.isSpeaking,
-                isCommanding: viewModel.isCommanding
+                isCommanding: viewModel.isCommanding,
+                detectedAdaptation: viewModel.detectedAdaptation,
+                appliedAdaptation: viewModel.appliedAdaptation,
+                detectedSpectralState: viewModel.detectedSpectralState,
+                adaptiveComplexityEnabled: $viewModel.adaptiveComplexityEnabled
             )
             Divider()
 

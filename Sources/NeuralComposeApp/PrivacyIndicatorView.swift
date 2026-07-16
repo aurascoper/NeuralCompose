@@ -12,6 +12,19 @@ struct PrivacyIndicatorView: View {
     var isDictating: Bool = false
     var isSpeaking: Bool = false
     var isCommanding: Bool = false
+    /// What the current signal quality maps to via the deterministic rule
+    /// table — kept current regardless of whether adaptive mode is applied
+    /// ("shadow mode"), so the badge is informative even while off.
+    var detectedAdaptation: GenerationAdaptation = .raw
+    /// What's actually been pushed to generation — equals `.raw` whenever
+    /// `adaptiveComplexityEnabled` is false.
+    var appliedAdaptation: GenerationAdaptation = .raw
+    /// Milestone B state source — always current regardless of the toggle
+    /// (shadow mode), same invariant as `detectedAdaptation`. `nil` means
+    /// the estimator has no opinion; the combination logic falls back to
+    /// `signalQuality` in that case (see `AdaptiveGenerationCombination`).
+    var detectedSpectralState: SpectralState? = nil
+    @Binding var adaptiveComplexityEnabled: Bool
 
     @State private var expanded: Bool = false
 
@@ -23,6 +36,7 @@ struct PrivacyIndicatorView: View {
                 Text(mode.substitutionSummary).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 signalBadge
+                adaptiveBadge
                 voiceBadge
                 cmdBadge
                 Button(action: { expanded.toggle() }) {
@@ -56,6 +70,36 @@ struct PrivacyIndicatorView: View {
                     GridRow {
                         Text("Network").bold()
                         Text("Disabled at runtime").foregroundStyle(.green)
+                    }
+                    GridRow {
+                        Text("Adaptive").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Apply to generation", isOn: $adaptiveComplexityEnabled)
+                                .toggleStyle(.switch)
+                            Text("Detected: \(adaptiveStateLabel(signalQuality: signalQuality, spectralState: detectedSpectralState)) — \(detectedAdaptation.maxCandidates) candidates, temp \(detectedAdaptation.temperature, specifier: "%.2f")")
+                                .foregroundStyle(.secondary)
+                            if let spectral = detectedSpectralState {
+                                Text("Spectral: \(spectral.badgeLabel)")
+                                    .foregroundStyle(.secondary)
+                                Text(SpectralState.honestyCaveat)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Spectral: unavailable — using signal-quality fallback")
+                                    .foregroundStyle(.secondary)
+                            }
+                            if adaptiveComplexityEnabled {
+                                Text("Applied: \(appliedAdaptation.maxCandidates) candidates, temp \(appliedAdaptation.temperature, specifier: "%.2f")")
+                            } else {
+                                Text("Not applied — generation is using defaults")
+                                    .foregroundStyle(.secondary)
+                            }
+                            if !detectedAdaptation.styleInstruction.isEmpty {
+                                Text("Would prompt: \"\(detectedAdaptation.styleInstruction)\"")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 }
                 .font(.caption)
@@ -123,6 +167,39 @@ struct PrivacyIndicatorView: View {
         case .healthy: return "Signal OK"
         case .poor:    return "Signal weak"
         case .lost:    return "No signal"
+        }
+    }
+
+    /// Always-visible badge showing what the deterministic rule table
+    /// currently detects, regardless of whether it's actually being applied
+    /// to generation ("shadow mode") — unlike `signalBadge`, this is never
+    /// gated on `mode.acquisition`, so it's visible and testable on the
+    /// synthetic stream too. A lighter background + "(preview)" suffix marks
+    /// detection-only; a filled background marks that it's live.
+    private var adaptiveBadge: some View {
+        let label = adaptiveStateLabel(signalQuality: signalQuality, spectralState: detectedSpectralState)
+        return Label(
+            adaptiveComplexityEnabled ? "Adaptive: \(label)" : "Adaptive: \(label) (preview)",
+            systemImage: "slider.horizontal.3"
+        )
+        .font(.caption)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Color.secondary.opacity(adaptiveComplexityEnabled ? 0.20 : 0.10))
+        .cornerRadius(4)
+    }
+
+    /// Mirrors `AdaptiveGenerationCombination`'s priority (`.lost` signal
+    /// quality is an absolute floor; otherwise a present spectral opinion
+    /// wins over the coarser signal-quality bucket) so the badge text never
+    /// disagrees with what's actually detected/applied.
+    private func adaptiveStateLabel(signalQuality: SignalQuality?, spectralState: SpectralState?) -> String {
+        if signalQuality == .lost { return "Minimal" }
+        if let spectralState { return spectralState.badgeLabel }
+        switch signalQuality {
+        case .none, .healthy: return "Standard"
+        case .poor:           return "Simplified"
+        case .lost:           return "Minimal"
         }
     }
 
