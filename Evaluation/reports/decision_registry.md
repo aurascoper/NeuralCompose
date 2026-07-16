@@ -33,7 +33,7 @@ Each entry:
 - **Supporting hypotheses:** 3.4-E **evaluated** — 10 generators, 45 pairs, 27 prompts, mean pairwise cosine ~0.55 (generators genuinely divergent), see `generator_comparison.json`
 - **Supporting benchmark(s):** `Evaluation/results/leaderboard.json`, `Evaluation/results/stage_3_4/generator_comparison.json`, `Evaluation/results/repro/repro_report.json`
 - **Confidence:** Medium — fleet evidence complete, but the #1/#2 composite gap is inside observed run-to-run variance
-- **Status:** Accepted (provisional — human review recommended: does tinyllama-1.1b's composite advantage outweigh 2× the RSS of qwen2.5-0.5b, given the quality-metric variance?)
+- **Status:** Accepted. Human review completed 2026-07-16 (Stage 3.5 readiness signoff): qwen2.5-0.5b confirmed as default over tinyllama-1.1b. Reasoning — tinyllama's composite advantage (0.843 vs 0.801) is within the run-to-run variance noise documented above, so it isn't a reliable quality edge; qwen's ~2× lower RSS (707 MB vs 1455 MB) matters more here than in a typical eval, since the generator process shares memory with live EEG windowing, classification, and spectral encoding. This resolves `Evaluation/reports/STAGE_3_5_READINESS.md`'s signoff condition #2 and unblocks Stage 3.5 policy-registry work (`3.5-P`, `3.5-D`) from encoding this default.
 
 ### 3. Gemma-3n-E2B as optional quality generator
 
