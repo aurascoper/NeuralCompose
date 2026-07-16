@@ -107,92 +107,24 @@ public enum PredictorFactory {
         )
     }
 
-    /// Looks for an `MLXProbe` binary next to the app's own executable —
-    /// true for `swift build`/`swift run`/Xcode SwiftPM-scheme builds (the
-    /// only ways this app is currently launched; both put sibling
-    /// executables in the same build-products directory). A real
-    /// distributable `.app` bundling `MLXProbe` as a helper tool is future
-    /// work, not handled here — `nil` in that case, same as any other
-    /// probe-unavailable path.
-    private static func locateMLXProbeBinary() -> URL? {
-        guard let executablePath = CommandLine.arguments.first else { return nil }
-        let sibling = URL(fileURLWithPath: executablePath)
-            .deletingLastPathComponent()
-            .appendingPathComponent("MLXProbe")
-        return FileManager.default.fileExists(atPath: sibling.path) ? sibling : nil
-    }
-
     /// Spawns the standalone `MLXProbe` binary (`--json <modelDirectory>`)
     /// as a disposable child process and races it against a timeout,
     /// returning a `ProbeResult` that distinguishes success, a parseable
-    /// failure, a timeout, and a crash-by-signal — rather than the `Bool`
-    /// this used to return. `MLXProbe --json` writes exactly one JSON line
-    /// to stdout and nothing else, so reading the whole pipe after the
-    /// process exits (inside `terminationHandler`) is safe without a
-    /// streaming reader — the payload is always small.
-    ///
-    /// The timeout matters independently of the crash risk this whole
-    /// mechanism exists for: MLX model loading can also hang rather than
-    /// crash — with no timeout, a hung probe would block the entire app's
-    /// startup forever instead of just falling back to the stub.
+    /// failure, a timeout, and a crash-by-signal. Thin wrapper over
+    /// `SubprocessProbe` — see that type for the actual Process/Pipe/
+    /// timeout/crash-detection mechanism, shared with the spectral state
+    /// estimator's factory rather than duplicated.
     private static func runInitProbeSubprocess(
         modelDirectory: URL, backend: MLXBackend, timeoutSeconds: Double = 20.0
     ) async -> ProbeResult {
-        guard let probeBinary = locateMLXProbeBinary() else {
+        guard let probeBinary = SubprocessProbe.locateSiblingBinary(named: "MLXProbe") else {
             return .failed(reason: "MLXProbe binary not found alongside the app executable")
         }
-        let process = Process()
-        process.executableURL = probeBinary
-        process.arguments = ["--json", "--backend", backend.rawValue, modelDirectory.path]
-        let stdoutPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = FileHandle.nullDevice
-
-        // Guards against resuming the continuation twice: the
-        // termination handler and the timeout task both race to resolve
-        // it, and only the first should count.
-        final class ResumeOnce: @unchecked Sendable {
-            private let lock = NSLock()
-            private var done = false
-            func resume(_ continuation: CheckedContinuation<ProbeResult, Never>, _ value: ProbeResult) {
-                lock.lock()
-                defer { lock.unlock() }
-                guard !done else { return }
-                done = true
-                continuation.resume(returning: value)
-            }
-        }
-
-        return await withCheckedContinuation { continuation in
-            let once = ResumeOnce()
-            process.terminationHandler = { p in
-                if p.terminationReason == .uncaughtSignal {
-                    once.resume(continuation, .crashed(signal: p.terminationStatus))
-                    return
-                }
-                let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                guard let decoded = try? JSONDecoder().decode(ProbeResult.self, from: data) else {
-                    once.resume(continuation, .failed(
-                        reason: "probe exited with status \(p.terminationStatus), no parseable output"
-                    ))
-                    return
-                }
-                once.resume(continuation, decoded)
-            }
-            do {
-                try process.run()
-            } catch {
-                once.resume(continuation, .failed(reason: "failed to launch MLXProbe: \(error.localizedDescription)"))
-                return
-            }
-            Task {
-                try? await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
-                guard process.isRunning else { return }
-                BCILog.predictor.notice("MLX probe subprocess exceeded \(timeoutSeconds, format: .fixed(precision: 0))s; terminating and using stub")
-                process.terminate()
-                once.resume(continuation, .timeout)
-            }
-        }
+        return await SubprocessProbe.run(
+            binary: probeBinary,
+            arguments: ["--json", "--backend", backend.rawValue, modelDirectory.path],
+            timeoutSeconds: timeoutSeconds
+        )
     }
 
     /// Where we look for MLX weights, in priority order:
