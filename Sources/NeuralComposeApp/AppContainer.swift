@@ -25,6 +25,12 @@ public struct AppContainer: Sendable {
     /// dependency-free deterministic stub; test-overridable like everything
     /// else here.
     public let sentenceEmbedder: any SentenceEmbedder
+    /// Milestone B state source — real MLX-backed if `Models/EEGEncoder/`
+    /// resolves and its anchor space is trusted, stub otherwise. Resolved
+    /// *after* `sentenceEmbedder` in `makeDefault()`: the estimator needs
+    /// the already-built embedder for its honesty gate and to rebuild the
+    /// anchor table (see `SpectralStateEstimator`'s doc comment).
+    public let spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
@@ -66,7 +72,10 @@ public struct AppContainer: Sendable {
         metrics: MetricsCollector,
         windowingConfig: EEGWindowingConfig,
         smootherConfig: IntentSmoother.Config = .init(),
-        sentenceEmbedder: any SentenceEmbedder = DeterministicSentenceEmbedder()
+        sentenceEmbedder: any SentenceEmbedder = DeterministicSentenceEmbedder(),
+        spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved = .init(
+            estimator: StubSpectralStateEstimator(), kind: .stub, warning: nil
+        )
     ) {
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
@@ -78,6 +87,7 @@ public struct AppContainer: Sendable {
         self.windowingConfig = windowingConfig
         self.smootherConfig = smootherConfig
         self.sentenceEmbedder = sentenceEmbedder
+        self.spectralEstimatorResolved = spectralEstimatorResolved
     }
 
     /// Build a container from the environment. This is what the App entry
@@ -126,6 +136,11 @@ public struct AppContainer: Sendable {
         }
         BCILog.embedding.notice("sentenceEmbedder backend: \(sentenceEmbedderBackend, privacy: .public)")
 
+        // Resolved after sentenceEmbedder — needs it for the honesty gate
+        // and to rebuild the anchor table (see SpectralStateEstimator).
+        let spectralEstimator = await SpectralStateEstimatorFactory.live(sentenceEmbedder: sentenceEmbedder)
+        BCILog.spectral.notice("spectral estimator backend: \(spectralEstimator.kind.rawValue, privacy: .public)")
+
         return AppContainer(
             streamResolved: stream,
             classifierResolved: classifier,
@@ -135,7 +150,8 @@ public struct AppContainer: Sendable {
             voiceCommandResolved: voiceCommand,
             metrics: metrics,
             windowingConfig: windowingConfig,
-            sentenceEmbedder: sentenceEmbedder
+            sentenceEmbedder: sentenceEmbedder,
+            spectralEstimatorResolved: spectralEstimator
         )
     }
 

@@ -37,6 +37,7 @@ let package = Package(
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
         .executable(name: "MLXProbe", targets: ["MLXProbe"]),
+        .executable(name: "SpectralProbe", targets: ["SpectralProbe"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -173,6 +174,21 @@ let package = Package(
             swiftSettings: strictConcurrency
         ),
 
+        // ── Spectral encoder load probe ────────────────────────────────────
+        // Same rationale as MLXProbe, kept as its own target rather than a
+        // `--kind` flag on MLXProbe: MLXProbe's own doc comment marks it as
+        // a temporary diagnostic slated for deletion once the probe-
+        // subprocess stall it was built to investigate is resolved, while
+        // spectral probing is permanent infrastructure for
+        // SpectralStateEstimatorFactory's stub-by-default fallback. See
+        // Sources/SpectralProbe/main.swift's doc comment.
+        .executableTarget(
+            name: "SpectralProbe",
+            dependencies: ["BCILLM"],
+            path: "Sources/SpectralProbe",
+            swiftSettings: strictConcurrency
+        ),
+
         // ── Tests ────────────────────────────────────────────────────────
         .testTarget(
             name: "BCICoreTests",
@@ -206,7 +222,15 @@ let package = Package(
         ),
         .testTarget(
             name: "BCILLMTests",
-            dependencies: ["BCILLM", "BCICore"],
+            // MLX itself (not just BCILLM) is needed directly:
+            // SpectralEncoderModelTests constructs a raw MLXArray to drive
+            // SpectralEncoderModel's shape/unit-norm invariants against
+            // random-init weights — no model file on disk, so it runs
+            // under plain `swift test` (MLX kernels only fault on eval()).
+            dependencies: [
+                "BCILLM", "BCICore",
+                .product(name: "MLX", package: "mlx-swift"),
+            ],
             path: "Tests/BCILLMTests"
         ),
         .testTarget(

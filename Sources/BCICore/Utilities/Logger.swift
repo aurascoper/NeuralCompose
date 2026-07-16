@@ -12,4 +12,5 @@ public enum BCILog {
     public static let pipeline   = Logger(subsystem: subsystem, category: "pipeline")
     public static let ui         = Logger(subsystem: subsystem, category: "ui")
     public static let voice      = Logger(subsystem: subsystem, category: "voice")
+    public static let spectral   = Logger(subsystem: subsystem, category: "spectral")
 }
