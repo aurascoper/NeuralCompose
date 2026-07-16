@@ -1,0 +1,103 @@
+{
+  "hypothesis_id": "3.5-P-pipeline-policies",
+  "evaluated_at": "2026-07-16T23:53:24.777779+00:00",
+  "prompt_category_buckets": {
+    "short_command": 4,
+    "technical": 3,
+    "uncertain": 20
+  },
+  "policies": {
+    "Fast": {
+      "resolution": {
+        "generator_model": "smollm2-360m",
+        "embedding_model": "all-MiniLM-L6-v2 (mlx-swift)"
+      },
+      "pipeline": {
+        "quality": 0.2659032922613084,
+        "latency_s": 1.2321347762059394,
+        "memory_mb": 1114.453125
+      }
+    },
+    "Balanced": {
+      "resolution": {
+        "generator_model": "smollm2-360m",
+        "embedding_model": "mxbai-embed-large-v1 (python)"
+      },
+      "pipeline": {
+        "quality": 0.7008856931443976,
+        "latency_s": 2.5018012391196356,
+        "memory_mb": 1646.109375
+      }
+    },
+    "Quality": {
+      "resolution": {
+        "generator_model": "qwen2.5-3b",
+        "embedding_model": "all-MiniLM-L6-v2 (python)"
+      },
+      "pipeline": {
+        "quality": 1.0,
+        "latency_s": 2.291271200886479,
+        "memory_mb": 3985.234375
+      }
+    },
+    "Adaptive": {
+      "resolution": {
+        "generator_branches": [
+          {
+            "branch": "short_command",
+            "weight": 0.14814814814814814,
+            "model": "smollm2-360m"
+          },
+          {
+            "branch": "everything_else",
+            "weight": 0.8518518518518519,
+            "model": "qwen2.5-3b"
+          }
+        ],
+        "embedding_branches": [
+          {
+            "branch": "short_command",
+            "weight": 0.14814814814814814,
+            "model": "all-MiniLM-L6-v2 (mlx-swift)"
+          },
+          {
+            "branch": "technical",
+            "weight": 0.1111111111111111,
+            "model": "all-MiniLM-L6-v2 (python)"
+          },
+          {
+            "branch": "uncertain (confidence_gated -> mid_tier proxy)",
+            "weight": 0.7407407407407407,
+            "model": "mxbai-embed-large-v1 (python)"
+          }
+        ],
+        "generator_composite": {
+          "generate_time_mean": 2.051940051943513,
+          "peak_rss_mb": 3062.9542824074074,
+          "norm_quality": 0.9306380125218692
+        },
+        "embedding_composite": {
+          "warm_encode_ms": 957.8657547963188,
+          "peak_rss_mb": 847.2569444444445,
+          "norm_quality": 0.7555294827897618
+        }
+      },
+      "pipeline": {
+        "quality": 0.8430837476558155,
+        "latency_s": 3.009805806739832,
+        "memory_mb": 3910.2112268518517
+      }
+    }
+  },
+  "pareto_frontier": [
+    "Fast",
+    "Balanced",
+    "Quality",
+    "Adaptive"
+  ],
+  "success_criterion": "Adaptive mode is Pareto-optimal OR within 5% of the best fixed mode on every axis",
+  "verdict": {
+    "pass": true,
+    "reason": "Adaptive is on the Pareto frontier"
+  }
+}

@@ -163,8 +163,9 @@
         "adaptive_vs_best_fixed": "<5% gap on every axis",
         "adaptive_pareto_probability": "60-80%"
       },
-      "status": "pre-registered",
-      "work_package": "P"
+      "status": "evaluated",
+      "work_package": "P",
+      "status_note": "Evaluated 2026-07-16T23:53:24.777779+00:00. Verdict: PASS \u2014 Adaptive is on the Pareto frontier. Pareto frontier: ['Fast', 'Balanced', 'Quality', 'Adaptive']. See Evaluation/results/stage_3_5/pipeline_policies.json."
     }
   ],
   "policy_registry": {
