@@ -69,6 +69,10 @@ and the opt-in is surfaced in the privacy indicator.
 Local defaults also make the system testable in air-gapped
 environments, which matters for clinical or research settings.
 
+This principle is about network egress, not local persistence — see
+`ADR-005-local-interaction-logging.md` for the opt-in, never-transmitted
+interaction logger and why it doesn't conflict with "no telemetry."
+
 ## 6. Components communicate across protocol boundaries
 
 The Intelligence layer does not know what produced the samples it
