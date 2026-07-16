@@ -97,6 +97,23 @@ You can set both; BrainFlow uses whichever it can match. Honored across all
 profiles. (Note: `NEURALCOMPOSE_MUSE_SERIAL` is something different — that
 points at a `/dev/cu.usbmodem*` *serial port*, used by the BLED112 profiles.)
 
+### Discovery timeout
+
+`BrainFlowService` sends BrainFlow a 20s BLE discovery timeout by default —
+override with `NEURALCOMPOSE_MUSE_DISCOVERY_TIMEOUT` (seconds):
+
+```bash
+NEURALCOMPOSE_MUSE_DISCOVERY_TIMEOUT=30 ./Scripts/run-muse-s.sh
+```
+
+BrainFlow's own default, when this field is left at 0, is a bare **6
+seconds** (`muse.cpp`'s `prepare_session()`) — often too short for macOS
+CoreBluetooth/SimpleBLE discovery on a cold adapter, and well under the
+30–60s advertising window in the checklist below. If connection attempts
+are all failing at roughly the same short duration with 0 samples (check
+`log show --predicate 'subsystem == "com.neuralcompose"'` for
+`Live stream interrupted (0 samples)`), this is the first thing to try.
+
 All wiring is confined to `BrainFlowService.makeParamsJSON()` and opaque to
 the rest of the codebase.
 
