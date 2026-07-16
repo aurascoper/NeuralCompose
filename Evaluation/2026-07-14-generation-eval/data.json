@@ -1,0 +1,588 @@
+{
+  "candidates" : [
+    {
+      "cold_load_time" : 2.641042947769165,
+      "directory" : "Qwen2.5-0.5B-Instruct-4bit",
+      "model_identifier" : "Qwen2.5-0.5B-Instruct-4bit",
+      "name" : "qwen-0.5b",
+      "peak_rss_mb" : 708.421875,
+      "prompts" : [
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.022220969200134277,
+          "generate_time" : 0.9163379669189453,
+          "generated_text" : "Yes, please tell me anything you would like to know or discuss. I'm here and am happy to assist with any question, topic matter detailed information query, or anything else you'd like me for.",
+          "prompt_id" : "instr-say-yes",
+          "tokens_per_second" : 44.743316854868084,
+          "word_count_ratio" : 8.5
+        },
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.02191603183746338,
+          "generate_time" : 0.42237401008605957,
+          "generated_text" : "I will not use the word 'very' again in this or any future sentences transcribed.",
+          "prompt_id" : "instr-avoid-very",
+          "tokens_per_second" : 44.98382842289163,
+          "word_count_ratio" : 1
+        },
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.02235996723175049,
+          "generate_time" : 0.1540830135345459,
+          "generated_text" : "Please provide me with the document.",
+          "prompt_id" : "instr-rewrite-formal",
+          "tokens_per_second" : 45.43005643143511,
+          "word_count_ratio" : 0.6
+        },
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.02225196361541748,
+          "generate_time" : 0.39961695671081543,
+          "generated_text" : "Even after a series of initial failures in the testing process, the test successfully passed.",
+          "prompt_id" : "instr-rewrite-clearer",
+          "tokens_per_second" : 42.540737359906686,
+          "word_count_ratio" : 0.8823529411764706
+        },
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.022552013397216797,
+          "generate_time" : 0.3636709451675415,
+          "generated_text" : "Sure, here's a continued version:\n\n...A...\nB...\n\nC...\n\nD",
+          "prompt_id" : "instr-sequence-letters",
+          "tokens_per_second" : 43.99581603261947,
+          "word_count_ratio" : 1.2857142857142858
+        },
+        {
+          "category" : "filler-removal",
+          "first_token_latency" : 0.02345895767211914,
+          "generate_time" : 2.9103100299835205,
+          "generated_text" : "That's a great point! The decision to either agree with or disagree strongly about something is personal and can be based on many factors such as your values, beliefs, goals or aspirations. What is important here are the positive outcomes that you can derive from your decision.\n\nThe key thing to remember in any discussion is always start with the facts and end on what you are willing to give up or sacrifice. This way, your decision can be weighed against the consequences of each choice you make.\n\nUltimately it is a good idea to listen carefully and think through your decision before making any final decisions. Do not just",
+          "meaning_preservation_cosine" : 0.5590001344680786,
+          "prompt_id" : "filler-second-option",
+          "tokens_per_second" : 41.23272048809161,
+          "word_count_ratio" : 8.461538461538462
+        },
+        {
+          "category" : "filler-removal",
+          "first_token_latency" : 0.02320396900177002,
+          "generate_time" : 0.9130220413208008,
+          "generated_text" : "That's a good idea! I'm always ready to help if you have something in mind for our next meeting. How about we decide together what activity or project might be the best fit?",
+          "meaning_preservation_cosine" : 0.5749101042747498,
+          "prompt_id" : "filler-try-tomorrow",
+          "tokens_per_second" : 41.62002479702269,
+          "word_count_ratio" : 2.2
+        },
+        {
+          "category" : "filler-removal",
+          "first_token_latency" : 0.022347092628479004,
+          "generate_time" : 2.101728916168213,
+          "generated_text" : "I'm really sorry to hear that. Can I help you with something else?\n\nIt is important for everyone in the team, and it's not just me. We need more time to meet all our colleagues' needs.\n\nCan you tell us a bit about what we're trying to achieve?\n\nI'm really sorry for the inconvenience, but I need you first. How can we find out if there's anything else that needs to be done?",
+          "meaning_preservation_cosine" : 0.6646024584770203,
+          "prompt_id" : "filler-need-more-time",
+          "tokens_per_second" : 41.870290370481285,
+          "word_count_ratio" : 4.866666666666666
+        },
+        {
+          "category" : "filler-removal",
+          "first_token_latency" : 0.02329707145690918,
+          "generate_time" : 1.0710419416427612,
+          "generated_text" : "I'm here to help! What seems to be the issue? Do you need some advice on something specific or would like me to assist with another question in a different manner? Please feel free to ask for your request.",
+          "meaning_preservation_cosine" : 0.4251289963722229,
+          "prompt_id" : "filler-its-fine",
+          "tokens_per_second" : 41.08149110623336,
+          "word_count_ratio" : 3.9
+        },
+        {
+          "category" : "punctuation-restoration",
+          "first_token_latency" : 0.022917985916137695,
+          "generate_time" : 2.8647990226745605,
+          "generated_text" : "Sure, here's a recipe for three-topping pizza:\n\nIngredients:\n- 2 large pieces of mozzarella cheese\n- A variety of ground meat (e.g. chicken, beef)\n  - Some choice from the grocery store\n- A variety of vegetables (e.g. peppers, onions)\n  - Some choice from the supermarket\n- A variety of toppings (e.g. pepperoni, mushrooms)\n  - Can be purchased from the grocery store\n\nInstructions:\n1) Preheat your oven to a high temperature (around 450 degrees F or about 23 deg C).",
+          "meaning_preservation_cosine" : 0.6449103951454163,
+          "prompt_id" : "punct-milk-eggs-bread",
+          "tokens_per_second" : 41.88775514450178,
+          "word_count_ratio" : 6.076923076923077
+        },
+        {
+          "category" : "punctuation-restoration",
+          "first_token_latency" : 0.02300894260406494,
+          "generate_time" : 0.39927709102630615,
+          "generated_text" : "Yes, I can tell you that she said yes right there in front of everyone.",
+          "meaning_preservation_cosine" : 0.9347499012947083,
+          "prompt_id" : "punct-she-said-yes",
+          "tokens_per_second" : 42.57694814471578,
+          "word_count_ratio" : 1.1538461538461537
+        },
+        {
+          "category" : "punctuation-restoration",
+          "first_token_latency" : 0.026237010955810547,
+          "generate_time" : 2.9942280054092407,
+          "generated_text" : "Thank you for bringing a laptop to our meeting. The presentation will be conducted via email with each participant accessing their own device through the internet.\n\nPlease ensure you have all necessary software and materials such as a laptop ready to run. We will use the following items:\n\n- Laptop (to be used with internet connection)\n- Printer or scanner to obtain images\nPlease ensure you have a copy of the meeting agenda and any detailed report attached.\n\nWe will also prepare slides or presentation templates along with a projector for video conferencing. Please bring any other items you will need to prepare the presentation.\n\nPlease come prepared with",
+          "meaning_preservation_cosine" : 0.749922513961792,
+          "prompt_id" : "punct-meeting-nine",
+          "tokens_per_second" : 40.077108284076324,
+          "word_count_ratio" : 9.083333333333334
+        },
+        {
+          "category" : "punctuation-restoration",
+          "first_token_latency" : 0.02261209487915039,
+          "generate_time" : 2.8763020038604736,
+          "generated_text" : "It's important to consider your personal situation and values before making a decision. If you feel motionless or unable to move, it may be best not to go out today.\n\nIf the decision is based on a specific goal or purpose that you have in mind, such as preparing for an important event or meeting someone new and cannot wait to leave now until tomorrow morning, it's a good idea to prioritize your journey towards that goal.\n\nUltimately, the decision should be based on what is best for you and those around us. Weigh your options carefully, consider all the pros and cons of each choice you",
+          "meaning_preservation_cosine" : 0.765162467956543,
+          "prompt_id" : "punct-go-now-or-wait",
+          "tokens_per_second" : 41.72023655337309,
+          "word_count_ratio" : 8.23076923076923
+        },
+        {
+          "category" : "capitalization",
+          "first_token_latency" : 0.022832036018371582,
+          "generate_time" : 1.7863980531692505,
+          "generated_text" : "Hello! I'm Hritik. It's nice to meet you, Dr Smith!\n\nI feel like we can talk about fun things today.\n\nHow may I assist you? How did your day go?\n\nI'm always here to help with questions and provide advice. Feel free to ask me anything you'd like.\n\nThank you for your time! Have a great day ahead.",
+          "meaning_preservation_cosine" : 0.6208029985427856,
+          "prompt_id" : "cap-dr-smith",
+          "tokens_per_second" : 41.983923945137775,
+          "word_count_ratio" : 5.8
+        },
+        {
+          "category" : "capitalization",
+          "first_token_latency" : 0.023423075675964355,
+          "generate_time" : 2.2905139923095703,
+          "generated_text" : "Sure! Here's a flight schedule for you:\n\nFriday, Friday to Thursday\n\nFlight Schedule: 12 PM - London\n9 AM Monday \n_______ – Paris \n\nNote that France is a country with many cities, so the exact dates and times may vary based on when flights are booked. Also keep in mind that the airline can change its schedule from time to time, so it's always a good idea to check with the airline for up-to-date information.",
+          "meaning_preservation_cosine" : 0.8340914249420166,
+          "prompt_id" : "cap-london-paris",
+          "tokens_per_second" : 41.03882373808071,
+          "word_count_ratio" : 7.5
+        },
+        {
+          "category" : "capitalization",
+          "first_token_latency" : 0.026888012886047363,
+          "generate_time" : 2.9950098991394043,
+          "generated_text" : "Sure, I will be sending a message to Sara and David by email before Tuesday's meeting.\n\n1. **Subject:** Meeting Schedule - Tuesday, April 26\n\n   I will prepare a message to email Sara and David.\n\n- **Subject:** Meeting Schedule - Tuesday, April 26\n\nPlease follow the email below to prepare your response.\n\n---\n\nThis message should be sent via an e-mail:\n\nSubject: Meeting Schedule - Tuesday, April 26\n\nDear Sara and David,\n\nI hope this email finds you well. I am writing to remind you of our upcoming meeting on Tuesday, April",
+          "meaning_preservation_cosine" : 0.8847566246986389,
+          "prompt_id" : "cap-email-sarah-david",
+          "tokens_per_second" : 40.06664553412033,
+          "word_count_ratio" : 9.1
+        },
+        {
+          "category" : "concise-rewrite",
+          "first_token_latency" : 0.02330601215362549,
+          "generate_time" : 0.9499540328979492,
+          "generated_text" : "Absolutely, I would be happy to assist you on any topic that interests me. Please feel free to ask for help with the task I have mentioned, or any other topic you might need assistance in.",
+          "meaning_preservation_cosine" : 0.8303593993186951,
+          "prompt_id" : "concise-wondering-help",
+          "tokens_per_second" : 42.107300579560864,
+          "word_count_ratio" : 2
+        },
+        {
+          "category" : "concise-rewrite",
+          "first_token_latency" : 0.024412035942077637,
+          "generate_time" : 0.6743439435958862,
+          "generated_text" : "It's great to hear from you! I'm always happy to help educate and provide useful information. What would be your question?",
+          "meaning_preservation_cosine" : 0.5842368006706238,
+          "prompt_id" : "concise-most-people-agree",
+          "tokens_per_second" : 38.55599245298629,
+          "word_count_ratio" : 1.05
+        },
+        {
+          "category" : "concise-rewrite",
+          "first_token_latency" : 0.02395808696746826,
+          "generate_time" : 0.9169489145278931,
+          "generated_text" : "I'm sorry to hear that we are still waiting for a response about the matter in question. Can you please provide me with more information or details so that I can assist you better?",
+          "meaning_preservation_cosine" : 0.7833139896392822,
+          "prompt_id" : "concise-still-waiting",
+          "tokens_per_second" : 40.35121195279465,
+          "word_count_ratio" : 1.8888888888888888
+        },
+        {
+          "category" : "concise-rewrite",
+          "first_token_latency" : 0.023997068405151367,
+          "generate_time" : 0.963250994682312,
+          "generated_text" : "I am not capable of making decisions for you, but if there is a possibility that further investigation might help us better understand the issue at hand or identify potential risks, we can explore it more thoroughly.",
+          "meaning_preservation_cosine" : 0.8026179671287537,
+          "prompt_id" : "concise-consider-looking",
+          "tokens_per_second" : 41.526040690144654,
+          "word_count_ratio" : 2.0555555555555554
+        },
+        {
+          "category" : "command-reformulation",
+          "first_token_latency" : 0.024073004722595215,
+          "generate_time" : 0.3124479055404663,
+          "generated_text" : "Exit all open tabs and windowss in the application.",
+          "meaning_preservation_cosine" : 0.790809154510498,
+          "prompt_id" : "command-close-windows",
+          "tokens_per_second" : 35.20586889828054,
+          "word_count_ratio" : 0.9
+        },
+        {
+          "category" : "command-reformulation",
+          "first_token_latency" : 0.023378968238830566,
+          "generate_time" : 0.13849103450775146,
+          "generated_text" : "Open your email inbox.",
+          "meaning_preservation_cosine" : 0.7806792259216309,
+          "prompt_id" : "command-open-emails",
+          "tokens_per_second" : 36.10342010782038,
+          "word_count_ratio" : 0.3076923076923077
+        },
+        {
+          "category" : "command-reformulation",
+          "first_token_latency" : 0.0324859619140625,
+          "generate_time" : 0.29461097717285156,
+          "generated_text" : "Reduce the volume of your audio to a lower level.",
+          "meaning_preservation_cosine" : 0.8010869026184082,
+          "prompt_id" : "command-music-down",
+          "tokens_per_second" : 37.337373188053945,
+          "word_count_ratio" : 0.7692307692307693
+        },
+        {
+          "category" : "command-reformulation",
+          "first_token_latency" : 0.02403104305267334,
+          "generate_time" : 0.13896703720092773,
+          "generated_text" : "Get me today's document.",
+          "meaning_preservation_cosine" : 0.7979903221130371,
+          "prompt_id" : "command-get-doc",
+          "tokens_per_second" : 43.17570641824077,
+          "word_count_ratio" : 0.3076923076923077
+        },
+        {
+          "category" : "technical-term-preservation",
+          "first_token_latency" : 0.028430938720703125,
+          "generate_time" : 0.38093507289886475,
+          "generated_text" : "The Brainflow-stream should be reconnected when the connection breaks down.",
+          "meaning_preservation_cosine" : 0.8534955382347107,
+          "prompt_id" : "tech-brainflow-reconnect",
+          "tokens_per_second" : 36.75166976215102,
+          "word_count_ratio" : 0.43478260869565216
+        },
+        {
+          "category" : "technical-term-preservation",
+          "first_token_latency" : 0.03480792045593262,
+          "generate_time" : 0.37512803077697754,
+          "generated_text" : "The classifier prefers to run on ANE instead of GPU when feasible.",
+          "meaning_preservation_cosine" : 0.9182410836219788,
+          "prompt_id" : "tech-ane-classifier",
+          "tokens_per_second" : 37.32059150845843,
+          "word_count_ratio" : 0.5
+        },
+        {
+          "category" : "technical-term-preservation",
+          "first_token_latency" : 0.025326013565063477,
+          "generate_time" : 0.4052010774612427,
+          "generated_text" : "Press the 'EEG' button to start recording your brain's electrical activity.",
+          "meaning_preservation_cosine" : 0.7590695023536682,
+          "prompt_id" : "tech-eeg-stream",
+          "tokens_per_second" : 39.48656824963747,
+          "word_count_ratio" : 0.6875
+        }
+      ],
+      "status" : "evaluated",
+      "warm_load_time" : 2.507431983947754
+    },
+    {
+      "directory" : "Qwen2.5-1.5B-Instruct-4bit",
+      "name" : "qwen-1.5b",
+      "prompts" : [
+
+      ],
+      "status" : "skipped: not downloaded"
+    },
+    {
+      "cold_load_time" : 11.769589066505432,
+      "directory" : "gemma-3n-E2B-it-lm-4bit",
+      "model_identifier" : "gemma-3n-E2B-it-lm-4bit",
+      "name" : "gemma-3n-e2b",
+      "peak_rss_mb" : 858.359375,
+      "prompts" : [
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.22772502899169922,
+          "generate_time" : 0.5004810094833374,
+          "generated_text" : "Yes.",
+          "prompt_id" : "instr-say-yes",
+          "tokens_per_second" : 7.992311244994747,
+          "word_count_ratio" : 0.25
+        },
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.17801105976104736,
+          "generate_time" : 4.512270927429199,
+          "generated_text" : "Understood. I will strive to avoid the word \"very\" in all future responses, as per your instructions. Just let me know what you need! 😊",
+          "prompt_id" : "instr-avoid-very",
+          "tokens_per_second" : 7.313390647578263,
+          "word_count_ratio" : 1.6666666666666667
+        },
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.16225004196166992,
+          "generate_time" : 15.41302490234375,
+          "generated_text" : "Here are a few options, ranging in formality, to rewrite \"Hey can you send that over\" more formally:\n\n**Option 1 (Most common & professional):**\n\n> \"Could you please send that over?\"\n\n**Option 2 (Slightly more formal):**\n\n> \"Please send that over.\"\n\n**Option 3 (If you're addressing someone in a specific role):**\n\n> \"Could you please forward that to me?\" (If it's a document)\n> \"Please send that to [Recipient Name\/Department].\" (If sending it",
+          "prompt_id" : "instr-rewrite-formal",
+          "tokens_per_second" : 7.7856229234893695,
+          "word_count_ratio" : 7.3
+        },
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.14771497249603271,
+          "generate_time" : 15.831385970115662,
+          "generated_text" : "Here are a few options for rewriting the sentence, depending on what you want to emphasize:\n\n**Option 1 (Focus on the success):**\n\n> The test was successful, even though some initial setup steps didn't work.\n\n**Option 2 (Focus on the troubleshooting):**\n\n> Despite some initial setup failures, the test completed successfully.\n\n**Option 3 (More concise):**\n\n> The test passed after some initial setup issues were resolved.\n\n**Option 4 (More formal):**\n\n> The test was successful, although initial setup steps encountered problems.",
+          "prompt_id" : "instr-rewrite-clearer",
+          "tokens_per_second" : 7.579879628133613,
+          "word_count_ratio" : 4.764705882352941
+        },
+        {
+          "category" : "instruction-following",
+          "first_token_latency" : 0.1384509801864624,
+          "generate_time" : 0.32296502590179443,
+          "generated_text" : "E",
+          "prompt_id" : "instr-sequence-letters",
+          "tokens_per_second" : 6.192620994844655,
+          "word_count_ratio" : 0.14285714285714285
+        },
+        {
+          "category" : "filler-removal",
+          "first_token_latency" : 0.13780105113983154,
+          "generate_time" : 10.366544961929321,
+          "generated_text" : "Okay! Thanks for letting me know. I understand you think the second option is the way to go. \n\nTo help solidify that, could you tell me a little more about *why* you think the second option is better? Knowing your reasoning will help me understand and potentially explore that path further. \n\nJust let me know if you'd like to elaborate! 😊",
+          "meaning_preservation_cosine" : 0.6986480951309204,
+          "prompt_id" : "filler-second-option",
+          "tokens_per_second" : 7.427739934836447,
+          "word_count_ratio" : 4.6923076923076925
+        },
+        {
+          "category" : "filler-removal",
+          "first_token_latency" : 0.13464295864105225,
+          "generate_time" : 16.030133962631226,
+          "generated_text" : "Okay! I understand. You're suggesting we try something (likely a task, conversation, or plan) again tomorrow instead of today. \n\nTo help me understand what you mean and if I can assist, could you tell me:\n\n* **What are we talking about?** (e.g., a task, an appointment, a project)\n* **What's the reason you think tomorrow is better?** (e.g., more time, less conflict)\n\nJust letting me know will help me respond appropriately! 😊\n\n\n\nI'm here to assist in any way",
+          "meaning_preservation_cosine" : 0.6158231496810913,
+          "prompt_id" : "filler-try-tomorrow",
+          "tokens_per_second" : 7.48590125820152,
+          "word_count_ratio" : 5.266666666666667
+        },
+        {
+          "category" : "filler-removal",
+          "first_token_latency" : 0.1406310796737671,
+          "generate_time" : 16.396528959274292,
+          "generated_text" : "Okay! I hear you. It sounds like you're saying that **you need more time to complete something.** \n\nTo help me understand better, could you tell me:\n\n* **What are you trying to do?** (e.g., a project, a task, an assignment)\n* **What do you need more time for?** (e.g., to research, to write, to finish a specific step)\n* **What's the reason you need more time?** (e.g., it's more complex than expected, unexpected delays)",
+          "meaning_preservation_cosine" : 0.7102548480033875,
+          "prompt_id" : "filler-need-more-time",
+          "tokens_per_second" : 7.318622148508143,
+          "word_count_ratio" : 4.933333333333334
+        },
+        {
+          "category" : "filler-removal",
+          "first_token_latency" : 0.1414729356765747,
+          "generate_time" : 16.098358035087585,
+          "generated_text" : "Okay! It sounds like you might be feeling a little...underwhelming? Or perhaps just processing something. 😊 \n\nIt's perfectly alright to say \"it's fine\" or \"I guess.\" It just means that whatever is happening isn't particularly exciting, and you're acknowledging it. \n\nIs there anything I can help you with? Sometimes just acknowledging a feeling is the first step. If you're comfortable sharing, I can try to offer support or just a listening ear! \n\nJust let me know what you'd like. 😊",
+          "meaning_preservation_cosine" : 0.5863539576530457,
+          "prompt_id" : "filler-its-fine",
+          "tokens_per_second" : 7.205703820673466,
+          "word_count_ratio" : 8
+        },
+        {
+          "category" : "punctuation-restoration",
+          "first_token_latency" : 0.13749206066131592,
+          "generate_time" : 7.183836936950684,
+          "generated_text" : "Okay, got it! Here's a reminder of what we need:\n\n*   **Milk**\n*   **Eggs** \n*   **Bread**\n*   **Coffee**\n\nLet me know if you need anything else! 😊",
+          "meaning_preservation_cosine" : 0.8615490794181824,
+          "prompt_id" : "punct-milk-eggs-bread",
+          "tokens_per_second" : 7.238471649117413,
+          "word_count_ratio" : 2.076923076923077
+        },
+        {
+          "category" : "punctuation-restoration",
+          "first_token_latency" : 0.19210290908813477,
+          "generate_time" : 12.282445073127747,
+          "generated_text" : "That's amazing! It's so exciting to hear that someone said yes. It's a really special moment, and it must feel incredible to witness that. 🎉 \n\nIt sounds like a truly memorable event! 😊\n\n\n\nIs there anything else I can help you with? Perhaps you'd like to talk more about it, or maybe generate a celebratory message for someone involved? ✨\n\n\n\nI'm here to listen! 😄",
+          "meaning_preservation_cosine" : 0.6798446178436279,
+          "prompt_id" : "punct-she-said-yes",
+          "tokens_per_second" : 7.246114228079832,
+          "word_count_ratio" : 5
+        },
+        {
+          "category" : "punctuation-restoration",
+          "first_token_latency" : 0.140375018119812,
+          "generate_time" : 8.291345953941345,
+          "generated_text" : "Okay, got it! \n\n**Meeting details:**\n\n*   **Time:** Starts at 9:00 AM\n*   **Bring:** Your laptop and the report.\n\n\n\nI'll be sure to remember this! 😊\n\n\n\nIs there anything else I can help you with?",
+          "meaning_preservation_cosine" : 0.7967902421951294,
+          "prompt_id" : "punct-meeting-nine",
+          "tokens_per_second" : 7.2364608030230135,
+          "word_count_ratio" : 2.8333333333333335
+        },
+        {
+          "category" : "punctuation-restoration",
+          "first_token_latency" : 0.13868701457977295,
+          "generate_time" : 16.520315051078796,
+          "generated_text" : "Okay, I understand you're on the fence about whether to do something now or wait until tomorrow morning. To help me give you a good response, could you tell me **what \"it\" is that we're talking about?** \n\nKnowing what you're considering will help me give more specific advice. 😊\n\n\n\nHowever, here are some general things to think about that might help you decide:\n\n**Pros of going now:**\n\n* **Potential benefits are immediate:** You might get to experience something, make progress on a task, or enjoy an activity right away.\n*",
+          "meaning_preservation_cosine" : 0.8312685489654541,
+          "prompt_id" : "punct-go-now-or-wait",
+          "tokens_per_second" : 7.263783991344878,
+          "word_count_ratio" : 6.923076923076923
+        },
+        {
+          "category" : "capitalization",
+          "first_token_latency" : 0.1389549970626831,
+          "generate_time" : 16.599979996681213,
+          "generated_text" : "Okay, I understand. You met Dr. Smith on January 5th in St. Louis. \n\nIs there anything else you'd like to tell me about this meeting? For example:\n\n* **What was the purpose of the meeting?** (e.g., a doctor's appointment, a consultation, etc.)\n* **What was Dr. Smith's role?** (e.g., a medical professional, a consultant)\n* **Do you want me to remember this information?** (I can help keep track of things if needed.)\n\nJust let",
+          "meaning_preservation_cosine" : 0.7675386071205139,
+          "prompt_id" : "cap-dr-smith",
+          "tokens_per_second" : 7.228924373643297,
+          "word_count_ratio" : 7.4
+        },
+        {
+          "category" : "capitalization",
+          "first_token_latency" : 0.13873004913330078,
+          "generate_time" : 16.012656927108765,
+          "generated_text" : "Okay, I understand! You're planning a trip with flights to London on Friday and Paris on Monday. \n\nIs there anything I can help you with regarding your trip? For example, are you:\n\n* **Looking for information about travel logistics (e.g., booking flights\/accommodation)?**\n* **Need help with a packing list?** \n* **Want recommendations for things to do in London or Paris?**\n* **Just confirming details so I can help with something else?**\n\nLet me know what you need! 😊",
+          "meaning_preservation_cosine" : 0.8276846408843994,
+          "prompt_id" : "cap-london-paris",
+          "tokens_per_second" : 7.119368167252913,
+          "word_count_ratio" : 7.8
+        },
+        {
+          "category" : "capitalization",
+          "first_token_latency" : 0.16096794605255127,
+          "generate_time" : 16.785063982009888,
+          "generated_text" : "Okay, I need a little more information to write the perfect email! Please tell me:\n\n* **What is this meeting about?** (Knowing the topic helps tailor the email's tone.)\n* **What is your relationship to Sarah and David?** (Are you a colleague, manager, etc.? This affects the appropriate tone.)\n* **Is there any specific information you want to remind them of?** (e.g., a link, agenda item, etc.)\n* **Do you have a preferred email subject line?**\n\nHowever, here are a few options based",
+          "meaning_preservation_cosine" : 0.7938721179962158,
+          "prompt_id" : "cap-email-sarah-david",
+          "tokens_per_second" : 7.149213141434262,
+          "word_count_ratio" : 8.3
+        },
+        {
+          "category" : "concise-rewrite",
+          "first_token_latency" : 0.16485810279846191,
+          "generate_time" : 16.774829983711243,
+          "generated_text" : "Okay, I understand! 😊 \n\nI'm happy to help in any way I can. While I don't have \"time\" in the human sense, I am ready to assist with tasks. \n\n**To help me best understand how I can be of assistance, could you tell me:**\n\n* **What is the task?**  Please describe it!\n* **Do you have any specific needs or requirements for the task?** \n\nThe more information you give me, the better I can assist.  I'm ready to brainstorm ideas, generate text, write",
+          "meaning_preservation_cosine" : 0.7931212186813354,
+          "prompt_id" : "concise-wondering-help",
+          "tokens_per_second" : 7.153574737658912,
+          "word_count_ratio" : 4.611111111111111
+        },
+        {
+          "category" : "concise-rewrite",
+          "first_token_latency" : 0.15407097339630127,
+          "generate_time" : 16.94179105758667,
+          "generated_text" : "Okay, I understand! You're saying that you think the option being discussed is generally considered a good choice. \n\nYou've presented this as your belief, and you think it aligns with what most people would agree is the better overall choice. \n\nIs there anything you'd like me to do with that statement? Do you want me to:\n\n* **Acknowledge your perspective and ask for more information?** (e.g., \"That's a good point! Could you elaborate on why you believe that?\")\n* **Ask for clarification?** (e",
+          "meaning_preservation_cosine" : 0.7347469329833984,
+          "prompt_id" : "concise-most-people-agree",
+          "tokens_per_second" : 7.083076375579726,
+          "word_count_ratio" : 4.15
+        },
+        {
+          "category" : "concise-rewrite",
+          "first_token_latency" : 0.2062770128250122,
+          "generate_time" : 17.135164976119995,
+          "generated_text" : "Okay, I understand. You've stated that you are a helpful assistant and that the current status is one of waiting for a response. \n\nThat's a perfectly clear and professional way to state the situation! It implies that you are acknowledging a pending action or information is still needed.\n\n\n\nIs there anything else I can help you with, perhaps related to this waiting period or a different task? Just let me know. I'm here if you need further assistance in communicating this status or exploring other possibilities.\n\n\n\nEssentially, I'm ready to continue assisting while acknowledging the pending response and",
+          "meaning_preservation_cosine" : 0.6801141500473022,
+          "prompt_id" : "concise-still-waiting",
+          "tokens_per_second" : 7.003142378099953,
+          "word_count_ratio" : 5.444444444444445
+        },
+        {
+          "category" : "concise-rewrite",
+          "first_token_latency" : 0.14164197444915771,
+          "generate_time" : 15.289501070976257,
+          "generated_text" : "Okay, I understand! That sounds like a good approach to explore the situation further. \n\nTo clarify, are you saying that:\n\n* **You're suggesting a next step?**\n* **There might be more information to gather?** \n\nKnowing the context will help me understand what you're implying and if I can assist further. 😊\n\n\n\nEssentially, \"There is a possibility that we could perhaps consider looking into this a bit further if that's alright\" is a polite way of suggesting to delve deeper.",
+          "meaning_preservation_cosine" : 0.7465791702270508,
+          "prompt_id" : "concise-consider-looking",
+          "tokens_per_second" : 7.129075009969582,
+          "word_count_ratio" : 4.388888888888889
+        },
+        {
+          "category" : "command-reformulation",
+          "first_token_latency" : 0.14013099670410156,
+          "generate_time" : 12.81496798992157,
+          "generated_text" : "**Close your windows.**\n\n\n\nThis is a clear, direct command that leaves no room for ambiguity. It's concise and easy to understand.\n\n\n\nHere are a few other options, depending on the desired tone:\n\n* **Please close your windows.** (More polite)\n* **Close all the windows.** (If there are multiple windows to close.)\n\n\n\nBut, \"Close your windows\" is perfectly adequate and clear as a direct command.",
+          "meaning_preservation_cosine" : 0.8479764461517334,
+          "prompt_id" : "command-close-windows",
+          "tokens_per_second" : 7.101071190467869,
+          "word_count_ratio" : 6.4
+        },
+        {
+          "category" : "command-reformulation",
+          "first_token_latency" : 0.1392819881439209,
+          "generate_time" : 9.885693907737732,
+          "generated_text" : "**Open the email folder.**\n\nHere's why it works:\n\n* **\"Open\"** is a direct and clear action.\n* **\"The email folder\"** is more specific than \"the thing with the emails.\"  It implies a defined location. \n\nThis is more professional and less ambiguous than the original phrasing!",
+          "meaning_preservation_cosine" : 0.7833108901977539,
+          "prompt_id" : "command-open-emails",
+          "tokens_per_second" : 7.080939451828423,
+          "word_count_ratio" : 3.4615384615384617
+        },
+        {
+          "category" : "command-reformulation",
+          "first_token_latency" : 0.13961994647979736,
+          "generate_time" : 11.494313955307007,
+          "generated_text" : "**Please lower the volume on the music.**\n\n(This is a more formal and clear way to phrase it, ensuring clarity for an AI.)\n\n\n\nHere are a few other options depending on the desired formality:\n\n* **Reduce the music volume slightly.**\n* **Lower the audio level of that song.**\n\n\n\nHowever, \"Please lower the volume on the music\" is a good general command.",
+          "meaning_preservation_cosine" : 0.7794504761695862,
+          "prompt_id" : "command-music-down",
+          "tokens_per_second" : 7.046962551653787,
+          "word_count_ratio" : 4.6923076923076925
+        },
+        {
+          "category" : "command-reformulation",
+          "first_token_latency" : 0.14241302013397217,
+          "generate_time" : 11.456472039222717,
+          "generated_text" : "**Please retrieve the document created yesterday.**\n\nThis is a more formal and complete way of phrasing the request, ensuring clarity. Here are a few other options depending on context:\n\n* **Please get me the document from yesterday.** (Slightly more polite)\n* **Find the document created on [Date] and return it to me.** (More specific, if you have a date)",
+          "meaning_preservation_cosine" : 0.8133379817008972,
+          "prompt_id" : "command-get-doc",
+          "tokens_per_second" : 7.070239400287104,
+          "word_count_ratio" : 4.538461538461538
+        },
+        {
+          "category" : "technical-term-preservation",
+          "first_token_latency" : 0.14886701107025146,
+          "generate_time" : 17.2306569814682,
+          "generated_text" : "Here are a few options for rewriting the sentence, keeping \"BrainFlow\" as is and making it clearer:\n\n**Option 1 (Most straightforward):**\n\n> The BrainFlow stream requires reconnection if it becomes disconnected.\n\n**Option 2 (Slightly more formal):**\n\n> If the BrainFlow stream loses connection, it needs to reconnect. \n\n**Option 3 (Emphasizing the action):**\n\n>  To maintain connectivity, the BrainFlow stream must reconnect if it is disconnected.\n\n\n\nAll of these options are clearer and more direct than the original while retaining",
+          "meaning_preservation_cosine" : 0.9057998061180115,
+          "prompt_id" : "tech-brainflow-reconnect",
+          "tokens_per_second" : 6.964331083200228,
+          "word_count_ratio" : 3.4347826086956523
+        },
+        {
+          "category" : "technical-term-preservation",
+          "first_token_latency" : 0.21536898612976074,
+          "generate_time" : 11.659173965454102,
+          "generated_text" : "The classifier prefers running on the ANE instead of the GPU, if possible.\n\n\n\n**Alternatively (slightly more formal):**\n\nThe classifier prefers ANE execution over GPU execution whenever feasible.\n\n\n\n**Even shorter (depending on context):**\n\nPrefer ANE for classifier execution when possible.\n\n\n\n\nThe key is to maintain the term \"ANE\" while making it more concise and natural-sounding.",
+          "meaning_preservation_cosine" : 0.8854812979698181,
+          "prompt_id" : "tech-ane-classifier",
+          "tokens_per_second" : 6.861549560632545,
+          "word_count_ratio" : 2.25
+        },
+        {
+          "category" : "technical-term-preservation",
+          "first_token_latency" : 0.14503097534179688,
+          "generate_time" : 14.864613056182861,
+          "generated_text" : "Here are a few options, ranging from slightly more formal to very polite:\n\n**Option 1 (Slightly more formal):**\n\n\"Please activate the EEG stream now.\"\n\n**Option 2 (Polite and direct):**\n\n\"Could you please start the EEG stream now?\"\n\n**Option 3 (Very polite):**\n\n\"Would you please initiate the EEG stream now?\"\n\n\n\nAll of these options are more polite than \"Turn on...\" while still clearly indicating the action needed.",
+          "meaning_preservation_cosine" : 0.8299144506454468,
+          "prompt_id" : "tech-eeg-stream",
+          "tokens_per_second" : 6.929208288886986,
+          "word_count_ratio" : 4.125
+        }
+      ],
+      "status" : "evaluated",
+      "warm_load_time" : 11.962244033813477
+    },
+    {
+      "directory" : "SmolLM2-1.7B-Instruct-4bit",
+      "name" : "smollm2-1.7b",
+      "prompts" : [
+
+      ],
+      "status" : "skipped: not downloaded"
+    },
+    {
+      "directory" : "Phi-3.5-mini-instruct-4bit",
+      "name" : "phi-3.5-mini",
+      "prompts" : [
+
+      ],
+      "status" : "skipped: not downloaded"
+    }
+  ],
+  "provenance" : {
+    "candidates_fixture_version" : 1,
+    "device" : "Apple M4",
+    "git_commit" : "377d6738af33a9fa34ab28e6edddd3d0561ee45c",
+    "macos_version" : "26.5.2",
+    "prompts_fixture_version" : 1
+  },
+  "schema_version" : 1
+}

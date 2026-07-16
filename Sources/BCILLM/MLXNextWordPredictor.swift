@@ -10,14 +10,58 @@ import Tokenizers
 
 /// Generation output plus the timing/throughput `GenerateResult` already
 /// computes — `generate()` (the `TextGenerating` conformance) discards
-/// everything but `text`; `MLXInitProbe` wants the rest. Declared
-/// unconditionally (not gated by `canImport(MLX)`) since the non-MLX
-/// `#else` build of `generateDetailed` still needs a return type.
-struct GenerationMetrics: Sendable {
-    let text: String
-    let promptTime: TimeInterval
-    let generateTime: TimeInterval
-    let tokensPerSecond: Double
+/// everything but `text`; `MLXInitProbe` and `GenerationEval` want the
+/// rest. Declared unconditionally (not gated by `canImport(MLX)`) since the
+/// non-MLX `#else` build of `generateDetailed` still needs a return type.
+/// `public`, not `internal`: `GenerationEval` (a separate executable
+/// target) calls `generateDetailed` directly to reuse one already-loaded
+/// predictor across many prompts, rather than reloading per prompt the way
+/// `MLXInitProbe.run` does.
+public struct GenerationMetrics: Sendable {
+    public let text: String
+    public let promptTime: TimeInterval
+    public let generateTime: TimeInterval
+    public let tokensPerSecond: Double
+    /// `"eos"` if the decode loop stopped by emitting an end-of-turn token,
+    /// `"maxTokens"` if it ran to the generation cap. Determined by
+    /// comparing `result.tokens.count` to the requested `maxTokens` —
+    /// `MLXLMCommon.generate` doesn't surface a structured stop reason.
+    public let stopReason: String
+    /// Words generated per second — `wordCount(text) / generateTime`.
+    /// Distinct from `tokensPerSecond` (sub-word BPE tokens) because the
+    /// ratio of tokens to words varies by tokenizer and output language.
+    public let wordsPerSecond: Double
+    /// Longest short-period n-gram loop found in the output (period 1-3).
+    /// `period = 0, repeatCount = 1` means no loop detected. See
+    /// `maxRepeatedNGram` below.
+    public let decoderLoopPeriod: Int
+    public let decoderLoopRepeatCount: Int
+    /// `true` if the generated text begins with a substantial prefix of the
+    /// prompt — a known failure mode where the model echoes input instead of
+    /// producing a response.
+    public let promptEchoDetected: Bool
+
+    public init(
+        text: String,
+        promptTime: TimeInterval,
+        generateTime: TimeInterval,
+        tokensPerSecond: Double,
+        stopReason: String = "unknown",
+        wordsPerSecond: Double = 0,
+        decoderLoopPeriod: Int = 0,
+        decoderLoopRepeatCount: Int = 1,
+        promptEchoDetected: Bool = false
+    ) {
+        self.text = text
+        self.promptTime = promptTime
+        self.generateTime = generateTime
+        self.tokensPerSecond = tokensPerSecond
+        self.stopReason = stopReason
+        self.wordsPerSecond = wordsPerSecond
+        self.decoderLoopPeriod = decoderLoopPeriod
+        self.decoderLoopRepeatCount = decoderLoopRepeatCount
+        self.promptEchoDetected = promptEchoDetected
+    }
 }
 
 /// MLX-Swift-backed next-word predictor.
@@ -185,10 +229,11 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
     /// fields `GenerateResult` already computes (`promptTime`,
     /// `generateTime`, `tokensPerSecond`) instead of discarding them after
     /// extracting `.output`. `generate` (the `TextGenerating` conformance
-    /// `DialecticEngine` calls) delegates to this; `MLXInitProbe` is the
-    /// other caller, for probe/benchmark metrics — kept `internal` since
-    /// both live in this module and nothing outside `BCILLM` needs it.
-    func generateDetailed(
+    /// `DialecticEngine` calls) delegates to this; `MLXInitProbe` and
+    /// `GenerationEval` are the other callers, for probe/benchmark metrics
+    /// — `public` so `GenerationEval` (a separate executable target) can
+    /// call it directly against an already-loaded predictor.
+    public func generateDetailed(
         prompt: String,
         maxTokens: Int,
         temperature: Double,
@@ -213,16 +258,32 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
                 input: input, parameters: params, context: ctx
             ) { _ in .more }
             Self.logGenerationDiagnostics(result: result, maxTokens: maxTokens)
+
+            let trimmedOutput = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            let stoppedAtCap = result.tokens.count >= maxTokens
+            let stopReason = stoppedAtCap ? "maxTokens" : "eos"
+            let wordCount = trimmedOutput.split(whereSeparator: { $0.isWhitespace }).count
+            let wps = result.generateTime > 0
+                ? Double(wordCount) / result.generateTime
+                : 0
+            let (loopPeriod, loopRepeatCount) = Self.maxRepeatedNGram(in: result.output)
+            let echoDetected = Self.detectPromptEcho(prompt: text, output: trimmedOutput)
+
             return GenerationMetrics(
-                text: result.output.trimmingCharacters(in: .whitespacesAndNewlines),
+                text: trimmedOutput,
                 promptTime: result.promptTime,
                 generateTime: result.generateTime,
-                tokensPerSecond: result.tokensPerSecond
+                tokensPerSecond: result.tokensPerSecond,
+                stopReason: stopReason,
+                wordsPerSecond: wps,
+                decoderLoopPeriod: loopPeriod,
+                decoderLoopRepeatCount: loopRepeatCount,
+                promptEchoDetected: echoDetected
             )
         }
     }
     #else
-    func generateDetailed(
+    public func generateDetailed(
         prompt: String,
         maxTokens: Int,
         temperature: Double,
@@ -282,6 +343,32 @@ public actor MLXNextWordPredictor: NextWordPredicting, TokenEmbeddingProviding, 
         // side effect of this bug fix. `cancelled` isn't a reachable stop
         // reason here either: cancellation throws out of `generate` (via
         // `Task.checkCancellation()`) before a `GenerateResult` exists.
+    }
+
+    /// Detects whether the model echoed the prompt back instead of producing
+    /// a response. Checks if the trimmed output starts with a substantial
+    /// prefix of the prompt text (≥ 50% of prompt words, minimum 3 words).
+    /// A known failure mode for small models without proper chat framing.
+    private static func detectPromptEcho(prompt: String, output: String) -> Bool {
+        let promptWords = prompt.lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .map(String.init)
+        let outputWords = output.lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .map(String.init)
+        guard promptWords.count >= 3, outputWords.count >= 3 else { return false }
+
+        // Check if output starts with ≥ 50% of prompt words in order
+        let minMatch = max(3, promptWords.count / 2)
+        var matchCount = 0
+        for i in 0 ..< min(promptWords.count, outputWords.count) {
+            if promptWords[i] == outputWords[i] {
+                matchCount += 1
+            } else {
+                break
+            }
+        }
+        return matchCount >= minMatch
     }
 
     /// Longest short-period decoding loop found in `text` — a short word

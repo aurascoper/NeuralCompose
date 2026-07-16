@@ -38,6 +38,7 @@ let package = Package(
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
         .executable(name: "MLXProbe", targets: ["MLXProbe"]),
         .executable(name: "SpectralProbe", targets: ["SpectralProbe"]),
+        .executable(name: "GenerationEval", targets: ["GenerationEval"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -186,6 +187,23 @@ let package = Package(
             name: "SpectralProbe",
             dependencies: ["BCILLM"],
             path: "Sources/SpectralProbe",
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── Generation evaluation harness ──────────────────────────────────
+        // Sibling executable, same shape as EmbeddingBench/SemanticEval:
+        // runs several MLX text-generation candidates (Evaluation/corpora/
+        // generation_eval_candidates_v1.json) against a shared prompt corpus
+        // (generation_eval_prompts_v1.json), emitting raw evidence
+        // (Evaluation/<date>-generation-eval/data.json) plus a
+        // scoring-template.csv for the dimensions that don't have a
+        // reliable automatic score. BCIClassifier is only for the optional
+        // CoreMLSentenceEmbedder meaning-preservation scorer, same reason
+        // EmbeddingBench/SemanticEval depend on it.
+        .executableTarget(
+            name: "GenerationEval",
+            dependencies: ["BCILLM", "BCICore", "BCIClassifier"],
+            path: "Sources/GenerationEval",
             swiftSettings: strictConcurrency
         ),
 
