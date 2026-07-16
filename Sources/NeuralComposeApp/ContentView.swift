@@ -39,6 +39,7 @@ struct ContentView: View {
             PrivacyIndicatorView(
                 mode: viewModel.pipelineMode,
                 lastError: viewModel.lastError,
+                startupWarning: viewModel.startupWarning,
                 signalQuality: viewModel.signalQuality,
                 isReconnecting: viewModel.isReconnecting,
                 isDictating: viewModel.isDictating,

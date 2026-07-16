@@ -48,7 +48,22 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var isPredicting: Bool = false
     @Published public private(set) var lastCommittedWord: String?
     @Published public private(set) var pipelineMode: PipelineMode
+    /// Reserved for genuine *live* pipeline failures (EEG stream drops,
+    /// calibration/Track-B start failures, etc.) — never populated from
+    /// one-time startup substitution notices. See `startupWarning` for
+    /// those. `PrivacyIndicatorView` keys its red "hard error" severity off
+    /// this field specifically, so it must stay narrow.
     @Published public private(set) var lastError: String?
+    /// One-time notice from container resolution when the classifier or
+    /// predictor fell back to a stand-in at startup (e.g. MLX weights
+    /// present but unusable in this build, so the stub predictor is in
+    /// use). Kept separate from `lastError` for the same
+    /// separation-of-concerns reason `voiceWarning`/`commandWarning`/
+    /// `refinementWarning` are each their own field: a correctly-handled
+    /// stand-in is not a live pipeline health signal, and conflating the
+    /// two made `PrivacyIndicatorView` show a red "Degraded" banner for a
+    /// case its own doc comment defines as the amber "stand-in" tier.
+    @Published public private(set) var startupWarning: String?
     @Published public private(set) var metricsSnapshot: MetricsCollector.Snapshot
     @Published public var computeMode: ClassifierComputeMode
     @Published public private(set) var isRunning: Bool = false
@@ -207,9 +222,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.smoother = IntentSmoother(config: container.smootherConfig)
         self.metricsSnapshot = container.metrics.snapshot()
         if let w = container.classifierResolved.warning {
-            self.lastError = w
+            self.startupWarning = w
         } else if let w = container.predictorResolved.warning {
-            self.lastError = w
+            self.startupWarning = w
         }
         if let w = container.voiceOutputResolved.warning {
             self.voiceWarning = w

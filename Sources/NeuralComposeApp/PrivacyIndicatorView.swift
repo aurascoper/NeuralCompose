@@ -7,6 +7,11 @@ import BCICore
 struct PrivacyIndicatorView: View {
     let mode: PipelineMode
     let lastError: String?
+    /// One-time startup substitution notice (classifier/predictor fell back
+    /// at launch) — informational, not a live pipeline failure. Shown with
+    /// a neutral icon, distinct from `lastError`'s alarm styling, and never
+    /// factors into `statusColor`/`statusTitle`.
+    var startupWarning: String? = nil
     var signalQuality: SignalQuality? = nil
     var isReconnecting: Bool = false
     var isDictating: Bool = false
@@ -103,6 +108,13 @@ struct PrivacyIndicatorView: View {
                     }
                 }
                 .font(.caption)
+
+                if let warning = startupWarning {
+                    Divider().padding(.vertical, 2)
+                    Label(warning, systemImage: "info.circle")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
 
                 if let err = lastError {
                     Divider().padding(.vertical, 2)
