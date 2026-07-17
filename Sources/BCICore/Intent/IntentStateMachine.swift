@@ -1,19 +1,24 @@
 import Foundation
 
-/// Application-level intent FSM. Maps `SmoothedIntent` events plus the
-/// carousel tick to one of three application actions:
+/// Application-level intent FSM. Maps `SmoothedIntent` events to one of
+/// three application actions:
 ///
 ///   • `.advanceHighlight`  — move the highlight one slot in the carousel.
 ///   • `.commitActive`      — append the currently-highlighted token, request
 ///                            new predictions.
 ///   • `.noop`               — wait, don't change anything.
 ///
+/// Advancing is purely gesture-driven (`.smoothed(.advance)`); `.timerTick`
+/// is *not* an independent advance source — see its case below. Selection is
+/// dwell-based (`IntentSmoother` fires `.selectActive` from sustained
+/// `.rest`, not a distinct gesture), so there is no "auto-tick vs. gesture"
+/// race to arbitrate here the way an earlier, timer-driven-advance design
+/// would have needed.
+///
 /// Why an FSM rather than free-form logic:
 ///   • Selection should *not* fire mid-prediction while the LLM is still
 ///     producing candidates — we want to ignore selectActive while in
 ///     `.predicting`.
-///   • Advance should be ignored during the auto-tick grace period so the
-///     UI doesn't appear jittery — the user's intent compete with the timer.
 public struct IntentStateMachine: Sendable {
 
     public enum State: Sendable, Hashable {
@@ -57,8 +62,17 @@ public struct IntentStateMachine: Sendable {
             return .noop
 
         // ── showing candidates ───────────────────────────────────────────
+        // `.timerTick` no longer auto-advances: a blind fixed-interval
+        // cycle would move the highlight off a candidate before the
+        // multi-second dwell period `IntentSmoother` needs to confirm
+        // .selectActive could ever complete. Advancing is now exclusively
+        // gesture-driven via .smoothed(.advance) below. Kept as an explicit
+        // case (not folded into the .idle/.predictionsRequested/
+        // .predictionsReady noop case below) so a future reader sees the
+        // reasoning at the exact spot where the old behavior lived, not
+        // just absence of a case.
         case (.showingCandidates, .timerTick):
-            return .advanceHighlight
+            return .noop
 
         case (.showingCandidates, .smoothed(.advance)):
             return .advanceHighlight

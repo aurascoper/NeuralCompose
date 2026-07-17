@@ -15,7 +15,7 @@ final class IntentSmootherTests: XCTestCase {
 
     func testSingleHitDoesNotActivate() async {
         let s = IntentSmoother(config: .init(
-            historySize: 5, activationCount: 3, selectActivationCount: 4, minConfidence: 0.5, refractoryWindows: 4
+            historySize: 5, activationCount: 3, dwellActivationCount: 4, minConfidence: 0.5, refractoryWindows: 4
         ))
         let out = await s.ingest(pred(.jawClench))
         XCTAssertEqual(out, .idle)
@@ -23,7 +23,7 @@ final class IntentSmootherTests: XCTestCase {
 
     func testRepeatedJawClenchAdvances() async {
         let s = IntentSmoother(config: .init(
-            historySize: 5, activationCount: 3, selectActivationCount: 4, minConfidence: 0.5, refractoryWindows: 4
+            historySize: 5, activationCount: 3, dwellActivationCount: 4, minConfidence: 0.5, refractoryWindows: 4
         ))
         _ = await s.ingest(pred(.jawClench))
         _ = await s.ingest(pred(.jawClench))
@@ -31,18 +31,31 @@ final class IntentSmootherTests: XCTestCase {
         XCTAssertEqual(third, .advance)
     }
 
-    func testHigherBarForSelect() async {
+    func testHigherBarForDwellSelect() async {
         let s = IntentSmoother(config: .init(
-            historySize: 5, activationCount: 3, selectActivationCount: 4, minConfidence: 0.5, refractoryWindows: 6
+            historySize: 5, activationCount: 3, dwellActivationCount: 4, minConfidence: 0.5, refractoryWindows: 6
         ))
-        // 3 selects → still advance bar but not select bar.
-        for _ in 0..<3 { _ = await s.ingest(pred(.select)) }
-        // 4th select → triggers selectActive.
-        let fourth = await s.ingest(pred(.select))
+        // 3 rest windows → still under the dwell bar.
+        for _ in 0..<3 { _ = await s.ingest(pred(.rest)) }
+        // 4th consecutive rest window → sustained dwell triggers selectActive.
+        let fourth = await s.ingest(pred(.rest))
         XCTAssertEqual(fourth, .selectActive)
         // Next call is in refractory → idle.
-        let next = await s.ingest(pred(.select))
+        let next = await s.ingest(pred(.rest))
         XCTAssertEqual(next, .idle)
+    }
+
+    /// `.select` is a real model output class (the trained classifier still
+    /// has 5 output logits) but is deliberately inert at the smoothing
+    /// layer post-redesign — dwell-based rest replaced it as the commit
+    /// trigger, and it must not silently also drive advance.
+    func testSelectClassNeverTriggersAnything() async {
+        let s = IntentSmoother(config: .init(
+            historySize: 5, activationCount: 3, dwellActivationCount: 4, minConfidence: 0.5, refractoryWindows: 6
+        ))
+        var last: SmoothedIntent = .idle
+        for _ in 0..<8 { last = await s.ingest(pred(.select, 0.95)) }
+        XCTAssertEqual(last, .idle, "sustained .select predictions must not trigger selectActive or advance")
     }
 
     func testAlternatingClassesDoNotAdvance() async {
@@ -50,7 +63,7 @@ final class IntentSmootherTests: XCTestCase {
         // No single class crosses activationCount=3, so the smoother must
         // remain idle even though *some* non-rest intent fires every window.
         let s = IntentSmoother(config: .init(
-            historySize: 6, activationCount: 3, selectActivationCount: 4, minConfidence: 0.5, refractoryWindows: 4
+            historySize: 6, activationCount: 3, dwellActivationCount: 4, minConfidence: 0.5, refractoryWindows: 4
         ))
         let cycle: [IntentClass] = [.jawClench, .singleBlink, .doubleBlink, .jawClench, .singleBlink, .doubleBlink]
         var last: SmoothedIntent = .idle
@@ -62,7 +75,7 @@ final class IntentSmootherTests: XCTestCase {
 
     func testLowConfidenceIsDiscarded() async {
         let s = IntentSmoother(config: .init(
-            historySize: 5, activationCount: 3, selectActivationCount: 4, minConfidence: 0.7, refractoryWindows: 4
+            historySize: 5, activationCount: 3, dwellActivationCount: 4, minConfidence: 0.7, refractoryWindows: 4
         ))
         for _ in 0..<5 { _ = await s.ingest(pred(.jawClench, 0.4)) }
         let final = await s.ingest(pred(.jawClench, 0.4))

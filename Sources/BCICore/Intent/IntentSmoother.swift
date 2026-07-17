@@ -6,15 +6,26 @@ import Foundation
 ///   • Per-window classifier output is noisy. The user is not going to clench
 ///     for exactly one window then stop.
 ///   • We want hysteresis between "advance" and "selectActive" so a single
-///     spurious select prediction doesn't trigger a token commit.
+///     spurious reading doesn't trigger a token commit.
+///
+/// Selection is **dwell-based**, not a distinct trained gesture: sustained
+/// `.rest` classification while a candidate is highlighted is what commits
+/// it. Replaces an earlier design where a separate `select` `IntentClass`
+/// drove commit — found live (2026-07-17) to have no defined physical
+/// gesture behind it, unlike jawClench/singleBlink/doubleBlink, which
+/// already fully cover advancing. `.select` predictions are still accepted
+/// from the classifier (the trained model still has 5 output classes) but
+/// are deliberately treated as ordinary non-advancing signal — they don't
+/// drive the FSM at all anymore.
 ///
 /// Strategy:
 ///   • Maintain a ring of the last `historySize` predictions.
 ///   • For each candidate class, compute count + **average confidence** over
 ///     all predictions in the ring for that class.
 ///   • An intent is *active* iff its count ≥ activation bar AND its
-///     averaged confidence ≥ `minConfidence`. A select requires a higher
-///     activation count than an advance.
+///     averaged confidence ≥ `minConfidence`. Dwell-select requires a higher
+///     activation count than an advance — deliberately staying still for
+///     longer than a single incidental pause between gestures.
 ///   • Advance requires a *single* class to cross `activationCount` —
 ///     alternating noisy classes (jaw → blink → jaw → blink) do not fire.
 ///   • After firing `selectActive`, enter a refractory period during which
@@ -24,20 +35,26 @@ public actor IntentSmoother {
     public struct Config: Sendable {
         public var historySize: Int
         public var activationCount: Int
-        public var selectActivationCount: Int
+        /// Consecutive-rest bar for dwell-select — deliberately higher than
+        /// `activationCount` so an ordinary pause between advance gestures
+        /// doesn't read as "commit this word." Tune against real
+        /// false-positive/false-negative rates, not by guessing; starts at
+        /// the same value as the gesture-based bar it replaced rather than
+        /// assuming dwelling is easier to hold and shortening it blind.
+        public var dwellActivationCount: Int
         public var minConfidence: Float
         public var refractoryWindows: Int
 
         public init(
             historySize: Int = 5,
             activationCount: Int = 3,
-            selectActivationCount: Int = 4,
+            dwellActivationCount: Int = 4,
             minConfidence: Float = 0.55,
             refractoryWindows: Int = 6
         ) {
             self.historySize = historySize
             self.activationCount = activationCount
-            self.selectActivationCount = selectActivationCount
+            self.dwellActivationCount = dwellActivationCount
             self.minConfidence = minConfidence
             self.refractoryWindows = refractoryWindows
         }
@@ -78,15 +95,19 @@ public actor IntentSmoother {
             return avg >= config.minConfidence
         }
 
-        // Prefer .select if it crosses its higher bar.
-        if let s = totals[.select], meetsBar(s, threshold: config.selectActivationCount) {
+        // Dwell-select: sustained .rest crossing its higher bar. Checked
+        // before advance so a candidate the user has settled on (gone still)
+        // commits rather than getting reinterpreted as noise.
+        if let r = totals[.rest], meetsBar(r, threshold: config.dwellActivationCount) {
             refractoryRemaining = config.refractoryWindows
             return .selectActive
         }
 
-        // Advance: a *single* non-rest, non-select class crosses
-        // activationCount with sufficient averaged confidence. We do not sum
-        // counts across classes — alternating noise must not fire.
+        // Advance: a *single* non-rest class crosses activationCount with
+        // sufficient averaged confidence. We do not sum counts across
+        // classes — alternating noise must not fire. `.select` is
+        // deliberately excluded here too, not just from the dwell check
+        // above — see the type doc comment.
         let advanceCandidates: [IntentClass] = [.jawClench, .singleBlink, .doubleBlink]
         for c in advanceCandidates {
             if let entry = totals[c], meetsBar(entry, threshold: config.activationCount) {
