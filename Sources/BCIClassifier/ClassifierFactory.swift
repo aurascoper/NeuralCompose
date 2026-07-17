@@ -24,7 +24,18 @@ public enum ClassifierFactory {
         computeMode: ClassifierComputeMode = .cpuAndNeuralEngine,
         modelPath: String? = nil
     ) -> Resolved {
-        let path = modelPath ?? Self.resolvePath()
+        // `defaultModelPath`/`defaultPackagePath` are relative to the
+        // process's current working directory — true when launched from a
+        // Terminal already `cd`'d into the repo (run-synthetic.sh,
+        // run-calibration.sh), but a GUI-launched `.app` bundle (`open`,
+        // required for BLE/TCC — see run-muse-s.sh's doc comment) gets CWD
+        // `/`, silently resolving to nothing and falling back to mock.
+        // `NEURALCOMPOSE_CLASSIFIER_MODEL` (absolute path) mirrors
+        // `PredictorFactory`'s `NEURALCOMPOSE_MLX_MODEL` override for the
+        // same reason.
+        let path = modelPath
+            ?? ProcessInfo.processInfo.environment["NEURALCOMPOSE_CLASSIFIER_MODEL"]
+            ?? Self.resolvePath()
         let url = URL(fileURLWithPath: path)
         if FileManager.default.fileExists(atPath: url.path) {
             do {
