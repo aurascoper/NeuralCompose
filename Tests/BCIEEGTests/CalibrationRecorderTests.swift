@@ -5,10 +5,9 @@ import XCTest
 /// Covers `CalibrationRecorder.recordTransportEvent(_:at:detail:)` —
 /// the metadata-logging half of the mid-session-disconnect watchdog
 /// fix (the other half is `EEGChannelHealthProvider`'s `.stale`
-/// support; see `EEGChannelHealthProviderTests`). Does not attempt to
-/// exercise the recorder's pre-existing sample/window/label recording
-/// path, which has no dedicated test coverage of its own yet and is
-/// out of scope for this change.
+/// support; see `EEGChannelHealthProviderTests`) — plus the sticky-label
+/// live-backfill regression added 2026-07-17 below. Window/label
+/// recording had no dedicated test coverage before that.
 final class CalibrationRecorderTests: XCTestCase {
 
     private func makeTempDirectory() throws -> URL {
@@ -95,7 +94,56 @@ final class CalibrationRecorderTests: XCTestCase {
         XCTAssertTrue(csv[4].contains(",fellBackToSynthetic,"))
     }
 
+    /// Regression for the bug found during the first real calibration
+    /// session (2026-07-17): a long, uninterrupted sticky hold (e.g. a
+    /// single 30s "rest" press-and-hold) starved almost all its windows to
+    /// "none" because `startStickyLabel` creates the event with
+    /// `tEnd == tStart`, and nothing updated `tEnd` while the hold was
+    /// still in progress — only `endStickyLabel`, called when the *next*
+    /// label starts, backfilled it. Short, frequently-tapped gestures
+    /// (jaw-clench "tap 20x, 1-2s apart") were fine because each tap's
+    /// `startStickyLabel` call itself invokes `endStickyLabel` first,
+    /// backfilling the *previous* tap every couple of seconds — only a
+    /// single long hold with no intervening taps exposed this.
+    func testWindowsRecordedDuringOngoingStickyHoldResolveToThatLabelNotNone() async throws {
+        let recorder = CalibrationRecorder()
+        let dir = try makeTempDirectory()
+        try await recorder.beginSession(to: dir, profile: .synthetic)
+
+        await recorder.startStickyLabel(.rest, at: 0.0)
+
+        // Simulate a 10s hold: windows arriving every 1s (matching the real
+        // 2s-window/1s-stride convention), all recorded *while the sticky
+        // is still active* — mirrors windows landing mid-hold in a real
+        // 30s+ rest block, well before the user releases [r].
+        for endTimestamp in stride(from: 2.0, through: 10.0, by: 1.0) {
+            let window = EEGWindow(
+                samples: [[0, 0]], sampleRate: 1.0, endTimestamp: endTimestamp, sequence: UInt64(endTimestamp)
+            )
+            await recorder.recordWindow(window)
+        }
+
+        await recorder.endStickyLabel(at: 11.0)
+        await recorder.finishSession()
+
+        let labels = try await readLabelsCSV(sessionDir: dir, recorder: recorder)
+        let dataRows = labels.dropFirst() // drop header
+        XCTAssertEqual(dataRows.count, 9, "one row per recordWindow call")
+        let noneRows = dataRows.filter { $0.contains(",none,") }
+        XCTAssertTrue(noneRows.isEmpty, "windows recorded mid-hold must resolve to \"rest\", not \"none\" — got: \(dataRows)")
+        for row in dataRows {
+            XCTAssertTrue(row.contains(",rest,"), "expected every mid-hold window labeled rest, got: \(row)")
+        }
+    }
+
     // MARK: - Helpers
+
+    private func readLabelsCSV(sessionDir: URL, recorder: CalibrationRecorder) async throws -> [String] {
+        let sessionID = await recorder.sessionID
+        let url = sessionDir.appendingPathComponent(sessionID).appendingPathComponent("labels.csv")
+        let contents = try String(contentsOf: url, encoding: .utf8)
+        return contents.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+    }
 
     private func readMetadata(sessionDir: URL, recorder: CalibrationRecorder) async throws -> [String: Any] {
         let sessionID = await recorder.sessionID
