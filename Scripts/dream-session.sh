@@ -43,6 +43,11 @@ echo "-- preflight --"
 echo ""
 
 mkdir -p "$NIGHT_DIR"
+# Birth time of the night dir, used later to find the calibration_* dir this
+# session's EEG actually landed in (CalibrationRecorder can't be told to
+# write into NIGHT_DIR — see step 6). Captured now, before telemetry starts
+# repeatedly touching files inside NIGHT_DIR and moving its mtime forward.
+NIGHT_DIR_EPOCH=$(stat -f %B "$NIGHT_DIR")
 
 # start_guarded <pidfile> <human-name> <command...>
 #   backgrounds a command with nohup+disown, skipping if its pidfile is live.
@@ -64,23 +69,38 @@ start_guarded() {
     echo "  started $name (pid $pid)"
 }
 
-# 2. Keep the Mac awake — a 6.5 h capture dies if the system sleeps.
-echo "-- keep-awake + telemetry --"
+# 2. Keep the Mac awake — a 6.5 h capture dies if the system sleeps. Safe to
+#    start immediately: caffeinate doesn't care whether the app is running yet.
+echo "-- keep-awake --"
 start_guarded "$NIGHT_DIR/.caffeinate.pid" "caffeinate" caffeinate -dis
+echo ""
 
-# 3. Engineering telemetry for the night (system metrics 1/min).
+# 3. The one thing the wrapper cannot do for you.
+cat <<EOF
+-- START THE RECORDING NOW --
+  Put on the Muse S, then start the app and begin recording:
+    (see Scripts/run-muse-s.sh; the wrapper can't drive BLE/UI). The app
+    writes its own calibration_<timestamp>_<profile> session dir under
+    $RECORDINGS_BASE — step 6 below links tonight's into $NIGHT_DIR/eeg_session.
+
+EOF
+if [[ "$DRY_RUN" -eq 0 ]]; then
+    # `|| true` guards against non-interactive stdin (EOF makes `read` exit
+    # non-zero, which set -e would otherwise treat as a hard failure here).
+    read -r -p "Press Enter once the app shows it is recording... " _ || true
+else
+    echo "  [dry-run] would wait here for Enter"
+fi
+echo ""
+
+# 4. Engineering telemetry for the night (system metrics 1/min). Started only
+#    now, after the app is confirmed running — starting it earlier meant its
+#    first tick always found no "NeuralCompose" process yet (rss_mb=None),
+#    which used to crash the watcher (see overnight-telemetry.py's _fmt fix).
+echo "-- telemetry --"
 start_guarded "$NIGHT_DIR/.telemetry.pid" "telemetry" \
     "$PY" "$REPO_ROOT/Scripts/overnight-telemetry.py" --night-dir "$NIGHT_DIR"
 echo ""
-
-# 4. The one thing the wrapper cannot do for you.
-cat <<EOF
--- START THE RECORDING NOW --
-  Put on the Muse S, then start the app recording into the night dir:
-    $NIGHT_DIR
-  (see Scripts/run-muse-s.sh; the wrapper can't drive BLE/UI). Then continue below.
-
-EOF
 
 # 5. Blink-tag cue helper (foreground) — writes protocol-<ts>.json into the night dir.
 echo "-- protocol cue helper --"
@@ -88,6 +108,35 @@ PROTOCOL_ARGS=(--out-dir "$NIGHT_DIR")
 [[ ${#SEGMENTS[@]} -gt 0 ]] && PROTOCOL_ARGS+=(--segments "${SEGMENTS[@]}")
 [[ "$DRY_RUN" -eq 1 ]] && PROTOCOL_ARGS+=(--dry-run)
 "$PY" "$REPO_ROOT/Scripts/run-session-protocol.py" "${PROTOCOL_ARGS[@]}"
+echo ""
+
+# 6. Resolve which calibration_* dir this night's EEG actually landed in and
+#    link it into NIGHT_DIR. Pick the largest (by disk usage) calibration_*
+#    dir born at/after NIGHT_DIR — largest as a proxy for "the real overnight
+#    session" rather than an aborted test recording.
+echo "-- resolving EEG session dir --"
+if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "  [dry-run] would search for calibration_* dirs born at/after $NIGHT_DIR"
+else
+    EEG_DIR="" BEST_SIZE=-1
+    for cand in "$RECORDINGS_BASE"/calibration_*; do
+        [[ -d "$cand" ]] || continue
+        cand_epoch=$(stat -f %B "$cand" 2>/dev/null) || continue
+        (( cand_epoch < NIGHT_DIR_EPOCH )) && continue
+        size=$(du -sk "$cand" 2>/dev/null | cut -f1)
+        [[ -z "$size" ]] && size=0
+        if (( size > BEST_SIZE )); then
+            BEST_SIZE=$size
+            EEG_DIR="$cand"
+        fi
+    done
+    if [[ -n "$EEG_DIR" ]]; then
+        ln -sfn "$EEG_DIR" "$NIGHT_DIR/eeg_session"
+        echo "  linked $NIGHT_DIR/eeg_session -> $EEG_DIR"
+    else
+        echo "  ⚠ no calibration_* dir born after $NIGHT_DIR found — was the app recording ever started?"
+    fi
+fi
 
 echo ""
 echo "=== active split tagged. Telemetry + keep-awake keep running overnight. ==="

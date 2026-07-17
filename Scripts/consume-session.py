@@ -49,9 +49,17 @@ def _load_analyzer():
 
 # ── Marker recovery + segmentation ───────────────────────────────────────
 
-def cluster_blink_bursts(blink_events: list[dict], min_blinks: int = 4,
+def cluster_blink_bursts(blink_events: list[dict], tag_blinks: int = 5, tolerance: int = 1,
                          max_gap_s: float = 2.0) -> list[dict]:
-    """Cluster consecutive detected blinks into 'tag' bursts (>= min_blinks)."""
+    """Cluster consecutive detected blinks into 'tag' bursts of size tag_blinks +/- tolerance.
+
+    Bursts outside that band are ordinary blinking/eye movement, not a deliberate
+    tag, and must NOT become a segment boundary. A prior version accepted any
+    burst >= a loose min_blinks floor with no upper bound; a single 76s run of 209
+    consecutive blinks (normal eye movement between deliberate tags) was accepted
+    as a marker and silently truncated every downstream segment to a few seconds
+    (see project_overnight_capture_pipeline_broken memory, 2026-07-16 session).
+    """
     if not blink_events:
         return []
     events = sorted(blink_events, key=lambda e: e["start_s"])
@@ -65,7 +73,7 @@ def cluster_blink_bursts(blink_events: list[dict], min_blinks: int = 4,
     bursts.append(cur)
     markers = []
     for b in bursts:
-        if len(b) >= min_blinks:
+        if abs(len(b) - tag_blinks) <= tolerance:
             markers.append({
                 "n_blinks": len(b),
                 "start_s": float(b[0]["start_s"]),
@@ -76,13 +84,25 @@ def cluster_blink_bursts(blink_events: list[dict], min_blinks: int = 4,
 
 
 def segment_from_markers(markers: list[dict], labels: list[str], total_s: float) -> list[dict]:
-    """Each marker precedes a labeled segment; segment i spans marker[i] → marker[i+1]."""
+    """Each marker precedes a labeled segment; segment i spans marker[i] → marker[i+1].
+
+    The *last* labeled segment always runs to total_s, even if extra marker-shaped
+    bursts were detected after it. Those trailing bursts are not another intentional
+    cue (there's no label left to assign them to) — most likely ordinary blinking/eye
+    movement during sleep. Previously the lookahead used markers[i+1] whenever it
+    existed at all, so a single stray post-tag burst silently truncated the final
+    segment (observed: "sleep" cut to 68s of 3300+ available seconds because a
+    same-shaped burst landed 69s after the tag) — see
+    project_overnight_capture_pipeline_broken memory.
+    """
     segs = []
     for i, label in enumerate(labels):
         if i >= len(markers):
             break
         start = markers[i]["end_s"]
-        end = markers[i + 1]["start_s"] if i + 1 < len(markers) else total_s
+        is_last_label = i + 1 >= len(labels)
+        end = total_s if is_last_label else (
+            markers[i + 1]["start_s"] if i + 1 < len(markers) else total_s)
         if end > start:
             segs.append({"label": label, "start_s": start, "end_s": end})
     return segs
@@ -287,16 +307,21 @@ def _sleep_review(df, channels, fs, segments, epoch_s, ana):
 
 def review_session(df, channels, fs, *, labels, protocol_log=None, do_active=True,
                    do_sleep=True, model_dir=DEFAULT_MODEL_DIR, window_s=2.0,
-                   stride_s=1.0, epoch_s=30.0) -> dict:
+                   stride_s=1.0, epoch_s=30.0, tag_blinks=5, tag_tolerance=1) -> dict:
     ana = _load_analyzer()
     total_s = len(df) / fs
     t_rel = np.arange(len(df)) / fs
 
     df_sub, sub_events = substitute_bad_channels(df.copy(), channels, fs)
 
+    # Prefer the protocol log's own recorded tag_blinks over the CLI default —
+    # it's the value actually cued to the user for this specific session.
+    if protocol_log is not None and "tag_blinks" in protocol_log:
+        tag_blinks = protocol_log["tag_blinks"]
+
     clip = ana.detect_clipping(df_sub, channels, t_rel)
     blinks = ana.detect_blinks(df_sub, channels, fs, t_rel, clip["pct_by_channel"])
-    markers = cluster_blink_bursts(blinks)
+    markers = cluster_blink_bursts(blinks, tag_blinks=tag_blinks, tolerance=tag_tolerance)
     segments = segment_from_markers(markers, labels, total_s) if markers else []
 
     review = {
@@ -359,6 +384,10 @@ def main() -> None:
     ap.add_argument("--sleep-timeline", action="store_true", help="Part 2 only")
     ap.add_argument("--model-dir", default=DEFAULT_MODEL_DIR)
     ap.add_argument("--epoch-s", type=float, default=30.0)
+    ap.add_argument("--tag-blinks", type=int, default=5,
+                    help="expected blink-tag burst size (overridden by --protocol's own value)")
+    ap.add_argument("--tag-tolerance", type=int, default=1,
+                    help="+/- slack when matching a detected burst to --tag-blinks")
     ap.add_argument("--out", type=Path, default=None, help="session-review.json path (default: next to input)")
     args = ap.parse_args()
 
@@ -371,7 +400,8 @@ def main() -> None:
 
     review = review_session(df, channels, fs, labels=args.labels, protocol_log=protocol_log,
                             do_active=do_active, do_sleep=do_sleep, model_dir=args.model_dir,
-                            epoch_s=args.epoch_s)
+                            epoch_s=args.epoch_s, tag_blinks=args.tag_blinks,
+                            tag_tolerance=args.tag_tolerance)
     _print_summary(review)
 
     out_path = args.out or (args.input.parent if args.input.is_file() else args.input) / "session-review.json"
