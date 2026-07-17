@@ -109,9 +109,13 @@ specific tasks (files, PRs, tests) live in GitHub Issues.
   pipeline)
 
 ### Cross-cutting
-- `□` Initial ADR set in `docs/architecture/decision-log/`
-  (ADR-001 through ADR-004 cover the major decisions made to date)
-- `□` `docs/architecture/PRINCIPLES.md` — engineering values that
+- `✓` Initial ADR set in `docs/architecture/decision-log/` (ADR-001
+  through ADR-005; note ADR-004 is currently double-assigned —
+  `ADR-004-privacy-first-acquisition.md` and
+  `ADR-004-sentence-embedder-backend-contract.md` both claim that
+  number, worth a rename/renumber pass since other docs may already
+  reference them by filename)
+- `✓` `docs/architecture/PRINCIPLES.md` — engineering values that
   govern how new work is integrated
 - `□` Layered architecture diagram in the main README
 
