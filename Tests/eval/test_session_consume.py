@@ -126,6 +126,60 @@ def test_segment_from_markers_warns_on_marker_shortfall():
         "the label shortfall must now be printed, not silent"
 
 
+def test_segment_from_protocol():
+    # Protocol cue times are Unix epoch; t0 is the first EEG sample's t_seconds.
+    # Segmentation must convert to the recording-relative axis and run each
+    # segment to the next cue (last to total_s).
+    t0 = 1.783e9
+    protocol = {"segments": [
+        {"label": "focus", "start_unix": t0 + 5.0},
+        {"label": "drowsy", "start_unix": t0 + 65.0},
+        {"label": "sleep", "start_unix": t0 + 125.0},
+    ]}
+    segs = csm.segment_from_protocol(protocol, total_s=200.0, t0=t0, min_segment_s=10.0)
+    assert [s["label"] for s in segs] == ["focus", "drowsy", "sleep"]
+    assert segs[0]["start_s"] == 5.0 and segs[0]["end_s"] == 65.0    # cue → next cue
+    assert segs[2]["end_s"] == 200.0                                  # last runs to total_s
+
+
+def test_segment_from_protocol_drops_short():
+    # A segment spans its own cue → the NEXT cue, so "blip" (55s→58s) is the 3s
+    # sliver that must be dropped; focus (5→55) and drowsy (58→end) survive.
+    t0 = 1.783e9
+    protocol = {"segments": [
+        {"label": "focus", "start_unix": t0 + 5.0},
+        {"label": "blip", "start_unix": t0 + 55.0},     # only 3s wide → dropped
+        {"label": "drowsy", "start_unix": t0 + 58.0},
+    ]}
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        segs = csm.segment_from_protocol(protocol, total_s=200.0, t0=t0, min_segment_s=10.0)
+    assert [s["label"] for s in segs] == ["focus", "drowsy"], "the 3s 'blip' must be dropped"
+    assert "DROPPED" in buf.getvalue() and "blip" in buf.getvalue()
+
+
+def test_review_session_prefers_protocol():
+    # When a protocol log is present, ground-truth cue times win over blink
+    # markers. Regression guard for the 2026-07-18 mis-segmentation where marker
+    # recovery collapsed "focus" to a sliver.
+    df, channels, fs = _make_session()
+    t0 = float(df["t_seconds"].iloc[0])
+    protocol = {"tag_blinks": 5, "segments": [
+        {"label": "focus", "start_unix": t0 + 4.0},
+        {"label": "drowsy", "start_unix": t0 + 20.0},
+        {"label": "sleep", "start_unix": t0 + 35.0},
+    ]}
+    review = csm.review_session(df, channels, fs, labels=["focus", "drowsy", "sleep"],
+                                protocol_log=protocol, do_active=True, do_sleep=True,
+                                model_dir=None, min_segment_s=10.0)
+    assert review["segments_source"] == "protocol"
+    assert [s["label"] for s in review["segments"]] == ["focus", "drowsy", "sleep"]
+    assert abs(review["segments"][0]["start_s"] - 4.0) < 1e-6, "focus starts at the protocol cue"
+    recon = review["protocol_reconciliation"]
+    assert recon["segments_used"] == "protocol"
+    assert len(recon["cue_marker_deltas"]) == 3, "one alignment delta per planned cue"
+
+
 def test_sweep_threshold_separates():
     rng = np.random.default_rng(1)
     focus_vals = list(rng.normal(2.0, 0.2, 40))   # high beta/alpha

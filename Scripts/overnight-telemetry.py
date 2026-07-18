@@ -69,12 +69,35 @@ def get_free_disk_gb(path="/"):
         return None
 
 
+def resolve_recording_dir(night_dir):
+    """Follow the `eeg_session` symlink to the real EEG sink.
+
+    The app writes EEG into a separate `calibration_<ts>_muses/` dir, which
+    dream-session.sh links as `night_dir/eeg_session` — created shortly AFTER
+    telemetry starts, so this must be resolved per tick, not once. pathlib's
+    glob/rglob do NOT descend a symlinked directory, so without following the
+    link both the size and sample counts below stay pinned near zero even though
+    an 80 MB eeg.csv exists one hop away. Mirrors
+    overnight-review.py::find_eeg_session_dir.
+    """
+    if not night_dir:
+        return night_dir
+    link = night_dir / "eeg_session"
+    if link.exists():
+        try:
+            return link.resolve()
+        except OSError:
+            return night_dir
+    return night_dir
+
+
 def get_recording_size_mb(night_dir):
-    """Get total size of the recording directory in MB."""
-    if not night_dir or not night_dir.exists():
+    """Get total size of the actual EEG recording (via the eeg_session sink) in MB."""
+    rec_dir = resolve_recording_dir(night_dir)
+    if not rec_dir or not rec_dir.exists():
         return 0.0
     total = 0
-    for f in night_dir.rglob("*"):
+    for f in rec_dir.rglob("*"):
         if f.is_file():
             try:
                 total += f.stat().st_size
@@ -84,10 +107,11 @@ def get_recording_size_mb(night_dir):
 
 
 def count_samples_csv(night_dir):
-    """Estimate samples received from the largest CSV in the night dir."""
-    if not night_dir or not night_dir.exists():
+    """Estimate samples received from the largest CSV in the recording sink."""
+    rec_dir = resolve_recording_dir(night_dir)
+    if not rec_dir or not rec_dir.exists():
         return 0
-    csvs = sorted(night_dir.glob("*.csv"), key=lambda f: f.stat().st_size if f.exists() else 0, reverse=True)
+    csvs = sorted(rec_dir.rglob("*.csv"), key=lambda f: f.stat().st_size if f.exists() else 0, reverse=True)
     if not csvs:
         return 0
     try:
@@ -144,6 +168,8 @@ def main():
                         help="Logging interval in seconds (default: 60)")
     parser.add_argument("--process-name", type=str, default="NeuralCompose",
                         help="Process name to track (default: NeuralCompose)")
+    parser.add_argument("--stall-ticks", type=int, default=3,
+                        help="flag a recording stall after this many ticks with no new samples while BLE is up")
     args = parser.parse_args()
 
     # Determine night directory
@@ -166,6 +192,8 @@ def main():
     print(f"  Press Ctrl+C to stop.")
     print()
 
+    prev_samples = None
+    flat_ticks = 0
     try:
         while True:
             now = datetime.now(timezone.utc)
@@ -183,6 +211,24 @@ def main():
                 "osc_queue_depth": None,  # populated if app writes it
             }
 
+            # Recording-stall detector: if the EEG CSV stops growing while the
+            # app/BLE is still up, the headset has silently stalled — surface it
+            # rather than logging a flat line for hours. Complements the in-app
+            # stream-stall watchdog (AppViewModel.nextOrStall), which drives live
+            # retry/fallback; this is the out-of-band observer that lands in
+            # metrics.jsonl for overnight-review.
+            # Only a recording that was flowing and then stopped counts as a
+            # stall (samples > 0); "never started" is a different failure that
+            # overnight-review already flags, and gating on it avoids a spurious
+            # stall during the warm-up before the eeg_session symlink appears.
+            samples = entry["samples_received"]
+            if prev_samples is not None and samples <= prev_samples and samples > 0 and entry["ble_connected"]:
+                flat_ticks += 1
+            else:
+                flat_ticks = 0
+            prev_samples = samples
+            entry["recording_stalled"] = flat_ticks >= args.stall_ticks
+
             with open(metrics_path, "a") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
 
@@ -195,6 +241,9 @@ def main():
                   f"Samples={entry['samples_received']:>8d} "
                   f"Rec={entry['recording_size_mb']:>7.1f}MB "
                   f"FSM={entry['fsm_state']}")
+            if entry["recording_stalled"]:
+                print(f"  ⚠ STALL: no new EEG samples for {flat_ticks} ticks "
+                      f"(~{flat_ticks * args.interval}s) while BLE is up — recording may be dead.")
 
             time.sleep(args.interval)
 

@@ -83,7 +83,8 @@ def cluster_blink_bursts(blink_events: list[dict], tag_blinks: int = 5, toleranc
     return markers
 
 
-def segment_from_markers(markers: list[dict], labels: list[str], total_s: float) -> list[dict]:
+def segment_from_markers(markers: list[dict], labels: list[str], total_s: float,
+                         min_segment_s: float = 0.0) -> list[dict]:
     """Each marker precedes a labeled segment; segment i spans marker[i] → marker[i+1].
 
     The *last* labeled segment always runs to total_s, even if extra marker-shaped
@@ -115,8 +116,54 @@ def segment_from_markers(markers: list[dict], labels: list[str], total_s: float)
         is_last_label = i + 1 >= len(labels)
         end = total_s if is_last_label else (
             markers[i + 1]["start_s"] if i + 1 < len(markers) else total_s)
-        if end > start:
-            segs.append({"label": label, "start_s": start, "end_s": end})
+        dur = end - start
+        if dur <= 0:
+            continue
+        if dur < min_segment_s:
+            print(f"  DROPPED marker segment '{label}': {dur:.1f}s < min {min_segment_s:.1f}s "
+                  f"(too short to tune/stage — likely a mis-detected tag boundary).")
+            continue
+        segs.append({"label": label, "start_s": start, "end_s": end})
+    return segs
+
+
+def segment_from_protocol(protocol_log: dict, total_s: float, t0: float,
+                          min_segment_s: float = 0.0) -> list[dict]:
+    """Segment straight from the protocol log's ground-truth cue times.
+
+    The protocol JSON records, per phase, the Unix-epoch ``start_unix`` at which
+    the cue actually fired — authoritative, unlike blink-marker recovery, which
+    mis-segments whenever the detected tag bursts don't line up with the phases
+    (observed 2026-07-18: ``focus`` collapsed to 58s of a planned 600s because
+    two bursts landed 59s apart; see project_overnight_capture_pipeline_broken
+    memory). Each cue's Unix time is converted to the recording-relative second
+    axis via ``t0`` (the first EEG sample's ``t_seconds``), so the emitted
+    ``{label, start_s, end_s}`` dicts match exactly what ``segment_from_markers``
+    produces and the downstream Part 1 / Part 2 reviews consume unchanged.
+
+    Adapted from ``classify-session.py::segment_lookup``, which already treats
+    the protocol log as ground truth. Each segment spans its own cue → the next
+    cue's start (the last runs to ``total_s``). Segments shorter than
+    ``min_segment_s``, or falling outside the recording, are dropped and logged.
+    """
+    bounds = sorted(
+        ((seg["label"], float(seg["start_unix"])) for seg in protocol_log.get("segments", [])
+         if "start_unix" in seg),
+        key=lambda s: s[1],
+    )
+    segs = []
+    for i, (label, start_unix) in enumerate(bounds):
+        start = max(0.0, start_unix - t0)
+        end = total_s if i + 1 >= len(bounds) else min(total_s, bounds[i + 1][1] - t0)
+        dur = end - start
+        if start >= total_s or dur <= 0:
+            print(f"  DROPPED protocol segment '{label}': outside recording "
+                  f"(start_s={start:.1f}, total_s={total_s:.1f}).")
+            continue
+        if dur < min_segment_s:
+            print(f"  DROPPED protocol segment '{label}': {dur:.1f}s < min {min_segment_s:.1f}s.")
+            continue
+        segs.append({"label": label, "start_s": start, "end_s": end})
     return segs
 
 
@@ -319,7 +366,8 @@ def _sleep_review(df, channels, fs, segments, epoch_s, ana):
 
 def review_session(df, channels, fs, *, labels, protocol_log=None, do_active=True,
                    do_sleep=True, model_dir=DEFAULT_MODEL_DIR, window_s=2.0,
-                   stride_s=1.0, epoch_s=30.0, tag_blinks=5, tag_tolerance=1) -> dict:
+                   stride_s=1.0, epoch_s=30.0, tag_blinks=5, tag_tolerance=1,
+                   min_segment_s=0.0) -> dict:
     ana = _load_analyzer()
     total_s = len(df) / fs
     t_rel = np.arange(len(df)) / fs
@@ -331,10 +379,27 @@ def review_session(df, channels, fs, *, labels, protocol_log=None, do_active=Tru
     if protocol_log is not None and "tag_blinks" in protocol_log:
         tag_blinks = protocol_log["tag_blinks"]
 
+    # Unix→relative bridge: the recording's t_seconds is Unix epoch, while
+    # markers/segments live on a recording-relative second axis. t0 makes the
+    # protocol's cue_unix/start_unix comparable to them.
+    t0 = float(df["t_seconds"].iloc[0]) if "t_seconds" in df.columns else None
+
     clip = ana.detect_clipping(df_sub, channels, t_rel)
     blinks = ana.detect_blinks(df_sub, channels, fs, t_rel, clip["pct_by_channel"])
     markers = cluster_blink_bursts(blinks, tag_blinks=tag_blinks, tolerance=tag_tolerance)
-    segments = segment_from_markers(markers, labels, total_s) if markers else []
+
+    # Ground-truth cue times beat blink-marker recovery when both exist: the
+    # protocol log records when each phase actually started, so we segment from
+    # it directly and fall back to markers only when there's no usable protocol
+    # (mirrors the tag_blinks precedence above). See the 2026-07-18 mis-segment
+    # in project_overnight_capture_pipeline_broken memory.
+    planned = protocol_log.get("segments", []) if protocol_log is not None else []
+    if planned and t0 is not None:
+        segments = segment_from_protocol(protocol_log, total_s, t0, min_segment_s)
+        segments_source = "protocol"
+    else:
+        segments = segment_from_markers(markers, labels, total_s, min_segment_s) if markers else []
+        segments_source = "markers"
 
     review = {
         "disclaimer": "Descriptors + sleep stages here are heuristic and UNVALIDATED on this "
@@ -342,14 +407,36 @@ def review_session(df, channels, fs, *, labels, protocol_log=None, do_active=Tru
         "duration_s": round(total_s, 1), "fs": fs, "channels": channels,
         "channel_substitutions": summarize_substitutions(sub_events),
         "n_blinks_detected": len(blinks),
-        "markers": markers, "segments": segments,
+        "markers": markers, "segments": segments, "segments_source": segments_source,
     }
     if protocol_log is not None:
-        planned = protocol_log.get("segments", [])
-        review["protocol_reconciliation"] = {
+        recon = {
+            "segments_used": segments_source,
             "n_markers_detected": len(markers), "n_planned_segments": len(planned),
             "match": len(markers) == len(planned),
         }
+        # Per-cue: how far the nearest detected marker sat from the protocol's
+        # ground-truth cue time (relative seconds). Large deltas are exactly why
+        # marker-based segmentation mis-fires and are worth surfacing even when
+        # we ignored the markers in favor of the protocol.
+        if t0 is not None:
+            deltas = []
+            for seg in planned:
+                if "start_unix" not in seg:
+                    continue
+                cue_rel = float(seg["start_unix"]) - t0
+                if markers:
+                    nearest = min(markers, key=lambda m: abs(m["center_s"] - cue_rel))
+                    deltas.append({
+                        "label": seg.get("label"), "cue_s": round(cue_rel, 1),
+                        "nearest_marker_s": round(nearest["center_s"], 1),
+                        "delta_s": round(nearest["center_s"] - cue_rel, 1),
+                    })
+                else:
+                    deltas.append({"label": seg.get("label"), "cue_s": round(cue_rel, 1),
+                                   "nearest_marker_s": None, "delta_s": None})
+            recon["cue_marker_deltas"] = deltas
+        review["protocol_reconciliation"] = recon
     if do_active and segments:
         review["active_split"] = _active_split_review(df_sub, channels, fs, segments,
                                                       window_s, stride_s, model_dir)
@@ -364,9 +451,16 @@ def _print_summary(review: dict) -> None:
     print("=== Session Review ===")
     print(review["disclaimer"])
     print(f"duration={review['duration_s']}s  fs={review['fs']}Hz  channels={review['channels']}")
-    print(f"blinks detected: {review['n_blinks_detected']}  markers: {len(review['markers'])}")
+    print(f"blinks detected: {review['n_blinks_detected']}  markers: {len(review['markers'])}"
+          f"  segmentation: {review.get('segments_source', 'markers')}")
     for seg in review["segments"]:
         print(f"  segment {seg['label']:8s} {seg['start_s']:.1f}s → {seg['end_s']:.1f}s")
+    recon = review.get("protocol_reconciliation")
+    if recon and recon.get("cue_marker_deltas"):
+        print("  cue↔marker alignment (relative s):")
+        for d in recon["cue_marker_deltas"]:
+            delta = f"{d['delta_s']:+.1f}s off" if d["delta_s"] is not None else "no marker"
+            print(f"    {str(d['label']):8s} cue@{d['cue_s']:.1f}s  ({delta})")
     act = review.get("active_split", {})
     if "threshold_suggestions" in act:
         print("\n-- Part 1: threshold tuning (focus vs drowsy) --")
@@ -400,6 +494,8 @@ def main() -> None:
                     help="expected blink-tag burst size (overridden by --protocol's own value)")
     ap.add_argument("--tag-tolerance", type=int, default=1,
                     help="+/- slack when matching a detected burst to --tag-blinks")
+    ap.add_argument("--min-segment-s", type=float, default=10.0,
+                    help="drop segments shorter than this many seconds (degenerate/mis-tagged boundaries)")
     ap.add_argument("--out", type=Path, default=None, help="session-review.json path (default: next to input)")
     args = ap.parse_args()
 
@@ -413,7 +509,7 @@ def main() -> None:
     review = review_session(df, channels, fs, labels=args.labels, protocol_log=protocol_log,
                             do_active=do_active, do_sleep=do_sleep, model_dir=args.model_dir,
                             epoch_s=args.epoch_s, tag_blinks=args.tag_blinks,
-                            tag_tolerance=args.tag_tolerance)
+                            tag_tolerance=args.tag_tolerance, min_segment_s=args.min_segment_s)
     _print_summary(review)
 
     out_path = args.out or (args.input.parent if args.input.is_file() else args.input) / "session-review.json"
