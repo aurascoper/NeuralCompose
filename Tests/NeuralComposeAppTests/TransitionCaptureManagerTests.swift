@@ -57,6 +57,35 @@ final class TransitionCaptureManagerTests: XCTestCase {
         XCTAssertEqual(transition.actionVector, [1, 0.7, 0])
     }
 
+    /// Regression test for a real bug: `JEPASpectralStateRingBuffer.isFull`
+    /// was a one-way latch that never reset, so a manager reused across a
+    /// disable/re-enable of the capture toggle would return stale
+    /// pre-toggle-off contents as a "complete" window instead of correctly
+    /// warming up again from scratch.
+    func testClearResetsToPreWarmupState() {
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let buffer = JEPASpectralStateRingBuffer(capacity: 2)
+        let manager = TransitionCaptureManager(
+            eegBuffer: buffer,
+            predictionHorizon: 0,
+            fileURL: directory.appendingPathComponent("transitions.jsonl")
+        )
+        manager.ingest(state(0))
+        manager.ingest(state(1))
+        XCTAssertNotNil(manager.recordTransition(actionVector: [1, 0.7, 0]), "buffer must be full before clear")
+
+        manager.clear()
+
+        // Immediately after clear, the buffer must behave exactly like a
+        // fresh one warming up — not return the stale pre-clear window.
+        XCTAssertNil(manager.recordTransition(actionVector: [1, 0.7, 0]), "must not serve stale data after clear()")
+        manager.ingest(state(2))
+        XCTAssertNil(manager.recordTransition(actionVector: [1, 0.7, 0]), "must still be warming up with only 1 of 2 slots filled")
+        manager.ingest(state(3))
+        XCTAssertNotNil(manager.recordTransition(actionVector: [1, 0.7, 0]), "must be full again once genuinely refilled")
+    }
+
     func testOverlappingCapturesAppendSeparateJSONLines() async throws {
         let directory = makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

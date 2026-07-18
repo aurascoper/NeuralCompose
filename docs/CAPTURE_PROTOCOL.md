@@ -62,7 +62,13 @@ venv/bin/python3 Scripts/consume-session.py <path> --sleep-timeline # Part 2 onl
 ```
 
 Outputs `session-review.json` + a console summary:
-- **Markers / segments** recovered from ≥4-blink bursts (reconciled against the protocol log).
+- **Markers / segments** recovered from blink bursts within a bounded `tag_blinks ± tolerance`
+  band (default 4-6 blinks), reconciled against the protocol log — NOT an open-ended "≥4"
+  minimum. A prior version accepted any burst above a loose floor with no upper bound; a single
+  76s run of 209 consecutive blinks (ordinary eye movement between deliberate tags) was wrongly
+  accepted as a marker and silently truncated every downstream segment to a few seconds (see
+  `project_overnight_capture_pipeline_broken` memory, 2026-07-16 session). Bursts outside the
+  band are ordinary blinking, not a tag, and must not become a segment boundary.
 - **Part 1 tuning:** focus×descriptor cross-tab + a β/α and θ/α threshold **sweep** that reports
   the cut-points best separating focus from drowsy (balanced accuracy). *Suggestions only* —
   review, then edit `Scripts/eeg_spectral.py::descriptor_for_ratios` yourself. If

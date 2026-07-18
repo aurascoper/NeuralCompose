@@ -26,10 +26,19 @@ func parseCSV(_ contents: String) -> [[String]] {
 class ConfusionMatrix {
     let labels: [String] = ["rest", "jaw_clench", "blink", "double_blink", "select"]
     var matrix: [[Int]] = Array(repeating: Array(repeating: 0, count: 5), count: 5)
+    // Windows whose predicted/actual label falls outside the 5-label set
+    // (e.g. no labels.csv row matched the window's sequence number) used to
+    // be silently dropped here with no visible trace. Counting them lets
+    // the caller reconcile "windows evaluated" against what the matrix
+    // actually scored instead of an artificially clean-looking accuracy.
+    private(set) var unmatchedCount = 0
 
     func add(predicted: String, actual: String) {
         guard let predIdx = labels.firstIndex(of: predicted),
-              let actualIdx = labels.firstIndex(of: actual) else { return }
+              let actualIdx = labels.firstIndex(of: actual) else {
+            unmatchedCount += 1
+            return
+        }
         matrix[predIdx][actualIdx] += 1
     }
 
@@ -241,7 +250,13 @@ func evaluateSession(directory: String, modelURL: URL) throws {
         print("Session: \(sessionID)")
     }
     print("Model: \(modelURL.path)")
-    print("Windows evaluated: \(windowIndex)\n")
+    print("Windows evaluated: \(windowIndex)")
+    if confusion.unmatchedCount > 0 {
+        print("  WARNING: \(confusion.unmatchedCount) window(s) had a predicted/actual label outside " +
+              "the 5-class set (e.g. no matching labels.csv row) and were excluded from the matrix below " +
+              "— accuracy is computed only over the remaining \(windowIndex - confusion.unmatchedCount).")
+    }
+    print("")
     print("Confusion Matrix (rows=predicted, cols=actual):")
     confusion.print()
 }

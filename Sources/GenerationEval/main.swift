@@ -126,11 +126,17 @@ for candidate in candidatesFixture.candidates {
 
     print("\(candidate.name): loading (cold)...")
     let coldStart = Date()
-    let predictor: MLXNextWordPredictor
+    let modelIdentifier: String
     do {
-        predictor = try await MLXNextWordPredictor(
+        let predictor = try await MLXNextWordPredictor(
             modelDirectory: modelDirectory, configuration: configuration
         )
+        modelIdentifier = predictor.modelIdentifier
+        // `predictor` (the cold instance) is deliberately captured down to
+        // just its identifier and never referenced again — it previously
+        // stayed alive (via a later `predictor.modelIdentifier` read after
+        // the warm load) all the way through the RSS measurement below,
+        // silently double-counting cold+warm model memory as one "peak."
     } catch {
         print("\(candidate.name): FAILED to load — \(error)")
         candidateResults.append(.init(
@@ -144,9 +150,9 @@ for candidate in candidatesFixture.candidates {
 
     print("\(candidate.name): loading (warm)...")
     let warmStart = Date()
-    // Discards `predictor` (the cold instance) in favor of this one — only
-    // the warm instance is used for generation below, per the plan's "keep
-    // the second instance" design.
+    // Only the warm instance is used for generation below, per the plan's
+    // "keep the second instance" design; the cold instance above is no
+    // longer reachable by this point, so it's already been released.
     let warmPredictor = try await MLXNextWordPredictor(
         modelDirectory: modelDirectory, configuration: configuration
     )
@@ -201,7 +207,7 @@ for candidate in candidatesFixture.candidates {
 
     candidateResults.append(.init(
         name: candidate.name, directory: candidate.directory, status: "evaluated",
-        modelIdentifier: predictor.modelIdentifier,
+        modelIdentifier: modelIdentifier,
         coldLoadTime: coldLoadTime, warmLoadTime: warmLoadTime, peakRSSMB: peakRSSMB,
         prompts: promptResults
     ))

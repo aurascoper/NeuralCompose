@@ -271,7 +271,12 @@ def plan_step(
     """
     stalled = velocity < config.stall_velocity_threshold and distance_to_goal > config.stall_distance_threshold
     if stalled:
-        num_wide = int(round(config.num_candidates * config.stall_widen_fraction))
+        # stall_widen_fraction has no range validation at the CLI/dataclass
+        # level (a value outside [0, 1] is a real, reachable misconfiguration
+        # via --stall-widen-fraction) -- clamp defensively here so num_normal
+        # can never go negative and crash sample_candidate_actions with
+        # "negative dimensions are not allowed".
+        num_wide = min(max(int(round(config.num_candidates * config.stall_widen_fraction)), 0), config.num_candidates)
         num_normal = config.num_candidates - num_wide
         normal_candidates = sample_candidate_actions(rng, num_normal, config.horizon, max_accel)
         wide_candidates = sample_candidate_actions(

@@ -1,9 +1,18 @@
 import XCTest
 import BCICore
 
-/// Pins the 1:1 field-for-field port of `WorldModel/mpc.py::MPCConfig`'s
-/// defaults — if a Python-side default changes without a matching Swift
-/// change, this test should fail rather than silently drift.
+/// Pins `WorldModelMPCConfig`'s own current defaults against hardcoded
+/// literals — a regression test for THIS struct changing unintentionally.
+///
+/// It does NOT read or compare against `WorldModel/mpc.py::MPCConfig` in
+/// any way, so it cannot catch the Python side drifting out of the 1:1
+/// field-for-field sync that struct's doc comment requires — that sync is
+/// still enforced only by convention/code review. `numCandidates`
+/// specifically is additionally checked against the exported CoreML
+/// predictor's actual batch size at resolve time
+/// (`WorldModelDemoFactory.live()`), which is what actually prevents a
+/// drift there from crashing the demo via `WorldModelMPCEngine.planStep`'s
+/// `precondition`.
 final class WorldModelMPCConfigTests: XCTestCase {
     func testDefaultsMatchPythonMPCConfig() {
         let config = WorldModelMPCConfig()

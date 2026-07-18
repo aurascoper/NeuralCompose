@@ -12,6 +12,12 @@ public protocol JEPATransitionCapturing: Sendable {
     /// interaction because partial windows must never enter the data set.
     @discardableResult
     func recordTransition(actionVector: [Float]) -> Task<Void, Never>?
+
+    /// Discards any buffered-but-incomplete feature window. Callers must call
+    /// this on every `jepaTransitionCaptureEnabled` transition (both
+    /// enabling and disabling) so stale pre-transition data can never splice
+    /// with fresh post-transition data into one persisted transition.
+    func clear()
 }
 
 /// Default for previews and tests that do not explicitly ask to write a
@@ -20,6 +26,7 @@ public struct NullJEPATransitionCapture: JEPATransitionCapturing {
     public init() {}
     public func ingest(_ state: JEPASpectralState) {}
     public func recordTransition(actionVector: [Float]) -> Task<Void, Never>? { nil }
+    public func clear() {}
 }
 
 /// Captures aligned `(W_t, a_t, W_t+1)` examples without blocking the UI or
@@ -55,6 +62,10 @@ public final class TransitionCaptureManager: JEPATransitionCapturing, @unchecked
 
     public func ingest(_ state: JEPASpectralState) {
         eegBuffer.append(state)
+    }
+
+    public func clear() {
+        eegBuffer.clear()
     }
 
     @discardableResult
@@ -116,7 +127,10 @@ public final class TransitionCaptureManager: JEPATransitionCapturing, @unchecked
                 let handle = try FileHandle(forWritingTo: fileURL)
                 defer { try? handle.close() }
                 handle.seekToEndOfFile()
-                handle.write(data)
+                // `write(contentsOf:)`, not `write(_:)` — the latter raises
+                // an uncatchable NSException on failure instead of a Swift
+                // `Error` this `try`/enclosing `catch` could actually handle.
+                try handle.write(contentsOf: data)
             } else {
                 try data.write(to: fileURL, options: .atomic)
             }

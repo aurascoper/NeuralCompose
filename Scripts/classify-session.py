@@ -149,6 +149,10 @@ def classify_session(eeg_path: Path, model_path: Path, protocol_log: dict | None
 def summarize(review: dict) -> None:
     preds = review["predictions"]
     print(f"=== Intent Classification: {review['session']} ===")
+    if not preds:
+        print("No windows classified — the session is too short to produce even one "
+              "512-sample window at the 256-sample stride. Nothing to summarize.")
+        return
     print(f"{review['n_windows']} windows (512 samples / 256 stride, nominal 256Hz)")
     print("CAVEAT: no ground truth for this session (labels.csv is uniformly 'none') — "
           "exploratory only. singleBlink/select predictions are UNRELIABLE — the training "

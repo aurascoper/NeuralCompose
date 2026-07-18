@@ -32,6 +32,16 @@ final class WorldModelMPCDemoViewModel: ObservableObject {
     private let config = WorldModelMPCConfig()
     private var tickTask: Task<Void, Never>?
     private let historyLimit = 60
+    private var tickCount = 0
+    /// The illustrative panel shares the SAME actor-serialized
+    /// `MLXNextWordPredictor` instance the real Track A carousel uses for
+    /// actual word suggestions ("running two on the Apple GPU at once just
+    /// thrashes," per that actor's own doc comment) — calling it on every
+    /// ~700ms tick meant a real word commit landing mid-demo could queue
+    /// behind a purely-illustrative call. Throttling to every Nth tick
+    /// keeps the panel live while meaningfully cutting how often that
+    /// collision can happen.
+    private let illustrativePanelTickInterval = 5
 
     init(container: AppContainer) {
         self.engineKind = container.worldModelDemoResolved.kind
@@ -74,7 +84,10 @@ final class WorldModelMPCDemoViewModel: ObservableObject {
         costMeanHistory = appending(costMeanHistory, record.diagnostics.costMean)
         latencyHistoryMs = appending(latencyHistoryMs, record.planningLatencyMs)
 
-        await updateIllustrativePanel(diagnostics: record.diagnostics)
+        tickCount += 1
+        if tickCount % illustrativePanelTickInterval == 0 {
+            await updateIllustrativePanel(diagnostics: record.diagnostics)
+        }
     }
 
     private func appending(_ history: [Double], _ value: Double) -> [Double] {

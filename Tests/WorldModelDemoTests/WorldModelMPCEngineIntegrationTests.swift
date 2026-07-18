@@ -47,4 +47,38 @@ final class WorldModelMPCEngineIntegrationTests: XCTestCase {
         XCTAssertGreaterThan(result.diagnostics.effectiveSampleSize, 0)
         XCTAssertLessThanOrEqual(result.diagnostics.effectiveSampleSize, Double(config.numCandidates))
     }
+
+    /// Regression test for a real bug: unlike the Python reference
+    /// (`assert torch.isfinite(...)`), `planStep` had no finite-value guard
+    /// at all, so `temperature == 0` drove the softmax to all-NaN weights,
+    /// and `ParticleNavigatorEnv.step`'s clip silently turned that into a
+    /// plausible-looking `maxAccel` action with no error anywhere.
+    func testPlanStepThrowsOnZeroTemperatureInsteadOfSilentlyCorruptingAction() async throws {
+        let modelsDir = repoRoot.appendingPathComponent("Models/WorldModelDemo").path
+        try XCTSkipUnless(
+            FileManager.default.fileExists(atPath: modelsDir + "/Encoder.mlpackage"),
+            "Models/WorldModelDemo/ not present on this machine — run WorldModel/export_coreml.py"
+        )
+
+        let resolved = WorldModelDemoFactory.live(modelsDirectory: modelsDir)
+        var config = WorldModelMPCConfig()
+        config.temperature = 0
+        config.adaptiveTemperature = false
+
+        do {
+            _ = try await resolved.engine.planStep(
+                state: [0.8, 0.8, 0, 0],
+                goalState: [-0.8, -0.8, 0, 0],
+                previousAction: nil,
+                velocity: 0,
+                distanceToGoal: 2.263,
+                maxAccel: 1.0,
+                config: config
+            )
+            XCTFail("expected planStep to throw on a zero-temperature softmax, not return silently")
+        } catch is BCIError {
+            // Expected — the exact failure mode is secondary to "it throws
+            // instead of returning a silently-corrupted finite action."
+        }
+    }
 }

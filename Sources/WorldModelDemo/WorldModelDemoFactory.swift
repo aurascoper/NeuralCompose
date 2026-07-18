@@ -49,6 +49,23 @@ public enum WorldModelDemoFactory {
             let predictor = try WorldModelLatentPredictorModel(
                 modelURL: base.appendingPathComponent("LatentPredictor.mlpackage")
             )
+
+            // WorldModelMPCConfig.numCandidates and the exported predictor's
+            // fixed batch size are independently-hardcoded literals (Swift
+            // default, this batchSize, export_coreml.py's PREDICTOR_BATCH)
+            // kept in sync only by convention. WorldModelMPCEngine.planStep
+            // enforces this with a `precondition` (a fatal, uncatchable
+            // trap) — check it here instead, at resolve time, so a drift
+            // falls back to the baseline controller gracefully rather than
+            // crashing the demo the first time someone opens it.
+            let expectedNumCandidates = WorldModelMPCConfig().numCandidates
+            guard predictor.batchSize == expectedNumCandidates else {
+                BCILog.worldModelDemo.notice(
+                    "World Model demo LatentPredictor batch size (\(predictor.batchSize, privacy: .public)) does not match WorldModelMPCConfig.numCandidates (\(expectedNumCandidates, privacy: .public)); using baseline controller"
+                )
+                return Resolved(engine: BaselineWorldModelDemoPlanner(), kind: .baseline, warning: nil)
+            }
+
             let engine = WorldModelMPCEngine(onlineEncoder: onlineEncoder, goalEncoder: goalEncoder, predictor: predictor)
             return Resolved(engine: engine, kind: .coreML, warning: nil)
         } catch {

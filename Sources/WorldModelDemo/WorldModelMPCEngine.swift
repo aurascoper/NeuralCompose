@@ -50,7 +50,11 @@ public actor WorldModelMPCEngine: WorldModelDemoPlanning {
 
         var candidateActions: [[[Float]]]
         if stalled {
-            let numWide = Int((Double(n) * config.stallWidenFraction).rounded())
+            // stallWidenFraction has no range validation on WorldModelMPCConfig
+            // -- clamp defensively so numNormal can never go negative and
+            // crash `0..<count` with a Range precondition trap (mirrors the
+            // identical fix in WorldModel/mpc.py::plan_step).
+            let numWide = min(max(Int((Double(n) * config.stallWidenFraction).rounded()), 0), n)
             let numNormal = n - numWide
             var rng = SystemRandomNumberGenerator()
             let normal = Self.sampleCandidateActions(count: numNormal, horizon: config.horizon, maxAccel: maxAccel, using: &rng)
@@ -108,17 +112,36 @@ public actor WorldModelMPCEngine: WorldModelDemoPlanning {
                 + config.terminalCostWeight * terminalCost[i]
         }
 
+        guard totalCost.allSatisfy({ $0.isFinite }) else {
+            throw BCIError.worldModelDemoInferenceFailed(reason: "non-finite cost in MPC candidate scoring")
+        }
+
         let costMin = totalCost.min() ?? 0
         let costMax = totalCost.max() ?? 0
         let costMean = totalCost.reduce(0, +) / Double(n)
         let variance = totalCost.reduce(0) { $0 + ($1 - costMean) * ($1 - costMean) } / Double(n)
         let costStd = variance.squareRoot()
 
+        // config.temperature == 0, or an all-but-degenerate candidate batch
+        // (costStd and minCostScale both ~0), would otherwise drive
+        // temperatureEffective to 0 and every weight to NaN — unlike the
+        // Python reference (`assert torch.isfinite(...)`), silently
+        // clipping a NaN action into a plausible-looking maxAccel value
+        // downstream instead of surfacing the failure.
         let costScale = config.adaptiveTemperature ? max(costStd, config.minCostScale) : 1.0
+        guard costScale > 0 else {
+            throw BCIError.worldModelDemoInferenceFailed(reason: "non-positive cost scale in MPC softmax")
+        }
         let temperatureEffective = config.temperature * costScale
+        guard temperatureEffective.isFinite, temperatureEffective > 0 else {
+            throw BCIError.worldModelDemoInferenceFailed(reason: "non-finite or non-positive temperature in MPC softmax")
+        }
 
         var weights = totalCost.map { exp(-($0 - costMin) / temperatureEffective) }
         let weightSum = weights.reduce(0, +)
+        guard weightSum.isFinite, weightSum > 0 else {
+            throw BCIError.worldModelDemoInferenceFailed(reason: "non-finite MPC softmax weight sum")
+        }
         weights = weights.map { $0 / weightSum }
 
         let actionDim = candidateActions[0][0].count
@@ -127,6 +150,9 @@ public actor WorldModelMPCEngine: WorldModelDemoPlanning {
             for d in 0..<actionDim {
                 blendedAction0[d] += Float(weights[i]) * candidateActions[i][0][d]
             }
+        }
+        guard blendedAction0.allSatisfy({ $0.isFinite }) else {
+            throw BCIError.worldModelDemoInferenceFailed(reason: "non-finite blended MPC action")
         }
 
         let effectiveSampleSize = 1.0 / weights.reduce(0) { $0 + $1 * $1 }

@@ -53,4 +53,19 @@ public final class JEPASpectralStateRingBuffer: @unchecked Sendable {
             return result
         }
     }
+
+    /// Discards all buffered states and resets to the pre-warmup state.
+    /// `isFull` was previously a one-way latch that never reset, so toggling
+    /// capture off and back on could return stale, pre-toggle-off contents
+    /// as if they were a freshly-completed window — splicing unrelated
+    /// chronological data into one persisted transition. Callers must call
+    /// this on every capture-enable transition (see
+    /// `TransitionCaptureManager.clear()`), not just at construction.
+    public func clear() {
+        queue.async(flags: .barrier) {
+            self.storage = Array(repeating: nil, count: self.capacity)
+            self.writeIndex = 0
+            self.isFull = false
+        }
+    }
 }

@@ -47,6 +47,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var highlightIndex: Int = 0
     @Published public private(set) var isPredicting: Bool = false
     @Published public private(set) var lastCommittedWord: String?
+    /// Mirrors `TextCompositionController.Snapshot.commitSequence` — the
+    /// actual signal `telemetryEvent` compares, since `lastCommittedWord`
+    /// alone can't tell "no new commit" apart from "the user genuinely
+    /// committed the same word twice in a row."
+    private var lastCommitSequence: UInt64 = 0
     @Published public private(set) var pipelineMode: PipelineMode
     /// Reserved for genuine *live* pipeline failures (EEG stream drops,
     /// calibration/Track-B start failures, etc.) — never populated from
@@ -107,7 +112,19 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// on, the pipeline retains a bounded in-memory feature window and writes
     /// one paired transition per genuine word commit. It is intentionally not
     /// coupled to the narrower interaction-log toggle.
-    @Published public var jepaTransitionCaptureEnabled: Bool = false
+    ///
+    /// Clears the underlying ring buffer on every transition (both
+    /// enabling and disabling) — `JEPASpectralStateRingBuffer`'s `isFull`
+    /// used to be a one-way latch that never reset, so toggling this off
+    /// and back on could return stale pre-toggle-off data as if it were a
+    /// freshly-completed window, splicing unrelated chronological data
+    /// into one persisted transition.
+    @Published public var jepaTransitionCaptureEnabled: Bool = false {
+        didSet {
+            guard oldValue != jepaTransitionCaptureEnabled else { return }
+            jepaTransitionCapture.clear()
+        }
+    }
 
     /// Separate, explicit opt-in for the synthetic-task JEPA+MPC planning
     /// demo (see `WorldModel/README.md`, `Sources/WorldModelDemo/`). Unlike
@@ -250,6 +267,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         if let w = container.classifierResolved.warning {
             self.startupWarning = w
         } else if let w = container.predictorResolved.warning {
+            self.startupWarning = w
+        } else if let w = container.spectralEstimatorResolved.warning {
+            // Previously dropped entirely — a real probe crash/timeout/init
+            // failure here silently fell back to the stub estimator with
+            // zero UI indication, unlike every sibling subsystem's
+            // equivalent failure path.
             self.startupWarning = w
         }
         if let w = container.voiceOutputResolved.warning {
@@ -1028,16 +1051,18 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         // through BCICore.
         let previousComposedText = self.composedText
         let previousCommittedWord = self.lastCommittedWord
+        let previousCommitSequence = self.lastCommitSequence
 
         self.composedText = snap.composedText
         self.candidates = snap.candidates
         self.highlightIndex = snap.highlightIndex
         self.isPredicting = snap.isPredicting
         self.lastCommittedWord = snap.lastCommittedWord
+        self.lastCommitSequence = snap.commitSequence
 
         guard let event = Self.telemetryEvent(
             previousComposedText: previousComposedText,
-            previousCommittedWord: previousCommittedWord,
+            previousCommitSequence: previousCommitSequence,
             snapshot: snap,
             signalQuality: signalQuality,
             detectedSpectralState: detectedSpectralState,
@@ -1067,16 +1092,22 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// embedding (see `TelemetryEvent`'s doc comment), and whatever
     /// adaptation was actually in effect (`appliedAdaptation`, `.raw` unless
     /// `adaptiveComplexityEnabled`), not just what was detected.
+    ///
+    /// Compares `commitSequence`, not `lastCommittedWord`'s text — two
+    /// genuine, temporally-distinct commits of the same word (e.g.
+    /// committing "the" twice in a row) are a real, legitimate case that a
+    /// text-equality check cannot distinguish from "no new commit
+    /// happened," silently dropping the second one.
     nonisolated static func telemetryEvent(
         previousComposedText: String,
-        previousCommittedWord: String?,
+        previousCommitSequence: UInt64,
         snapshot: TextCompositionController.Snapshot,
         signalQuality: SignalQuality?,
         detectedSpectralState: SpectralState?,
         appliedAdaptation: GenerationAdaptation,
         adaptiveComplexityEnabled: Bool
     ) -> TelemetryEvent? {
-        guard let committed = snapshot.lastCommittedWord, committed != previousCommittedWord else {
+        guard let committed = snapshot.lastCommittedWord, snapshot.commitSequence != previousCommitSequence else {
             return nil
         }
         return TelemetryEvent(

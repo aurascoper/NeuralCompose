@@ -51,4 +51,40 @@ final class AppViewModelStartupWarningTests: XCTestCase {
         XCTAssertEqual(viewModel.startupWarning, predictorResolved.warning)
         XCTAssertNil(viewModel.lastError, "startup substitution notices must never populate lastError")
     }
+
+    /// Regression test for a real bug: `spectralEstimatorResolved.warning`
+    /// was never read anywhere in `AppViewModel`, even though the factory
+    /// can populate it with a real, descriptive failure message (probe
+    /// crash/timeout/init failure) — unlike every sibling subsystem
+    /// (classifier/predictor/voice), whose equivalent warning does surface.
+    func testSpectralEstimatorWarningRoutesToStartupWarning() async throws {
+        let classifierResolved = ClassifierFactory.live()
+        XCTAssertNil(classifierResolved.warning, "sanity check: isolate the spectral warning path")
+        let predictorResolved = await PredictorFactory.live(modelDirectory: URL(fileURLWithPath: "/nonexistent"))
+        XCTAssertNil(predictorResolved.warning, "sanity check: a genuinely-missing directory resolves to stub with no warning")
+
+        let spectralResolved = SpectralStateEstimatorFactory.Resolved(
+            estimator: StubSpectralStateEstimator(),
+            kind: .stub,
+            warning: "Spectral probe crashed (signal 11); using stub estimator."
+        )
+
+        let container = AppContainer(
+            streamResolved: EEGStreamFactory.makeSynthetic(),
+            classifierResolved: classifierResolved,
+            predictorResolved: predictorResolved,
+            voiceOutputResolved: VoiceOutputFactory.live(),
+            voiceInputResolved: VoiceInputFactory.live(overrideAvailability: false),
+            voiceCommandResolved: VoiceCommandFactory.live(overrideAvailability: false),
+            metrics: MetricsCollector(),
+            windowingConfig: EEGWindowingConfig(
+                windowSeconds: 2.0, strideSeconds: 1.0, sampleRate: 256, channelCount: 4
+            ),
+            spectralEstimatorResolved: spectralResolved
+        )
+        let viewModel = AppViewModel(container: container)
+
+        XCTAssertEqual(viewModel.startupWarning, spectralResolved.warning)
+        XCTAssertNil(viewModel.lastError, "startup substitution notices must never populate lastError")
+    }
 }

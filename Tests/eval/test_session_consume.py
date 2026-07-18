@@ -6,7 +6,9 @@ heuristic sleep-stage labeller, an end-to-end review through the real blink
 detector, and the cue-helper dry run. pytest-style + __main__ runner (pytest is
 not installed in the calibration venv).
 """
+import contextlib
 import importlib.util
+import io
 import sys
 import tempfile
 from pathlib import Path
@@ -105,6 +107,23 @@ def test_segment_from_markers():
     assert [s["label"] for s in segs] == ["focus", "drowsy", "sleep"]
     assert segs[0]["start_s"] == 4 and segs[0]["end_s"] == 20      # marker0.end → marker1.start
     assert segs[2]["end_s"] == 100.0                                # last runs to end
+
+
+def test_segment_from_markers_warns_on_marker_shortfall():
+    # Only 2 markers detected for 3 labels — a realistic flaky-detection
+    # scenario. Regression test for a real bug: this used to silently
+    # stretch drowsy's segment to total_s and drop "sleep" entirely with
+    # no visible trace anywhere in the console summary.
+    markers = [{"start_s": 0, "end_s": 4, "center_s": 2},
+               {"start_s": 20, "end_s": 24, "center_s": 22}]
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        segs = csm.segment_from_markers(markers, ["focus", "drowsy", "sleep"], total_s=100.0)
+    assert [s["label"] for s in segs] == ["focus", "drowsy"], "sleep must still be dropped (only 2 markers)"
+    assert segs[1]["end_s"] == 100.0, "drowsy still absorbs the remaining session"
+    printed = buf.getvalue()
+    assert "WARNING" in printed and "sleep" in printed, \
+        "the label shortfall must now be printed, not silent"
 
 
 def test_sweep_threshold_separates():

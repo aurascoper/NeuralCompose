@@ -73,6 +73,40 @@ final class IntentSmootherTests: XCTestCase {
         XCTAssertEqual(last, .idle, "alternating classes should not aggregate into advance")
     }
 
+    /// Regression test for a real bug: with `refractoryWindows` (6) >
+    /// `historySize` (5), ambient `.rest` accumulated purely during the
+    /// post-commit cooldown used to refill the ring enough to immediately
+    /// re-fire `.selectActive` the instant refractory ended — an
+    /// unintended auto-commit with no deliberate dwell action from the
+    /// user. Refractory predictions must not count toward the next dwell.
+    func testAmbientRestDuringRefractoryDoesNotAutoRefire() async {
+        let s = IntentSmoother(config: .init(
+            historySize: 5, activationCount: 3, dwellActivationCount: 4, minConfidence: 0.55, refractoryWindows: 6
+        ))
+        // 3 rest windows stay under the dwell bar.
+        for _ in 0..<3 { _ = await s.ingest(pred(.rest)) }
+        // 4th consecutive rest window crosses the dwell bar -> selectActive,
+        // entering a 6-window refractory period.
+        let fourth = await s.ingest(pred(.rest))
+        XCTAssertEqual(fourth, .selectActive)
+
+        // Exactly `refractoryWindows` more windows of ambient .rest (the
+        // user simply isn't gesturing right after the commit, which is
+        // normal) -- all must stay idle, and must NOT silently refill the
+        // dwell ring.
+        for _ in 0..<6 {
+            let out = await s.ingest(pred(.rest))
+            XCTAssertEqual(out, .idle, "must stay idle throughout the refractory cooldown")
+        }
+
+        // Refractory has now fully elapsed. If ambient .rest during
+        // refractory had counted toward the dwell ring (the bug), this call
+        // would spuriously re-fire .selectActive with zero genuine
+        // post-refractory dwell from the user.
+        let firstAfterRefractory = await s.ingest(pred(.rest))
+        XCTAssertEqual(firstAfterRefractory, .idle, "must not auto-refire immediately after refractory ends")
+    }
+
     func testLowConfidenceIsDiscarded() async {
         let s = IntentSmoother(config: .init(
             historySize: 5, activationCount: 3, dwellActivationCount: 4, minConfidence: 0.7, refractoryWindows: 4

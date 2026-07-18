@@ -48,7 +48,11 @@ public actor TelemetryLogger: InteractionLogging {
             let handle = try fileHandle(for: day)
             var data = try encoder.encode(event)
             data.append(0x0A) // newline
-            handle.write(data)
+            // `write(contentsOf:)`, not `write(_:)` — the latter raises an
+            // uncatchable Objective-C NSException on failure (disk full,
+            // permission revoked) instead of a Swift `Error`, which this
+            // catch block could not actually intercept.
+            try handle.write(contentsOf: data)
         } catch {
             BCILog.telemetry.error("TelemetryLogger: failed to write event \(event.eventId, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }

@@ -98,6 +98,18 @@ def segment_from_markers(markers: list[dict], labels: list[str], total_s: float)
     segs = []
     for i, label in enumerate(labels):
         if i >= len(markers):
+            dropped = labels[i:]
+            if i == 0:
+                print(
+                    f"  WARNING: no markers detected for any of {len(labels)} label(s) {labels} — "
+                    f"no segments were created. Check blink-tag detection for this session."
+                )
+            else:
+                print(
+                    f"  WARNING: only {len(markers)} marker(s) detected for {len(labels)} label(s) — "
+                    f"{dropped} have no segment (label '{labels[i - 1]}' absorbed the remaining "
+                    f"session instead). Check blink-tag detection for this session."
+                )
             break
         start = markers[i]["end_s"]
         is_last_label = i + 1 >= len(labels)

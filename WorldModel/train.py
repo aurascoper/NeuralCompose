@@ -81,8 +81,20 @@ def run_epoch(
     n_batches = 0
 
     grad_context = torch.enable_grad() if training else torch.no_grad()
+    skipped_batches = 0
     with grad_context:
         for s_t, a_t, s_next in loader:
+            # vicreg_loss's variance term uses unbiased (N-1) variance and
+            # its covariance term divides by (batch_size - 1) -- both are
+            # NaN at batch size 1 (a real, possible final-batch size, since
+            # make_dataloader never passes drop_last=True). A NaN loss would
+            # backward() into every weight silently, and the collapse
+            # warning below would never catch it (NaN < threshold is always
+            # False) -- skip degenerate batches at this boundary instead of
+            # letting them corrupt training.
+            if s_t.shape[0] < 2:
+                skipped_batches += 1
+                continue
             s_t, a_t, s_next = s_t.to(device), a_t.to(device), s_next.to(device)
 
             if training:
@@ -101,6 +113,13 @@ def run_epoch(
                 totals[key] += losses[key].item()
             n_batches += 1
 
+    if skipped_batches:
+        print(f"  WARNING: skipped {skipped_batches} batch(es) of size < 2 (VICReg variance/covariance are undefined at batch size 1)")
+    if n_batches == 0:
+        raise RuntimeError(
+            "run_epoch: every batch had fewer than 2 samples -- nothing to train/validate on. "
+            "Check --batch-size against the dataset size."
+        )
     return {key: total / n_batches for key, total in totals.items()}
 
 

@@ -70,13 +70,21 @@ public actor IntentSmoother {
     }
 
     public func ingest(_ prediction: IntentPrediction) -> SmoothedIntent {
-        history.append(prediction)
-        if history.count > config.historySize { history.removeFirst() }
-
+        // Refractory predictions are deliberately NOT appended to `history`.
+        // They used to be appended unconditionally before this check, which
+        // let ambient `.rest` accumulated purely during the cooldown (the
+        // user isn't gesturing right after a commit) refill the ring enough
+        // to immediately re-cross the dwell bar the instant refractory
+        // ended — an unintended auto-commit with no deliberate dwell action.
+        // Refractory now means "not observed" for smoothing purposes, not
+        // just "not acted on."
         if refractoryRemaining > 0 {
             refractoryRemaining -= 1
             return .idle
         }
+
+        history.append(prediction)
+        if history.count > config.historySize { history.removeFirst() }
 
         // Tally count + summed confidence per class across the whole ring.
         // (No per-window threshold filter — the bar is on the *averaged*
@@ -99,6 +107,11 @@ public actor IntentSmoother {
         // before advance so a candidate the user has settled on (gone still)
         // commits rather than getting reinterpreted as noise.
         if let r = totals[.rest], meetsBar(r, threshold: config.dwellActivationCount) {
+            // Clear the ring so refractory starts from a clean slate — combined
+            // with not appending during refractory (above), the next
+            // dwell-select requires `dwellActivationCount` genuinely-new
+            // post-refractory `.rest` windows, not stale/ambient ones.
+            history.removeAll(keepingCapacity: true)
             refractoryRemaining = config.refractoryWindows
             return .selectActive
         }
