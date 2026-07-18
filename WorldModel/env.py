@@ -70,3 +70,24 @@ class ParticleNavigatorEnv:
                 vel[dim] = -vel[dim] * c.restitution
 
         return np.concatenate([new_pos, vel]).astype(np.float32)
+
+
+def sample_goal(rng: np.random.Generator, config: EnvConfig = EnvConfig()) -> np.ndarray:
+    """Target state to plan toward: a random arena position, at rest.
+
+    Day 4 (see `WorldModel/README.md`) is where `goal` first enters this
+    module. A full (4,) state, not just a (2,) position, because the JEPA
+    latent space is opaque -- there's no way to build a "position-only"
+    latent constraint by slicing 32 unlabeled dimensions. The only sound
+    way to get a goal latent comparable to a predicted latent is encoding
+    a complete raw state through the same Encoder path the predictor was
+    trained against. Zero velocity gives the natural "come to rest here"
+    framing.
+
+    Deliberately does not affect `step()` -- goal is a planning/evaluation
+    target, not a dynamics concept, so `ParticleNavigatorEnv` stays exactly
+    as stateless and goal-agnostic as it already is.
+    """
+    pos = rng.uniform(-config.arena_half_extent, config.arena_half_extent, size=2)
+    vel = np.zeros(2)
+    return np.concatenate([pos, vel]).astype(np.float32)

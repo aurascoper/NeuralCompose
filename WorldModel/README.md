@@ -210,13 +210,89 @@ assumed. A longer ablation run would likely continue declining well past
 identical epoch budget already answers the question the ablation was
 for.
 
-### Day 4 — Latent Model Predictive Control (not started)
+### Day 4 — Latent Model Predictive Control (done, 2026-07-17)
 
 Freeze the trained JEPA. Sample $N$ candidate action sequences over horizon
 $H$, unroll each in latent space via the frozen predictor, score by distance
 to a goal latent, execute the first action of the best sequence, replan
 (receding horizon). This is where the `goal` concept enters the environment
 for the first time.
+
+Sampling-based (random shooting / MPPI), not gradient-based — a control
+loop has no time to backprop through the predictor at every step.
+
+- **`env.py::sample_goal`** — a new free function (not a method;
+  `ParticleNavigatorEnv` stays exactly as stateless as it already was),
+  returns a full `(4,)` `[x, y, 0, 0]` state so it can be encoded with zero
+  API changes elsewhere — the JEPA latent space is opaque (32 unlabeled
+  dims), so a goal latent can only be built by encoding a *complete* raw
+  state through the same `Encoder` path the predictor was trained against.
+  `step()` is unchanged; goal is a planning/eval target, not a dynamics
+  concept.
+- **`mpc.py::MPCConfig`** — `horizon=10 num_candidates=512 temperature=1.0
+  state_cost_weight=1.0 smoothness_cost_weight=0.1`. `horizon` defaults
+  well under Day 3's ~15-step trustworthy-rollout finding, with real
+  margin rather than budgeting up to that edge.
+- **`mpc.py::score_candidates`** — batched latent rollout (`H` forward
+  passes through the frozen `predictor`, mirroring `train.py::rollout_check`'s
+  loop shape) scored by summed per-step L2 distance to a goal latent (a
+  running cost-to-go, not just the final step) plus an action-smoothness
+  penalty. No "utility reward" or "fatigue barrier" term — no honest analog
+  exists in this task. Current-state latent comes from the **online**
+  `encoder` (what the predictor was actually trained to consume as input,
+  matching `forward_online`/`rollout_check`'s exact precedent); the goal
+  latent comes from `target_encoder` (matching its only role everywhere
+  else in the codebase: a fixed comparison anchor, never predictor input).
+- **`mpc.py::plan_step`** — MPPI softmax weighting over sampled candidates
+  (not greedy argmin), first action of the blended sequence executed
+  (receding horizon), diagnostics (`cost_min/mean/max`, effective sample
+  size) returned every call so `temperature` miscalibration is visible
+  rather than silent.
+- **`mpc.py::run_episode`/`main()`** — one shared closed-loop harness for
+  three policies (`mpc`, `zero`-action, `random`-action) run against an
+  *identical* fixed list of `(start, goal)` pairs, reporting success rate,
+  mean/median final distance-to-goal, and (for `mpc`) honestly-measured
+  (not budgeted) planning latency and aggregated MPPI diagnostics.
+
+**Verified 2026-07-17**: a direct diagnostic (500 random states, one fixed
+sampled goal) found real-position distance and latent distance-to-goal only
+moderately correlated (`r=0.63` via the online `encoder`, `r=0.64` via
+`target_encoder`) — the trained latent space carries real but noisy
+information about true spatial closeness, which bounds how tightly any
+planner can steer.
+
+`./WorldModel/mpc.py --episodes 100 --seed 1` at three horizons, all
+against the identical 100 `(start, goal)` pairs:
+
+| horizon | mpc success / mean dist | zero success / mean dist | random success / mean dist | mean latency | effective sample size |
+|---|---|---|---|---|---|
+| 5  | 0.13 / 0.536 | 0.07 / 1.060 | 0.14 / 0.947 | 5.6 ms | 372/512 |
+| 10 (default) | 0.13 / 0.449 | 0.07 / 1.060 | 0.11 / 0.990 | 7.4 ms | 157/512 |
+| 25 | 0.18 / 0.470 | 0.07 / 1.060 | 0.11 / 1.024 | 11.5 ms | 6/512 |
+
+On the continuous metric, MPC's mean final distance is robustly and
+substantially better than both baselines at every horizon tested (roughly
+45-55% closer than zero, 40-50% closer than random) — a real, consistent
+steering effect. The binary success rate (tight `0.1` tolerance) is noisier
+and less decisive at `n=100`: MPC modestly beats both baselines at horizon
+10 and 25, but is edged out by the random baseline by one point at horizon
+5 (`0.13` vs `0.14`) — well within noise for a tight-tolerance metric on top
+of an `r≈0.63` latent-to-position correlation. `zero`'s numbers are
+identical across all three rows (`0.07` / `1.060`), confirming the episode
+list really is reproduced identically across horizon runs, as designed.
+
+**A genuine finding from the built-in MPPI diagnostics, not a clean
+"longer horizon helps/hurts" answer**: effective sample size collapses
+from `372/512` (horizon 5) to `157/512` (horizon 10) to `6/512` (horizon
+25) at the fixed default `temperature=1.0`. Cost is summed over the whole
+horizon, so raw cost magnitude scales with `horizon` while `temperature`
+doesn't — at horizon 25 the softmax has become nearly greedy argmin rather
+than a true MPPI blend. The horizon-25 row above is therefore confounded
+by an uncalibrated temperature, not a clean test of what happens once
+planning exceeds Day 3's ~15-step trustworthy-rollout limit. A fair test
+would need `temperature` re-tuned (or cost normalized by horizon) at each
+horizon — flagged here as a well-motivated follow-up, not implemented in
+this landing since it goes beyond what was scoped.
 
 ## Explicitly out of scope for this spike (so far)
 
