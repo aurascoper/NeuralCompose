@@ -167,6 +167,17 @@ def main() -> None:
     ap.add_argument("--stall-distance-threshold", type=float, default=MPCConfig().stall_distance_threshold)
     ap.add_argument("--stall-variance-multiplier", type=float, default=MPCConfig().stall_variance_multiplier)
     ap.add_argument("--stall-widen-fraction", type=float, default=MPCConfig().stall_widen_fraction)
+    ap.add_argument(
+        "--adaptive-temperature",
+        action=argparse.BooleanOptionalAction,
+        default=MPCConfig().adaptive_temperature,
+    )
+    ap.add_argument("--min-cost-scale", type=float, default=MPCConfig().min_cost_scale)
+    ap.add_argument(
+        "--normalize-running-cost-by-horizon",
+        action=argparse.BooleanOptionalAction,
+        default=MPCConfig().normalize_running_cost_by_horizon,
+    )
 
     ap.add_argument("--max-episode-steps", type=int, default=50)
     ap.add_argument("--max-accel", type=float, default=EnvConfig().max_accel)
@@ -203,6 +214,9 @@ def main() -> None:
         stall_distance_threshold=args.stall_distance_threshold,
         stall_variance_multiplier=args.stall_variance_multiplier,
         stall_widen_fraction=args.stall_widen_fraction,
+        adaptive_temperature=args.adaptive_temperature,
+        min_cost_scale=args.min_cost_scale,
+        normalize_running_cost_by_horizon=args.normalize_running_cost_by_horizon,
     )
     device = resolve_device()
 

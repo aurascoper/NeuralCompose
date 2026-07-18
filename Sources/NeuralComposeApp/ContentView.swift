@@ -50,7 +50,8 @@ struct ContentView: View {
                 detectedSpectralState: viewModel.detectedSpectralState,
                 adaptiveComplexityEnabled: $viewModel.adaptiveComplexityEnabled,
                 interactionLoggingEnabled: $viewModel.interactionLoggingEnabled,
-                jepaTransitionCaptureEnabled: $viewModel.jepaTransitionCaptureEnabled
+                jepaTransitionCaptureEnabled: $viewModel.jepaTransitionCaptureEnabled,
+                worldModelDemoEnabled: $viewModel.worldModelDemoEnabled
             )
             Divider()
 

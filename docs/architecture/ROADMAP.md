@@ -138,14 +138,25 @@ validation) are still landing.
   NeuralCompose instances, each running on its own Muse
 - `~` World Model (JEPA + MPC) research spike — `WorldModel/` (new
   top-level dir, decoupled from `Sources/`, PyTorch not MLX). The synthetic
-  architecture work is landed through Day 4. A separate Phase 1, local-only
-  data path landed 2026-07-18: an explicit `JEPATransition` opt-in captures
+  architecture work is landed through Day 4, plus a 2026-07-18
+  adaptive-temperature fix for the MPPI planner's effective-sample-size
+  collapse (a real statistical fix, honestly reported as *not* a clear
+  success/distance-metric win — see `WorldModel/README.md`'s "Temperature/
+  cost-scale calibration" section). A separate Phase 1, local-only data
+  path landed 2026-07-18: an explicit `JEPATransition` opt-in captures
   paired EEG feature windows and the real `GenerationAdaptation`, while
   `WorldModel/eeg_jepa.py` trains an offline Conv1d JEPA from that JSONL.
   No corpus has yet been collected, and the app does not load or act on a
-  JEPA model. Any latent anchoring, MPC, or automatic behavior remains gated
-  on collection volume and an independent validation threshold. See
-  `WorldModel/README.md` and `ADR-006-jepa-transition-capture.md`.
+  real-EEG JEPA model. Separately, the (still synthetic-task-only) Day
+  1-4 JEPA was exported to Core ML (`WorldModel/export_coreml.py`) and
+  ported to a new, off-by-default Swift research demo
+  (`Sources/WorldModelDemo/`, `WorldModelMPCDemoView`) proving the
+  CoreML/ANE toolchain end to end — it never reads real EEG and never
+  actuates real generation; see `ADR-007-world-model-demo.md`. Any latent
+  anchoring, real-EEG MPC, or automatic behavior remains gated on
+  collection volume and an independent validation threshold. See
+  `WorldModel/README.md`, `ADR-006-jepa-transition-capture.md`, and
+  `ADR-007-world-model-demo.md`.
 
 ### Interface
 - `□` Local web dashboard for remote monitoring (deferred from the

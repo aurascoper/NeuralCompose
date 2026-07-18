@@ -54,6 +54,38 @@ hurting the hardest tested case when combined with it (see README). Left
 configurable for future tuning, not deleted, but not proven enough to
 default on.
 
+Effective-sample-size collapse and the adaptive-temperature fix: the MPPI
+softmax (`plan_step`) weights candidates by `-(cost - cost.min()) /
+temperature`. What actually controls how peaky that softmax gets is the
+SPREAD of `cost - cost.min()` relative to `temperature`, not cost's
+absolute size. Two independent, already-measured changes inflate that
+spread while `temperature` stayed fixed at `1.0`: raising `horizon` alone
+(effective sample size 157/512 -> 6/512 at horizon 25, since the running
+cost is summed per step) and adding `terminal_cost_weight` on top of the
+existing horizon-10 running cost (157/512 -> ~13/512) -- both are the same
+underlying "cost scale outpaces fixed temperature" problem, not two bugs
+(see README, "Fixing the receding-horizon stall"). `adaptive_temperature`
+rescales the softmax by the candidate batch's own cost spread every
+planning step (`temperature_effective = temperature * cost.std()`), so a
+fixed dimensionless `temperature` keeps producing a comparable effective
+sample size regardless of how `terminal_cost_weight`/`horizon` move the
+raw cost scale -- standard MPPI practice (cost-scale-normalized softmax),
+not new to this codebase. `min_cost_scale` floors the scale statistic so a
+near-degenerate batch (`cost.std() ~ 0`, every candidate scores almost
+identically) can't blow `temperature_effective` toward zero and collapse
+effective sample size from the OPPOSITE direction (a vanishing
+denominator, not an inflated cost scale). This is a calibration-layer fix
+inside `plan_step` only -- it does not change any value `score_candidates`
+returns, so it doesn't touch why the terminal term is squared-once vs. the
+running term summed, or the stall-widening default, discussed above.
+`normalize_running_cost_by_horizon` is a separate, off-by-default lever
+that instead rescales `score_candidates`' running cost itself (dividing by
+`horizon` so `state_cost_weight`'s meaning stays comparable across horizon
+values); left configurable rather than defaulted on since it hasn't been
+validated together with the existing `state_cost_weight=1.0` /
+`terminal_cost_weight=2.0` tuning -- `adaptive_temperature` alone is the
+required fix, this is an optional secondary one.
+
 Which encoder produces which latent is easy to get backwards:
 `JEPAModule.forward_online` always feeds the predictor a latent from the
 ONLINE `encoder`, never `target_encoder` -- that's what the predictor was
@@ -97,7 +129,18 @@ GOAL_TOLERANCE = 0.1  # matches dataset.py's WAYPOINT_REACHED_DIST
 class MPCConfig:
     horizon: int = 10
     num_candidates: int = 512
-    temperature: float = 1.0
+    # Under adaptive_temperature=True (default), this is a dimensionless
+    # multiplier of the candidate batch's own cost.std(), not an absolute
+    # cost-scale value -- 0.45 was found empirically (see README, "Temperature/
+    # cost-scale calibration"): at horizon=10 with terminal_cost_weight=0 it
+    # reproduces the original pre-terminal-cost effective-sample-size
+    # reference (~157/512); with terminal_cost_weight=2.0 re-enabled at this
+    # same value, effective sample size stays in the 150-200+/512 range
+    # (no collapse) across horizons 5/10/25, at the cost of a measurably
+    # smaller (not larger) hard-case success/distance improvement than the
+    # collapsed-ESS configuration showed on this specific small (n=35) hard
+    # case sample -- see README for the full, honestly-reported trade-off.
+    temperature: float = 0.45
     state_cost_weight: float = 1.0
     smoothness_cost_weight: float = 0.1
     # Terminal-state term and stall-triggered widening -- see module
@@ -117,6 +160,18 @@ class MPCConfig:
     # deleted, but shouldn't be on by default until it's actually proven.
     stall_variance_multiplier: float = 1.0
     stall_widen_fraction: float = 0.25
+    # Scale-adaptive softmax temperature -- see module docstring
+    # "Effective-sample-size collapse and the adaptive-temperature fix" for
+    # why this is the required fix for the terminal-cost-added/horizon-25
+    # effective-sample-size collapses. Default True; new `temperature`
+    # default under this scheme must be found empirically (see
+    # WorldModel/sweep.py and README), not guessed -- this is a genuine
+    # rescaling of what `temperature` means, not a no-op toggle.
+    adaptive_temperature: bool = True
+    min_cost_scale: float = 1e-3
+    # Optional, off by default -- see module docstring. Not validated
+    # together with state_cost_weight/terminal_cost_weight yet.
+    normalize_running_cost_by_horizon: bool = False
 
 
 def sample_candidate_actions(
@@ -168,6 +223,8 @@ def score_candidates(
         full = torch.cat([prev, candidate_actions], dim=1)
     smoothness_cost = (full[:, 1:] - full[:, :-1]).norm(dim=-1).sum(dim=1)
 
+    if config.normalize_running_cost_by_horizon:
+        state_cost = state_cost / config.horizon
     weighted_state = config.state_cost_weight * state_cost
     weighted_smoothness = config.smoothness_cost_weight * smoothness_cost
     weighted_terminal = config.terminal_cost_weight * terminal_cost
@@ -232,7 +289,12 @@ def plan_step(
     )
     assert torch.isfinite(cost).all(), "non-finite cost in MPC candidate scoring"
 
-    weights = F.softmax(-(cost - cost.min()) / config.temperature, dim=0)
+    if config.adaptive_temperature:
+        cost_scale = cost.std(unbiased=False).clamp_min(config.min_cost_scale)
+    else:
+        cost_scale = torch.ones((), device=cost.device)
+    temperature_effective = config.temperature * cost_scale
+    weights = F.softmax(-(cost - cost.min()) / temperature_effective, dim=0)
     blended = (weights.view(-1, 1, 1) * candidate_actions).sum(dim=0)  # (H, ACTION_DIM)
     assert torch.isfinite(blended).all(), "non-finite blended action"
 
@@ -240,6 +302,8 @@ def plan_step(
         "cost_min": cost.min().item(),
         "cost_mean": cost.mean().item(),
         "cost_max": cost.max().item(),
+        "cost_std": cost.std(unbiased=False).item(),
+        "temperature_effective": temperature_effective.item(),
         # ESS near 1 -> effectively greedy (temperature too low); ESS near
         # num_candidates -> no discrimination between candidates (too high).
         "effective_sample_size": (1.0 / (weights ** 2).sum()).item(),
@@ -360,6 +424,17 @@ def main() -> None:
     ap.add_argument("--stall-distance-threshold", type=float, default=MPCConfig().stall_distance_threshold)
     ap.add_argument("--stall-variance-multiplier", type=float, default=MPCConfig().stall_variance_multiplier)
     ap.add_argument("--stall-widen-fraction", type=float, default=MPCConfig().stall_widen_fraction)
+    ap.add_argument(
+        "--adaptive-temperature",
+        action=argparse.BooleanOptionalAction,
+        default=MPCConfig().adaptive_temperature,
+    )
+    ap.add_argument("--min-cost-scale", type=float, default=MPCConfig().min_cost_scale)
+    ap.add_argument(
+        "--normalize-running-cost-by-horizon",
+        action=argparse.BooleanOptionalAction,
+        default=MPCConfig().normalize_running_cost_by_horizon,
+    )
 
     ap.add_argument("--episodes", type=int, default=50)
     ap.add_argument("--max-episode-steps", type=int, default=50)
@@ -386,6 +461,9 @@ def main() -> None:
         stall_distance_threshold=args.stall_distance_threshold,
         stall_variance_multiplier=args.stall_variance_multiplier,
         stall_widen_fraction=args.stall_widen_fraction,
+        adaptive_temperature=args.adaptive_temperature,
+        min_cost_scale=args.min_cost_scale,
+        normalize_running_cost_by_horizon=args.normalize_running_cost_by_horizon,
     )
     device = resolve_device()
 
@@ -464,6 +542,13 @@ def main() -> None:
                     f"effective_sample_size mean={ess.mean():.1f}/{config.num_candidates}"
                 )
                 print(f"  stall_detected on {stall_rate:.1%} of planning steps")
+                if config.adaptive_temperature:
+                    temp_eff = np.array([d["temperature_effective"] for d in all_diag])
+                    cost_std = np.array([d["cost_std"] for d in all_diag])
+                    print(
+                        f"  adaptive temperature: cost_std mean={cost_std.mean():.3f} "
+                        f"temperature_effective mean={temp_eff.mean():.3f}"
+                    )
 
     mpc_success = sum(r["reached"] for r in results["mpc"]) / len(results["mpc"])
     zero_success = sum(r["reached"] for r in results["zero"]) / len(results["zero"])

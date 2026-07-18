@@ -16,6 +16,7 @@ import Foundation
 /// the underlying affordances exist.
 public enum AppCommand: Sendable, Equatable, Hashable {
     case openPhaseBDebug
+    case openWorldModelDemo
     case startRecording
     case stopRecording
     case beginCalibration
@@ -44,6 +45,7 @@ extension AppCommand {
     public var id: String {
         switch self {
         case .openPhaseBDebug:    return "debug.phase-b"
+        case .openWorldModelDemo: return "worldmodel.open-demo"
         case .startRecording:     return "record.start"
         case .stopRecording:      return "record.stop"
         case .beginCalibration:   return "calibration.begin"

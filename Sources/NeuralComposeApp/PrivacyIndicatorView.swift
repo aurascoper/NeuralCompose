@@ -38,6 +38,12 @@ struct PrivacyIndicatorView: View {
     /// The app keeps this visible as a distinct recording state rather than
     /// silently broadening the existing interaction log.
     @Binding var jepaTransitionCaptureEnabled: Bool
+    /// Separate opt-in for the synthetic-task World Model MPC demo window
+    /// (see `Sources/WorldModelDemo/`). Unlike the toggles above, this
+    /// gates no data persistence at all — the demo reads nothing real and
+    /// writes nothing to disk in either state; it only controls whether
+    /// the demo window's closed-loop simulation actually runs.
+    @Binding var worldModelDemoEnabled: Bool
 
     @State private var expanded: Bool = false
 
@@ -52,6 +58,7 @@ struct PrivacyIndicatorView: View {
                 adaptiveBadge
                 interactionLogBadge
                 jepaCaptureBadge
+                worldModelDemoBadge
                 voiceBadge
                 cmdBadge
                 Button(action: { expanded.toggle() }) {
@@ -152,6 +159,23 @@ struct PrivacyIndicatorView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Text("Local only; records no composed text or committed words.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    GridRow {
+                        Text("World Model Demo").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Run synthetic-task MPC demo", isOn: $worldModelDemoEnabled)
+                                .toggleStyle(.switch)
+                            if worldModelDemoEnabled {
+                                Text("Demo window runs a self-contained simulation; reads nothing real, writes nothing to disk.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Off — demo window is idle; nothing is read or written")
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Synthetic 2D task only — never reads real EEG. See WorldModel/README.md.")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -290,6 +314,22 @@ struct PrivacyIndicatorView: View {
     private var jepaCaptureBadge: some View {
         if jepaTransitionCaptureEnabled {
             Label("JEPA capture", systemImage: "waveform.badge.record")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
+        }
+    }
+
+    /// Distinct from `jepaCaptureBadge`: this feature persists nothing to
+    /// disk in either state, so red here means "the demo simulation is
+    /// actively running," not "something is being recorded."
+    @ViewBuilder
+    private var worldModelDemoBadge: some View {
+        if worldModelDemoEnabled {
+            Label("World Model Demo", systemImage: "cube.transparent")
                 .font(.caption)
                 .foregroundStyle(.red)
                 .padding(.horizontal, 8)

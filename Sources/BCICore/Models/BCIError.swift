@@ -42,6 +42,12 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
     case microphonePermissionDenied
     case speechRecognitionPermissionDenied
 
+    // World Model demo (synthetic-task JEPA+MPC research demo, not real EEG)
+    case worldModelDemoModelMissing(path: String)
+    case worldModelDemoLoadFailed(path: String, underlying: String)
+    case worldModelDemoInferenceFailed(reason: String)
+    case worldModelDemoOutputShapeUnexpected(expected: String, actual: String)
+
     // App-level
     case cancelled
 
@@ -93,6 +99,14 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
             return "Microphone permission denied"
         case .speechRecognitionPermissionDenied:
             return "Speech recognition permission denied"
+        case .worldModelDemoModelMissing(let path):
+            return "World Model demo Core ML model not found at \(path)"
+        case .worldModelDemoLoadFailed(let path, let underlying):
+            return "World Model demo Core ML load failed at \(path): \(underlying)"
+        case .worldModelDemoInferenceFailed(let reason):
+            return "World Model demo Core ML inference failed: \(reason)"
+        case .worldModelDemoOutputShapeUnexpected(let expected, let actual):
+            return "World Model demo Core ML output shape mismatch — expected \(expected), got \(actual)"
         case .cancelled:
             return "Cancelled"
         }

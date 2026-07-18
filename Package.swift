@@ -34,6 +34,7 @@ let package = Package(
         .library(name: "BCIClassifier", targets: ["BCIClassifier"]),
         .library(name: "BCILLM",        targets: ["BCILLM"]),
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
+        .library(name: "WorldModelDemo", targets: ["WorldModelDemo"]),
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
         .executable(name: "MLXProbe", targets: ["MLXProbe"]),
@@ -117,10 +118,24 @@ let package = Package(
             linkerSettings: [.linkedFramework("Speech")]
         ),
 
+        // ── World Model demo (synthetic-task JEPA+MPC, CoreML/ANE) ────────
+        // Deliberately NOT a `BCI*`-prefixed name: every `BCI*` target is a
+        // real production-pipeline stage; this is a synthetic-task research
+        // demo (see WorldModel/README.md), never fed real EEG. Depends only
+        // on BCICore — no MLX, no new third-party deps. Imported only by
+        // NeuralComposeApp; must never become a dependency of any BCI*
+        // target.
+        .target(
+            name: "WorldModelDemo",
+            dependencies: ["BCICore"],
+            path: "Sources/WorldModelDemo",
+            swiftSettings: strictConcurrency
+        ),
+
         // ── Application ──────────────────────────────────────────────────
         .executableTarget(
             name: "NeuralComposeApp",
-            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice"],
+            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice", "WorldModelDemo"],
             path: "Sources/NeuralComposeApp",
             // Info.plist lives in Resources/ for reference / Xcode builds but
             // is intentionally NOT declared as a SwiftPM resource: SwiftPM
@@ -255,6 +270,11 @@ let package = Package(
             name: "BCIVoiceTests",
             dependencies: ["BCIVoice", "BCICore"],
             path: "Tests/BCIVoiceTests"
+        ),
+        .testTarget(
+            name: "WorldModelDemoTests",
+            dependencies: ["WorldModelDemo", "BCICore"],
+            path: "Tests/WorldModelDemoTests"
         ),
         .testTarget(
             name: "NeuralComposeAppTests",

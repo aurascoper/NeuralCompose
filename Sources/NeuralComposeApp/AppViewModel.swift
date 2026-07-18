@@ -109,6 +109,17 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// coupled to the narrower interaction-log toggle.
     @Published public var jepaTransitionCaptureEnabled: Bool = false
 
+    /// Separate, explicit opt-in for the synthetic-task JEPA+MPC planning
+    /// demo (see `WorldModel/README.md`, `Sources/WorldModelDemo/`). Unlike
+    /// `jepaTransitionCaptureEnabled`, this gates no data collection at
+    /// all — it only controls whether the self-contained synthetic-task
+    /// demo window actually runs its closed-loop simulation and calls the
+    /// real on-device predictor for its illustrative panel (see
+    /// `WorldModelMPCDemoView`). Off by default; unrelated to
+    /// `interactionLoggingEnabled` and `jepaTransitionCaptureEnabled`,
+    /// which this never reads or modifies.
+    @Published public var worldModelDemoEnabled: Bool = false
+
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(

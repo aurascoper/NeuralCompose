@@ -60,6 +60,25 @@ struct NeuralComposeAppEntry: App {
             }
         }
 
+        // World Model demo — synthetic-task JEPA+MPC research window (see
+        // WorldModel/README.md, Sources/WorldModelDemo/). Always reachable
+        // like Phase B Debug; `AppViewModel.worldModelDemoEnabled` (off by
+        // default) gates whether the view's content actually runs the
+        // simulation, not whether the window/menu item exists.
+        Window("World Model Demo", id: "world-model-demo") {
+            WorldModelMPCDemoView(viewModel: loader.viewModel)
+        }
+        .defaultSize(width: 900, height: 640)
+        .commands {
+            CommandMenu("World Model") {
+                Button("Open World Model Demo") {
+                    if let dispatcher = loader.dispatcher {
+                        Task { await dispatcher.perform(.openWorldModelDemo) }
+                    }
+                }.keyboardShortcut("m", modifiers: [.command, .shift])
+            }
+        }
+
         MenuBarExtra("NeuralCompose", systemImage: "brain.head.profile") {
             if let viewModel = loader.viewModel {
                 MenuBarView(viewModel: viewModel)

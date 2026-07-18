@@ -506,6 +506,149 @@ its best approach and degrade earlier near-misses. That makes the next
 real problem less about raw budget and more about convergence/termination
 behavior, temperature/cost-scale calibration, or representation quality.
 
+### Temperature/cost-scale calibration (2026-07-18)
+
+The parameter sweep above flagged the real next problem without fixing it:
+"temperature/cost-scale calibration... a natural next step." This session
+did that calibration.
+
+**Diagnosis, not re-derived**: `plan_step`'s softmax weights candidates by
+`-(cost - cost.min()) / temperature`. What controls how peaky that gets is
+the *spread* of `cost - cost.min()` relative to the fixed `temperature=1.0`
+— and two independent changes had already inflated that spread: adding
+`terminal_cost_weight=2.0` (effective sample size, ESS, 157/512 → ~13/512
+at horizon 10) and raising horizon alone (157/512 → 6/512 at horizon 25,
+no terminal term needed). Same root cause, not two bugs.
+
+**Fix implemented**: `MPCConfig.adaptive_temperature` (default `True`)
+rescales the softmax by the candidate batch's own cost spread every
+planning step — `temperature_effective = temperature * cost.std()` —
+floored by `min_cost_scale=1e-3` so a near-degenerate batch can't collapse
+ESS from the *opposite* direction. `normalize_running_cost_by_horizon` was
+also added as a second, independent lever, left off by default (not
+validated together with the existing cost weights).
+
+**Calibration pass** (`./WorldModel/mpc.py --episodes 100 --seed 1
+--terminal-cost-weight 0`, sweeping `--temperature`, looking for the value
+that reproduces the original pre-terminal-cost ESS reference of ~157/512):
+
+| temperature | ESS mean | success_rate | mean_final_distance |
+|---|---:|---:|---:|
+| 0.3 | 103.7/512 | 0.13 | 0.4643 |
+| 0.4 | 140.8/512 | 0.15 | 0.4639 |
+| **0.45** | **158.3/512** | 0.14 | 0.4633 |
+| 0.5 | 174.7/512 | 0.16 | 0.4676 |
+| 1.0 | 297.2/512 | 0.13 | 0.5223 |
+
+`temperature=0.45` was the closest match (158.3 vs. the 157 reference) and
+is the new `MPCConfig` default.
+
+**Aggregate check, re-enabling `terminal_cost_weight=2.0` at
+`temperature=0.45`** (`--episodes 100 --seed 1`, matching the exact
+invocation used throughout this file):
+
+| horizon | ESS mean | success_rate | mean_final_distance |
+|---|---:|---:|---:|
+| 5 | 178.9/512 | 0.14 | 0.4342 |
+| 10 (default) | 176.0/512 | 0.20 | 0.5032 |
+| 25 | 122.2/512 | 0.18 | 0.6129 |
+
+Compare to the pre-fix numbers this replaces: horizon 10 was ESS `13.5/512`,
+success `0.21`, mean `0.4435`; horizon 25 was ESS `6/512` (measured
+independently at Day 4, before terminal cost existed). **The fix
+unambiguously does what it was built to do**: ESS no longer collapses to
+single digits at any tested horizon — it stays in a healthy 120-180/512
+range throughout, instead of collapsing toward a near-greedy, statistically
+fragile softmax as horizon or terminal-cost weight grow.
+
+**What it does *not* do: clearly improve the success/distance metrics — in
+fact the opposite, reported honestly rather than picked around.** At the
+default horizon=10, success rate and mean distance are both slightly worse
+than the collapsed-ESS configuration (`0.20`/`0.5032` vs. `0.21`/`0.4435`).
+`telemetry.py --seed 1` improved substantially (final_distance
+`0.283 → 0.147`, even better than the original pre-terminal-cost `0.196`),
+but `telemetry.py --seed 7 --horizon 5` gave some of its terminal-cost gain
+back (`0.258 → 0.324`, still much better than the pre-terminal-cost
+`0.463`), and the single corner-to-corner flagship case at its default seed
+got clearly worse (`0.8033 → 1.3183`).
+
+**The full committed hard-case sweep (`./WorldModel/sweep.py`, 7 cases × 5
+seeds = 35 trials — see "the failing diagonal" below for why 7 not the
+original 7-but-uncoordinated set) makes the honest picture clearest**:
+
+| config | successes | mean_final_distance | mean ESS |
+|---|---:|---:|---:|
+| adaptive off (pre-fix behavior) | 1/35 (2.9%) | 1.1993 | 31.3/512 |
+| adaptive on, temperature=0.45 (new default) | 0/35 (0.0%) | 1.2509 | 207.1/512 |
+| adaptive on, temperature=0.15 | 0/35 (0.0%) | 1.2312 | 62.3/512 |
+
+All three are within noise of each other on this small sample (`1.20`-`1.25`
+mean distance, 0-1 successes out of 35) — **on this exact committed
+hard-case set, whether adaptive temperature is on or off does not clearly
+move the success/distance metrics in either direction.** The three
+"large"-case coordinates here are freshly defined and documented in
+`sweep.py::HARD_CASES` (the original 35-trial sweep's three cases in this
+category were never recorded with exact coordinates, so this doesn't
+attempt to reproduce them — it replaces them with a reproducible set).
+
+**Net assessment**: this is a real fix for a real, unambiguous statistical
+pathology (ESS collapsing to single digits is a fragile, near-degenerate
+softmax by any measure, most dramatically demonstrated at horizon 25:
+6/512 → 122/512), and it's the correct default for that reason — a
+planner whose action is effectively determined by a handful of samples out
+of 512 is not a robust design regardless of whether this particular n=35
+noisy sample happened to score it well. But it should not be reported as
+"fixing the stall" in the success/distance sense the original ask was
+framed around: on that metric, this session's evidence says the collapsed,
+near-greedy softmax the terminal-cost fix produced was doing no worse (and
+anecdotally, on some individual cases, better) than a statistically
+healthier one. Both configurations still get 0-1/35 literal successes on
+this hard-case set — none of this changes the underlying `r≈0.63`
+representation-quality ceiling this file has named repeatedly.
+
+**The persistently-failing diagonal, `(0.8,-0.8)→(-0.8,0.8)`**: still fails
+completely under every configuration tested this session (mean final
+distance `2.234`-`2.272`, barely different from the `2.263` starting
+distance, regardless of `adaptive_temperature` on/off or `temperature`
+value) — confirming it's unrelated to the ESS-collapse issue just fixed. A
+time-boxed, two-part diagnostic (`./WorldModel/latent_diagnostics.py`)
+ruled out the two cheapest hypotheses without finding the actual cause:
+
+1. **Latent-vs-position monotonicity along the line itself**: not
+   obviously worse on the failing line (r=0.882, 2/20 non-monotonic steps)
+   than the working diagonal (r=0.918, 0/20) or even the failing
+   diagonal's reverse direction (r=0.838, 5/20) — all three are
+   reasonably well-behaved. This rules out "the encoder has a severe local
+   defect specifically on this line" as the explanation.
+2. **Training-data density**: no meaningful gap near either diagonal line
+   (16,268 vs. 16,149 points within 0.15 units of each line, out of 81,600
+   total position samples) or near any of the four corners (~3,460-3,674
+   each). This rules out "this direction/corner pair was undersampled
+   during data generation" as the explanation.
+
+Per this session's time-box, this stops here: **an open question, not
+solved**. The two ruled-out hypotheses were both about the *encoder's*
+static representation; the actual defect — if there is one specific to
+this direction rather than just an unlucky combination of the `r≈0.63`
+ceiling and a 2.26-unit maximal distance — most likely lives in the
+*predictor's* multi-step rollout fidelity for this specific action
+direction, which this session did not check.
+
+---
+
+## World Model, Swift, and CoreML (2026-07-18 onward)
+
+Building on the fix above, this spike gained a second, parallel track: a
+CoreML export of the synthetic-task JEPA (`WorldModel/export_coreml.py`)
+and a Swift-side research demo (`Sources/WorldModelDemo/`) that runs the
+same MPPI planner natively on the ANE. This remains entirely a synthetic-
+task exercise — no real EEG data, no claim about cognitive state, off by
+default, never touching the real typing/generation path. See
+`Sources/WorldModelDemo/` and the `WorldModelMPCDemoView` in-app for the
+full framing; the short version is the same one this file has used
+throughout: prove the architecture (now including the on-device CoreML/ANE
+leg) on the toy task before any real-EEG decision is made.
+
 ## Explicitly out of scope for this spike (so far)
 
 - Runtime use of real EEG data: the app can now collect and train from a

@@ -54,6 +54,8 @@ public final class AppCommandDispatcher {
         switch command {
         case .openPhaseBDebug:
             target.pendingWindowOpen = "phase-b-debug"
+        case .openWorldModelDemo:
+            target.pendingWindowOpen = "world-model-demo"
         case .startRecording:
             await target.startCalibrationRecording()
         case .stopRecording:
