@@ -136,6 +136,17 @@ validation) are still landing.
   richer semantic visualization
 - `□` Multi-user collaboration: shared 3D workspace across multiple
   NeuralCompose instances, each running on its own Muse
+- `~` World Model (JEPA + MPC) research spike — `WorldModel/` (new
+  top-level dir, decoupled from `Sources/`, PyTorch not MLX). Day 1
+  (synthetic env + trajectory dataset + DataLoader) landed 2026-07-17;
+  Days 2-4 (predictor networks, anti-collapse training loop, latent
+  MPC) not started. Deliberately synthetic, *not* trained on real EEG
+  data — one processed night of sleep data and zero logged
+  interaction events exist today, nowhere near enough volume/action
+  variation for a real JEPA. Whether/how to point this at
+  `SpectralState`/`TelemetryEvent` is a future decision gated on the
+  architecture actually working on the toy task first. See
+  `WorldModel/README.md`.
 
 ### Interface
 - `□` Local web dashboard for remote monitoring (deferred from the
