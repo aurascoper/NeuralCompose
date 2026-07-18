@@ -120,7 +120,7 @@ second run at `--ema-tau 0.9 --seed 1 --batch-size 4` showed a ~20x larger
 the online encoder faster), a useful sanity check that the update isn't a
 no-op or miswired.
 
-### Day 3 — The Representation Loss & Training Loop (not started)
+### Day 3 — The Representation Loss & Training Loop (done, 2026-07-17)
 
 The hard part: avoiding representation collapse (mapping every state to a
 constant so prediction loss is trivially zero).
@@ -131,6 +131,84 @@ EMA update, never via gradient descent: $\bar\theta \leftarrow \tau\bar\theta + 
 
 Deliverable: a predictor that unrolls latent trajectories across a
 multi-step horizon without diverging.
+
+- **`loss.py::vicreg_loss`** (config `VICRegConfig`: `inv_weight=10.0
+  var_weight=10.0 cov_weight=1.0 gamma=1.0 eps=1e-4`) — VICReg-style
+  invariance/variance/covariance loss, applied to both `z_pred` and
+  `z_target`. `std_target_mean` is the collapse-detection metric watched
+  every epoch: near `gamma` (1.0) means healthy, near 0 means collapsed.
+  `z_target`'s var/cov terms carry no gradient (it arrives already
+  detached from `forward_target`'s `@torch.no_grad()`) — they're
+  diagnostics, not optimization pressure; only `z_pred`'s terms actually
+  backprop into `encoder`/`predictor`.
+- **`train.py::TrainConfig`/`main()`** — wires `make_dataloader` (Day 1) +
+  `JEPAModule` (Day 2) + `vicreg_loss` into an Adam training loop
+  (`encoder`+`predictor` params only, never `target_encoder`, which is
+  EMA-only), calling `update_target_ema()` after every step. Per-epoch
+  stdout prints train/val loss components and `std_target_mean`, with a
+  collapse `WARNING` if it drops below `0.1 * gamma`.
+- **`train.py::rollout_check`** — validates the deliverable directly in
+  latent space (JEPA has no decoder back to raw state): self-feeds the
+  predictor for `rollout_horizon` steps with no teacher forcing, checking
+  finiteness, latent-norm growth, and drift from the true final state's
+  target encoding relative to a random-trajectory-pair baseline. Runs
+  automatically at the end of every `train.py` invocation.
+- Checkpoint: `WorldModel/checkpoints/jepa.pt` (gitignored, mirrors
+  `WorldModel/data/`), a dict of `model_state_dict` + `jepa_config` +
+  `vicreg_config` + final metrics — what Day 4 will load
+  (`JEPAModule(JEPAConfig(**ckpt["jepa_config"]))` then
+  `load_state_dict`) and freeze.
+
+**Verified 2026-07-17**: `./WorldModel/loss.py` smoke test: collapsed
+latents (`1e-6`-scale noise) → `var=1.98` `std_target_mean=0.0100`;
+healthy latents (`torch.randn`) → `var=0.023` `std_target_mean=1.0085`;
+latents that are high-magnitude but every dimension a scalar multiple of
+one shared direction (variance looks mostly fine, redundancy hidden from
+`var`) → `cov=58.8`, ~250x the healthy case's `cov=0.23` — confirms the
+covariance term catches what the variance term alone misses.
+
+`./WorldModel/train.py` (75 epochs, default config, `data/{train,val}.npz`
+from Day 1): train loss `9.1694 → 5.1614`, val loss `9.8014 → 6.9765`
+(`inv` component `0.0852 → 0.0680` val); `std_target_mean` held stable in
+the `0.75–0.83` range for all 75 epochs with zero collapse `WARNING`s —
+the representation did not degrade during training.
+
+`rollout_check` at the default `rollout_horizon=20`: `finite=True`,
+latent norm stayed bounded (`ratio=1.18`, no blow-up), but
+`final_drift_vs_target=6.33` came out essentially tied with
+`random_pair_baseline=6.26` — by 20 steps of unforced autoregressive
+rollout, the predictor has lost trajectory-specific information. A
+follow-up sweep across horizons on the trained checkpoint clarified this
+rather than leaving it as a flat failure: `drift/baseline` rises smoothly
+from `0.22` (horizon 1) through `0.51` (horizon 5), `0.74` (horizon 10),
+`0.90` (horizon 15), crossing `1.01` right around horizon 18–20, up to
+`1.15` by horizon 49 (full episode length) — latent norm never exceeds
+`1.2x` its starting value even at horizon 49. So this is compounding
+single-step prediction error eroding *information content* over a long
+autoregressive rollout, not numerical divergence — the predictor is
+genuinely informative (clearly better than a random trajectory guess)
+through roughly 15 steps, and degrades to chance beyond that.
+**Implication for Day 4**: a receding-horizon MPC planning loop should
+keep its horizon comfortably under ~15 steps to trust these latent
+rollouts; treating this as a free 50-step horizon would not be
+justified by what Day 3 actually measured.
+
+Negative-control ablation (`--var-weight 0 --cov-weight 0`, otherwise
+identical config/data/seed, 75 epochs): `std_target_mean` declined
+continuously and monotonically the entire run (`0.59 → 0.46`, still
+falling at epoch 75, no plateau reached), while the real run held
+essentially flat (`0.79 → 0.77`) over the same 75 epochs on identical
+data and architecture — direct evidence the variance/covariance terms are
+actively opposing a real, ongoing degradation, not decorative. Note this
+corrects an a priori guess made while planning this ablation (that
+collapse would be visually near-total within 10–15 epochs): the EMA
+target (`ema_tau=0.99`) actually tracks the online encoder almost fully
+within a few hundred steps, so slow EMA lag doesn't explain the
+gentler-than-expected decline — the erosion itself is just slower than
+assumed. A longer ablation run would likely continue declining well past
+75 epochs; this was not run, since the monotonic-vs-flat contrast over an
+identical epoch budget already answers the question the ablation was
+for.
 
 ### Day 4 — Latent Model Predictive Control (not started)
 
