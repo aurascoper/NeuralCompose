@@ -49,7 +49,8 @@ struct ContentView: View {
                 appliedAdaptation: viewModel.appliedAdaptation,
                 detectedSpectralState: viewModel.detectedSpectralState,
                 adaptiveComplexityEnabled: $viewModel.adaptiveComplexityEnabled,
-                interactionLoggingEnabled: $viewModel.interactionLoggingEnabled
+                interactionLoggingEnabled: $viewModel.interactionLoggingEnabled,
+                jepaTransitionCaptureEnabled: $viewModel.jepaTransitionCaptureEnabled
             )
             Divider()
 

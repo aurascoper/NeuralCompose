@@ -40,6 +40,12 @@ public struct AppContainer: Sendable {
     /// `TelemetryLogger`; `AppViewModel.interactionLoggingEnabled` (off by
     /// default) gates whether it's ever actually called.
     public let interactionLogger: any InteractionLogging
+    /// Separate local-only recorder for paired EEG-window/action transitions.
+    /// It is inert by default and independently gated by
+    /// `AppViewModel.jepaTransitionCaptureEnabled`; do not route this through
+    /// `TelemetryEvent`, whose deliberately narrower privacy contract remains
+    /// unchanged.
+    public let jepaTransitionCapture: any JEPATransitionCapturing
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
@@ -85,7 +91,8 @@ public struct AppContainer: Sendable {
         spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved = .init(
             estimator: StubSpectralStateEstimator(), kind: .stub, warning: nil
         ),
-        interactionLogger: any InteractionLogging = NullInteractionLogger()
+        interactionLogger: any InteractionLogging = NullInteractionLogger(),
+        jepaTransitionCapture: any JEPATransitionCapturing = NullJEPATransitionCapture()
     ) {
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
@@ -99,6 +106,7 @@ public struct AppContainer: Sendable {
         self.sentenceEmbedder = sentenceEmbedder
         self.spectralEstimatorResolved = spectralEstimatorResolved
         self.interactionLogger = interactionLogger
+        self.jepaTransitionCapture = jepaTransitionCapture
     }
 
     /// Build a container from the environment. This is what the App entry
@@ -156,6 +164,11 @@ public struct AppContainer: Sendable {
         // interactionLoggingEnabled toggle (off by default) actually calls
         // log(_:). See ADR-005-local-interaction-logging.md.
         let interactionLogger = TelemetryLogger(directory: TelemetryLogger.defaultDirectory())
+        let stateStride = max(windowingConfig.strideSeconds, 0.001)
+        let stateWindowCapacity = max(1, Int((5.0 / stateStride).rounded(.up)))
+        let jepaTransitionCapture = TransitionCaptureManager(
+            eegBuffer: JEPASpectralStateRingBuffer(capacity: stateWindowCapacity)
+        )
 
         return AppContainer(
             streamResolved: stream,
@@ -168,7 +181,8 @@ public struct AppContainer: Sendable {
             windowingConfig: windowingConfig,
             sentenceEmbedder: sentenceEmbedder,
             spectralEstimatorResolved: spectralEstimator,
-            interactionLogger: interactionLogger
+            interactionLogger: interactionLogger,
+            jepaTransitionCapture: jepaTransitionCapture
         )
     }
 

@@ -103,6 +103,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// this on (see `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`).
     @Published public var interactionLoggingEnabled: Bool = false
 
+    /// Separate, explicit opt-in for the local JEPA training data set. While
+    /// on, the pipeline retains a bounded in-memory feature window and writes
+    /// one paired transition per genuine word commit. It is intentionally not
+    /// coupled to the narrower interaction-log toggle.
+    @Published public var jepaTransitionCaptureEnabled: Bool = false
+
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
@@ -164,6 +170,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private let predictor: any NextWordPredicting
     private let spectralEstimator: any SpectralStateEstimating
     private let interactionLogger: any InteractionLogging
+    private let jepaTransitionCapture: any JEPATransitionCapturing
     private let voiceOutput: any SpeechSynthesizing
     private let voiceInput: any DictationRecognizing
     private let voiceCommandInput: any VoiceCommandRecognizing
@@ -211,6 +218,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.predictor = container.predictorResolved.predictor
         self.spectralEstimator = container.spectralEstimatorResolved.estimator
         self.interactionLogger = container.interactionLogger
+        self.jepaTransitionCapture = container.jepaTransitionCapture
         self.voiceOutput = container.voiceOutputResolved.synthesizer
         self.voiceInput = container.voiceInputResolved.recognizer
         // The voice command recognizer holds a parser closure that
@@ -305,8 +313,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         let initialResolved = container.streamResolved
         let containerRef = container
         let spectralEstimatorRef = self.spectralEstimator
+        let jepaTransitionCaptureRef = self.jepaTransitionCapture
         streamTask = Task.detached(priority: .userInitiated) {
-            [weak self, windowing, metrics = metricsRef, channel, samples, spectralEstimatorRef] in
+            [weak self, windowing, metrics = metricsRef, channel, samples, spectralEstimatorRef, jepaTransitionCaptureRef] in
             var current = initialResolved
             var calibrationSampleCounter = 0
             var calibrationLastLogTime = Date()
@@ -390,6 +399,21 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                     if changed {
                                         self?.applyAdaptiveGeneration()
                                     }
+                                }
+
+                                // The compact JEPA state is derived from the
+                                // same validated live window that powers the
+                                // classifier. Keep it in memory only when the
+                                // distinct capture toggle is active.
+                                let jepaCaptureEnabled = await MainActor.run {
+                                    self?.jepaTransitionCaptureEnabled ?? false
+                                }
+                                if jepaCaptureEnabled,
+                                   let state = JEPASpectralState(
+                                       window: window,
+                                       timestamp: Date().timeIntervalSince1970
+                                   ) {
+                                    jepaTransitionCaptureRef.ingest(state)
                                 }
 
                                 // Record window and compute metrics if in calibration mode
@@ -1000,8 +1024,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.isPredicting = snap.isPredicting
         self.lastCommittedWord = snap.lastCommittedWord
 
-        guard interactionLoggingEnabled else { return }
-        if let event = Self.telemetryEvent(
+        guard let event = Self.telemetryEvent(
             previousComposedText: previousComposedText,
             previousCommittedWord: previousCommittedWord,
             snapshot: snap,
@@ -1009,9 +1032,16 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             detectedSpectralState: detectedSpectralState,
             appliedAdaptation: appliedAdaptation,
             adaptiveComplexityEnabled: adaptiveComplexityEnabled
-        ) {
+        ) else { return }
+
+        if interactionLoggingEnabled {
             let logger = interactionLogger
             Task { await logger.log(event) }
+        }
+        if jepaTransitionCaptureEnabled {
+            _ = jepaTransitionCapture.recordTransition(
+                actionVector: JEPAActionEncoder.vector(for: appliedAdaptation)
+            )
         }
     }
 

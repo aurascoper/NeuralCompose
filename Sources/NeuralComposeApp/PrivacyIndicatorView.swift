@@ -34,6 +34,10 @@ struct PrivacyIndicatorView: View {
     /// `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`.
     /// Never transmitted anywhere; written only to a local JSONL file.
     @Binding var interactionLoggingEnabled: Bool
+    /// Separate opt-in for the higher-sensitivity paired EEG feature data set.
+    /// The app keeps this visible as a distinct recording state rather than
+    /// silently broadening the existing interaction log.
+    @Binding var jepaTransitionCaptureEnabled: Bool
 
     @State private var expanded: Bool = false
 
@@ -47,6 +51,7 @@ struct PrivacyIndicatorView: View {
                 signalBadge
                 adaptiveBadge
                 interactionLogBadge
+                jepaCaptureBadge
                 voiceBadge
                 cmdBadge
                 Button(action: { expanded.toggle() }) {
@@ -127,6 +132,26 @@ struct PrivacyIndicatorView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Text("Local only, never transmitted — see ADR-005.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    GridRow {
+                        Text("JEPA Dataset").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Capture EEG transitions locally", isOn: $jepaTransitionCaptureEnabled)
+                                .toggleStyle(.switch)
+                            if jepaTransitionCaptureEnabled {
+                                Text("Recording paired EEG windows and generation settings to")
+                                    .foregroundStyle(.secondary)
+                                Text("~/Documents/NeuralCompose/JEPATransitions/")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Off - no JEPA transition data is written")
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Local only; records no composed text or committed words.")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -249,6 +274,22 @@ struct PrivacyIndicatorView: View {
     private var interactionLogBadge: some View {
         if interactionLoggingEnabled {
             Label("Logging", systemImage: "record.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
+        }
+    }
+
+    /// Separate from the word-commit log badge because this opt-in stores
+    /// measured EEG-derived features. The visible recorder state is part of
+    /// the consent boundary, not merely a diagnostics affordance.
+    @ViewBuilder
+    private var jepaCaptureBadge: some View {
+        if jepaTransitionCaptureEnabled {
+            Label("JEPA capture", systemImage: "waveform.badge.record")
                 .font(.caption)
                 .foregroundStyle(.red)
                 .padding(.horizontal, 8)

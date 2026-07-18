@@ -137,17 +137,15 @@ validation) are still landing.
 - `□` Multi-user collaboration: shared 3D workspace across multiple
   NeuralCompose instances, each running on its own Muse
 - `~` World Model (JEPA + MPC) research spike — `WorldModel/` (new
-  top-level dir, decoupled from `Sources/`, PyTorch not MLX). Day 1
-  (synthetic env + trajectory dataset + DataLoader) landed 2026-07-17;
-  Day 2 (encoder + EMA target encoder + latent predictor, `models.py`)
-  landed 2026-07-17; Days 3-4 (anti-collapse training loop, latent
-  MPC) not started. Deliberately synthetic, *not* trained on real EEG
-  data — one processed night of sleep data and zero logged
-  interaction events exist today, nowhere near enough volume/action
-  variation for a real JEPA. Whether/how to point this at
-  `SpectralState`/`TelemetryEvent` is a future decision gated on the
-  architecture actually working on the toy task first. See
-  `WorldModel/README.md`.
+  top-level dir, decoupled from `Sources/`, PyTorch not MLX). The synthetic
+  architecture work is landed through Day 4. A separate Phase 1, local-only
+  data path landed 2026-07-18: an explicit `JEPATransition` opt-in captures
+  paired EEG feature windows and the real `GenerationAdaptation`, while
+  `WorldModel/eeg_jepa.py` trains an offline Conv1d JEPA from that JSONL.
+  No corpus has yet been collected, and the app does not load or act on a
+  JEPA model. Any latent anchoring, MPC, or automatic behavior remains gated
+  on collection volume and an independent validation threshold. See
+  `WorldModel/README.md` and `ADR-006-jepa-transition-capture.md`.
 
 ### Interface
 - `□` Local web dashboard for remote monitoring (deferred from the
