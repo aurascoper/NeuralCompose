@@ -4,6 +4,7 @@ import BCIEEG
 import BCIClassifier
 import BCILLM
 import BCIVoice
+import WorldModelDemo
 
 /// Composition root. Knows nothing about SwiftUI; constructs the pipeline
 /// pieces and hands them to the view model. Kept here so previews and unit
@@ -25,6 +26,35 @@ public struct AppContainer: Sendable {
     /// dependency-free deterministic stub; test-overridable like everything
     /// else here.
     public let sentenceEmbedder: any SentenceEmbedder
+    /// Milestone B state source — real MLX-backed if `Models/EEGEncoder/`
+    /// resolves and its anchor space is trusted, stub otherwise. Resolved
+    /// *after* `sentenceEmbedder` in `makeDefault()`: the estimator needs
+    /// the already-built embedder for its honesty gate and to rebuild the
+    /// anchor table (see `SpectralStateEstimator`'s doc comment).
+    public let spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved
+    /// Sink for opt-in local interaction logging (see
+    /// `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`).
+    /// Defaults to a no-op here — same "stub-safe by default" shape as
+    /// `sentenceEmbedder`/`spectralEstimatorResolved` — so constructing an
+    /// `AppContainer` directly (tests, previews) never touches disk unless a
+    /// caller explicitly opts in. `makeDefault()` wires the real
+    /// `TelemetryLogger`; `AppViewModel.interactionLoggingEnabled` (off by
+    /// default) gates whether it's ever actually called.
+    public let interactionLogger: any InteractionLogging
+    /// Separate local-only recorder for paired EEG-window/action transitions.
+    /// It is inert by default and independently gated by
+    /// `AppViewModel.jepaTransitionCaptureEnabled`; do not route this through
+    /// `TelemetryEvent`, whose deliberately narrower privacy contract remains
+    /// unchanged.
+    public let jepaTransitionCapture: any JEPATransitionCapturing
+    /// Synthetic-task JEPA+MPC research demo (see `Sources/WorldModelDemo/`,
+    /// `WorldModel/README.md`) — CoreML/ANE if `Models/WorldModelDemo/`
+    /// resolves, a baseline proportional controller otherwise. Entirely
+    /// separate from the real pipeline: never reads EEG, never actuates
+    /// generation, gated by `AppViewModel.worldModelDemoEnabled` (off by
+    /// default). Deliberately excluded from `PipelineMode` — that type
+    /// drives the real pipeline's status banner.
+    public let worldModelDemoResolved: WorldModelDemoFactory.Resolved
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
@@ -66,7 +96,15 @@ public struct AppContainer: Sendable {
         metrics: MetricsCollector,
         windowingConfig: EEGWindowingConfig,
         smootherConfig: IntentSmoother.Config = .init(),
-        sentenceEmbedder: any SentenceEmbedder = DeterministicSentenceEmbedder()
+        sentenceEmbedder: any SentenceEmbedder = DeterministicSentenceEmbedder(),
+        spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved = .init(
+            estimator: StubSpectralStateEstimator(), kind: .stub, warning: nil
+        ),
+        interactionLogger: any InteractionLogging = NullInteractionLogger(),
+        jepaTransitionCapture: any JEPATransitionCapturing = NullJEPATransitionCapture(),
+        worldModelDemoResolved: WorldModelDemoFactory.Resolved = .init(
+            engine: BaselineWorldModelDemoPlanner(), kind: .baseline, warning: nil
+        )
     ) {
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
@@ -78,6 +116,10 @@ public struct AppContainer: Sendable {
         self.windowingConfig = windowingConfig
         self.smootherConfig = smootherConfig
         self.sentenceEmbedder = sentenceEmbedder
+        self.spectralEstimatorResolved = spectralEstimatorResolved
+        self.interactionLogger = interactionLogger
+        self.jepaTransitionCapture = jepaTransitionCapture
+        self.worldModelDemoResolved = worldModelDemoResolved
     }
 
     /// Build a container from the environment. This is what the App entry
@@ -126,6 +168,24 @@ public struct AppContainer: Sendable {
         }
         BCILog.embedding.notice("sentenceEmbedder backend: \(sentenceEmbedderBackend, privacy: .public)")
 
+        // Resolved after sentenceEmbedder — needs it for the honesty gate
+        // and to rebuild the anchor table (see SpectralStateEstimator).
+        let spectralEstimator = await SpectralStateEstimatorFactory.live(sentenceEmbedder: sentenceEmbedder)
+        BCILog.spectral.notice("spectral estimator backend: \(spectralEstimator.kind.rawValue, privacy: .public)")
+
+        // Always constructed — writes nothing until AppViewModel's opt-in
+        // interactionLoggingEnabled toggle (off by default) actually calls
+        // log(_:). See ADR-005-local-interaction-logging.md.
+        let interactionLogger = TelemetryLogger(directory: TelemetryLogger.defaultDirectory())
+        let stateStride = max(windowingConfig.strideSeconds, 0.001)
+        let stateWindowCapacity = max(1, Int((5.0 / stateStride).rounded(.up)))
+        let jepaTransitionCapture = TransitionCaptureManager(
+            eegBuffer: JEPASpectralStateRingBuffer(capacity: stateWindowCapacity)
+        )
+
+        let worldModelDemo = WorldModelDemoFactory.live()
+        BCILog.worldModelDemo.notice("world model demo backend: \(worldModelDemo.kind.rawValue, privacy: .public)")
+
         return AppContainer(
             streamResolved: stream,
             classifierResolved: classifier,
@@ -135,7 +195,11 @@ public struct AppContainer: Sendable {
             voiceCommandResolved: voiceCommand,
             metrics: metrics,
             windowingConfig: windowingConfig,
-            sentenceEmbedder: sentenceEmbedder
+            sentenceEmbedder: sentenceEmbedder,
+            spectralEstimatorResolved: spectralEstimator,
+            interactionLogger: interactionLogger,
+            jepaTransitionCapture: jepaTransitionCapture,
+            worldModelDemoResolved: worldModelDemo
         )
     }
 

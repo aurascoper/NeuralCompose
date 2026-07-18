@@ -21,6 +21,7 @@ If --night-dir is not specified, uses the most recent night-* directory.
 """
 import argparse
 import json
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -35,6 +36,65 @@ def find_latest_night_dir():
         return None
     nights = sorted(RECORDINGS_BASE.glob("night-*"))
     return nights[-1] if nights else None
+
+
+def find_eeg_session_dir(night_dir):
+    """Resolve the calibration_* dir this night's EEG actually landed in.
+
+    CalibrationRecorder always writes its own calibration_<ts>_<profile> dir
+    directly under RECORDINGS_BASE — there is no code path that makes it
+    write into night_dir itself. dream-session.sh links the session it finds
+    into night_dir/eeg_session; prefer that. Fall back to searching
+    RECORDINGS_BASE for calibration_* dirs born at/after night_dir (covers
+    night dirs created before this link existed), picking the largest by
+    disk usage as a proxy for "the real session" over an aborted test.
+    """
+    link = night_dir / "eeg_session"
+    if link.exists():
+        return link.resolve()
+    if not RECORDINGS_BASE.exists():
+        return None
+    try:
+        night_birth = night_dir.stat().st_birthtime
+    except AttributeError:
+        night_birth = night_dir.stat().st_ctime
+    best_dir, best_size = None, -1
+    for cand in RECORDINGS_BASE.glob("calibration_*"):
+        if not cand.is_dir():
+            continue
+        try:
+            cand_birth = getattr(cand.stat(), "st_birthtime", cand.stat().st_ctime)
+        except OSError:
+            continue
+        if cand_birth < night_birth:
+            continue
+        size = sum(f.stat().st_size for f in cand.glob("*") if f.is_file())
+        if size > best_size:
+            best_size, best_dir = size, cand
+    return best_dir
+
+
+def eeg_csv_stats(csv_path):
+    """Cheap row-count + time-span stats for an eeg.csv without loading it fully."""
+    try:
+        with open(csv_path, "rb") as f:
+            f.readline()  # header
+            first_data = f.readline()
+            f.seek(0, 2)
+            size = f.tell()
+            back = min(size, 8192)
+            f.seek(max(0, size - back))
+            tail = f.read().decode(errors="ignore")
+        last_line = next((ln for ln in reversed(tail.strip().split("\n")) if ln.strip()), None)
+        if not first_data or not last_line:
+            return None
+        first_t = float(first_data.decode().split(",")[0])
+        last_t = float(last_line.split(",")[0])
+        result = subprocess.run(["wc", "-l", str(csv_path)], capture_output=True, text=True, timeout=10)
+        n_rows = max(0, int(result.stdout.strip().split()[0]) - 1)
+        return {"n_rows": n_rows, "span_s": last_t - first_t}
+    except Exception:
+        return None
 
 
 def load_metrics(night_dir):
@@ -191,6 +251,33 @@ def main():
             print(f"  Total written: {rec_sizes[-1]:.1f} MB")
             print()
 
+    # EEG recording — separate from engineering telemetry. CalibrationRecorder
+    # writes its own calibration_<ts>_<profile> dir, never into night_dir.
+    eeg_dir = find_eeg_session_dir(night_dir)
+    eeg_minutes = None
+    print(f"## EEG Recording")
+    if not eeg_dir:
+        print(f"  ⚠ No EEG session found for this night (no {night_dir.name}/eeg_session link, "
+              f"no calibration_* dir born at/after this night dir)")
+        print(f"    Looked in: {RECORDINGS_BASE}")
+    else:
+        print(f"  Session dir:    {eeg_dir}")
+        csvs = sorted(eeg_dir.glob("*.csv"), key=lambda f: f.stat().st_size if f.exists() else 0, reverse=True)
+        if not csvs:
+            print(f"  ⚠ Session dir has no CSV files")
+        else:
+            stats = eeg_csv_stats(csvs[0])
+            if stats is None:
+                print(f"  ⚠ Could not read {csvs[0].name}")
+            else:
+                eeg_minutes = stats["span_s"] / 60
+                print(f"  EEG file:       {csvs[0].name}")
+                print(f"  Rows:           {stats['n_rows']:,}")
+                print(f"  Span:           {eeg_minutes:.1f} minutes ({stats['span_s'] / 3600:.2f} hours)")
+                if eeg_minutes < 60:
+                    print(f"                  ⚠ Under an hour — not a plausible overnight session")
+    print()
+
     # Passive cue simulation
     print(f"## Passive Cue Simulation")
     print(f"  Hypothetical cues: {len(cues)}")
@@ -209,23 +296,38 @@ def main():
         print(f"  ✓ No crash logs or exception files found")
     print()
 
-    # Summary
+    # Summary — collect concrete issues rather than a single opaque boolean,
+    # so a near-zero-duration or EEG-less night can't silently read "healthy".
     print(f"## Summary")
-    if metrics:
+    issues = []
+    if not metrics:
+        issues.append("no telemetry data (metrics.jsonl missing or empty)")
+    else:
+        elapsed_min = metrics[-1].get("elapsed_min", 0)
+        if elapsed_min < 30:
+            issues.append(f"telemetry duration only {elapsed_min:.1f} min — watcher likely "
+                          f"crashed or never ran overnight")
+        if not all(m.get("ble_connected") for m in metrics[-10:]):
+            issues.append("BLE not connected in the final samples")
         rss_values = [m.get("rss_mb") for m in metrics if m.get("rss_mb") is not None]
-        all_good = (
-            all(m.get("ble_connected") for m in metrics[-10:]) and
-            not exceptions and
-            (len(rss_values) < 10 or
-             (len(rss_values) > 10 and
-              (sum(rss_values[len(rss_values)//2:]) / (len(rss_values) - len(rss_values)//2)) /
-              (sum(rss_values[:len(rss_values)//2]) / (len(rss_values)//2)) < 1.2))
-            if rss_values else True
-        )
-        if all_good:
-            print(f"  ✓ Session looks healthy. Ready for analysis.")
-        else:
-            print(f"  ⚠ Issues detected. Review the sections above before proceeding.")
+        if len(rss_values) > 10:
+            first_half = sum(rss_values[:len(rss_values)//2]) / (len(rss_values)//2)
+            second_half = sum(rss_values[len(rss_values)//2:]) / (len(rss_values) - len(rss_values)//2)
+            if first_half > 0 and second_half / first_half >= 1.2:
+                issues.append("possible memory leak (RSS grew >20% first half vs second half)")
+    if exceptions:
+        issues.append(f"{len(exceptions)} crash/exception file(s) found")
+    if not eeg_dir:
+        issues.append("no EEG session found for this night")
+    elif eeg_minutes is not None and eeg_minutes < 60:
+        issues.append(f"EEG span only {eeg_minutes:.1f} min — not a plausible overnight session")
+
+    if not issues:
+        print(f"  ✓ Session looks healthy. Ready for analysis.")
+    else:
+        print(f"  ⚠ Issues detected:")
+        for issue in issues:
+            print(f"    - {issue}")
     print()
     print(f"Full telemetry: {night_dir / 'metrics.jsonl'}")
 

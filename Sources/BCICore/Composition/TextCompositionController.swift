@@ -19,19 +19,28 @@ public actor TextCompositionController {
         public let highlightIndex: Int
         public let isPredicting: Bool
         public let lastCommittedWord: String?
+        /// Monotonically increasing count of genuine commit events (EEG
+        /// `.commitActive`, `appendExternalText`, `applyRefinement` — never
+        /// `reset()`). `lastCommittedWord` alone can't distinguish "no new
+        /// commit happened" from "the user genuinely committed the same
+        /// word twice in a row" — this sequence number can, and is the
+        /// signal callers should actually compare, not the word text.
+        public let commitSequence: UInt64
 
         public init(
             composedText: String,
             candidates: [PredictedWord],
             highlightIndex: Int,
             isPredicting: Bool,
-            lastCommittedWord: String?
+            lastCommittedWord: String?,
+            commitSequence: UInt64 = 0
         ) {
             self.composedText = composedText
             self.candidates = candidates
             self.highlightIndex = highlightIndex
             self.isPredicting = isPredicting
             self.lastCommittedWord = lastCommittedWord
+            self.commitSequence = commitSequence
         }
 
         public var activeCandidate: PredictedWord? {
@@ -56,11 +65,19 @@ public actor TextCompositionController {
     private let config: Config
     private var stateMachine = IntentStateMachine()
 
+    /// Live, mutable override of `config`'s generation parameters — set via
+    /// `updateGenerationAdaptation(_:)`. Kept separate from `config` (which
+    /// stays construction-time-fixed) so the deterministic rule table
+    /// driving this can change per EEG window without touching `Config`'s
+    /// role as init-time defaults/seed context.
+    private var adaptation: GenerationAdaptation
+
     private var composed: String
     private var candidates: [PredictedWord] = []
     private var highlightIndex: Int = 0
     private var isPredicting: Bool = false
     private var lastCommittedWord: String?
+    private var commitSequence: UInt64 = 0
 
     private var currentCancellation = UUID()
 
@@ -75,12 +92,20 @@ public actor TextCompositionController {
         self.predictor = predictor
         self.metrics = metrics
         self.config = config
+        self.adaptation = GenerationAdaptation(maxCandidates: config.maxCandidates, temperature: config.temperature)
         self.composed = config.seedContext
         self.snapshotChannel = BoundedAsyncChannel<Snapshot>(capacity: 16, overflow: .dropOldest)
     }
 
     public func start() async {
         await requestPredictions()
+    }
+
+    /// Applies a new deterministic generation adaptation (see
+    /// `GenerationAdaptation`) — takes effect on the next
+    /// `requestPredictions()` call, not retroactively.
+    public func updateGenerationAdaptation(_ adaptation: GenerationAdaptation) async {
+        self.adaptation = adaptation
     }
 
     public func tick() async {
@@ -108,6 +133,7 @@ public actor TextCompositionController {
         guard !trimmed.isEmpty else { return }
         composed = appendToken(composed, trimmed)
         lastCommittedWord = trimmed.split(separator: " ").last.map(String.init) ?? trimmed
+        commitSequence += 1
         metrics.recordExternalText(source: source, wordCount: trimmed.split(separator: " ").count)
         await requestPredictions()
         publishSnapshot()
@@ -123,6 +149,7 @@ public actor TextCompositionController {
         guard !trimmed.isEmpty else { return }
         composed = trimmed
         lastCommittedWord = trimmed.split(separator: " ").last.map(String.init)
+        commitSequence += 1
         metrics.recordExternalText(source: .automation, wordCount: trimmed.split(separator: " ").count)
         await requestPredictions()
         publishSnapshot()
@@ -157,6 +184,7 @@ public actor TextCompositionController {
             guard let active = currentActive else { return }
             composed = appendToken(composed, active.text)
             lastCommittedWord = active.text
+            commitSequence += 1
             metrics.recordSelection(committedToken: active.text)
             await requestPredictions()
         }
@@ -176,10 +204,16 @@ public actor TextCompositionController {
 
         let started = DispatchTime.now()
         do {
+            // `promptContext` is what the predictor sees; `composed` (what's
+            // displayed and what appendToken/appendExternalText operate on)
+            // is never touched by the style instruction.
+            let promptContext = adaptation.styleInstruction.isEmpty
+                ? composed
+                : "\(adaptation.styleInstruction)\n\(composed)"
             let words = try await predictor.predictNextWords(
-                context: composed,
-                maxCandidates: config.maxCandidates,
-                temperature: config.temperature,
+                context: promptContext,
+                maxCandidates: adaptation.maxCandidates,
+                temperature: adaptation.temperature,
                 cancellationID: id
             )
             // Bail if a newer commit happened while this call was outstanding.
@@ -210,7 +244,8 @@ public actor TextCompositionController {
             candidates: candidates,
             highlightIndex: highlightIndex,
             isPredicting: isPredicting,
-            lastCommittedWord: lastCommittedWord
+            lastCommittedWord: lastCommittedWord,
+            commitSequence: commitSequence
         )
         _ = snapshotChannel.send(snap)
     }

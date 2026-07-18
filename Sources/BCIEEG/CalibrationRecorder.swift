@@ -192,6 +192,24 @@ public actor CalibrationRecorder {
         let tStart = window.endTimestamp - window.durationSeconds
         let tEnd = window.endTimestamp
 
+        // Extend any still-active sticky event to cover through this
+        // window. `startStickyLabel` creates the event with `tEnd == tStart`
+        // (zero duration) and only backfills the real end time when the
+        // *next* label starts — so without this, every window resolved
+        // while a sticky is still being held sees a zero-length event and
+        // falls through to "none"; only the trailing window(s) recorded
+        // right as the hold ends (after the backfill) ever resolve to that
+        // label. This silently starved "rest" of almost all its data on a
+        // long single hold, while short/tapped gestures (each tap
+        // re-triggers startStickyLabel -> endStickyLabel) were fine because
+        // they backfill every couple of seconds. `<` guards against ever
+        // shrinking a tEnd that endStickyLabel already finalized.
+        for sticky in activeEvents where sticky.label.isSticky {
+            if allEvents[sticky.allEventsIndex].tEnd < tEnd {
+                allEvents[sticky.allEventsIndex].tEnd = tEnd
+            }
+        }
+
         let resolvedLabel = resolveLabel(for: tStart, to: tEnd)
         let profileStr = profile == .synthetic ? "synthetic" : "muses"
         let row = "\(sessionID),\(window.sequence),\(String(format: "%.6f", tStart)),\(String(format: "%.6f", tEnd)),\(resolvedLabel),\(profileStr),\(String(format: "%.1f", window.sampleRate))\n"

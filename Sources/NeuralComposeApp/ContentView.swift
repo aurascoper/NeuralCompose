@@ -39,11 +39,19 @@ struct ContentView: View {
             PrivacyIndicatorView(
                 mode: viewModel.pipelineMode,
                 lastError: viewModel.lastError,
+                startupWarning: viewModel.startupWarning,
                 signalQuality: viewModel.signalQuality,
                 isReconnecting: viewModel.isReconnecting,
                 isDictating: viewModel.isDictating,
                 isSpeaking: viewModel.isSpeaking,
-                isCommanding: viewModel.isCommanding
+                isCommanding: viewModel.isCommanding,
+                detectedAdaptation: viewModel.detectedAdaptation,
+                appliedAdaptation: viewModel.appliedAdaptation,
+                detectedSpectralState: viewModel.detectedSpectralState,
+                adaptiveComplexityEnabled: $viewModel.adaptiveComplexityEnabled,
+                interactionLoggingEnabled: $viewModel.interactionLoggingEnabled,
+                jepaTransitionCaptureEnabled: $viewModel.jepaTransitionCaptureEnabled,
+                worldModelDemoEnabled: $viewModel.worldModelDemoEnabled
             )
             Divider()
 

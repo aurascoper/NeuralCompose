@@ -230,6 +230,24 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
             serial_number = serialNum
         }
 
+        // timeout: seconds BrainFlow's Muse driver spends BLE-scanning
+        // before giving up. Left at 0, BrainFlow's own default kicks in —
+        // muse.cpp's prepare_session() falls back to a bare 6s scan
+        // window, which is frequently too short for macOS
+        // CoreBluetooth/SimpleBLE discovery (cold adapter state,
+        // first-connect GATT negotiation) and undercuts the ~30-60s
+        // advertising window this project's own hardware docs tell you to
+        // expect. 20s stays comfortably inside that window without
+        // hanging forever on a genuinely absent device. Override via
+        // NEURALCOMPOSE_MUSE_DISCOVERY_TIMEOUT for a slower room or a
+        // faster fail in CI.
+        if let envTimeout = env["NEURALCOMPOSE_MUSE_DISCOVERY_TIMEOUT"],
+           let parsedTimeout = Int(envTimeout) {
+            timeout = parsedTimeout
+        } else {
+            timeout = 20
+        }
+
         // other_info: BrainFlow 5.22+ uses this to pass Athena startup
         // options such as the preset (p1041 / p1042 / p1043) and low_latency=true.
         // We supply a sensible default for Athena; any profile can override

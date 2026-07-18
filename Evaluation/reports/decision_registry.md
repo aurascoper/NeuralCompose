@@ -33,7 +33,7 @@ Each entry:
 - **Supporting hypotheses:** 3.4-E **evaluated** — 10 generators, 45 pairs, 27 prompts, mean pairwise cosine ~0.55 (generators genuinely divergent), see `generator_comparison.json`
 - **Supporting benchmark(s):** `Evaluation/results/leaderboard.json`, `Evaluation/results/stage_3_4/generator_comparison.json`, `Evaluation/results/repro/repro_report.json`
 - **Confidence:** Medium — fleet evidence complete, but the #1/#2 composite gap is inside observed run-to-run variance
-- **Status:** Accepted (provisional — human review recommended: does tinyllama-1.1b's composite advantage outweigh 2× the RSS of qwen2.5-0.5b, given the quality-metric variance?)
+- **Status:** Accepted. Human review completed 2026-07-16 (Stage 3.5 readiness signoff): qwen2.5-0.5b confirmed as default over tinyllama-1.1b. Reasoning — tinyllama's composite advantage (0.843 vs 0.801) is within the run-to-run variance noise documented above, so it isn't a reliable quality edge; qwen's ~2× lower RSS (707 MB vs 1455 MB) matters more here than in a typical eval, since the generator process shares memory with live EEG windowing, classification, and spectral encoding. This resolves `Evaluation/reports/STAGE_3_5_READINESS.md`'s signoff condition #2 and unblocks Stage 3.5 policy-registry work (`3.5-P`, `3.5-D`) from encoding this default.
 
 ### 3. Gemma-3n-E2B as optional quality generator
 
@@ -53,14 +53,14 @@ Each entry:
 - **Confidence:** Low — no evidence yet
 - **Status:** Pending Stage 3.4-B+F (deferred until streaming benchmark completes)
 
-### 5. Adaptive routing for production (pending)
+### 5. Adaptive routing for production (partially evaluated)
 
 - **Decision:** Whether to replace fixed model selection with adaptive routing by input type
-- **Evidence:** TBD — Stage 3.5-B will evaluate adaptive embedding routing; Stage 3.5-P will compare Fast/Balanced/Quality/Adaptive policies
-- **Supporting hypotheses:** 3.5-B (adaptive routing), 3.5-P (pipeline policies)
-- **Supporting benchmark(s):** TBD
-- **Confidence:** Low — no evidence yet
-- **Status:** Pending Stage 3.5-B + 3.5-P
+- **Evidence:** `3.5-P` evaluated 2026-07-16: Adaptive lands on the 4-way Pareto frontier alongside Fast/Balanced/Quality (quality 0.843, latency 3.010s, memory 3910MB — no policy strictly dominates another on all three axes). Adaptive's routing was resolved against `generation_eval_prompts_v1.json`'s existing categories as a proxy for input type (no corpus is labeled with the routing rule's exact short_command/technical/uncertain taxonomy — see `run_stage_3_5.py`'s module docstring for the full methodology and its caveats, including that the embedding rule's "uncertain -> confidence_gated" branch has no real confidence signal yet and was resolved as a mid_tier proxy). `3.5-B` (adaptive embedding routing specifically) is still unevaluated.
+- **Supporting hypotheses:** 3.5-B (adaptive routing, pre-registered, not yet evaluated), 3.5-P (pipeline policies, **evaluated**, PASS)
+- **Supporting benchmark(s):** `Evaluation/results/stage_3_5/pipeline_policies.json`, `Evaluation/results/stage_3_5/pipeline_policies.md`
+- **Confidence:** Low-Medium — 3.5-P's Pareto result is a real signal, but it's built on an approximate input-type taxonomy and reuses frozen Stage 3.4 leaderboards rather than a purpose-built routing corpus; 3.5-B would sharpen this
+- **Status:** Pending Stage 3.5-B (Adaptive being Pareto-optimal in 3.5-P is a necessary but not sufficient condition — it doesn't yet validate the routing rule's category assignments themselves)
 
 ### 6. Cascaded generation (pending)
 

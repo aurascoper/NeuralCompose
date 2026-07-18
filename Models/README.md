@@ -13,6 +13,13 @@ Drop model artifacts here. Contents are gitignored.
                                   `Qwen2.5-0.5B-Instruct-4bit` (default) and
                                   `gemma-3n-E2B-it-lm-4bit` — selected via the
                                   `NEURALCOMPOSE_MLX_BACKEND` env var.
+- `WorldModelDemo/`               `Encoder.mlpackage`/`GoalEncoder.mlpackage`/
+                                  `LatentPredictor.mlpackage`, produced by
+                                  `WorldModel/export_coreml.py` from the
+                                  synthetic-task JEPA — powers the off-by-default
+                                  World Model research demo window
+                                  (`Sources/WorldModelDemo/`). Not real EEG data;
+                                  see `WorldModel/README.md`.
 
 If a file is missing, the corresponding pipeline stage falls back to its mock
 or stub implementation and the app continues to run.

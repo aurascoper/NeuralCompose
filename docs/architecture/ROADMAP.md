@@ -74,10 +74,32 @@ specific tasks (files, PRs, tests) live in GitHub Issues.
   (Fast, Balanced, Quality, Adaptive), adaptive routing, cascaded
   generation, confidence-gated selection, pipeline policy comparison;
   results in `Evaluation/results/stage_3_5/`
+  - **2026-07-16 decision**: a pasted external proposal asked for a
+    production `DynamicRouter`/`CascadeTier` that switches the LLM
+    backend/model at runtime based on BCI cognitive-load state. Not
+    built: `MLXNextWordPredictor` (`Sources/BCILLM/MLXNextWordPredictor.swift`)
+    is an actor holding one `ModelContainer` set once at init, and its
+    own doc comment warns that two resident models thrash the GPU;
+    `PredictorFactory.live()` resolves one backend behind a 20s
+    crash-safety probe, not something to repeat per request. Real
+    tier-switching is exactly this Stage 3.5 policy-registry work and
+    stays gated behind it — see `3.5-D-cascaded-generation` in
+    `Evaluation/corpora/hypothesis_registry.json`, still
+    `"pre-registered"`. `GenerationAdaptation`
+    (`Sources/BCICore/Composition/GenerationAdaptation.swift`, shipped
+    2026-07-16) — candidate count/temperature/prompt-style, applied to
+    the single resolved predictor — is the production adaptation
+    mechanism until this stage produces evidence for anything more.
 - `□` Stage 4: Deploy only what the evidence supports — adaptive
   routing, learned confidence estimation, online policy selection,
   production telemetry (privacy-preserving), continual evaluation.
   Stage 4 **consumes** evidence, not generates it.
+  - Note: this "production telemetry" is about instrumenting the
+    *routing/policy system* once Stage 3.5 has evidence to act on — a
+    different, narrower thing than the opt-in local interaction logger
+    landing alongside this note (`ADR-005-local-interaction-logging.md`),
+    which captures raw (state, commit) pairs for possible future
+    training data and doesn't inform any routing decision.
 
 ### Interface
 - `□` Playback-driven 2D + 3D visualization (the canonical demo path;
@@ -87,9 +109,13 @@ specific tasks (files, PRs, tests) live in GitHub Issues.
   pipeline)
 
 ### Cross-cutting
-- `□` Initial ADR set in `docs/architecture/decision-log/`
-  (ADR-001 through ADR-004 cover the major decisions made to date)
-- `□` `docs/architecture/PRINCIPLES.md` — engineering values that
+- `✓` Initial ADR set in `docs/architecture/decision-log/` (ADR-001
+  through ADR-005; note ADR-004 is currently double-assigned —
+  `ADR-004-privacy-first-acquisition.md` and
+  `ADR-004-sentence-embedder-backend-contract.md` both claim that
+  number, worth a rename/renumber pass since other docs may already
+  reference them by filename)
+- `✓` `docs/architecture/PRINCIPLES.md` — engineering values that
   govern how new work is integrated
 - `□` Layered architecture diagram in the main README
 
@@ -110,6 +136,27 @@ validation) are still landing.
   richer semantic visualization
 - `□` Multi-user collaboration: shared 3D workspace across multiple
   NeuralCompose instances, each running on its own Muse
+- `~` World Model (JEPA + MPC) research spike — `WorldModel/` (new
+  top-level dir, decoupled from `Sources/`, PyTorch not MLX). The synthetic
+  architecture work is landed through Day 4, plus a 2026-07-18
+  adaptive-temperature fix for the MPPI planner's effective-sample-size
+  collapse (a real statistical fix, honestly reported as *not* a clear
+  success/distance-metric win — see `WorldModel/README.md`'s "Temperature/
+  cost-scale calibration" section). A separate Phase 1, local-only data
+  path landed 2026-07-18: an explicit `JEPATransition` opt-in captures
+  paired EEG feature windows and the real `GenerationAdaptation`, while
+  `WorldModel/eeg_jepa.py` trains an offline Conv1d JEPA from that JSONL.
+  No corpus has yet been collected, and the app does not load or act on a
+  real-EEG JEPA model. Separately, the (still synthetic-task-only) Day
+  1-4 JEPA was exported to Core ML (`WorldModel/export_coreml.py`) and
+  ported to a new, off-by-default Swift research demo
+  (`Sources/WorldModelDemo/`, `WorldModelMPCDemoView`) proving the
+  CoreML/ANE toolchain end to end — it never reads real EEG and never
+  actuates real generation; see `ADR-007-world-model-demo.md`. Any latent
+  anchoring, real-EEG MPC, or automatic behavior remains gated on
+  collection volume and an independent validation threshold. See
+  `WorldModel/README.md`, `ADR-006-jepa-transition-capture.md`, and
+  `ADR-007-world-model-demo.md`.
 
 ### Interface
 - `□` Local web dashboard for remote monitoring (deferred from the

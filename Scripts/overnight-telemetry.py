@@ -112,6 +112,18 @@ def get_app_state(night_dir):
     return "Unknown"
 
 
+def _fmt(value, width, prec):
+    """Right-justified fixed-point string, or a right-justified '?' when value is None.
+
+    Plain f-string interpolation like ``f"{x or '?':>7.1f}"`` still applies the
+    float format spec to the '?' fallback and raises ValueError — the spec binds
+    to the whole `x or default` expression, not conditionally on which branch fired.
+    """
+    if value is None:
+        return f"{'?':>{width}}"
+    return f"{value:>{width}.{prec}f}"
+
+
 def check_ble_connected():
     """Check if a BrainFlow/Muse process is running (proxy for BLE)."""
     try:
@@ -176,9 +188,9 @@ def main():
 
             # Console summary
             print(f"  [{entry['elapsed_min']:6.1f}m] "
-                  f"RSS={entry['rss_mb'] or '?':>7.1f}MB "
-                  f"CPU={entry['cpu_pct'] or '?':>5.1f}% "
-                  f"Disk={entry['free_disk_gb'] or '?':>5.1f}GB "
+                  f"RSS={_fmt(entry['rss_mb'], 7, 1)}MB "
+                  f"CPU={_fmt(entry['cpu_pct'], 5, 1)}% "
+                  f"Disk={_fmt(entry['free_disk_gb'], 5, 1)}GB "
                   f"BLE={'Y' if entry['ble_connected'] else 'N'} "
                   f"Samples={entry['samples_received']:>8d} "
                   f"Rec={entry['recording_size_mb']:>7.1f}MB "

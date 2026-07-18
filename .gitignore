@@ -46,3 +46,14 @@ venv/
 venv.*.parked/
 __pycache__/
 *.pyc
+
+## World Model spike — generated trajectories, regenerable via
+## WorldModel/dataset.py (seeded, so --seed 0 reproduces exactly)
+WorldModel/data/
+
+## World Model spike — trained checkpoints, regenerable via WorldModel/train.py
+WorldModel/checkpoints/
+
+## World Model spike — generated telemetry visualizations, regenerable via
+## WorldModel/telemetry.py
+WorldModel/*.png

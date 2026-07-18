@@ -1,17 +1,12 @@
 import Foundation
 
-/// Outcome of an MLX init+generate probe. `.success`/`.failed` are the only
-/// two cases a probe can observe about *itself* — a process can't detect
-/// its own timeout-by-parent or its own uncaught-signal crash. `.timeout`
-/// and `.crashed` only ever get constructed by whichever process is
-/// *supervising* a probe subprocess (`PredictorFactory`), by interpreting
-/// how that child process actually terminated.
-public enum ProbeResult: Sendable, Codable, Equatable {
-    case success(ProbeMetrics)
-    case failed(reason: String)
-    case timeout
-    case crashed(signal: Int32)
-}
+/// Outcome of an MLX init+generate probe. See `SubprocessProbe.Outcome` for
+/// the full doc on the four cases — this is the LLM-shaped instantiation of
+/// that generic type, kept as a named alias so nothing about `MLXProbe`'s
+/// CLI or `PredictorFactory`'s decoding needed to change when the
+/// subprocess-probing machinery itself was generalized to also serve the
+/// spectral state estimator.
+public typealias ProbeResult = SubprocessProbe.Outcome<ProbeMetrics>
 
 public struct ProbeMetrics: Sendable, Codable, Equatable {
     public let modelIdentifier: String

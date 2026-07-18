@@ -11,6 +11,15 @@ All structural prerequisites are met: both benchmark tracks terminal (17/17 embe
 
 **Condition 2 — resolve decision-registry entry #2.** The frozen leaderboard ranks tinyllama-1.1b #1 (0.843) over the current default qwen2.5-0.5b (0.801), but the gap sits inside the observed quality-metric variance and qwen has half the RSS (707 vs 1455 MB). Stage 3.5 policy work binds `auto:*` roles to leaderboard positions, so this default should be settled (or explicitly delegated to the policy layer) before routing experiments encode it.
 
+## Signoffs resolved — 2026-07-16
+
+Both conditions above were signed off by the program owner:
+
+- **Condition 1: accepted as documented.** The reproducibility variance stands as a documented limitation of the evidence base, not something to re-characterize before proceeding — Stage 3.5 experiments must respect the variance bands (see Risk 1 below), but no additional repro runs were requested.
+- **Condition 2: qwen2.5-0.5b confirmed as default.** See `decision_registry.md` entry #2 for the full reasoning (variance-noise quality gap; RSS matters more here than a typical eval since the generator shares a process with the live EEG pipeline). Stage 3.5 policy work may now bind `auto:*` roles against this settled default.
+
+Stage 3.5 is now unconditionally clear to proceed.
+
 ## Justification
 
 - Stage 3.5's core need is a trustworthy, frozen, traceable evidence base to bind policies against. That now exists, machine-verified end to end (checkpoint → leaderboard within 1e-6; frozen checksums verify).
@@ -22,12 +31,12 @@ All structural prerequisites are met: both benchmark tracks terminal (17/17 embe
 1. **Quality-delta illusions.** Any 3.5 experiment that selects models on quality deltas smaller than the observed variance bands (±0.014 meaning, ±0.06 stability, ±0.2 instruction-following) will chase noise. Mitigation: multi-run medians for generation metrics, or restrict routing signals to the reproducible metrics (latency, RSS, embedding quality).
 2. **Perf numbers are load-dependent** (2.5× throughput swing observed). Policies with latency budgets must be validated under realistic concurrent load (EEG pipeline + classifier running), not quiescent-machine numbers.
 3. **RQ2/RQ3 are pilots** — geometry/agreement conclusions are not decision-grade; do not let 3.5 routing heuristics silently assume them.
-4. **Uncommitted GenerationEval source** (tech-debt #1) — commit before 3.5 builds on that harness.
+4. ~~**Uncommitted GenerationEval source** (tech-debt #1) — commit before 3.5 builds on that harness.~~ Resolved 2026-07-16 (commit `b28d266`).
 
 ## Suggested ordering (effort → payoff)
 
-1. Human sign-offs above (minutes; unblocks everything).
-2. Commit `Sources/GenerationEval/` + Package.swift hunks (small; closes the reproducibility gap).
+1. ~~Human sign-offs above (minutes; unblocks everything).~~ Done 2026-07-16 — see "Signoffs resolved" above.
+2. ~~Commit `Sources/GenerationEval/` + Package.swift hunks (small; closes the reproducibility gap).~~ Done 2026-07-16 (commit `b28d266`).
 3. 3.5-P policy comparison offline (uses only frozen evidence + registry bindings; no production code) — highest payoff/effort ratio, and it operationalizes the frozen leaderboards.
 4. 3.5-B adaptive routing offline study (needs 3.5-P baselines).
 5. 3.5-D cascade evaluation (candidate set from the frozen leaderboard, not assumed gemma-3n-e2b — see decision registry entry #3).

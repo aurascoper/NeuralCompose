@@ -7,11 +7,43 @@ import BCICore
 struct PrivacyIndicatorView: View {
     let mode: PipelineMode
     let lastError: String?
+    /// One-time startup substitution notice (classifier/predictor fell back
+    /// at launch) — informational, not a live pipeline failure. Shown with
+    /// a neutral icon, distinct from `lastError`'s alarm styling, and never
+    /// factors into `statusColor`/`statusTitle`.
+    var startupWarning: String? = nil
     var signalQuality: SignalQuality? = nil
     var isReconnecting: Bool = false
     var isDictating: Bool = false
     var isSpeaking: Bool = false
     var isCommanding: Bool = false
+    /// What the current signal quality maps to via the deterministic rule
+    /// table — kept current regardless of whether adaptive mode is applied
+    /// ("shadow mode"), so the badge is informative even while off.
+    var detectedAdaptation: GenerationAdaptation = .raw
+    /// What's actually been pushed to generation — equals `.raw` whenever
+    /// `adaptiveComplexityEnabled` is false.
+    var appliedAdaptation: GenerationAdaptation = .raw
+    /// Milestone B state source — always current regardless of the toggle
+    /// (shadow mode), same invariant as `detectedAdaptation`. `nil` means
+    /// the estimator has no opinion; the combination logic falls back to
+    /// `signalQuality` in that case (see `AdaptiveGenerationCombination`).
+    var detectedSpectralState: SpectralState? = nil
+    @Binding var adaptiveComplexityEnabled: Bool
+    /// Opt-in, off by default — see
+    /// `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`.
+    /// Never transmitted anywhere; written only to a local JSONL file.
+    @Binding var interactionLoggingEnabled: Bool
+    /// Separate opt-in for the higher-sensitivity paired EEG feature data set.
+    /// The app keeps this visible as a distinct recording state rather than
+    /// silently broadening the existing interaction log.
+    @Binding var jepaTransitionCaptureEnabled: Bool
+    /// Separate opt-in for the synthetic-task World Model MPC demo window
+    /// (see `Sources/WorldModelDemo/`). Unlike the toggles above, this
+    /// gates no data persistence at all — the demo reads nothing real and
+    /// writes nothing to disk in either state; it only controls whether
+    /// the demo window's closed-loop simulation actually runs.
+    @Binding var worldModelDemoEnabled: Bool
 
     @State private var expanded: Bool = false
 
@@ -23,6 +55,10 @@ struct PrivacyIndicatorView: View {
                 Text(mode.substitutionSummary).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 signalBadge
+                adaptiveBadge
+                interactionLogBadge
+                jepaCaptureBadge
+                worldModelDemoBadge
                 voiceBadge
                 cmdBadge
                 Button(action: { expanded.toggle() }) {
@@ -57,8 +93,102 @@ struct PrivacyIndicatorView: View {
                         Text("Network").bold()
                         Text("Disabled at runtime").foregroundStyle(.green)
                     }
+                    GridRow {
+                        Text("Adaptive").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Apply to generation", isOn: $adaptiveComplexityEnabled)
+                                .toggleStyle(.switch)
+                            Text("Detected: \(adaptiveStateLabel(signalQuality: signalQuality, spectralState: detectedSpectralState)) — \(detectedAdaptation.maxCandidates) candidates, temp \(detectedAdaptation.temperature, specifier: "%.2f")")
+                                .foregroundStyle(.secondary)
+                            if let spectral = detectedSpectralState {
+                                Text("Spectral: \(spectral.badgeLabel)")
+                                    .foregroundStyle(.secondary)
+                                Text(SpectralState.honestyCaveat)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Spectral: unavailable — using signal-quality fallback")
+                                    .foregroundStyle(.secondary)
+                            }
+                            if adaptiveComplexityEnabled {
+                                Text("Applied: \(appliedAdaptation.maxCandidates) candidates, temp \(appliedAdaptation.temperature, specifier: "%.2f")")
+                            } else {
+                                Text("Not applied — generation is using defaults")
+                                    .foregroundStyle(.secondary)
+                            }
+                            if !detectedAdaptation.styleInstruction.isEmpty {
+                                Text("Would prompt: \"\(detectedAdaptation.styleInstruction)\"")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    GridRow {
+                        Text("Interaction Log").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Log commits locally", isOn: $interactionLoggingEnabled)
+                                .toggleStyle(.switch)
+                            if interactionLoggingEnabled {
+                                Text("Recording each committed word + detected state to")
+                                    .foregroundStyle(.secondary)
+                                Text("~/Documents/NeuralCompose/InteractionLogs/")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Off — nothing is written")
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Local only, never transmitted — see ADR-005.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    GridRow {
+                        Text("JEPA Dataset").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Capture EEG transitions locally", isOn: $jepaTransitionCaptureEnabled)
+                                .toggleStyle(.switch)
+                            if jepaTransitionCaptureEnabled {
+                                Text("Recording paired EEG windows and generation settings to")
+                                    .foregroundStyle(.secondary)
+                                Text("~/Documents/NeuralCompose/JEPATransitions/")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Off - no JEPA transition data is written")
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Local only; records no composed text or committed words.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    GridRow {
+                        Text("World Model Demo").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Run synthetic-task MPC demo", isOn: $worldModelDemoEnabled)
+                                .toggleStyle(.switch)
+                            if worldModelDemoEnabled {
+                                Text("Demo window runs a self-contained simulation; reads nothing real, writes nothing to disk.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Off — demo window is idle; nothing is read or written")
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Synthetic 2D task only — never reads real EEG. See WorldModel/README.md.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 .font(.caption)
+
+                if let warning = startupWarning {
+                    Divider().padding(.vertical, 2)
+                    Label(warning, systemImage: "info.circle")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
 
                 if let err = lastError {
                     Divider().padding(.vertical, 2)
@@ -123,6 +253,89 @@ struct PrivacyIndicatorView: View {
         case .healthy: return "Signal OK"
         case .poor:    return "Signal weak"
         case .lost:    return "No signal"
+        }
+    }
+
+    /// Always-visible badge showing what the deterministic rule table
+    /// currently detects, regardless of whether it's actually being applied
+    /// to generation ("shadow mode") — unlike `signalBadge`, this is never
+    /// gated on `mode.acquisition`, so it's visible and testable on the
+    /// synthetic stream too. A lighter background + "(preview)" suffix marks
+    /// detection-only; a filled background marks that it's live.
+    private var adaptiveBadge: some View {
+        let label = adaptiveStateLabel(signalQuality: signalQuality, spectralState: detectedSpectralState)
+        return Label(
+            adaptiveComplexityEnabled ? "Adaptive: \(label)" : "Adaptive: \(label) (preview)",
+            systemImage: "slider.horizontal.3"
+        )
+        .font(.caption)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Color.secondary.opacity(adaptiveComplexityEnabled ? 0.20 : 0.10))
+        .cornerRadius(4)
+    }
+
+    /// Mirrors `AdaptiveGenerationCombination`'s priority (`.lost` signal
+    /// quality is an absolute floor; otherwise a present spectral opinion
+    /// wins over the coarser signal-quality bucket) so the badge text never
+    /// disagrees with what's actually detected/applied.
+    private func adaptiveStateLabel(signalQuality: SignalQuality?, spectralState: SpectralState?) -> String {
+        if signalQuality == .lost { return "Minimal" }
+        if let spectralState { return spectralState.badgeLabel }
+        switch signalQuality {
+        case .none, .healthy: return "Standard"
+        case .poor:           return "Simplified"
+        case .lost:           return "Minimal"
+        }
+    }
+
+    /// Deliberately obvious while active — matching the universal hardware
+    /// convention for "something is being recorded right now" (a camera/mic
+    /// recording light), since this persists content to disk, unlike
+    /// `adaptiveBadge`'s preview/live distinction. Not shown at all when
+    /// off — there's nothing happening to indicate.
+    @ViewBuilder
+    private var interactionLogBadge: some View {
+        if interactionLoggingEnabled {
+            Label("Logging", systemImage: "record.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
+        }
+    }
+
+    /// Separate from the word-commit log badge because this opt-in stores
+    /// measured EEG-derived features. The visible recorder state is part of
+    /// the consent boundary, not merely a diagnostics affordance.
+    @ViewBuilder
+    private var jepaCaptureBadge: some View {
+        if jepaTransitionCaptureEnabled {
+            Label("JEPA capture", systemImage: "waveform.badge.record")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
+        }
+    }
+
+    /// Distinct from `jepaCaptureBadge`: this feature persists nothing to
+    /// disk in either state, so red here means "the demo simulation is
+    /// actively running," not "something is being recorded."
+    @ViewBuilder
+    private var worldModelDemoBadge: some View {
+        if worldModelDemoEnabled {
+            Label("World Model Demo", systemImage: "cube.transparent")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
         }
     }
 

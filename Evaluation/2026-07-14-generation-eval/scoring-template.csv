@@ -1,0 +1,391 @@
+candidate,prompt_id,category,first_token_latency,generate_time,tokens_per_second,word_count_ratio,meaning_preservation_cosine,prompt_text,generated_text,meaning_preserved,grammar,no_hallucination,no_added_commentary,conciseness,instruction_followed
+"qwen-0.5b","instr-say-yes","instruction-following","0.022220969200134277","0.9163379669189453","44.743316854868084","8.5","","Say the word yes","Yes, please tell me anything you would like to know or discuss. I'm here and am happy to assist with any question, topic matter detailed information query, or anything else you'd like me for.",,,,,,
+"qwen-0.5b","instr-avoid-very","instruction-following","0.02191603183746338","0.42237401008605957","44.98382842289163","1.0","","I will not use the word 'very' again in this or any future sentences transcribed","I will not use the word 'very' again in this or any future sentences transcribed.",,,,,,
+"qwen-0.5b","instr-rewrite-formal","instruction-following","0.02235996723175049","0.1540830135345459","45.43005643143511","0.6","","Rewrite this more formally: ""Hey can you send that over.""","Please provide me with the document.",,,,,,
+"qwen-0.5b","instr-rewrite-clearer","instruction-following","0.02225196361541748","0.39961695671081543","42.540737359906686","0.8823529411764706","","Rewrite this sentence in a clearer way:
+
+The test passed even though several setup steps failed initially.","Even after a series of initial failures in the testing process, the test successfully passed.",,,,,,
+"qwen-0.5b","instr-sequence-letters","instruction-following","0.022552013397216797","0.3636709451675415","43.99581603261947","1.2857142857142858","","Continue the sequence:
+A
+B
+C
+D","Sure, here's a continued version:
+
+...A...
+B...
+
+C...
+
+D",,,,,,
+"qwen-0.5b","filler-second-option","filler-removal","0.02345895767211914","2.9103100299835205","41.23272048809161","8.461538461538462","0.5590001344680786","Um, so, I think we should, like, probably go with the second option.","That's a great point! The decision to either agree with or disagree strongly about something is personal and can be based on many factors such as your values, beliefs, goals or aspirations. What is important here are the positive outcomes that you can derive from your decision.
+
+The key thing to remember in any discussion is always start with the facts and end on what you are willing to give up or sacrifice. This way, your decision can be weighed against the consequences of each choice you make.
+
+Ultimately it is a good idea to listen carefully and think through your decision before making any final decisions. Do not just",,,,,,
+"qwen-0.5b","filler-try-tomorrow","filler-removal","0.02320396900177002","0.9130220413208008","41.62002479702269","2.2","0.5749101042747498","You know, uh, I was kind of thinking maybe we could, um, try again tomorrow.","That's a good idea! I'm always ready to help if you have something in mind for our next meeting. How about we decide together what activity or project might be the best fit?",,,,,,
+"qwen-0.5b","filler-need-more-time","filler-removal","0.022347092628479004","2.101728916168213","41.870290370481285","4.866666666666666","0.6646024584770203","So basically what I'm trying to say is, like, we need more time, you know?","I'm really sorry to hear that. Can I help you with something else?
+
+It is important for everyone in the team, and it's not just me. We need more time to meet all our colleagues' needs.
+
+Can you tell us a bit about what we're trying to achieve?
+
+I'm really sorry for the inconvenience, but I need you first. How can we find out if there's anything else that needs to be done?",,,,,,
+"qwen-0.5b","filler-its-fine","filler-removal","0.02329707145690918","1.0710419416427612","41.08149110623336","3.9","0.4251289963722229","Uh, well, I guess, I mean, it's fine I suppose.","I'm here to help! What seems to be the issue? Do you need some advice on something specific or would like me to assist with another question in a different manner? Please feel free to ask for your request.",,,,,,
+"qwen-0.5b","punct-milk-eggs-bread","punctuation-restoration","0.022917985916137695","2.8647990226745605","41.88775514450178","6.076923076923077","0.6449103951454163","we need three things milk eggs and bread also dont forget the coffee","Sure, here's a recipe for three-topping pizza:
+
+Ingredients:
+- 2 large pieces of mozzarella cheese
+- A variety of ground meat (e.g. chicken, beef)
+  - Some choice from the grocery store
+- A variety of vegetables (e.g. peppers, onions)
+  - Some choice from the supermarket
+- A variety of toppings (e.g. pepperoni, mushrooms)
+  - Can be purchased from the grocery store
+
+Instructions:
+1) Preheat your oven to a high temperature (around 450 degrees F or about 23 deg C).",,,,,,
+"qwen-0.5b","punct-she-said-yes","punctuation-restoration","0.02300894260406494","0.39927709102630615","42.57694814471578","1.1538461538461537","0.9347499012947083","can you believe it she said yes right there in front of everyone","Yes, I can tell you that she said yes right there in front of everyone.",,,,,,
+"qwen-0.5b","punct-meeting-nine","punctuation-restoration","0.026237010955810547","2.9942280054092407","40.077108284076324","9.083333333333334","0.749922513961792","the meeting starts at nine but bring your laptop and the report","Thank you for bringing a laptop to our meeting. The presentation will be conducted via email with each participant accessing their own device through the internet.
+
+Please ensure you have all necessary software and materials such as a laptop ready to run. We will use the following items:
+
+- Laptop (to be used with internet connection)
+- Printer or scanner to obtain images
+Please ensure you have a copy of the meeting agenda and any detailed report attached.
+
+We will also prepare slides or presentation templates along with a projector for video conferencing. Please bring any other items you will need to prepare the presentation.
+
+Please come prepared with",,,,,,
+"qwen-0.5b","punct-go-now-or-wait","punctuation-restoration","0.02261209487915039","2.8763020038604736","41.72023655337309","8.23076923076923","0.765162467956543","im not sure if we should go now or wait until tomorrow morning","It's important to consider your personal situation and values before making a decision. If you feel motionless or unable to move, it may be best not to go out today.
+
+If the decision is based on a specific goal or purpose that you have in mind, such as preparing for an important event or meeting someone new and cannot wait to leave now until tomorrow morning, it's a good idea to prioritize your journey towards that goal.
+
+Ultimately, the decision should be based on what is best for you and those around us. Weigh your options carefully, consider all the pros and cons of each choice you",,,,,,
+"qwen-0.5b","cap-dr-smith","capitalization","0.022832036018371582","1.7863980531692505","41.983923945137775","5.8","0.6208029985427856","i met dr smith on jan 5 in st louis","Hello! I'm Hritik. It's nice to meet you, Dr Smith!
+
+I feel like we can talk about fun things today.
+
+How may I assist you? How did your day go?
+
+I'm always here to help with questions and provide advice. Feel free to ask me anything you'd like.
+
+Thank you for your time! Have a great day ahead.",,,,,,
+"qwen-0.5b","cap-london-paris","capitalization","0.023423075675964355","2.2905139923095703","41.03882373808071","7.5","0.8340914249420166","were flying to london on friday then paris on monday","Sure! Here's a flight schedule for you:
+
+Friday, Friday to Thursday
+
+Flight Schedule: 12 PM - London
+9 AM Monday 
+_______ – Paris 
+
+Note that France is a country with many cities, so the exact dates and times may vary based on when flights are booked. Also keep in mind that the airline can change its schedule from time to time, so it's always a good idea to check with the airline for up-to-date information.",,,,,,
+"qwen-0.5b","cap-email-sarah-david","capitalization","0.026888012886047363","2.9950098991394043","40.06664553412033","9.1","0.8847566246986389","please email sarah and david before the meeting on tuesday","Sure, I will be sending a message to Sara and David by email before Tuesday's meeting.
+
+1. **Subject:** Meeting Schedule - Tuesday, April 26
+
+   I will prepare a message to email Sara and David.
+
+- **Subject:** Meeting Schedule - Tuesday, April 26
+
+Please follow the email below to prepare your response.
+
+---
+
+This message should be sent via an e-mail:
+
+Subject: Meeting Schedule - Tuesday, April 26
+
+Dear Sara and David,
+
+I hope this email finds you well. I am writing to remind you of our upcoming meeting on Tuesday, April",,,,,,
+"qwen-0.5b","concise-wondering-help","concise-rewrite","0.02330601215362549","0.9499540328979492","42.107300579560864","2.0","0.8303593993186951","I was wondering if maybe you might possibly have some time available to help me with this task.","Absolutely, I would be happy to assist you on any topic that interests me. Please feel free to ask for help with the task I have mentioned, or any other topic you might need assistance in.",,,,,,
+"qwen-0.5b","concise-most-people-agree","concise-rewrite","0.024412035942077637","0.6743439435958862","38.55599245298629","1.05","0.5842368006706238","It is my belief that, in general, most people would probably agree that this is likely the better option overall.","It's great to hear from you! I'm always happy to help educate and provide useful information. What would be your question?",,,,,,
+"qwen-0.5b","concise-still-waiting","concise-rewrite","0.02395808696746826","0.9169489145278931","40.35121195279465","1.8888888888888888","0.7833139896392822","At this point in time, we are currently still waiting for a response regarding the matter in question.","I'm sorry to hear that we are still waiting for a response about the matter in question. Can you please provide me with more information or details so that I can assist you better?",,,,,,
+"qwen-0.5b","concise-consider-looking","concise-rewrite","0.023997068405151367","0.963250994682312","41.526040690144654","2.0555555555555554","0.8026179671287537","There is a possibility that we could perhaps consider looking into this a bit further if that's alright.","I am not capable of making decisions for you, but if there is a possibility that further investigation might help us better understand the issue at hand or identify potential risks, we can explore it more thoroughly.",,,,,,
+"qwen-0.5b","command-close-windows","command-reformulation","0.024073004722595215","0.3124479055404663","35.20586889828054","0.9","0.790809154510498","Rewrite this as a clear, complete command: ""close your windows""","Exit all open tabs and windowss in the application.",,,,,,
+"qwen-0.5b","command-open-emails","command-reformulation","0.023378968238830566","0.13849103450775146","36.10342010782038","0.3076923076923077","0.7806792259216309","Rewrite this as a clear, complete command: ""open the thing with the emails""","Open your email inbox.",,,,,,
+"qwen-0.5b","command-music-down","command-reformulation","0.0324859619140625","0.29461097717285156","37.337373188053945","0.7692307692307693","0.8010869026184082","Rewrite this as a clear, complete command: ""turn that music down a bit""","Reduce the volume of your audio to a lower level.",,,,,,
+"qwen-0.5b","command-get-doc","command-reformulation","0.02403104305267334","0.13896703720092773","43.17570641824077","0.3076923076923077","0.7979903221130371","Rewrite this as a clear, complete command: ""get me the doc from yesterday""","Get me today's document.",,,,,,
+"qwen-0.5b","tech-brainflow-reconnect","technical-term-preservation","0.028430938720703125","0.38093507289886475","36.75166976215102","0.43478260869565216","0.8534955382347107","Rewrite this sentence in a clearer way, but keep the technical term ""BrainFlow"" unchanged: The BrainFlow stream needs to reconnect if it drops.","The Brainflow-stream should be reconnected when the connection breaks down.",,,,,,
+"qwen-0.5b","tech-ane-classifier","technical-term-preservation","0.03480792045593262","0.37512803077697754","37.32059150845843","0.5","0.9182410836219788","Rewrite this more concisely, but keep the term ""ANE"" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible.","The classifier prefers to run on ANE instead of GPU when feasible.",,,,,,
+"qwen-0.5b","tech-eeg-stream","technical-term-preservation","0.025326013565063477","0.4052010774612427","39.48656824963747","0.6875","0.7590695023536682","Rewrite this more politely, but keep the term ""EEG"" unchanged: Turn on the EEG stream now.","Press the 'EEG' button to start recording your brain's electrical activity.",,,,,,
+"gemma-3n-e2b","instr-say-yes","instruction-following","0.22772502899169922","0.5004810094833374","7.992311244994747","0.25","","Say the word yes","Yes.",,,,,,
+"gemma-3n-e2b","instr-avoid-very","instruction-following","0.17801105976104736","4.512270927429199","7.313390647578263","1.6666666666666667","","I will not use the word 'very' again in this or any future sentences transcribed","Understood. I will strive to avoid the word ""very"" in all future responses, as per your instructions. Just let me know what you need! 😊",,,,,,
+"gemma-3n-e2b","instr-rewrite-formal","instruction-following","0.16225004196166992","15.41302490234375","7.7856229234893695","7.3","","Rewrite this more formally: ""Hey can you send that over.""","Here are a few options, ranging in formality, to rewrite ""Hey can you send that over"" more formally:
+
+**Option 1 (Most common & professional):**
+
+> ""Could you please send that over?""
+
+**Option 2 (Slightly more formal):**
+
+> ""Please send that over.""
+
+**Option 3 (If you're addressing someone in a specific role):**
+
+> ""Could you please forward that to me?"" (If it's a document)
+> ""Please send that to [Recipient Name/Department]."" (If sending it",,,,,,
+"gemma-3n-e2b","instr-rewrite-clearer","instruction-following","0.14771497249603271","15.831385970115662","7.579879628133613","4.764705882352941","","Rewrite this sentence in a clearer way:
+
+The test passed even though several setup steps failed initially.","Here are a few options for rewriting the sentence, depending on what you want to emphasize:
+
+**Option 1 (Focus on the success):**
+
+> The test was successful, even though some initial setup steps didn't work.
+
+**Option 2 (Focus on the troubleshooting):**
+
+> Despite some initial setup failures, the test completed successfully.
+
+**Option 3 (More concise):**
+
+> The test passed after some initial setup issues were resolved.
+
+**Option 4 (More formal):**
+
+> The test was successful, although initial setup steps encountered problems.",,,,,,
+"gemma-3n-e2b","instr-sequence-letters","instruction-following","0.1384509801864624","0.32296502590179443","6.192620994844655","0.14285714285714285","","Continue the sequence:
+A
+B
+C
+D","E",,,,,,
+"gemma-3n-e2b","filler-second-option","filler-removal","0.13780105113983154","10.366544961929321","7.427739934836447","4.6923076923076925","0.6986480951309204","Um, so, I think we should, like, probably go with the second option.","Okay! Thanks for letting me know. I understand you think the second option is the way to go. 
+
+To help solidify that, could you tell me a little more about *why* you think the second option is better? Knowing your reasoning will help me understand and potentially explore that path further. 
+
+Just let me know if you'd like to elaborate! 😊",,,,,,
+"gemma-3n-e2b","filler-try-tomorrow","filler-removal","0.13464295864105225","16.030133962631226","7.48590125820152","5.266666666666667","0.6158231496810913","You know, uh, I was kind of thinking maybe we could, um, try again tomorrow.","Okay! I understand. You're suggesting we try something (likely a task, conversation, or plan) again tomorrow instead of today. 
+
+To help me understand what you mean and if I can assist, could you tell me:
+
+* **What are we talking about?** (e.g., a task, an appointment, a project)
+* **What's the reason you think tomorrow is better?** (e.g., more time, less conflict)
+
+Just letting me know will help me respond appropriately! 😊
+
+
+
+I'm here to assist in any way",,,,,,
+"gemma-3n-e2b","filler-need-more-time","filler-removal","0.1406310796737671","16.396528959274292","7.318622148508143","4.933333333333334","0.7102548480033875","So basically what I'm trying to say is, like, we need more time, you know?","Okay! I hear you. It sounds like you're saying that **you need more time to complete something.** 
+
+To help me understand better, could you tell me:
+
+* **What are you trying to do?** (e.g., a project, a task, an assignment)
+* **What do you need more time for?** (e.g., to research, to write, to finish a specific step)
+* **What's the reason you need more time?** (e.g., it's more complex than expected, unexpected delays)",,,,,,
+"gemma-3n-e2b","filler-its-fine","filler-removal","0.1414729356765747","16.098358035087585","7.205703820673466","8.0","0.5863539576530457","Uh, well, I guess, I mean, it's fine I suppose.","Okay! It sounds like you might be feeling a little...underwhelming? Or perhaps just processing something. 😊 
+
+It's perfectly alright to say ""it's fine"" or ""I guess."" It just means that whatever is happening isn't particularly exciting, and you're acknowledging it. 
+
+Is there anything I can help you with? Sometimes just acknowledging a feeling is the first step. If you're comfortable sharing, I can try to offer support or just a listening ear! 
+
+Just let me know what you'd like. 😊",,,,,,
+"gemma-3n-e2b","punct-milk-eggs-bread","punctuation-restoration","0.13749206066131592","7.183836936950684","7.238471649117413","2.076923076923077","0.8615490794181824","we need three things milk eggs and bread also dont forget the coffee","Okay, got it! Here's a reminder of what we need:
+
+*   **Milk**
+*   **Eggs** 
+*   **Bread**
+*   **Coffee**
+
+Let me know if you need anything else! 😊",,,,,,
+"gemma-3n-e2b","punct-she-said-yes","punctuation-restoration","0.19210290908813477","12.282445073127747","7.246114228079832","5.0","0.6798446178436279","can you believe it she said yes right there in front of everyone","That's amazing! It's so exciting to hear that someone said yes. It's a really special moment, and it must feel incredible to witness that. 🎉 
+
+It sounds like a truly memorable event! 😊
+
+
+
+Is there anything else I can help you with? Perhaps you'd like to talk more about it, or maybe generate a celebratory message for someone involved? ✨
+
+
+
+I'm here to listen! 😄",,,,,,
+"gemma-3n-e2b","punct-meeting-nine","punctuation-restoration","0.140375018119812","8.291345953941345","7.2364608030230135","2.8333333333333335","0.7967902421951294","the meeting starts at nine but bring your laptop and the report","Okay, got it! 
+
+**Meeting details:**
+
+*   **Time:** Starts at 9:00 AM
+*   **Bring:** Your laptop and the report.
+
+
+
+I'll be sure to remember this! 😊
+
+
+
+Is there anything else I can help you with?",,,,,,
+"gemma-3n-e2b","punct-go-now-or-wait","punctuation-restoration","0.13868701457977295","16.520315051078796","7.263783991344878","6.923076923076923","0.8312685489654541","im not sure if we should go now or wait until tomorrow morning","Okay, I understand you're on the fence about whether to do something now or wait until tomorrow morning. To help me give you a good response, could you tell me **what ""it"" is that we're talking about?** 
+
+Knowing what you're considering will help me give more specific advice. 😊
+
+
+
+However, here are some general things to think about that might help you decide:
+
+**Pros of going now:**
+
+* **Potential benefits are immediate:** You might get to experience something, make progress on a task, or enjoy an activity right away.
+*",,,,,,
+"gemma-3n-e2b","cap-dr-smith","capitalization","0.1389549970626831","16.599979996681213","7.228924373643297","7.4","0.7675386071205139","i met dr smith on jan 5 in st louis","Okay, I understand. You met Dr. Smith on January 5th in St. Louis. 
+
+Is there anything else you'd like to tell me about this meeting? For example:
+
+* **What was the purpose of the meeting?** (e.g., a doctor's appointment, a consultation, etc.)
+* **What was Dr. Smith's role?** (e.g., a medical professional, a consultant)
+* **Do you want me to remember this information?** (I can help keep track of things if needed.)
+
+Just let",,,,,,
+"gemma-3n-e2b","cap-london-paris","capitalization","0.13873004913330078","16.012656927108765","7.119368167252913","7.8","0.8276846408843994","were flying to london on friday then paris on monday","Okay, I understand! You're planning a trip with flights to London on Friday and Paris on Monday. 
+
+Is there anything I can help you with regarding your trip? For example, are you:
+
+* **Looking for information about travel logistics (e.g., booking flights/accommodation)?**
+* **Need help with a packing list?** 
+* **Want recommendations for things to do in London or Paris?**
+* **Just confirming details so I can help with something else?**
+
+Let me know what you need! 😊",,,,,,
+"gemma-3n-e2b","cap-email-sarah-david","capitalization","0.16096794605255127","16.785063982009888","7.149213141434262","8.3","0.7938721179962158","please email sarah and david before the meeting on tuesday","Okay, I need a little more information to write the perfect email! Please tell me:
+
+* **What is this meeting about?** (Knowing the topic helps tailor the email's tone.)
+* **What is your relationship to Sarah and David?** (Are you a colleague, manager, etc.? This affects the appropriate tone.)
+* **Is there any specific information you want to remind them of?** (e.g., a link, agenda item, etc.)
+* **Do you have a preferred email subject line?**
+
+However, here are a few options based",,,,,,
+"gemma-3n-e2b","concise-wondering-help","concise-rewrite","0.16485810279846191","16.774829983711243","7.153574737658912","4.611111111111111","0.7931212186813354","I was wondering if maybe you might possibly have some time available to help me with this task.","Okay, I understand! 😊 
+
+I'm happy to help in any way I can. While I don't have ""time"" in the human sense, I am ready to assist with tasks. 
+
+**To help me best understand how I can be of assistance, could you tell me:**
+
+* **What is the task?**  Please describe it!
+* **Do you have any specific needs or requirements for the task?** 
+
+The more information you give me, the better I can assist.  I'm ready to brainstorm ideas, generate text, write",,,,,,
+"gemma-3n-e2b","concise-most-people-agree","concise-rewrite","0.15407097339630127","16.94179105758667","7.083076375579726","4.15","0.7347469329833984","It is my belief that, in general, most people would probably agree that this is likely the better option overall.","Okay, I understand! You're saying that you think the option being discussed is generally considered a good choice. 
+
+You've presented this as your belief, and you think it aligns with what most people would agree is the better overall choice. 
+
+Is there anything you'd like me to do with that statement? Do you want me to:
+
+* **Acknowledge your perspective and ask for more information?** (e.g., ""That's a good point! Could you elaborate on why you believe that?"")
+* **Ask for clarification?** (e",,,,,,
+"gemma-3n-e2b","concise-still-waiting","concise-rewrite","0.2062770128250122","17.135164976119995","7.003142378099953","5.444444444444445","0.6801141500473022","At this point in time, we are currently still waiting for a response regarding the matter in question.","Okay, I understand. You've stated that you are a helpful assistant and that the current status is one of waiting for a response. 
+
+That's a perfectly clear and professional way to state the situation! It implies that you are acknowledging a pending action or information is still needed.
+
+
+
+Is there anything else I can help you with, perhaps related to this waiting period or a different task? Just let me know. I'm here if you need further assistance in communicating this status or exploring other possibilities.
+
+
+
+Essentially, I'm ready to continue assisting while acknowledging the pending response and",,,,,,
+"gemma-3n-e2b","concise-consider-looking","concise-rewrite","0.14164197444915771","15.289501070976257","7.129075009969582","4.388888888888889","0.7465791702270508","There is a possibility that we could perhaps consider looking into this a bit further if that's alright.","Okay, I understand! That sounds like a good approach to explore the situation further. 
+
+To clarify, are you saying that:
+
+* **You're suggesting a next step?**
+* **There might be more information to gather?** 
+
+Knowing the context will help me understand what you're implying and if I can assist further. 😊
+
+
+
+Essentially, ""There is a possibility that we could perhaps consider looking into this a bit further if that's alright"" is a polite way of suggesting to delve deeper.",,,,,,
+"gemma-3n-e2b","command-close-windows","command-reformulation","0.14013099670410156","12.81496798992157","7.101071190467869","6.4","0.8479764461517334","Rewrite this as a clear, complete command: ""close your windows""","**Close your windows.**
+
+
+
+This is a clear, direct command that leaves no room for ambiguity. It's concise and easy to understand.
+
+
+
+Here are a few other options, depending on the desired tone:
+
+* **Please close your windows.** (More polite)
+* **Close all the windows.** (If there are multiple windows to close.)
+
+
+
+But, ""Close your windows"" is perfectly adequate and clear as a direct command.",,,,,,
+"gemma-3n-e2b","command-open-emails","command-reformulation","0.1392819881439209","9.885693907737732","7.080939451828423","3.4615384615384617","0.7833108901977539","Rewrite this as a clear, complete command: ""open the thing with the emails""","**Open the email folder.**
+
+Here's why it works:
+
+* **""Open""** is a direct and clear action.
+* **""The email folder""** is more specific than ""the thing with the emails.""  It implies a defined location. 
+
+This is more professional and less ambiguous than the original phrasing!",,,,,,
+"gemma-3n-e2b","command-music-down","command-reformulation","0.13961994647979736","11.494313955307007","7.046962551653787","4.6923076923076925","0.7794504761695862","Rewrite this as a clear, complete command: ""turn that music down a bit""","**Please lower the volume on the music.**
+
+(This is a more formal and clear way to phrase it, ensuring clarity for an AI.)
+
+
+
+Here are a few other options depending on the desired formality:
+
+* **Reduce the music volume slightly.**
+* **Lower the audio level of that song.**
+
+
+
+However, ""Please lower the volume on the music"" is a good general command.",,,,,,
+"gemma-3n-e2b","command-get-doc","command-reformulation","0.14241302013397217","11.456472039222717","7.070239400287104","4.538461538461538","0.8133379817008972","Rewrite this as a clear, complete command: ""get me the doc from yesterday""","**Please retrieve the document created yesterday.**
+
+This is a more formal and complete way of phrasing the request, ensuring clarity. Here are a few other options depending on context:
+
+* **Please get me the document from yesterday.** (Slightly more polite)
+* **Find the document created on [Date] and return it to me.** (More specific, if you have a date)",,,,,,
+"gemma-3n-e2b","tech-brainflow-reconnect","technical-term-preservation","0.14886701107025146","17.2306569814682","6.964331083200228","3.4347826086956523","0.9057998061180115","Rewrite this sentence in a clearer way, but keep the technical term ""BrainFlow"" unchanged: The BrainFlow stream needs to reconnect if it drops.","Here are a few options for rewriting the sentence, keeping ""BrainFlow"" as is and making it clearer:
+
+**Option 1 (Most straightforward):**
+
+> The BrainFlow stream requires reconnection if it becomes disconnected.
+
+**Option 2 (Slightly more formal):**
+
+> If the BrainFlow stream loses connection, it needs to reconnect. 
+
+**Option 3 (Emphasizing the action):**
+
+>  To maintain connectivity, the BrainFlow stream must reconnect if it is disconnected.
+
+
+
+All of these options are clearer and more direct than the original while retaining",,,,,,
+"gemma-3n-e2b","tech-ane-classifier","technical-term-preservation","0.21536898612976074","11.659173965454102","6.861549560632545","2.25","0.8854812979698181","Rewrite this more concisely, but keep the term ""ANE"" unchanged: The classifier prefers to run on the ANE rather than the GPU whenever possible.","The classifier prefers running on the ANE instead of the GPU, if possible.
+
+
+
+**Alternatively (slightly more formal):**
+
+The classifier prefers ANE execution over GPU execution whenever feasible.
+
+
+
+**Even shorter (depending on context):**
+
+Prefer ANE for classifier execution when possible.
+
+
+
+
+The key is to maintain the term ""ANE"" while making it more concise and natural-sounding.",,,,,,
+"gemma-3n-e2b","tech-eeg-stream","technical-term-preservation","0.14503097534179688","14.864613056182861","6.929208288886986","4.125","0.8299144506454468","Rewrite this more politely, but keep the term ""EEG"" unchanged: Turn on the EEG stream now.","Here are a few options, ranging from slightly more formal to very polite:
+
+**Option 1 (Slightly more formal):**
+
+""Please activate the EEG stream now.""
+
+**Option 2 (Polite and direct):**
+
+""Could you please start the EEG stream now?""
+
+**Option 3 (Very polite):**
+
+""Would you please initiate the EEG stream now?""
+
+
+
+All of these options are more polite than ""Turn on..."" while still clearly indicating the action needed.",,,,,,

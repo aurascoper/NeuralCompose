@@ -47,8 +47,28 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var highlightIndex: Int = 0
     @Published public private(set) var isPredicting: Bool = false
     @Published public private(set) var lastCommittedWord: String?
+    /// Mirrors `TextCompositionController.Snapshot.commitSequence` — the
+    /// actual signal `telemetryEvent` compares, since `lastCommittedWord`
+    /// alone can't tell "no new commit" apart from "the user genuinely
+    /// committed the same word twice in a row."
+    private var lastCommitSequence: UInt64 = 0
     @Published public private(set) var pipelineMode: PipelineMode
+    /// Reserved for genuine *live* pipeline failures (EEG stream drops,
+    /// calibration/Track-B start failures, etc.) — never populated from
+    /// one-time startup substitution notices. See `startupWarning` for
+    /// those. `PrivacyIndicatorView` keys its red "hard error" severity off
+    /// this field specifically, so it must stay narrow.
     @Published public private(set) var lastError: String?
+    /// One-time notice from container resolution when the classifier or
+    /// predictor fell back to a stand-in at startup (e.g. MLX weights
+    /// present but unusable in this build, so the stub predictor is in
+    /// use). Kept separate from `lastError` for the same
+    /// separation-of-concerns reason `voiceWarning`/`commandWarning`/
+    /// `refinementWarning` are each their own field: a correctly-handled
+    /// stand-in is not a live pipeline health signal, and conflating the
+    /// two made `PrivacyIndicatorView` show a red "Degraded" banner for a
+    /// case its own doc comment defines as the amber "stand-in" tier.
+    @Published public private(set) var startupWarning: String?
     @Published public private(set) var metricsSnapshot: MetricsCollector.Snapshot
     @Published public var computeMode: ClassifierComputeMode
     @Published public private(set) var isRunning: Bool = false
@@ -61,6 +81,61 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     @Published public private(set) var signalQuality: SignalQuality?
     @Published public private(set) var isReconnecting: Bool = false
+
+    /// Off by default ("shadow mode"): `detectedAdaptation` is always kept
+    /// current from live `signalQuality` so the badge is informative from
+    /// launch, but it only reaches the predictor (`appliedAdaptation`) once
+    /// the user explicitly opts in here — lets the detection be judged
+    /// against lived experience before it's trusted to change output.
+    @Published public var adaptiveComplexityEnabled: Bool = false {
+        didSet { applyAdaptiveGeneration() }
+    }
+    /// What the current `signalQuality` maps to via `SignalQualityGenerationRules`,
+    /// regardless of whether adaptive mode is enabled.
+    @Published public private(set) var detectedAdaptation: GenerationAdaptation = .raw
+    /// What's actually been pushed to the composition controller — equals
+    /// `.raw` whenever `adaptiveComplexityEnabled` is false.
+    @Published public private(set) var appliedAdaptation: GenerationAdaptation = .raw
+    /// Milestone B state source — always kept current regardless of the
+    /// toggle, same shadow-mode invariant as `detectedAdaptation`. `nil`
+    /// means the estimator has no opinion (stub, missing weights, wrong
+    /// shape, artifact-contaminated window, or untrusted anchor space) —
+    /// `applyAdaptiveGeneration()` falls back to `signalQuality` in that case.
+    @Published public private(set) var detectedSpectralState: SpectralState?
+
+    /// Off by default, mirroring `adaptiveComplexityEnabled`'s opt-in shape:
+    /// no interaction is logged locally until the user explicitly turns
+    /// this on (see `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`).
+    @Published public var interactionLoggingEnabled: Bool = false
+
+    /// Separate, explicit opt-in for the local JEPA training data set. While
+    /// on, the pipeline retains a bounded in-memory feature window and writes
+    /// one paired transition per genuine word commit. It is intentionally not
+    /// coupled to the narrower interaction-log toggle.
+    ///
+    /// Clears the underlying ring buffer on every transition (both
+    /// enabling and disabling) — `JEPASpectralStateRingBuffer`'s `isFull`
+    /// used to be a one-way latch that never reset, so toggling this off
+    /// and back on could return stale pre-toggle-off data as if it were a
+    /// freshly-completed window, splicing unrelated chronological data
+    /// into one persisted transition.
+    @Published public var jepaTransitionCaptureEnabled: Bool = false {
+        didSet {
+            guard oldValue != jepaTransitionCaptureEnabled else { return }
+            jepaTransitionCapture.clear()
+        }
+    }
+
+    /// Separate, explicit opt-in for the synthetic-task JEPA+MPC planning
+    /// demo (see `WorldModel/README.md`, `Sources/WorldModelDemo/`). Unlike
+    /// `jepaTransitionCaptureEnabled`, this gates no data collection at
+    /// all — it only controls whether the self-contained synthetic-task
+    /// demo window actually runs its closed-loop simulation and calls the
+    /// real on-device predictor for its illustrative panel (see
+    /// `WorldModelMPCDemoView`). Off by default; unrelated to
+    /// `interactionLoggingEnabled` and `jepaTransitionCaptureEnabled`,
+    /// which this never reads or modifies.
+    @Published public var worldModelDemoEnabled: Bool = false
 
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
@@ -121,6 +196,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private let smoother: IntentSmoother
     private let classifier: any IntentClassifying
     private let predictor: any NextWordPredicting
+    private let spectralEstimator: any SpectralStateEstimating
+    private let interactionLogger: any InteractionLogging
+    private let jepaTransitionCapture: any JEPATransitionCapturing
     private let voiceOutput: any SpeechSynthesizing
     private let voiceInput: any DictationRecognizing
     private let voiceCommandInput: any VoiceCommandRecognizing
@@ -166,6 +244,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.metrics = container.metrics
         self.classifier = container.classifierResolved.classifier
         self.predictor = container.predictorResolved.predictor
+        self.spectralEstimator = container.spectralEstimatorResolved.estimator
+        self.interactionLogger = container.interactionLogger
+        self.jepaTransitionCapture = container.jepaTransitionCapture
         self.voiceOutput = container.voiceOutputResolved.synthesizer
         self.voiceInput = container.voiceInputResolved.recognizer
         // The voice command recognizer holds a parser closure that
@@ -184,9 +265,15 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.smoother = IntentSmoother(config: container.smootherConfig)
         self.metricsSnapshot = container.metrics.snapshot()
         if let w = container.classifierResolved.warning {
-            self.lastError = w
+            self.startupWarning = w
         } else if let w = container.predictorResolved.warning {
-            self.lastError = w
+            self.startupWarning = w
+        } else if let w = container.spectralEstimatorResolved.warning {
+            // Previously dropped entirely — a real probe crash/timeout/init
+            // failure here silently fell back to the stub estimator with
+            // zero UI indication, unlike every sibling subsystem's
+            // equivalent failure path.
+            self.startupWarning = w
         }
         if let w = container.voiceOutputResolved.warning {
             self.voiceWarning = w
@@ -223,6 +310,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.classifierChannel = classifications
         self.composition = composition
         await composition.start()
+        applyAdaptiveGeneration()
 
         // ── snapshots → UI (MainActor) ────────────────────────────────────
         snapshotTask = Task {
@@ -258,8 +346,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         //    back and keep going. Updates `pipelineMode` on the way.
         let initialResolved = container.streamResolved
         let containerRef = container
+        let spectralEstimatorRef = self.spectralEstimator
+        let jepaTransitionCaptureRef = self.jepaTransitionCapture
         streamTask = Task.detached(priority: .userInitiated) {
-            [weak self, windowing, metrics = metricsRef, channel, samples] in
+            [weak self, windowing, metrics = metricsRef, channel, samples, spectralEstimatorRef, jepaTransitionCaptureRef] in
             var current = initialResolved
             var calibrationSampleCounter = 0
             var calibrationLastLogTime = Date()
@@ -325,10 +415,39 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                 // window. Cheap and avoids needing the full CalibrationMetrics
                                 // struct when not recording.
                                 let quality = Self.signalQuality(of: window)
+                                // Milestone B state source — always run regardless of
+                                // adaptiveComplexityEnabled (shadow mode), same invariant as
+                                // signalQuality/detectedAdaptation. Stub estimator returns nil
+                                // immediately; the real one gates on shape/artifact internally.
+                                let spectral = await spectralEstimatorRef.estimate(window: window)
                                 await MainActor.run {
+                                    var changed = false
                                     if self?.signalQuality != quality {
                                         self?.signalQuality = quality
+                                        changed = true
                                     }
+                                    if self?.detectedSpectralState != spectral {
+                                        self?.detectedSpectralState = spectral
+                                        changed = true
+                                    }
+                                    if changed {
+                                        self?.applyAdaptiveGeneration()
+                                    }
+                                }
+
+                                // The compact JEPA state is derived from the
+                                // same validated live window that powers the
+                                // classifier. Keep it in memory only when the
+                                // distinct capture toggle is active.
+                                let jepaCaptureEnabled = await MainActor.run {
+                                    self?.jepaTransitionCaptureEnabled ?? false
+                                }
+                                if jepaCaptureEnabled,
+                                   let state = JEPASpectralState(
+                                       window: window,
+                                       timestamp: Date().timeIntervalSince1970
+                                   ) {
+                                    jepaTransitionCaptureRef.ingest(state)
                                 }
 
                                 // Record window and compute metrics if in calibration mode
@@ -405,6 +524,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     await MainActor.run {
                         self?.isReconnecting = true
                         self?.signalQuality = .lost
+                        self?.applyAdaptiveGeneration()
                     }
                     try? await Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
                     await MainActor.run { self?.isReconnecting = false }
@@ -836,6 +956,22 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     // MARK: - Helpers
 
+    /// Recomputes `detectedAdaptation` from live `signalQuality`/
+    /// `detectedSpectralState` unconditionally (so the badge is informative
+    /// even in shadow mode), then pushes it to the composition controller
+    /// only if `adaptiveComplexityEnabled` and only if it actually changed.
+    /// Call after every `signalQuality`/`detectedSpectralState` write.
+    private func applyAdaptiveGeneration() {
+        let detected = AdaptiveGenerationCombination.adaptation(
+            signalQuality: signalQuality, spectralState: detectedSpectralState
+        )
+        detectedAdaptation = detected
+        let applied = adaptiveComplexityEnabled ? detected : .raw
+        guard applied != appliedAdaptation else { return }
+        appliedAdaptation = applied
+        Task { [composition] in await composition?.updateGenerationAdaptation(applied) }
+    }
+
     private func computeCalibrationMetrics(window: EEGWindow) -> CalibrationMetrics {
         let channelLabels = container.streamResolved.profile.channelLabels.isEmpty
             ? ["ch0", "ch1", "ch2", "ch3"]
@@ -907,11 +1043,83 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     private func apply(snapshot snap: TextCompositionController.Snapshot) {
+        // Captured before overwriting: `self.composedText`/`lastCommittedWord`
+        // still hold the *previous* snapshot's values here, which is exactly
+        // "the context right before this commit" — TextCompositionController
+        // itself never exposes a pre-commit string, so this is reconstructed
+        // from the snapshot stream rather than threading a new parameter
+        // through BCICore.
+        let previousComposedText = self.composedText
+        let previousCommittedWord = self.lastCommittedWord
+        let previousCommitSequence = self.lastCommitSequence
+
         self.composedText = snap.composedText
         self.candidates = snap.candidates
         self.highlightIndex = snap.highlightIndex
         self.isPredicting = snap.isPredicting
         self.lastCommittedWord = snap.lastCommittedWord
+        self.lastCommitSequence = snap.commitSequence
+
+        guard let event = Self.telemetryEvent(
+            previousComposedText: previousComposedText,
+            previousCommitSequence: previousCommitSequence,
+            snapshot: snap,
+            signalQuality: signalQuality,
+            detectedSpectralState: detectedSpectralState,
+            appliedAdaptation: appliedAdaptation,
+            adaptiveComplexityEnabled: adaptiveComplexityEnabled
+        ) else { return }
+
+        if interactionLoggingEnabled {
+            let logger = interactionLogger
+            Task { await logger.log(event) }
+        }
+        if jepaTransitionCaptureEnabled {
+            _ = jepaTransitionCapture.recordTransition(
+                actionVector: JEPAActionEncoder.vector(for: appliedAdaptation)
+            )
+        }
+    }
+
+    /// Pure: given the snapshot stream's before/after state plus the
+    /// currently-published BCI context, decides whether this snapshot
+    /// represents a genuine new word commit and, if so, builds the event to
+    /// log — `nil` on carousel ticks/prediction refreshes that don't change
+    /// `lastCommittedWord`. Kept free of `self`/`interactionLoggingEnabled`
+    /// so it's unit-testable with plain values, no pipeline or actor
+    /// required (see `Tests/NeuralComposeAppTests/AppViewModelTelemetryTests.swift`).
+    /// Logs the classified `SpectralState` badge label, never the raw
+    /// embedding (see `TelemetryEvent`'s doc comment), and whatever
+    /// adaptation was actually in effect (`appliedAdaptation`, `.raw` unless
+    /// `adaptiveComplexityEnabled`), not just what was detected.
+    ///
+    /// Compares `commitSequence`, not `lastCommittedWord`'s text — two
+    /// genuine, temporally-distinct commits of the same word (e.g.
+    /// committing "the" twice in a row) are a real, legitimate case that a
+    /// text-equality check cannot distinguish from "no new commit
+    /// happened," silently dropping the second one.
+    nonisolated static func telemetryEvent(
+        previousComposedText: String,
+        previousCommitSequence: UInt64,
+        snapshot: TextCompositionController.Snapshot,
+        signalQuality: SignalQuality?,
+        detectedSpectralState: SpectralState?,
+        appliedAdaptation: GenerationAdaptation,
+        adaptiveComplexityEnabled: Bool
+    ) -> TelemetryEvent? {
+        guard let committed = snapshot.lastCommittedWord, snapshot.commitSequence != previousCommitSequence else {
+            return nil
+        }
+        return TelemetryEvent(
+            composedContextBeforeCommit: previousComposedText,
+            committedWord: committed,
+            signalQuality: signalQuality.map(String.init(describing:)),
+            detectedSpectralState: detectedSpectralState?.badgeLabel,
+            appliedMaxCandidates: appliedAdaptation.maxCandidates,
+            appliedTemperature: appliedAdaptation.temperature,
+            appliedStyleInstruction: appliedAdaptation.styleInstruction,
+            adaptiveComplexityEnabled: adaptiveComplexityEnabled
+        )
     }
 }
 

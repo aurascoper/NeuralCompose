@@ -35,22 +35,17 @@ final class GenerationConfigurationTests: XCTestCase {
         XCTAssertNil(MLXBackend(rawValue: "Qwen"))  // rawValue lookup is case-sensitive by design; callers lowercase first
     }
 
-    // MARK: - Hardware-optional: real Gemma weights, if present locally
-
-    /// Follows the same idiom as `MLXGenerationRegressionTests`: no-op if
-    /// the model directory isn't present on this machine (Gemma weights
-    /// aren't checked into the repo and are a manual download step — see
-    /// `Models/README.md`).
-    func testGemmaBackendProducesWellFormedGeneration() async throws {
-        let modelDirectory = URL(fileURLWithPath: "Models/gemma-3n-E2B-it-lm-4bit")
-        guard FileManager.default.fileExists(atPath: modelDirectory.path) else { return }
-
-        let predictor = try await MLXNextWordPredictor(
-            modelDirectory: modelDirectory, configuration: .gemma
-        )
-        let output = try await predictor.generate(
-            prompt: "Say the word no", maxTokens: 120, temperature: 0.7, cancellationID: UUID()
-        )
-        XCTAssertFalse(output.isEmpty)
-    }
+    // Deliberately NOT testing `MLXNextWordPredictor(modelDirectory:
+    // configuration: .gemma)` directly here, even guarded by a
+    // `FileManager.fileExists` no-op check: once real Gemma weights are
+    // present on disk (as they now are), that guard no longer skips, and a
+    // direct in-process construction hits the same uncatchable "Failed to
+    // load the default metallib" crash documented in
+    // `MLXInitProbeTests.swift` — confirmed by hand, it took down this
+    // entire suite when tried. Same reasoning as that file: real-model
+    // coverage belongs behind the subprocess boundary
+    // (`PredictorFactoryCrashSafetyTests`/`MLXGenerationRegressionTests`,
+    // via `PredictorFactory.live()`) or an Xcode-built context (`MLXProbe
+    // --backend gemma`, `GenerationEval`), never a direct call from a
+    // shared process like this test runner.
 }

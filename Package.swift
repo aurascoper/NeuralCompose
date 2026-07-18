@@ -34,9 +34,12 @@ let package = Package(
         .library(name: "BCIClassifier", targets: ["BCIClassifier"]),
         .library(name: "BCILLM",        targets: ["BCILLM"]),
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
+        .library(name: "WorldModelDemo", targets: ["WorldModelDemo"]),
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
         .executable(name: "MLXProbe", targets: ["MLXProbe"]),
+        .executable(name: "SpectralProbe", targets: ["SpectralProbe"]),
+        .executable(name: "GenerationEval", targets: ["GenerationEval"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -115,10 +118,24 @@ let package = Package(
             linkerSettings: [.linkedFramework("Speech")]
         ),
 
+        // ── World Model demo (synthetic-task JEPA+MPC, CoreML/ANE) ────────
+        // Deliberately NOT a `BCI*`-prefixed name: every `BCI*` target is a
+        // real production-pipeline stage; this is a synthetic-task research
+        // demo (see WorldModel/README.md), never fed real EEG. Depends only
+        // on BCICore — no MLX, no new third-party deps. Imported only by
+        // NeuralComposeApp; must never become a dependency of any BCI*
+        // target.
+        .target(
+            name: "WorldModelDemo",
+            dependencies: ["BCICore"],
+            path: "Sources/WorldModelDemo",
+            swiftSettings: strictConcurrency
+        ),
+
         // ── Application ──────────────────────────────────────────────────
         .executableTarget(
             name: "NeuralComposeApp",
-            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice"],
+            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice", "WorldModelDemo"],
             path: "Sources/NeuralComposeApp",
             // Info.plist lives in Resources/ for reference / Xcode builds but
             // is intentionally NOT declared as a SwiftPM resource: SwiftPM
@@ -173,6 +190,38 @@ let package = Package(
             swiftSettings: strictConcurrency
         ),
 
+        // ── Spectral encoder load probe ────────────────────────────────────
+        // Same rationale as MLXProbe, kept as its own target rather than a
+        // `--kind` flag on MLXProbe: MLXProbe's own doc comment marks it as
+        // a temporary diagnostic slated for deletion once the probe-
+        // subprocess stall it was built to investigate is resolved, while
+        // spectral probing is permanent infrastructure for
+        // SpectralStateEstimatorFactory's stub-by-default fallback. See
+        // Sources/SpectralProbe/main.swift's doc comment.
+        .executableTarget(
+            name: "SpectralProbe",
+            dependencies: ["BCILLM"],
+            path: "Sources/SpectralProbe",
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── Generation evaluation harness ──────────────────────────────────
+        // Sibling executable, same shape as EmbeddingBench/SemanticEval:
+        // runs several MLX text-generation candidates (Evaluation/corpora/
+        // generation_eval_candidates_v1.json) against a shared prompt corpus
+        // (generation_eval_prompts_v1.json), emitting raw evidence
+        // (Evaluation/<date>-generation-eval/data.json) plus a
+        // scoring-template.csv for the dimensions that don't have a
+        // reliable automatic score. BCIClassifier is only for the optional
+        // CoreMLSentenceEmbedder meaning-preservation scorer, same reason
+        // EmbeddingBench/SemanticEval depend on it.
+        .executableTarget(
+            name: "GenerationEval",
+            dependencies: ["BCILLM", "BCICore", "BCIClassifier"],
+            path: "Sources/GenerationEval",
+            swiftSettings: strictConcurrency
+        ),
+
         // ── Tests ────────────────────────────────────────────────────────
         .testTarget(
             name: "BCICoreTests",
@@ -206,13 +255,26 @@ let package = Package(
         ),
         .testTarget(
             name: "BCILLMTests",
-            dependencies: ["BCILLM", "BCICore"],
+            // MLX itself (not just BCILLM) is needed directly:
+            // SpectralEncoderModelTests constructs a raw MLXArray to drive
+            // SpectralEncoderModel's shape/unit-norm invariants against
+            // random-init weights — no model file on disk, so it runs
+            // under plain `swift test` (MLX kernels only fault on eval()).
+            dependencies: [
+                "BCILLM", "BCICore",
+                .product(name: "MLX", package: "mlx-swift"),
+            ],
             path: "Tests/BCILLMTests"
         ),
         .testTarget(
             name: "BCIVoiceTests",
             dependencies: ["BCIVoice", "BCICore"],
             path: "Tests/BCIVoiceTests"
+        ),
+        .testTarget(
+            name: "WorldModelDemoTests",
+            dependencies: ["WorldModelDemo", "BCICore"],
+            path: "Tests/WorldModelDemoTests"
         ),
         .testTarget(
             name: "NeuralComposeAppTests",
