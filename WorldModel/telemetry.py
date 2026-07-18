@@ -4,13 +4,17 @@
 Day 4 of the World Model (JEPA + MPC) research spike (see
 `WorldModel/README.md`): `mpc.py`'s own evaluation harness only prints
 aggregate statistics across 100 episodes. This script runs ONE `"mpc"`
-episode with full per-step history recorded and renders a 3-panel figure:
+episode with full per-step history recorded and renders a 4-panel figure:
 the real spatial trajectory (actual goal position and tolerance radius,
-never a fabricated "flow zone"), MPPI diagnostics over time (effective
+never a fabricated "flow zone", with a marker at every step where
+`mpc.py`'s stall-detection fired), MPPI diagnostics over time (effective
 sample size and mean cost -- real quantities `plan_step` already
-computes), and per-step planning latency (measured, not budgeted against
-any target -- no "50ms" reference line; that number belongs to a
-different, not-yet-real system).
+computes), per-step planning latency (measured, not budgeted against any
+target -- no "50ms" reference line; that number belongs to a different,
+not-yet-real system), and real distance-to-goal over time (the most
+direct read on whether progress resumes after a stall -- low velocity
+alone doesn't distinguish a stall from normal convergence near the goal,
+but distance does).
 
 Usage:
   ./WorldModel/telemetry.py
@@ -62,12 +66,16 @@ def plot_telemetry(
     output: Path,
 ) -> None:
     history = result["history"]
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+    fig, axes = plt.subplots(1, 4, figsize=(20, 5))
 
     # --- Panel 1: spatial trajectory ---
     ax = axes[0]
     xs, ys = reconstruct_trajectory(env, start, history)
     ax.plot(xs, ys, "-o", markersize=3, linewidth=1, alpha=0.7, color="steelblue")
+    stall_xs = [xs[i] for i, h in enumerate(history) if h["diagnostics"].get("stall_detected")]
+    stall_ys = [ys[i] for i, h in enumerate(history) if h["diagnostics"].get("stall_detected")]
+    if stall_xs:
+        ax.scatter(stall_xs, stall_ys, color="crimson", marker="x", s=60, zorder=6, label="stall detected")
     ax.scatter([xs[0]], [ys[0]], color="green", s=100, zorder=5, label="start")
     ax.scatter([xs[-1]], [ys[-1]], color="red", s=100, zorder=5, label="end")
     ax.scatter([goal[0]], [goal[1]], color="black", marker="*", s=150, zorder=5, label="goal")
@@ -122,6 +130,24 @@ def plot_telemetry(
         ax.set_title("planning latency")
     ax.grid(True, alpha=0.2)
 
+    # --- Panel 4: real distance-to-goal over time ---
+    ax = axes[3]
+    if history:
+        # xs/ys include the reconstructed terminal point (len = len(history)+1);
+        # distance is computed at every point the particle actually occupied,
+        # step 0 through the end of the episode.
+        dist = [float(np.hypot(x - goal[0], y - goal[1])) for x, y in zip(xs, ys)]
+        ax.plot(range(len(dist)), dist, color="darkgreen")
+        ax.axhline(goal_tolerance, color="black", linestyle="--", linewidth=1, label="goal_tolerance")
+        ax.set_xlabel("step")
+        ax.set_ylabel("distance to goal")
+        ax.set_title("distance to goal over time")
+        ax.legend(loc="upper right", fontsize=8)
+    else:
+        ax.text(0.5, 0.5, "no planning steps recorded", ha="center", va="center", transform=ax.transAxes)
+        ax.set_title("distance to goal over time")
+    ax.grid(True, alpha=0.2)
+
     plt.tight_layout()
     fig.savefig(output, dpi=150)
 
@@ -136,8 +162,14 @@ def main() -> None:
     ap.add_argument("--temperature", type=float, default=MPCConfig().temperature)
     ap.add_argument("--state-cost-weight", type=float, default=MPCConfig().state_cost_weight)
     ap.add_argument("--smoothness-cost-weight", type=float, default=MPCConfig().smoothness_cost_weight)
+    ap.add_argument("--terminal-cost-weight", type=float, default=MPCConfig().terminal_cost_weight)
+    ap.add_argument("--stall-velocity-threshold", type=float, default=MPCConfig().stall_velocity_threshold)
+    ap.add_argument("--stall-distance-threshold", type=float, default=MPCConfig().stall_distance_threshold)
+    ap.add_argument("--stall-variance-multiplier", type=float, default=MPCConfig().stall_variance_multiplier)
+    ap.add_argument("--stall-widen-fraction", type=float, default=MPCConfig().stall_widen_fraction)
 
     ap.add_argument("--max-episode-steps", type=int, default=50)
+    ap.add_argument("--max-accel", type=float, default=EnvConfig().max_accel)
     ap.add_argument("--goal-tolerance", type=float, default=GOAL_TOLERANCE)
     ap.add_argument("--min-goal-distance", type=float, default=0.5)
 
@@ -166,6 +198,11 @@ def main() -> None:
         temperature=args.temperature,
         state_cost_weight=args.state_cost_weight,
         smoothness_cost_weight=args.smoothness_cost_weight,
+        terminal_cost_weight=args.terminal_cost_weight,
+        stall_velocity_threshold=args.stall_velocity_threshold,
+        stall_distance_threshold=args.stall_distance_threshold,
+        stall_variance_multiplier=args.stall_variance_multiplier,
+        stall_widen_fraction=args.stall_widen_fraction,
     )
     device = resolve_device()
 
@@ -176,7 +213,7 @@ def main() -> None:
     for p in model.parameters():
         p.requires_grad_(False)
 
-    env = ParticleNavigatorEnv(EnvConfig())
+    env = ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel))
 
     start = (
         np.array([args.start_x, args.start_y, 0.0, 0.0], dtype=np.float32)

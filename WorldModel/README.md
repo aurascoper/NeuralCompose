@@ -13,11 +13,12 @@ model" over NeuralCompose's own EEG-derived cognitive state ($z_t$ =
 predictor). That idea is real but currently unbuildable — as of 2026-07-17
 there is exactly **one night** of processed sleep data
 (`session-review.json`'s `sleep_timeline`) and **zero** logged
-`(state, action, next_state)` interaction events (`InteractionLogging` /
-`TelemetryEvent`, see `ADR-005-local-interaction-logging.md`, is opt-in and
-off by default, and nothing has turned it on yet). A JEPA needs volume,
-genuine action variation, and temporal transitions — none of which real EEG
-data currently provides.
+`(state, action, next_state)` interaction events. As of 2026-07-18, the app
+has a separate, explicitly opt-in `JEPATransition` capture path
+(`ADR-006-jepa-transition-capture.md`) that can collect those aligned local
+examples, but no real corpus has been gathered or validated yet. A JEPA still
+needs volume, genuine action variation, and temporal transitions — conditions
+the existing real EEG data does not yet meet.
 
 So: prove the architecture on a synthetic continuous-control task first,
 where ground truth is known, data is free, and correctness bugs (does the
@@ -33,6 +34,29 @@ touches the app target graph). It lives in its own top-level directory
 rather than nested in `Evaluation/` (which is specifically the embedding-model
 benchmark harness — a different research thread with its own hypothesis
 registry) or `Scripts/` (EEG-pipeline tooling).
+
+## Native Transition Data Path (Phase 1, landed 2026-07-18)
+
+The Swift app now has a local-only, separately opt-in data-harvesting path:
+
+- `JEPASpectralState` derives alpha/beta/theta energy proxies plus
+  per-electrode power from each existing live `EEGWindow`.
+- `TransitionCaptureManager` takes a full pre-action window at a real word
+  commit, waits five seconds off the UI executor, takes a full post-action
+  window, and appends a `JEPATransition` JSON object to
+  `~/Documents/NeuralCompose/JEPATransitions/jepa_transitions.jsonl`.
+- The only logged action is the normalized `GenerationAdaptation` that was
+  actually applied: `[maxCandidates / 3, temperature, hasStylePrompt]`.
+  Composed text and committed words are not part of this schema.
+- `eeg_jepa.py` loads that JSONL entirely into RAM, validates fixed shapes,
+  Z-scores all feature channels, and trains a Conv1d online encoder, frozen
+  EMA target encoder, and latent predictor. Run
+  `venv/bin/python WorldModel/eeg_jepa.py --smoke-test` to exercise the
+  schema and one training epoch without touching user data.
+
+This is data collection and offline training support only. It neither loads a
+JEPA checkpoint into the app nor changes the existing synthetic MPC spike.
+See `ADR-006-jepa-transition-capture.md` for the consent and scope boundary.
 
 ## Platform note
 
@@ -334,17 +358,161 @@ evaluation's `--min-goal-distance 0.5` typically samples. All three runs:
 no crash, effective sample size stayed within `[1, num_candidates]`, latency
 in the same few-ms range (5.1-8.4ms mean) as the aggregate table above.
 
+### Fixing the receding-horizon stall (2026-07-17)
+
+The corner-to-corner stall documented above was diagnosed as classic
+receding-horizon myopia: once the goal is farther away than `horizon`
+steps can close, every candidate's horizon-summed running cost looks
+similarly "can't get there," so the small-but-now-relatively-influential
+smoothness penalty starts controlling the softmax ranking instead of
+goal-directedness. Two mechanisms were added to `mpc.py::MPCConfig`:
+
+- **`terminal_cost_weight=2.0`** (new) — a *squared* distance-to-goal
+  penalty on the trajectory's final state only (not summed across the
+  horizon like the existing running cost), restoring discrimination at
+  the one point candidates have actually had a chance to diverge by.
+  Squared only for this single-point term — squaring the running term
+  would quadratically amplify noise in the already-only-`r≈0.63`
+  latent-distance signal at every one of the `horizon` steps.
+- **Stall-triggered candidate widening** — detected from real
+  position-space state (`velocity < stall_velocity_threshold=0.1` and
+  `distance_to_goal > stall_distance_threshold=0.5`, both already
+  available in `run_episode`'s loop, not a fresh latent-space threshold)
+  rather than a cost-shaping "reward large action magnitude" term (which
+  can't distinguish productive movement from jitter and would fight the
+  existing smoothness penalty). When triggered, a minority of the
+  candidate batch samples at a wider action range, hedged against the
+  rest of the batch staying at the normal range (the frozen predictor's
+  behavior on out-of-training-distribution actions is unmeasured, unlike
+  the well-measured ~15-step horizon boundary).
+
+**An ablation (2×2: `terminal_cost_weight` on/off × stall-widening on/off,
+on the corner-to-corner case) found the terminal cost term does
+essentially all of the work, and stall-widening adds no aggregate benefit
+while actively hurting when combined with the terminal term on the
+hardest tested case:**
+
+| config | corner-to-corner final_distance |
+|---|---|
+| both off (reproduces the original baseline) | 1.7904 |
+| terminal only | **0.8033** |
+| widening only | 1.7768 (no meaningful change) |
+| both on | 1.3351 (worse than terminal-only) |
+
+Based on this, **`stall_variance_multiplier` now defaults to `1.0`** — a
+deliberate no-op (still detects and reports `stall_detected` in
+diagnostics for visibility, just doesn't widen). The mechanism stays
+wired up and CLI-configurable for future tuning, not deleted, but isn't
+evidenced enough to default on.
+
+**Aggregate check** (`./WorldModel/mpc.py --episodes 100 --seed 1`,
+default horizon=10, final config): `mpc` success_rate `0.13 → 0.21`,
+mean_final_distance `0.449 → 0.430`, median `0.325 → 0.306` — a real,
+broad improvement, not just a hard-case fluke. **But effective sample
+size collapsed from `157/512` to `~13/512`** — the terminal term's
+squared-and-weighted magnitude apparently reproduces the same "cost scale
+outpaces fixed `temperature`" issue Day 4's horizon-25 finding already
+surfaced. The planner is now much closer to greedy argmin most of the
+time, not a true MPPI blend — flagged as a real trade-off, not chosen to
+be re-tuned in this landing (would need `temperature` recalibrated
+against the new cost scale, a natural next step).
+
+**Regression check, mixed result — reported honestly, not smoothed
+over**: `--seed 7 --horizon 5` improved (`0.463 → 0.258`), but `--seed 1`
+— a case that was already performing well — *regressed* (`0.196 → 0.283`,
+confirmed via ablation to be caused by the terminal cost term alone, not
+widening: an isolated `--seed 1` run with widening explicitly disabled
+produced the identical `0.2834`). The terminal cost is a real net win in
+aggregate, not a strictly-better-everywhere fix.
+
+**Multi-seed × multi-hard-case sweep** (4 corner-to-corner diagonals + 3
+large-but-non-maximal pairs × 5 seeds = 35 trials, final config, ad hoc
+script not committed to the repo): **0/35 (0%) literal successes** — the
+user's stated bar ("clears the corner-to-corner test 100% of the time")
+is not met, and that should be stated plainly rather than dressed up.
+Mean distance closed across all 35 trials: `0.82` units (mean start
+distance `1.94` → mean final distance `1.15`) — real, substantial,
+consistent progress, just not full convergence within the 50-step budget.
+The breakdown is more informative than the average: two `~1.5`-distance
+cases landed just outside `goal_tolerance` on every single seed
+(`final_distance≈0.12` and `≈0.18` — genuine near-misses, consistently),
+while the four maximal-distance (`2.263`) corner diagonals varied
+sharply — three showed partial-to-substantial improvement (down to
+`0.66-2.05`, `1.03-1.99`, and a very consistent `~1.62-1.64` respectively
+across seeds), but the fourth, `(0.8,-0.8)→(-0.8,0.8)`, was essentially a
+complete failure on every seed (`2.234-2.241`, barely different from the
+`2.263` start) — a specific, unexplained directional asymmetry, not
+investigated further here (root-causing it is a real open question, not
+something to guess at without more diagnostics).
+
+**Net assessment**: the fix is real and substantial — it measurably
+improves the aggregate success rate and mean distance, and turns the
+flagship stalled trajectory into one with sustained, monotonic progress
+for the entire episode (visible directly in `telemetry.py`'s new
+distance-to-goal panel) — but it does not solve receding-horizon planning
+at the arena's diagonal extremes, it introduces a real (if narrow)
+regression risk on already-easy cases, and it trades away MPPI's sampling
+diversity in the process. All of this traces back to the same ceiling
+Day 3/4 already measured and named honestly: `r≈0.63` latent-to-position
+correlation is a representation-quality limit that better cost-shaping
+can make fuller use of, not manufacture past.
+
+### Parameter sweep: time budget, horizon, acceleration (2026-07-18)
+
+The corner-to-corner case
+`--start-x 0.8 --start-y 0.8 --goal-x -0.8 --goal-y -0.8` was rerun with
+one lever changed at a time, resetting the same seed-0 candidate-sampling
+RNG for each row so credit/blame stays attributable. `mpc.py` and
+`telemetry.py` now both expose `--max-accel`, wired only by constructing
+`ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel))`; the sampler,
+random policy, and `env.step()` already read `env.config.max_accel`, so no
+other code path was changed.
+
+| config | reached? | final_distance | mean ESS | trajectory note |
+|---|---:|---:|---:|---|
+| default (`H=10`, 50 steps, `max_accel=1.0`) | no | 0.8033 | 18.9/512 | monotonic progress, still far outside tolerance |
+| `--max-episode-steps 75` | no | 0.2534 | 19.4/512 | monotonic, large improvement from time alone |
+| `--max-episode-steps 100` | no | **0.1832** | 21.5/512 | best isolated hard-case result, but still outside `goal_tolerance=0.1` |
+| `--horizon 15` | no | 0.9662 | 4.2/512 | worse result; ESS collapsed further at the trust-boundary horizon |
+| `--max-accel 1.5` | no | 0.5112 | 4.7/512 | smooth and monotonic on the plot, but much closer to greedy/OOD sampling |
+| `--max-episode-steps 75 --max-accel 1.5` | no | 0.2158 | 6.7/512 | helped vs 75 steps alone, still not reached, low ESS |
+| `--max-episode-steps 100 --max-accel 1.5` | no | 0.1983 | 7.6/512 | worse than 100 steps alone, low ESS persists |
+
+**Result**: none of the tested levers closed the corner-to-corner gap.
+The best hard-case setting found here is the conservative
+`--max-episode-steps 100` alone, which gets to `final_distance=0.1832`
+but still misses the literal success bar. The extra-horizon hypothesis did
+not pay off in this test: `--horizon 15` pushed into the Day 3
+trust-boundary region and the diagnostics showed the expected noise/cost
+scale problem rather than a free improvement. The acceleration hypothesis
+helped the 50-step hard case, and produced no NaNs/assertion failures or
+visible trajectory jitter in telemetry, but the whole candidate batch is
+then sampled from a range the predictor was not trained on; the ESS drop
+to `~5/512` is a real warning sign, not a clean win.
+
+Regression reruns under the hard-case-best setting
+(`--max-episode-steps 100`) were negative:
+
+| regression case | previous final_distance | with 100 steps | note |
+|---|---:|---:|---|
+| `telemetry.py --seed 1` | 0.2834 | 0.3315 | got closer mid-episode, then drifted away |
+| `telemetry.py --seed 7 --horizon 5` | 0.258 | 0.4081 | same pattern: extra budget worsened the final position |
+
+A softer 75-step rerun did not rescue the trade-off (`0.3602` for
+`--seed 1`, `0.3639` for `--seed 7 --horizon 5`). So the honest conclusion
+is not "raise the default time budget"; it is narrower: more time helps
+this one diagonal hard case, but the current planner can keep moving after
+its best approach and degrade earlier near-misses. That makes the next
+real problem less about raw budget and more about convergence/termination
+behavior, temperature/cost-scale calibration, or representation quality.
+
 ## Explicitly out of scope for this spike (so far)
 
-- Any connection to real EEG data, `SpectralState`, or `TelemetryEvent` —
-  a future decision, made only after the architecture is proven here. See
-  `WorldModel/EEG_INTEGRATION_DESIGN.md` for a speculative, unscheduled
-  design pass on what that would actually require — it corrects several
-  assumptions a real-integration proposal made against this codebase (a
-  real continuous EEG-window encoder and a real sliding-window pipeline
-  already ship; a persisted training dataset and a JEPA-dedicated encoder
-  do not) and explicitly rejects the parts that conflict with this app's
-  architecture regardless of timing (a cloud LLM API, a separate
-  Python+ZeroMQ runtime process).
+- Runtime use of real EEG data: the app can now collect and train from a
+  separate local data set, but it still cannot load a JEPA model, anchor
+  latents, run MPC over a user, or change generation behavior from that
+  model. `WorldModel/EEG_INTEGRATION_DESIGN.md` documents the remaining
+  validation and architecture constraints; cloud LLM calls and a
+  Python+ZeroMQ runtime process remain explicitly rejected.
 - Any change to `InteractionLogging`/`interactionLoggingEnabled`'s opt-in
   default — that's ADR-005's invariant, untouched by this work.

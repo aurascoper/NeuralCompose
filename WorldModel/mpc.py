@@ -12,12 +12,47 @@ of candidate action sequences, scores all of them in a single batched
 forward pass through the frozen predictor, and blends the best ones -- no
 backward pass anywhere in this file.
 
-Cost has exactly two terms: distance to a goal latent (summed over the
-whole horizon, not just the final step -- a running cost-to-go) and an
-action-smoothness penalty. There is deliberately no "utility reward" term
-(no analog to rewarding high-bandwidth actions in a physics task) and no
-"fatigue barrier" term (no fatigue-latent-cluster analog here) -- this
-task doesn't need either.
+Cost has three terms: distance to a goal latent summed over the whole
+horizon (a running cost-to-go), a squared terminal-state distance (see
+below), and an action-smoothness penalty. There is deliberately no
+"utility reward" term (no analog to rewarding high-bandwidth actions in a
+physics task) and no "fatigue barrier" term (no fatigue-latent-cluster
+analog here) -- this task doesn't need either.
+
+Receding-horizon myopia and its fix: with a goal farther away than
+`horizon` steps can close, every candidate's horizon-summed running cost
+looks similarly "can't get there" -- so the (deliberately small)
+smoothness penalty starts controlling the softmax ranking instead of
+goal-directedness, and the planner settles into doing very little. The
+terminal-state term (`terminal_cost_weight`, squared distance at step H
+only, not summed) restores discrimination by isolating the one point in
+the sequence candidates have actually had a chance to diverge by, rather
+than diluting that signal across the near-invariant early steps. Squared
+only for this single-point term, not the running term -- squaring a
+signal summed over every step would quadratically amplify noise in the
+already-only-moderately-reliable (`r≈0.63`, see README) latent-distance
+proxy at every one of those steps.
+
+Stall detection uses real position-space state (velocity, distance to
+goal from `env.py`'s own `[x,y,vx,vy]`), not a latent-space threshold --
+`r≈0.63` isn't reliable enough to calibrate a fresh magic number in an
+opaque 32-dim space when real, already-interpretable quantities are
+sitting right there. When stalled, a minority of the candidate batch
+(`stall_widen_fraction`) can be sampled at a wider action range
+(`stall_variance_multiplier`); the rest stays at the normal range. Full
+widening of the whole batch was deliberately avoided -- the frozen
+predictor's behavior outside its presumably-training-range actions is
+unmeasured, unlike the well-measured ~15-step horizon boundary, so hedging
+keeps most of the batch trustworthy while still letting the existing cost
+function's honest signal (not a new reward term) decide whether the wider
+candidates pay off. `stall_detected`/`stall_variance_multiplier` are still
+wired through and reported in diagnostics for visibility either way, but
+`stall_variance_multiplier` defaults to 1.0 (a no-op) -- an ablation found
+the terminal-cost term alone drives essentially all of the measured
+improvement, and widening added no aggregate benefit while actively
+hurting the hardest tested case when combined with it (see README). Left
+configurable for future tuning, not deleted, but not proven enough to
+default on.
 
 Which encoder produces which latent is easy to get backwards:
 `JEPAModule.forward_online` always feeds the predictor a latent from the
@@ -65,6 +100,23 @@ class MPCConfig:
     temperature: float = 1.0
     state_cost_weight: float = 1.0
     smoothness_cost_weight: float = 0.1
+    # Terminal-state term and stall-triggered widening -- see module
+    # docstring for why each exists. terminal_cost_weight/
+    # stall_variance_multiplier/stall_widen_fraction have no existing
+    # codebase quantity to anchor to (unlike the two thresholds below) --
+    # first-pass values, not pre-calibrated.
+    terminal_cost_weight: float = 2.0
+    stall_velocity_threshold: float = 0.1  # 5% of EnvConfig.max_speed=2.0
+    stall_distance_threshold: float = 0.5  # matches the --min-goal-distance default
+    # 1.0 is a deliberate no-op default (still detects/reports stall_detected
+    # for visibility, just doesn't widen the sampling range) -- an ablation
+    # this session found stall-widening adds no measurable aggregate benefit
+    # and can actively hurt when combined with the terminal cost term on hard
+    # cases (see README). terminal_cost_weight alone is the evidenced win;
+    # widening is left wired up and CLI-configurable for future tuning, not
+    # deleted, but shouldn't be on by default until it's actually proven.
+    stall_variance_multiplier: float = 1.0
+    stall_widen_fraction: float = 0.25
 
 
 def sample_candidate_actions(
@@ -85,14 +137,15 @@ def score_candidates(
     candidate_actions: torch.Tensor,
     prev_action: torch.Tensor | None,
     config: MPCConfig,
-) -> torch.Tensor:
-    """Total cost per candidate sequence, shape (N,): summed per-step
-    latent distance to the goal (a running cost-to-go, not just the final
-    step) plus an action-smoothness penalty. `prev_action` (the action
-    actually executed on the previous real step) is prepended so the
-    smoothness term stays continuous across replans; `None` only on an
-    episode's very first step, when there's nothing to be continuous
-    with yet.
+) -> tuple[torch.Tensor, dict]:
+    """Total cost per candidate sequence, shape (N,), plus a component
+    breakdown: summed per-step latent distance to the goal (a running
+    cost-to-go, not just the final step), a squared terminal-state
+    distance (see module docstring for why only this term is squared),
+    and an action-smoothness penalty. `prev_action` (the action actually
+    executed on the previous real step) is prepended so the smoothness
+    term stays continuous across replans; `None` only on an episode's
+    very first step, when there's nothing to be continuous with yet.
     """
     n = candidate_actions.shape[0]
     z = z_start.unsqueeze(0).expand(n, -1)
@@ -101,13 +154,31 @@ def score_candidates(
         z = model.predictor(z, candidate_actions[:, t])
         state_cost = state_cost + (z - z_goal.unsqueeze(0)).norm(dim=-1)
 
+    # z is now the t=horizon state -- already computed by the loop above,
+    # captured here (not recomputed) for a second, separately-weighted,
+    # squared appearance. Intentional double appearance, not a bug: the
+    # running term is a cost-to-go over the whole horizon; this term
+    # specifically sharpens discrimination at the one point candidates
+    # have actually had a chance to diverge by (see module docstring).
+    terminal_cost = (z - z_goal.unsqueeze(0)).norm(dim=-1) ** 2
+
     full = candidate_actions
     if prev_action is not None:
         prev = prev_action.view(1, 1, -1).expand(n, 1, -1)
         full = torch.cat([prev, candidate_actions], dim=1)
     smoothness_cost = (full[:, 1:] - full[:, :-1]).norm(dim=-1).sum(dim=1)
 
-    return config.state_cost_weight * state_cost + config.smoothness_cost_weight * smoothness_cost
+    weighted_state = config.state_cost_weight * state_cost
+    weighted_smoothness = config.smoothness_cost_weight * smoothness_cost
+    weighted_terminal = config.terminal_cost_weight * terminal_cost
+
+    total = weighted_state + weighted_smoothness + weighted_terminal
+    components = {
+        "state_cost_mean": weighted_state.mean().item(),
+        "smoothness_cost_mean": weighted_smoothness.mean().item(),
+        "terminal_cost_mean": weighted_terminal.mean().item(),
+    }
+    return total, components
 
 
 @torch.no_grad()
@@ -120,19 +191,45 @@ def plan_step(
     rng: np.random.Generator,
     max_accel: float,
     device: torch.device,
+    velocity: float,
+    distance_to_goal: float,
 ) -> tuple[torch.Tensor, dict]:
     """One MPPI planning step: sample candidates, score them, blend via a
-    temperature-scaled softmax (not greedy argmin) -- a convex combination
-    of in-bounds action sequences stays in-bounds, no re-clipping needed.
-    Returns the first action of the blended sequence (receding horizon)
-    plus diagnostics for sanity-checking `temperature` calibration.
+    temperature-scaled softmax (not greedy argmin). Returns the first
+    action of the blended sequence (receding horizon) plus diagnostics for
+    sanity-checking `temperature` calibration and stall detection.
+
+    `velocity`/`distance_to_goal` are real position-space quantities (see
+    module docstring) used to detect a receding-horizon stall: low
+    velocity while still far from goal. When stalled, a minority
+    (`stall_widen_fraction`) of the candidate batch is sampled at a wider
+    action range (`stall_variance_multiplier`) instead of uniformly
+    widening the whole batch -- see module docstring for why. Note this
+    means the "convex combination of in-bounds sequences stays in-bounds"
+    property no longer strictly holds during a stalled step (the blended
+    action can exceed `max_accel` if softmax weight concentrates on wide
+    candidates) -- harmless since `env.step` already clips before
+    executing, but worth knowing rather than assuming re-clipping is
+    always unnecessary.
     """
-    candidate_actions = sample_candidate_actions(
-        rng, config.num_candidates, config.horizon, max_accel
-    ).to(device)
+    stalled = velocity < config.stall_velocity_threshold and distance_to_goal > config.stall_distance_threshold
+    if stalled:
+        num_wide = int(round(config.num_candidates * config.stall_widen_fraction))
+        num_normal = config.num_candidates - num_wide
+        normal_candidates = sample_candidate_actions(rng, num_normal, config.horizon, max_accel)
+        wide_candidates = sample_candidate_actions(
+            rng, num_wide, config.horizon, max_accel * config.stall_variance_multiplier
+        )
+        candidate_actions = torch.cat([normal_candidates, wide_candidates], dim=0).to(device)
+    else:
+        candidate_actions = sample_candidate_actions(
+            rng, config.num_candidates, config.horizon, max_accel
+        ).to(device)
 
     z_start = model.encoder(state.unsqueeze(0)).squeeze(0)
-    cost = score_candidates(model, z_start, goal_latent, candidate_actions, prev_action, config)
+    cost, cost_components = score_candidates(
+        model, z_start, goal_latent, candidate_actions, prev_action, config
+    )
     assert torch.isfinite(cost).all(), "non-finite cost in MPC candidate scoring"
 
     weights = F.softmax(-(cost - cost.min()) / config.temperature, dim=0)
@@ -146,6 +243,9 @@ def plan_step(
         # ESS near 1 -> effectively greedy (temperature too low); ESS near
         # num_candidates -> no discrimination between candidates (too high).
         "effective_sample_size": (1.0 / (weights ** 2).sum()).item(),
+        "stall_detected": stalled,
+        "effective_max_accel": max_accel * config.stall_variance_multiplier if stalled else max_accel,
+        **cost_components,
     }
     return blended[0], diagnostics
 
@@ -199,16 +299,19 @@ def run_episode(
     steps_used = 0
 
     for step in range(max_steps):
-        if float(np.linalg.norm(state[:2] - goal[:2])) < goal_tolerance:
+        distance_to_goal = float(np.linalg.norm(state[:2] - goal[:2]))
+        if distance_to_goal < goal_tolerance:
             reached = True
             break
         steps_used = step + 1
 
         if policy == "mpc":
             state_t = torch.from_numpy(state).to(device)
+            velocity = float(np.linalg.norm(state[2:]))
             t0 = time.perf_counter()
             action_t, diag = plan_step(
-                model, state_t, goal_latent, prev_action, config, rng, env.config.max_accel, device
+                model, state_t, goal_latent, prev_action, config, rng, env.config.max_accel, device,
+                velocity, distance_to_goal,
             )
             latencies.append(time.perf_counter() - t0)
             diagnostics.append(diag)
@@ -252,9 +355,15 @@ def main() -> None:
     ap.add_argument("--temperature", type=float, default=MPCConfig().temperature)
     ap.add_argument("--state-cost-weight", type=float, default=MPCConfig().state_cost_weight)
     ap.add_argument("--smoothness-cost-weight", type=float, default=MPCConfig().smoothness_cost_weight)
+    ap.add_argument("--terminal-cost-weight", type=float, default=MPCConfig().terminal_cost_weight)
+    ap.add_argument("--stall-velocity-threshold", type=float, default=MPCConfig().stall_velocity_threshold)
+    ap.add_argument("--stall-distance-threshold", type=float, default=MPCConfig().stall_distance_threshold)
+    ap.add_argument("--stall-variance-multiplier", type=float, default=MPCConfig().stall_variance_multiplier)
+    ap.add_argument("--stall-widen-fraction", type=float, default=MPCConfig().stall_widen_fraction)
 
     ap.add_argument("--episodes", type=int, default=50)
     ap.add_argument("--max-episode-steps", type=int, default=50)
+    ap.add_argument("--max-accel", type=float, default=EnvConfig().max_accel)
     ap.add_argument("--goal-tolerance", type=float, default=GOAL_TOLERANCE)
     ap.add_argument("--min-goal-distance", type=float, default=0.5)
     ap.add_argument("--seed", type=int, default=0)
@@ -272,6 +381,11 @@ def main() -> None:
         temperature=args.temperature,
         state_cost_weight=args.state_cost_weight,
         smoothness_cost_weight=args.smoothness_cost_weight,
+        terminal_cost_weight=args.terminal_cost_weight,
+        stall_velocity_threshold=args.stall_velocity_threshold,
+        stall_distance_threshold=args.stall_distance_threshold,
+        stall_variance_multiplier=args.stall_variance_multiplier,
+        stall_widen_fraction=args.stall_widen_fraction,
     )
     device = resolve_device()
 
@@ -282,7 +396,7 @@ def main() -> None:
     for p in model.parameters():
         p.requires_grad_(False)
 
-    env = ParticleNavigatorEnv(EnvConfig())
+    env = ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel))
 
     print(f"mpc.py: device={device} checkpoint={args.checkpoint}")
     print(f"  config: {config}")
@@ -343,11 +457,13 @@ def main() -> None:
                 ess = np.array([d["effective_sample_size"] for d in all_diag])
                 cost_min = np.array([d["cost_min"] for d in all_diag])
                 cost_mean = np.array([d["cost_mean"] for d in all_diag])
+                stall_rate = np.mean([d["stall_detected"] for d in all_diag])
                 print(
                     f"  MPPI diagnostics: cost_min~{cost_min.mean():.3f} "
                     f"cost_mean~{cost_mean.mean():.3f} "
                     f"effective_sample_size mean={ess.mean():.1f}/{config.num_candidates}"
                 )
+                print(f"  stall_detected on {stall_rate:.1%} of planning steps")
 
     mpc_success = sum(r["reached"] for r in results["mpc"]) / len(results["mpc"])
     zero_success = sum(r["reached"] for r in results["zero"]) / len(results["zero"])
