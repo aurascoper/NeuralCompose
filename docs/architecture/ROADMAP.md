@@ -139,7 +139,8 @@ validation) are still landing.
 - `~` World Model (JEPA + MPC) research spike — `WorldModel/` (new
   top-level dir, decoupled from `Sources/`, PyTorch not MLX). Day 1
   (synthetic env + trajectory dataset + DataLoader) landed 2026-07-17;
-  Days 2-4 (predictor networks, anti-collapse training loop, latent
+  Day 2 (encoder + EMA target encoder + latent predictor, `models.py`)
+  landed 2026-07-17; Days 3-4 (anti-collapse training loop, latent
   MPC) not started. Deliberately synthetic, *not* trained on real EEG
   data — one processed night of sleep data and zero logged
   interaction events exist today, nowhere near enough volume/action

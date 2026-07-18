@@ -84,14 +84,41 @@ resamples).
 `data/` is gitignored — regenerate anytime via `./dataset.py` (seeded, so
 `--seed 0` reproduces exactly).
 
-### Day 2 — The Core JEPA Architecture (not started)
+### Day 2 — The Core JEPA Architecture (done, 2026-07-17)
 
 Three networks, predicting entirely in latent space (never reconstructing
 raw state):
-- **Encoder** $E_\theta$: raw state $s_t \to$ latent $z_t$.
-- **Target encoder** $E_{\bar\theta}$: EMA copy of $E_\theta$, provides
-  stable prediction targets.
-- **Predictor** $P_\phi$: $(z_t, a_t) \to \hat z_{t+1}$.
+- **`models.py::Encoder`** $E_\theta$: raw state $s_t \to$ latent $z_t$.
+  `Linear→LayerNorm→GELU` ×2 then `Linear→LayerNorm` down to `latent_dim`
+  (default 32). LayerNorm not BatchNorm — `TrajectoryDataset` transitions
+  are shuffled i.i.d. by the DataLoader, so batch statistics would leak
+  across otherwise-independent transitions (the same issue BYOL's analysis
+  flags for two-tower online/EMA setups); LayerNorm also works correctly at
+  `batch_size=1`. The final LayerNorm does *not* by itself prevent
+  representation collapse (it normalizes per sample, across the latent
+  axis — a batch of identical vectors still satisfies it); Day 3's
+  anti-collapse term operates on a different axis entirely (per feature,
+  across the batch).
+- **`models.py::JEPAModule.target_encoder`** $E_{\bar\theta}$: a
+  `copy.deepcopy` of `Encoder`, frozen (`requires_grad=False`), updated
+  only by `update_target_ema()` — never by backprop — providing a stable,
+  non-moving prediction target.
+- **`models.py::LatentPredictor`** $P_\phi$: $(z_t, a_t) \to \hat
+  z_{t+1}$, same two hidden blocks as the encoder, no final LayerNorm on
+  the output (the target is already normalized; re-normalizing the
+  prediction would discard scale information the loss needs).
+
+**Verified 2026-07-17**: `./WorldModel/models.py` (default config:
+`latent_dim=32 hidden_dim=128 ema_tau=0.99`, `device=mps`, `batch_size=16`,
+random-tensor smoke test, not real data): `forward_online`/`forward_target`
+both produce `(16, 32)`, finite, target params confirmed frozen
+(`requires_grad=False`). One real SGD step (`lr=0.1`) on the online encoder
+against `MSE(z_pred, z_target)=1.084621`, then `update_target_ema()`: all
+12 target parameter tensors moved (`max |delta|=0.000136`), all finite. A
+second run at `--ema-tau 0.9 --seed 1 --batch-size 4` showed a ~20x larger
+`max |delta|=0.0027` — consistent with the EMA formula (lower tau tracks
+the online encoder faster), a useful sanity check that the update isn't a
+no-op or miswired.
 
 ### Day 3 — The Representation Loss & Training Loop (not started)
 
