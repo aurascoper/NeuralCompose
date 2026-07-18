@@ -165,11 +165,22 @@ def run_episode(
     goal_tolerance: float,
     device: torch.device,
     rng: np.random.Generator,
+    record_history: bool = False,
 ) -> dict:
     """Run one closed-loop episode under `policy` ("mpc" | "zero" |
     "random"). One shared harness for all three so termination/tolerance/
     step-budget logic is identical across MPC and its baselines -- the
     only thing that differs between calls is how the action is chosen.
+
+    `record_history=False` (the default, used by main()'s 100-episode x
+    3-policy evaluation loop) returns exactly the summary dict this
+    function has always returned. `record_history=True` additionally
+    returns a `"history"` key -- one dict per step with the pre-step
+    `state` and the `action` taken (plus `latency`/`diagnostics` for
+    `"mpc"` steps) -- for callers (e.g. telemetry.py) that need per-step
+    detail rather than just the summary. The terminal state isn't stored
+    per entry; a caller can reconstruct it exactly by replaying
+    `env.step` over the recorded actions, since `step` is stateless.
     """
     assert policy in ("mpc", "zero", "random")
 
@@ -183,6 +194,7 @@ def run_episode(
     prev_action = None
     latencies: list[float] = []
     diagnostics: list[dict] = []
+    history: list[dict] | None = [] if record_history else None
     reached = False
     steps_used = 0
 
@@ -207,18 +219,28 @@ def run_episode(
         else:  # "random"
             action = _sample_random_action(rng, env.config.max_accel)
 
+        if record_history:
+            entry = {"state": state.copy(), "action": action.copy()}
+            if policy == "mpc":
+                entry["latency"] = latencies[-1]
+                entry["diagnostics"] = diag
+            history.append(entry)
+
         state = env.step(state, action)
 
     if not reached and float(np.linalg.norm(state[:2] - goal[:2])) < goal_tolerance:
         reached = True
 
-    return {
+    result = {
         "reached": reached,
         "steps_used": steps_used,
         "final_distance": float(np.linalg.norm(state[:2] - goal[:2])),
         "latencies": latencies,
         "diagnostics": diagnostics,
     }
+    if record_history:
+        result["history"] = history
+    return result
 
 
 def main() -> None:

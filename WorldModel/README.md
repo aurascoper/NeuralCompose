@@ -253,6 +253,22 @@ loop has no time to backprop through the predictor at every step.
   *identical* fixed list of `(start, goal)` pairs, reporting success rate,
   mean/median final distance-to-goal, and (for `mpc`) honestly-measured
   (not budgeted) planning latency and aggregated MPPI diagnostics.
+- **`mpc.py::run_episode`** — new optional `record_history: bool = False`
+  parameter (default off, so the existing 100-episode × 3-policy
+  evaluation in `main()` is byte-for-byte unaffected): when `True`, also
+  returns a `"history"` key — a list of one dict per step (`state` before
+  the step, `action` taken, plus `latency`/`diagnostics` for `"mpc"`
+  steps) — for callers that need per-step detail rather than the lean
+  summary.
+- **`telemetry.py`** — new script, single-episode visualization companion
+  to `mpc.py`: runs one `"mpc"` episode with `record_history=True` against
+  a seeded (or explicitly overridden via `--start-x/--start-y/--goal-x/--goal-y`)
+  `(start, goal)` pair and saves a 3-panel figure — the real `(x, y)`
+  spatial trajectory with the actual sampled goal position and its
+  `goal_tolerance` radius (never a fabricated "flow zone"), per-step MPPI
+  `effective_sample_size`/`cost_mean` diagnostics, and per-step planning
+  latency with no fabricated budget line — to `telemetry_run.png`
+  (gitignored, `WorldModel/*.png`).
 
 **Verified 2026-07-17**: a direct diagnostic (500 random states, one fixed
 sampled goal) found real-position distance and latent distance-to-goal only
@@ -294,9 +310,41 @@ would need `temperature` re-tuned (or cost normalized by horizon) at each
 horizon — flagged here as a well-motivated follow-up, not implemented in
 this landing since it goes beyond what was scoped.
 
+**`telemetry.py` verified 2026-07-17**: three runs, default horizon unless
+noted. `--seed 1` (start=(0.02,0.90), goal=(-0.38,-0.15)): not reached in
+50 steps, final_distance=0.196 (close — inside `2×goal_tolerance`), latency
+mean=7.4-8.4ms across two determinism-check runs (identical start/goal/
+reached/steps_used/final_distance both times — only wall-clock latency
+values differ run to run, as expected). `--seed 7 --horizon 5`
+(start=(0.25,0.79), goal=(-0.40,0.75)): not reached, final_distance=0.463,
+the trajectory panel shows the particle curving away and stalling near
+(0.3, 0.4) rather than continuing toward the goal — a real, visible miss,
+not a plotting artifact. An explicit hard case,
+`--start-x 0.8 --start-y 0.8 --goal-x -0.8 --goal-y -0.8` (opposite
+corners, distance 2.26 — near the arena's diagonal maximum): final_distance
+1.79 — the trajectory panel shows real, substantial early progress
+((0.8,0.8)→~(0.4,0.53)) that then stalls well short of the goal, even
+though the MPPI diagnostics panel shows a healthy, non-collapsed effective
+sample size (~350-440/512) and steadily decreasing cost throughout — the
+planner keeps finding lower-cost sequences by its own metric without that
+translating into continued real progress, consistent with the `r≈0.63`
+latent-to-position correlation bounding how far steering can be trusted,
+especially on harder/longer-distance instances than the aggregate
+evaluation's `--min-goal-distance 0.5` typically samples. All three runs:
+no crash, effective sample size stayed within `[1, num_candidates]`, latency
+in the same few-ms range (5.1-8.4ms mean) as the aggregate table above.
+
 ## Explicitly out of scope for this spike (so far)
 
 - Any connection to real EEG data, `SpectralState`, or `TelemetryEvent` —
-  a future decision, made only after the architecture is proven here.
+  a future decision, made only after the architecture is proven here. See
+  `WorldModel/EEG_INTEGRATION_DESIGN.md` for a speculative, unscheduled
+  design pass on what that would actually require — it corrects several
+  assumptions a real-integration proposal made against this codebase (a
+  real continuous EEG-window encoder and a real sliding-window pipeline
+  already ship; a persisted training dataset and a JEPA-dedicated encoder
+  do not) and explicitly rejects the parts that conflict with this app's
+  architecture regardless of timing (a cloud LLM API, a separate
+  Python+ZeroMQ runtime process).
 - Any change to `InteractionLogging`/`interactionLoggingEnabled`'s opt-in
   default — that's ADR-005's invariant, untouched by this work.
