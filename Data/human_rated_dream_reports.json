@@ -1,0 +1,44 @@
+[
+  {
+    "report_id": "human_01",
+    "text": "I was walking onto a massive dark stage to address a crowd, but when I opened my mouth, no sound came out and my teeth felt loose. [Note: woke up abruptly, heart racing]",
+    "target_hypothesis": "hyp_fear_failure_01",
+    "ground_truth_drift": 0.10,
+    "calibration_note": "Canonical fear-failure imagery: stage + audience (paraphrased as 'crowd') + the somatic-marker 'teeth loose' from the same fear-of-failure family. The denoise pass strips the [Note: ...] meta-commentary. Anchors hit literally by the prototype token-membership check: 'stage' = 1 of 5 (the literal anchor). 'crowd' is semantically 'audience' but the prototype has no synonym handling. GT 0.10 reflects a human rater reading the canonical fear-failure beat."
+  },
+  {
+    "report_id": "human_02",
+    "text": "I was stuck inside a runaway vehicle traveling down a steep canyon. The brakes completely failed to engage and I lost all steering control.",
+    "target_hypothesis": "hyp_fear_failure_01",
+    "ground_truth_drift": 0.15,
+    "calibration_note": "Loss-of-control is the canonical fear-failure beat, expressed through 'runaway vehicle' / 'brakes failed' / 'lost steering control'. The literal anchor words ('stage', 'audience', 'falling', 'forgetting', 'test') do not appear. GT 0.15 reflects a human rater reading the loss-of-control beat as on-target for fear-failure. The prototype's token-membership check has no morphology ('control' doesn't match 'audience' etc.) and no semantic-distance handling, so this report will register as zero anchor hits."
+  },
+  {
+    "report_id": "human_03",
+    "text": "I was wandering around an old high school locker room looking for my forgotten schedule. I couldn't find my way out and the halls felt tightly constricted.",
+    "target_hypothesis": "hyp_fear_failure_01",
+    "ground_truth_drift": 0.45,
+    "calibration_note": "Mixed signal: 'forgotten schedule' is the literal-inflection test case (anchor 'forgetting' vs. token 'forgotten' — the prototype's exact-match check will not match), and the 'couldn't find my way out' / 'halls constricted' are performance-anxiety-adjacent without being canonical. GT 0.45 reflects a moderate-drift reading: the imagery is in the fear-failure family but it's a flat, undramatic scene without the canonical embarrassment beat."
+  },
+  {
+    "report_id": "human_04",
+    "text": "I soared directly over an open emerald valley, completely untethered. I glided through the clouds and discovered an ancient stone temple nestled in the forest below.",
+    "target_hypothesis": "hyp_safe_exploration_01",
+    "ground_truth_drift": 0.05,
+    "calibration_note": "Canonical safe-exploration imagery: 'soared' / 'glided' / 'untethered' (the 'floating' anchor beat expressed in flying) / 'discovered' / 'open' / 'valley' / 'temple'. None of the literal on-disk anchors (home, shield, light, floating) appear. GT 0.05 reflects a human rater reading the on-target safe-exploration beat (with a small positive drift for the dramatic affect). The prototype's token-membership check will register zero anchor hits."
+  },
+  {
+    "report_id": "human_05",
+    "text": "I was floating on my back in a calm, open ocean. The sky was clear blue. It was completely peaceful, though not much else happened.",
+    "target_hypothesis": "hyp_safe_exploration_01",
+    "ground_truth_drift": 0.35,
+    "calibration_note": "One literal anchor hit ('floating') in a peaceful but flat affect context. The 'open ocean' is the open-spaces beat (a semantic expansion of the 'open' word the brief's PrimerGenerator uses, but not a literal on-disk anchor). GT 0.35 reflects a moderate-drift reading: the safe-exploration imagery is on-target but the dream is undramatic — no discovery, no shelter, just floating."
+  },
+  {
+    "report_id": "human_06",
+    "text": "I spent the whole dream painting the kitchen walls of my childhood home a bright golden yellow. My old dog was sleeping quietly on the rug.",
+    "target_hypothesis": "hyp_fear_failure_01",
+    "ground_truth_drift": 0.90,
+    "calibration_note": "One literal anchor hit ('home', from 'childhood home') in a mundane off-target context. The 'kitchen walls' / 'yellow' / 'dog' / 'rug' imagery is not in the safe-exploration semantic domain — it's a routine memory beat that doesn't fit the active hypothesis. GT 0.90 reflects a high-drift reading: the only anchor that fires is incidental. This is the calibration case where the prototype may under-call drift (predicted ~0.75 vs GT 0.90) because the incidental anchor hit masks the off-target content."
+  }
+]

@@ -51,6 +51,7 @@ __pycache__/
 Data/*
 !Data/.gitkeep
 !Data/synthetic_dream_reports.json
+!Data/human_rated_dream_reports.json
 
 ## World Model spike — generated trajectories, regenerable via
 ## WorldModel/dataset.py (seeded, so --seed 0 reproduces exactly)
