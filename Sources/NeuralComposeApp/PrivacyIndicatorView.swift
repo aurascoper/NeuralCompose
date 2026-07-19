@@ -48,6 +48,11 @@ struct PrivacyIndicatorView: View {
     /// `worldModelDemoEnabled` it persists nothing; red means "the loop is
     /// actively speaking generated text," not "recording."
     @Binding var spokenGenerationLoopEnabled: Bool
+    /// Experimental opt-in for the hypnagogic loop. UNIQUE among these toggles:
+    /// while active it both captures the mic (on-device STT) AND may send
+    /// transcript text to a cloud assistant — the one deliberate runtime network
+    /// exception (decision_registry entry 8). Red = "listening + text may leave."
+    @Binding var hypnagogicLoopEnabled: Bool
 
     @State private var expanded: Bool = false
 
@@ -64,6 +69,7 @@ struct PrivacyIndicatorView: View {
                 jepaCaptureBadge
                 worldModelDemoBadge
                 spokenLoopBadge
+                hypnagogicLoopBadge
                 voiceBadge
                 cmdBadge
                 Button(action: { expanded.toggle() }) {
@@ -96,7 +102,16 @@ struct PrivacyIndicatorView: View {
                     }
                     GridRow {
                         Text("Network").bold()
-                        Text("Disabled at runtime").foregroundStyle(.green)
+                        if hypnagogicLoopEnabled {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Cloud active — Hypnagogic mode").foregroundStyle(.red)
+                                Text("Transcript text (never audio) may be sent to the claude CLI. Opt-in exception — see decision_registry entry 8.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text("Disabled at runtime").foregroundStyle(.green)
+                        }
                     }
                     GridRow {
                         Text("Adaptive").bold()
@@ -195,6 +210,20 @@ struct PrivacyIndicatorView: View {
                                     .foregroundStyle(.red)
                             }
                             Text(SpokenGenerationHonesty.headerCaveat)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    GridRow {
+                        Text("Hypnagogic").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Run hypnagogic dialogue loop", isOn: $hypnagogicLoopEnabled)
+                                .toggleStyle(.switch)
+                            if hypnagogicLoopEnabled {
+                                Text("Listening on-device; transcript text may be sent to a cloud assistant. Audio never leaves the machine; nothing is persisted.")
+                                    .foregroundStyle(.red)
+                            }
+                            Text("Experimental, manual-trigger scaffolding — not a validated intervention, not wired to any sleep detector. The one runtime network exception (decision_registry entry 8).")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -370,6 +399,23 @@ struct PrivacyIndicatorView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
+        }
+    }
+
+    /// The most consequential badge: while active the mic is capturing AND
+    /// transcript text may be leaving the machine (cloud LLM). Explicit
+    /// "+ Cloud" + a network icon so the runtime egress is never invisible —
+    /// this is the one place the app breaks its "no network at runtime" default.
+    @ViewBuilder
+    private var hypnagogicLoopBadge: some View {
+        if hypnagogicLoopEnabled {
+            Label("Listening + Cloud", systemImage: "antenna.radiowaves.left.and.right")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.18))
                 .cornerRadius(4)
         }
     }
