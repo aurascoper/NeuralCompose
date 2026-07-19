@@ -230,9 +230,60 @@ class LLMDriftScorer:
         '{"drift": <float>}.'
     )
 
+    # r1: prompt for DeepSeek-R1 reasoning-distilled models. These models
+    # derive accuracy from generating an internal chain-of-thought inside
+    # <think>...</think> tags BEFORE emitting the final answer. With
+    # response_format=json_object the JSON grammar wrapper leaves no room to
+    # reason first, which can make a 1.5B distilled model worse than the
+    # base. So the r1 path: (a) drops response_format=json_object, (b) asks
+    # the model to reason inside <think> tags, (c) tells it to emit a single
+    # JSON object at the tail, (d) parses that tail. A prompt-topology
+    # change, not a v1/v2 wording variation.
+    #
+    # EMPIRICALLY VERIFIED (2026-07-19, Ollama llama-server): the server
+    # parses the <think>...</think> block itself and returns the reasoning in
+    # a separate message field, so message.content already arrives as clean
+    # tail JSON (probe: 764 completion tokens but 17 content chars =
+    # '{"drift": 0.75}', finish_reason=stop). The <think>-strip in
+    # _parse_r1_response is therefore defence-in-depth against OTHER servers,
+    # not something this one exercises. And the verdict was negative anyway:
+    # deepseek-r1:1.5b still scored in the noise (single-seed rho 0.21,
+    # unstable) — the reasoning topology did not rescue a 1.5B model on the
+    # n=6 fixture. Kept for the falsification record / larger reasoning models.
+    SYSTEM_PROMPT_R1 = (
+        "You are a precise sleep-laboratory scoring engine. Your job is to "
+        "analyze a dream report and calculate its semantic drift relative to "
+        "a target dream-induction hypothesis.\n\n"
+        "Drift scale:\n"
+        "  - 0.00: Perfect match. The dream captures the core thematic imagery "
+        "and meaning of the hypothesis.\n"
+        "  - 1.00: Complete drift. The dream has no semantic, structural, or "
+        "symbolic relationship to the hypothesis.\n\n"
+        "Reason about semantic imagery and morphology, NOT literal anchor "
+        "matching. The anchors below are a context hint about the target — "
+        "you should also recognize equivalent imagery ('soaring over a "
+        "valley' is the same beat as 'floating in open space') and "
+        "morphological variants ('forgotten' is the same beat as 'forgetting'). "
+        "The dream's tone and affect matter: a flat affectless off-target "
+        "report has high drift; a vivid on-target dream with rich imagery "
+        "has low drift.\n\n"
+        "IMPORTANT: structure your response in two parts.\n"
+        "1. First, write your analytical reasoning step-by-step inside "
+        "<think>...</think> tags. Use the think block to weigh the dream's "
+        "imagery against the hypothesis, recognize morphology and semantic "
+        "equivalents, and arrive at a drift value.\n"
+        "2. Then, at the very end of your response, output a single valid "
+        "JSON object (no other text after it) matching this exact schema:\n"
+        '{"drift": <float between 0.00 and 1.00>}\n\n'
+        "The JSON object is the only thing the downstream parser reads. "
+        "Anything before the JSON is the think block + reasoning. Anything "
+        "after the JSON is ignored."
+    )
+
     # Default to v1 (the empirically better prompt across all tested
-    # configurations). Pass `prompt_version="v2"` to use the
-    # falsified variant.
+    # configurations for non-reasoning models). Pass `prompt_version="r1"`
+    # for DeepSeek-R1 reasoning-distilled models; pass `prompt_version="v2"`
+    # to use the falsified variant.
     SYSTEM_PROMPT = SYSTEM_PROMPT_V1
 
     def __init__(
@@ -252,9 +303,24 @@ class LLMDriftScorer:
             self.system_prompt = self.SYSTEM_PROMPT_V1
         elif prompt_version == "v2":
             self.system_prompt = self.SYSTEM_PROMPT_V2
+        elif prompt_version == "r1":
+            self.system_prompt = self.SYSTEM_PROMPT_R1
         else:
-            raise ValueError(f"Unknown prompt_version: {prompt_version!r}; expected 'v1' or 'v2'")
+            raise ValueError(f"Unknown prompt_version: {prompt_version!r}; expected 'v1', 'v2', or 'r1'")
         self.prompt_version = prompt_version
+        # Boundary guard (decision_registry.md entry 7): a ':cloud' model is a
+        # NETWORK model — Ollama proxies it off-device even though base_url is
+        # localhost. Permitted in THIS offline research/eval tool only; it must
+        # NEVER be wired into the on-device Swift runtime (Sources/BCILLM/),
+        # the project's fully-on-device, no-cloud, no-telemetry invariant. The
+        # empirically-strong drift scorer (deepseek-v4-flash:cloud, 3-run rho
+        # ~0.84) is exactly such a model, so warn loudly at the point of use.
+        if ":cloud" in self.model:
+            log.warning(
+                "MODEL %r is a NETWORK/CLOUD scorer: OFFLINE EVAL ONLY. Do NOT "
+                "ship it into the on-device runtime (Sources/BCILLM/). See "
+                "decision_registry.md entry 7.", self.model,
+            )
 
     def preflight(self) -> bool:
         """Check the local server is reachable and lists our model."""
@@ -314,6 +380,15 @@ class LLMDriftScorer:
         routes full-text scoring here when the LLM backend is selected.
         The token-based `score()` method above is the protocol-conformance
         fallback used by the importable API.
+
+        Two prompt topologies are supported:
+          - v1 / v2: strict JSON mode (`response_format=json_object`); the
+            response is a single JSON object parsed directly.
+          - r1: chain-of-thought mode for DeepSeek-R1 reasoning models.
+            Drops strict JSON mode, asks the model to reason inside
+            <think>...</think> tags, and emit a JSON object at the tail.
+            The response is parsed with `_parse_r1_response` which strips
+            the think block and finds the last `{}` block.
         """
         user_content = (
             f"Target Hypothesis: {hypothesis.hypothesis_id}\n"
@@ -323,26 +398,31 @@ class LLMDriftScorer:
             f"Dream Report Text:\n\"\"\"\n{report_text}\n\"\"\"\n\n"
             f"Calculate the drift score as a float between 0.00 and 1.00."
         )
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user",   "content": user_content},
             ],
             "temperature": 0.3,
-            "response_format": {"type": "json_object"},
         }
+        # R1 reasoning models need strict JSON mode OFF so the local
+        # inference engine doesn't suppress the <think> chain-of-thought
+        # tokens. v1/v2 use strict JSON mode for parseable single-object
+        # output.
+        if self.prompt_version != "r1":
+            payload["response_format"] = {"type": "json_object"}
 
         last_err: Optional[Exception] = None
         for attempt in range(self.max_retries + 1):
             try:
                 response = self._post_chat(payload)
-                content_str = response["choices"][0]["message"]["content"].strip()
-                parsed = json.loads(content_str)
-                if "drift" not in parsed:
-                    raise ValueError(f"LLM response missing 'drift' key: {content_str!r}")
-                drift = float(parsed["drift"])
-                return max(0.0, min(1.0, drift))
+                content_str = response["choices"][0]["message"]["content"]
+                if self.prompt_version == "r1":
+                    drift = self._parse_r1_response(content_str)
+                else:
+                    drift = self._parse_v1v2_response(content_str)
+                return drift
             except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError, KeyError) as e:
                 last_err = e
                 if attempt < self.max_retries:
@@ -356,6 +436,69 @@ class LLMDriftScorer:
         # at this point because the for-loop body always assigns it.
         assert last_err is not None  # noqa: S101 — defensive for the type checker
         raise RuntimeError(f"LLM call failed: {last_err}") from last_err
+
+    @staticmethod
+    def _parse_v1v2_response(content_str: str) -> float:
+        """Parse a strict-JSON-mode response (v1/v2 prompt)."""
+        content_str = content_str.strip()
+        parsed = json.loads(content_str)
+        if "drift" not in parsed:
+            raise ValueError(f"LLM response missing 'drift' key: {content_str!r}")
+        drift = float(parsed["drift"])
+        return max(0.0, min(1.0, drift))
+
+    @staticmethod
+    def _parse_r1_response(content_str: str) -> float:
+        """Parse an R1 reasoning-model response.
+
+        Empirically (Ollama llama-server, 2026-07-19) `content_str` already
+        arrives as clean tail JSON because the server parses the
+        <think>...</think> block into a separate message field. But OTHER
+        OpenAI-compatible servers may inline it in `content`:
+           <think>...analytical reasoning...</think>
+            ...free text...
+            {"drift": <float>}
+        so we still strip any <think>...</think> defensively, then look for
+        the LAST balanced {} block (json.loads on progressively shorter
+        suffixes handles nested braces). `drift` is clamped to [0, 1]. On any
+        failure (no JSON, malformed, missing field) we return 0.5 as a
+        neutral fallback.
+
+        Tail-aware extraction (parse from the end) is more robust than a
+        naive `r"{[^}]*}"`, which matches the FIRST braces and could match
+        inside the think block.
+        """
+        text = content_str
+        # Step 1: strip the <think>...</think> block. Use a non-greedy
+        # match so multiple think blocks (rare, but possible) all get
+        # stripped.
+        text_no_think = re.sub(r"<think>.*?</think>", " ", text, flags=re.DOTALL)
+        # Step 2: find the LAST balanced {} block by scanning from the
+        # end. A simpler approach: try json.loads on progressively shorter
+        # suffixes of the response, from the full text back to the last
+        # `{` character. This handles nested braces correctly because
+        # json.loads is a real parser.
+        last_open = text_no_think.rfind("{")
+        if last_open < 0:
+            log.warning("R1 parse: no '{' found in response: %r", text[:200])
+            return 0.5
+        # Try parsing from `last_open` to the end, then progressively
+        # earlier (in case the trailing `}` is missing for some reason).
+        for start in range(last_open, max(last_open - 200, -1), -1):
+            candidate = text_no_think[start:]
+            # Trim to the last `}` (if any) so we have a balanced prefix.
+            last_close = candidate.rfind("}")
+            if last_close < 0:
+                continue
+            candidate = candidate[: last_close + 1]
+            try:
+                parsed = json.loads(candidate)
+                if "drift" in parsed:
+                    return max(0.0, min(1.0, float(parsed["drift"])))
+            except (json.JSONDecodeError, ValueError, TypeError):
+                continue
+        log.warning("R1 parse: no valid JSON object with 'drift' key found in: %r", text[:200])
+        return 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -693,8 +836,8 @@ def _main(argv: Optional[list[str]] = None) -> int:
                         help=f"model id (default: {DEFAULT_LLM_MODEL})")
     parser.add_argument("--llm-timeout", type=float, default=DEFAULT_LLM_TIMEOUT_S,
                         help="per-call timeout in seconds (default: %(default)s)")
-    parser.add_argument("--prompt-version", choices=["v1", "v2"], default="v1",
-                        help="system prompt version (default: v1; v2 was empirically a regression, kept for the falsification record)")
+    parser.add_argument("--prompt-version", choices=["v1", "v2", "r1"], default="v1",
+                        help="system prompt version (default: v1; v2 was empirically a regression, kept for the falsification record; r1 is for DeepSeek-R1 reasoning-distilled models)")
     parser.add_argument("--runs", type=int, default=1,
                         help="number of evaluation runs for multi-seed evaluation; report mean +- std of Spearman rho (default: 1, single-run mode)")
     parser.add_argument("--quiet", action="store_true", help="log only warnings")
