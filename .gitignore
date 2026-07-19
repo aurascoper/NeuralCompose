@@ -50,6 +50,7 @@ __pycache__/
 ## Synthetic data outputs (regeneratable from Scripts/generate_synthetic_sleep.py)
 Data/*
 !Data/.gitkeep
+!Data/synthetic_dream_reports.json
 
 ## World Model spike — generated trajectories, regenerable via
 ## WorldModel/dataset.py (seeded, so --seed 0 reproduces exactly)
