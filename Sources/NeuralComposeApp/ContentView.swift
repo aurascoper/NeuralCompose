@@ -51,7 +51,8 @@ struct ContentView: View {
                 adaptiveComplexityEnabled: $viewModel.adaptiveComplexityEnabled,
                 interactionLoggingEnabled: $viewModel.interactionLoggingEnabled,
                 jepaTransitionCaptureEnabled: $viewModel.jepaTransitionCaptureEnabled,
-                worldModelDemoEnabled: $viewModel.worldModelDemoEnabled
+                worldModelDemoEnabled: $viewModel.worldModelDemoEnabled,
+                spokenGenerationLoopEnabled: $viewModel.spokenGenerationLoopEnabled
             )
             Divider()
 
@@ -332,7 +333,7 @@ private struct ControlsView: View {
             } label: {
                 Label("Speak", systemImage: "speaker.wave.2.fill")
             }
-            .disabled(viewModel.composedText.isEmpty || viewModel.isSpeaking)
+            .disabled(viewModel.composedText.isEmpty || viewModel.isSpeaking || viewModel.spokenGenerationLoopEnabled)
 
             Button {
                 Task { await dispatcher.perform(.refine) }

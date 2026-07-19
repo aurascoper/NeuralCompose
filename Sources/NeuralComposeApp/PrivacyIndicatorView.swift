@@ -44,6 +44,10 @@ struct PrivacyIndicatorView: View {
     /// writes nothing to disk in either state; it only controls whether
     /// the demo window's closed-loop simulation actually runs.
     @Binding var worldModelDemoEnabled: Bool
+    /// Experimental opt-in for the spoken-generation loop. Like
+    /// `worldModelDemoEnabled` it persists nothing; red means "the loop is
+    /// actively speaking generated text," not "recording."
+    @Binding var spokenGenerationLoopEnabled: Bool
 
     @State private var expanded: Bool = false
 
@@ -59,6 +63,7 @@ struct PrivacyIndicatorView: View {
                 interactionLogBadge
                 jepaCaptureBadge
                 worldModelDemoBadge
+                spokenLoopBadge
                 voiceBadge
                 cmdBadge
                 Button(action: { expanded.toggle() }) {
@@ -176,6 +181,20 @@ struct PrivacyIndicatorView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Text("Synthetic 2D task only — never reads real EEG. See WorldModel/README.md.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    GridRow {
+                        Text("Spoken Loop").bold()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Run spoken generation loop", isOn: $spokenGenerationLoopEnabled)
+                                .toggleStyle(.switch)
+                            if spokenGenerationLoopEnabled {
+                                Text(SpokenGenerationHonesty.captureContaminationCaveat)
+                                    .foregroundStyle(.red)
+                            }
+                            Text(SpokenGenerationHonesty.headerCaveat)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -330,6 +349,22 @@ struct PrivacyIndicatorView: View {
     private var worldModelDemoBadge: some View {
         if worldModelDemoEnabled {
             Label("World Model Demo", systemImage: "cube.transparent")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(4)
+        }
+    }
+
+    /// Red while the experimental spoken loop is actively generating + speaking.
+    /// Distinct from `voiceBadge`'s "Speaking…" (which reflects the manual Speak
+    /// button's `isSpeaking`) — the loop bypasses that flag.
+    @ViewBuilder
+    private var spokenLoopBadge: some View {
+        if spokenGenerationLoopEnabled {
+            Label("Spoken loop", systemImage: "waveform.badge.mic")
                 .font(.caption)
                 .foregroundStyle(.red)
                 .padding(.horizontal, 8)
