@@ -32,6 +32,12 @@ Recordings/golden/*
 !Recordings/golden/README.md
 !Recordings/golden/report/
 
+## Secrets — never commit API keys / tokens. `.env` holds HF_API_TOKEN and
+## (optionally) ANTHROPIC_API_KEY for the offline dream-mode eval tool.
+.env
+.env.*
+!.env.example
+
 ## Editors
 .vscode/
 .idea/

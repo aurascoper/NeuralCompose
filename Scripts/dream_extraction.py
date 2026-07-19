@@ -104,6 +104,14 @@ DEFAULT_LLM_URL   = "http://localhost:11434/v1"
 DEFAULT_LLM_MODEL = "qwen2.5:0.5b"
 DEFAULT_LLM_TIMEOUT_S = 30.0
 
+# bge-small-en-v1.5 sentence-transformers snapshot (the ANE embedder's weights),
+# loaded offline for the `bge` and `hybrid` drift-scoring backends. Needs the ML
+# venv (torch/sentence-transformers) — the proxy/llm backends stay zero-dep.
+DEFAULT_BGE_MODEL = str(REPO_ROOT / "Models" / "bge-small-en-v1.5-hf")
+# BAAI's recommended retrieval query instruction for bge-*-en-v1.5. Applied to
+# the report (query) side only when --bge-query-prefix is passed; empty by default.
+BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+
 
 # ---------------------------------------------------------------------------
 # Hypothesis context
@@ -153,6 +161,151 @@ class SymbolMatchScorer:
         matched = sum(1 for a in anchors_lower if a in symbols)
         drift = 1.0 - (matched / len(anchors_lower))
         return max(0.0, min(1.0, drift))
+
+
+# ---------------------------------------------------------------------------
+# bge-small embedding helpers (offline; used by the bge + hybrid backends)
+# ---------------------------------------------------------------------------
+
+_BGE_CACHE: dict[str, Any] = {}
+
+
+def _load_bge(model_path: str) -> Any:
+    """Lazy-load a sentence-transformers bge model (cached per path). Offline —
+    the weights live on disk at Models/bge-small-en-v1.5-hf. Needs the ML venv
+    (torch/sentence-transformers); the proxy/llm backends stay zero-dep, so the
+    import is deferred to here and raises an actionable error if unavailable."""
+    if model_path not in _BGE_CACHE:
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as e:
+            raise RuntimeError(
+                "The 'bge'/'hybrid' backends need sentence-transformers (torch). "
+                "Install requirements-calibration.txt, or run this tool with the "
+                f"project venv, e.g. `venv/bin/python {Path(sys.argv[0]).name} ...`. "
+                f"(import error: {e})"
+            ) from e
+        _BGE_CACHE[model_path] = SentenceTransformer(model_path, device="cpu")
+    return _BGE_CACHE[model_path]
+
+
+def _concept_text(ctx: HypothesisContext) -> str:
+    """Text used to embed a hypothesis. The example registry leaves
+    target_concept empty, so the semantic content lives in the anchor words —
+    fall back to (or combine with) them so bge embeds something meaningful
+    rather than an empty string."""
+    tc = (ctx.target_concept or "").strip()
+    anchors = ", ".join(str(a) for a in ctx.primary_anchors)
+    if tc and anchors:
+        return f"{tc}. {anchors}"
+    return tc or anchors
+
+
+def _bge_signal(
+    model: Any,
+    report_text: str,
+    hypothesis: HypothesisContext,
+    contrast_contexts: Optional[list[HypothesisContext]] = None,
+    query_prefix: str = "",
+    tau: float = 0.1,
+) -> dict[str, Any]:
+    """bge semantic signal for one (report, hypothesis).
+
+    Contrastive when `contrast_contexts` (all hypotheses) is given: the prior is
+    driven by how much closer the report sits to its OWN target concept than to
+    the nearest competing hypothesis — a RELATIVE margin. This fixes the
+    absolute-cosine compression (all ~0.4) that made a single cos(report,target)
+    rank the metaphorical cases backwards. Vectors are L2-normalized so dot ==
+    cosine — the same geometry as the Swift runtime's Embedding.cosineSimilarity
+    (Stage 3.4: cross-runtime cosine 1.000000). `query_prefix` optionally applies
+    bge's retrieval query instruction to the report (query) side."""
+    contexts = list(contrast_contexts) if contrast_contexts else [hypothesis]
+    ids = [c.hypothesis_id for c in contexts]
+    concepts = [_concept_text(c) for c in contexts]
+    anchors = [str(a) for a in hypothesis.primary_anchors]
+    texts = [query_prefix + report_text] + concepts + anchors
+    embs = model.encode(texts, convert_to_numpy=True,
+                        normalize_embeddings=True, show_progress_bar=False)
+    rep = embs[0]
+    n = len(concepts)
+    cos_all = {ids[i]: float(np.dot(rep, embs[1 + i])) for i in range(n)}
+    anchor_cos = [float(np.dot(rep, embs[1 + n + i])) for i in range(len(anchors))]
+    cos_target = cos_all.get(hypothesis.hypothesis_id, float(np.dot(rep, embs[1])))
+    others = [v for k, v in cos_all.items() if k != hypothesis.hypothesis_id]
+    cos_other_max = max(others) if others else None
+    margin = (cos_target - cos_other_max) if cos_other_max is not None else None
+    if len(cos_all) >= 2:
+        # softmax over hypotheses -> p(target); drift prior = 1 - p_target.
+        # Monotonic in the margin, so tau doesn't change bge-alone's rank order;
+        # it only shapes the absolute prior handed to the hybrid LLM.
+        vals = np.array([cos_all[i] for i in ids]) / max(tau, 1e-6)
+        vals = vals - vals.max()
+        p = np.exp(vals)
+        p = p / p.sum()
+        p_target = float(p[ids.index(hypothesis.hypothesis_id)])
+        drift_prior = 1.0 - p_target
+    else:
+        p_target = None
+        drift_prior = 1.0 - cos_target
+    return {
+        "cos_target": cos_target,
+        "cos_all": cos_all,
+        "cos_other_max": cos_other_max,
+        "margin": margin,
+        "p_target": p_target,
+        "anchor_cos_mean": float(np.mean(anchor_cos)) if anchor_cos else None,
+        "anchor_cos_max": float(np.max(anchor_cos)) if anchor_cos else None,
+        "drift_prior": max(0.0, min(1.0, drift_prior)),
+    }
+
+
+def _sig_key(report_text: str, hypothesis: HypothesisContext) -> str:
+    """Stable-ish key for stashing a per-report signal in the audit trail
+    (last write wins across multi-seed runs)."""
+    return f"{hypothesis.hypothesis_id}::{report_text[:48]}"
+
+
+class BgeCosineScorer:
+    """Pure bge-cosine drift scorer — the on-device-capable control.
+
+    drift = clamp(1 - cosine(report, target_concept)). No LLM, no network: it
+    reuses the ANE embedder's own weights offline. Two jobs: (a) the on-device
+    baseline (unlike the cloud LLMs, this one *could* run in the app), and (b)
+    the control that reveals whether the hybrid LLM cross-examiner adds anything
+    over raw cosine. Always dispatched via evaluate_with_text (it needs the full
+    text, which the symbolic score() path discards)."""
+
+    name: str = "bge"
+
+    def __init__(self, bge_model: str = DEFAULT_BGE_MODEL, query_prefix: str = "", tau: float = 0.1):
+        self.bge_model_path = bge_model
+        self.query_prefix = query_prefix
+        self.tau = tau
+        self._model: Any = None
+        self.contrast_contexts: list[HypothesisContext] = []
+        self.signals: dict[str, Any] = {}
+
+    def set_contrast_contexts(self, contexts: list[HypothesisContext]) -> None:
+        """Inject all hypothesis contexts so drift is scored contrastively
+        (report vs its own target vs the competing hypotheses)."""
+        self.contrast_contexts = list(contexts)
+
+    def _bge(self) -> Any:
+        if self._model is None:
+            self._model = _load_bge(self.bge_model_path)
+        return self._model
+
+    def score(self, symbols: frozenset[str], hypothesis: HypothesisContext) -> float:
+        # Protocol conformance only. This backend is always dispatched through
+        # evaluate_with_text (full text); the symbol-set path discards the very
+        # morphology bge exists to capture, so it must not be the real path.
+        return 0.5
+
+    def evaluate_with_text(self, report_text: str, hypothesis: HypothesisContext) -> float:
+        sig = _bge_signal(self._bge(), report_text, hypothesis,
+                          self.contrast_contexts, self.query_prefix, self.tau)
+        self.signals[_sig_key(report_text, hypothesis)] = sig
+        return sig["drift_prior"]
 
 
 class LLMDriftScorer:
@@ -293,12 +446,14 @@ class LLMDriftScorer:
         timeout_s: float = DEFAULT_LLM_TIMEOUT_S,
         max_retries: int = 2,
         prompt_version: str = "v1",
+        api_key: Optional[str] = None,
     ):
         self.base_url = base_url.rstrip("/")
         self.url = f"{self.base_url}/chat/completions"
         self.model = model
         self.timeout_s = timeout_s
         self.max_retries = max_retries
+        self.api_key = api_key
         if prompt_version == "v1":
             self.system_prompt = self.SYSTEM_PROMPT_V1
         elif prompt_version == "v2":
@@ -308,24 +463,31 @@ class LLMDriftScorer:
         else:
             raise ValueError(f"Unknown prompt_version: {prompt_version!r}; expected 'v1', 'v2', or 'r1'")
         self.prompt_version = prompt_version
-        # Boundary guard (decision_registry.md entry 7): a ':cloud' model is a
-        # NETWORK model — Ollama proxies it off-device even though base_url is
-        # localhost. Permitted in THIS offline research/eval tool only; it must
-        # NEVER be wired into the on-device Swift runtime (Sources/BCILLM/),
-        # the project's fully-on-device, no-cloud, no-telemetry invariant. The
-        # empirically-strong drift scorer (deepseek-v4-flash:cloud, 3-run rho
-        # ~0.84) is exactly such a model, so warn loudly at the point of use.
-        if ":cloud" in self.model:
+        # Response-topology flags, decoupled from the prompt NAME so subclasses
+        # (e.g. HybridDriftScorer) can pick their own. v1/v2 use strict JSON
+        # mode; r1 (and hybrid) reason before answering, so JSON mode is OFF and
+        # the tail {} block is parsed — this is also more portable across servers
+        # that don't honor response_format (e.g. Anthropic's OpenAI-compat).
+        self.use_json_mode = prompt_version in ("v1", "v2")
+        self.tail_parse = prompt_version == "r1"
+        # Boundary guard (decision_registry.md entry 7): a network/cloud scorer
+        # is permitted in THIS offline research/eval tool ONLY; it must NEVER be
+        # wired into the on-device Swift runtime (Sources/BCILLM/), the project's
+        # fully-on-device, no-cloud, no-telemetry invariant. Fires for an Ollama
+        # ':cloud' model, any authenticated endpoint (api_key set), or any
+        # non-localhost base_url (e.g. api.anthropic.com).
+        _local = ("localhost" in self.base_url) or ("127.0.0.1" in self.base_url)
+        if (":cloud" in self.model) or (self.api_key is not None) or (not _local):
             log.warning(
-                "MODEL %r is a NETWORK/CLOUD scorer: OFFLINE EVAL ONLY. Do NOT "
-                "ship it into the on-device runtime (Sources/BCILLM/). See "
-                "decision_registry.md entry 7.", self.model,
+                "SCORER %r via %s is a NETWORK/CLOUD scorer: OFFLINE EVAL ONLY. Do "
+                "NOT ship it into the on-device runtime (Sources/BCILLM/). See "
+                "decision_registry.md entry 7.", self.model, self.base_url,
             )
 
     def preflight(self) -> bool:
         """Check the local server is reachable and lists our model."""
         try:
-            req = urllib.request.Request(f"{self.base_url}/models", method="GET")
+            req = urllib.request.Request(f"{self.base_url}/models", method="GET", headers=self._auth_headers())
             with urllib.request.urlopen(req, timeout=2.0) as response:
                 if response.status != 200:
                     return False
@@ -341,12 +503,21 @@ class LLMDriftScorer:
             log.warning("Preflight failed: %s", e)
             return False
 
+    def _auth_headers(self) -> dict[str, str]:
+        """Headers for every request. Adds a Bearer token only when an api_key
+        is set (Ollama needs none locally; an authenticated OpenAI-compat
+        endpoint such as Anthropic's needs `Authorization: Bearer <key>`)."""
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
+
     def _post_chat(self, payload: dict[str, Any]) -> dict[str, Any]:
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             self.url,
             data=data,
-            headers={"Content-Type": "application/json"},
+            headers=self._auth_headers(),
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=self.timeout_s) as response:
@@ -369,6 +540,18 @@ class LLMDriftScorer:
         matched = sum(1 for a in anchors_lower if a in symbols)
         return max(0.0, min(1.0, 1.0 - (matched / len(anchors_lower))))
 
+    def _build_user_content(self, report_text: str, hypothesis: HypothesisContext) -> str:
+        """Build the user message. Overridable seam: HybridDriftScorer injects a
+        precomputed bge similarity signal here before the LLM reasons over it."""
+        return (
+            f"Target Hypothesis: {hypothesis.hypothesis_id}\n"
+            f"Description: {hypothesis.target_concept}\n"
+            f"Context Anchors (use as hint, not as matching vocabulary): "
+            f"{json.dumps(list(hypothesis.primary_anchors))}\n\n"
+            f"Dream Report Text:\n\"\"\"\n{report_text}\n\"\"\"\n\n"
+            f"Calculate the drift score as a float between 0.00 and 1.00."
+        )
+
     def evaluate_with_text(
         self,
         report_text: str,
@@ -390,14 +573,7 @@ class LLMDriftScorer:
             The response is parsed with `_parse_r1_response` which strips
             the think block and finds the last `{}` block.
         """
-        user_content = (
-            f"Target Hypothesis: {hypothesis.hypothesis_id}\n"
-            f"Description: {hypothesis.target_concept}\n"
-            f"Context Anchors (use as hint, not as matching vocabulary): "
-            f"{json.dumps(list(hypothesis.primary_anchors))}\n\n"
-            f"Dream Report Text:\n\"\"\"\n{report_text}\n\"\"\"\n\n"
-            f"Calculate the drift score as a float between 0.00 and 1.00."
-        )
+        user_content = self._build_user_content(report_text, hypothesis)
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": [
@@ -406,11 +582,11 @@ class LLMDriftScorer:
             ],
             "temperature": 0.3,
         }
-        # R1 reasoning models need strict JSON mode OFF so the local
-        # inference engine doesn't suppress the <think> chain-of-thought
-        # tokens. v1/v2 use strict JSON mode for parseable single-object
-        # output.
-        if self.prompt_version != "r1":
+        # Strict JSON mode for v1/v2 only. It is OFF for reasoning topologies
+        # (r1, hybrid) so the model can reason before answering, and so the call
+        # is portable across servers that don't honor response_format (e.g.
+        # Anthropic's OpenAI-compat endpoint); those responses are tail-parsed.
+        if self.use_json_mode:
             payload["response_format"] = {"type": "json_object"}
 
         last_err: Optional[Exception] = None
@@ -418,7 +594,7 @@ class LLMDriftScorer:
             try:
                 response = self._post_chat(payload)
                 content_str = response["choices"][0]["message"]["content"]
-                if self.prompt_version == "r1":
+                if self.tail_parse:
                     drift = self._parse_r1_response(content_str)
                 else:
                     drift = self._parse_v1v2_response(content_str)
@@ -497,8 +673,104 @@ class LLMDriftScorer:
                     return max(0.0, min(1.0, float(parsed["drift"])))
             except (json.JSONDecodeError, ValueError, TypeError):
                 continue
+        # Last-resort: regex for `"drift": <number>` recovers values from
+        # slightly-malformed JSON (e.g. `{"drift": 0.75"}` with a stray quote)
+        # that small/cloud models occasionally emit — better than a 0.5 fallback
+        # that silently injects noise into the correlation.
+        m = re.search(r'"?drift"?\s*:\s*([-+]?[0-9]*\.?[0-9]+)', text_no_think)
+        if m:
+            try:
+                return max(0.0, min(1.0, float(m.group(1))))
+            except ValueError:
+                pass
         log.warning("R1 parse: no valid JSON object with 'drift' key found in: %r", text[:200])
         return 0.5
+
+
+class HybridDriftScorer(LLMDriftScorer):
+    """bge distance + cloud-LLM cross-examiner (the S-2 'joint-embedding + LLM'
+    design). Computes a bge-small semantic-similarity signal between the dream
+    and the target concept/anchors, injects it into the prompt as a PRIOR, and
+    lets the LLM reason about whether that distance is skewed by negation,
+    metaphor, or morphology before emitting {"drift": float}.
+
+    OFFLINE-EVAL-ONLY (the cross-examiner is a cloud LLM). Needs the ML venv for
+    bge. Uses JSON-mode-off + tail-parse so the same code path works across both
+    deepseek-v4-flash:cloud and Anthropic's OpenAI-compat endpoint (Claude)."""
+
+    name: str = "hybrid"
+
+    SYSTEM_PROMPT_HYBRID = (
+        "You are a precise sleep-laboratory scoring engine. You calculate the "
+        "semantic drift of a dream report relative to a target dream-induction "
+        "hypothesis.\n\n"
+        "Drift scale:\n"
+        "  - 0.00: perfect match — the dream captures the core imagery and "
+        "meaning of the hypothesis.\n"
+        "  - 1.00: complete drift — no semantic, structural, or symbolic "
+        "relationship to the hypothesis.\n\n"
+        "You are given a PRECOMPUTED bge-small embedding signal: how close the "
+        "dream sits to THIS target concept versus the nearest COMPETING "
+        "hypothesis (a relative margin), plus an embedding drift prior. Treat it "
+        "as a PRIOR, not the answer: raw cosine is fooled by negation ('I did NOT "
+        "fall' sits close to 'falling' in embedding space but is the opposite "
+        "beat), by metaphor, and it under-weights morphological/synonym matches "
+        "('forgot' vs 'forgetting', 'house' vs 'home'). A positive margin means "
+        "the dream is embedding-closer to its own target than to the alternative. "
+        "Reason explicitly about whether the margin over- or under-states the true "
+        "drift for THIS dream, then decide.\n\n"
+        "Think step by step, then at the very END output a single JSON object "
+        "and nothing after it: {\"drift\": <float between 0.00 and 1.00>}. Only "
+        "the final JSON object is read."
+    )
+
+    def __init__(self, *, bge_model: str = DEFAULT_BGE_MODEL,
+                 query_prefix: str = "", tau: float = 0.1, **kwargs: Any):
+        # Give the parent a valid prompt_version, then switch to the hybrid
+        # prompt + reasoning topology (JSON mode off, tail parse).
+        kwargs.setdefault("prompt_version", "v1")
+        super().__init__(**kwargs)
+        self.bge_model_path = bge_model
+        self.query_prefix = query_prefix
+        self.tau = tau
+        self._bge_model: Any = None
+        self.contrast_contexts: list[HypothesisContext] = []
+        self.system_prompt = self.SYSTEM_PROMPT_HYBRID
+        self.prompt_version = "hybrid"
+        self.use_json_mode = False
+        self.tail_parse = True
+        self.signals: dict[str, Any] = {}
+
+    def set_contrast_contexts(self, contexts: list[HypothesisContext]) -> None:
+        """Inject all hypothesis contexts so the bge signal is contrastive
+        (report vs its own target vs the competing hypotheses)."""
+        self.contrast_contexts = list(contexts)
+
+    def _bge(self) -> Any:
+        if self._bge_model is None:
+            self._bge_model = _load_bge(self.bge_model_path)
+        return self._bge_model
+
+    def _build_user_content(self, report_text: str, hypothesis: HypothesisContext) -> str:
+        sig = _bge_signal(self._bge(), report_text, hypothesis,
+                          self.contrast_contexts, self.query_prefix, self.tau)
+        self.signals[_sig_key(report_text, hypothesis)] = sig
+        other_s = "n/a" if sig["cos_other_max"] is None else f"{sig['cos_other_max']:.3f}"
+        margin_s = "n/a" if sig["margin"] is None else f"{sig['margin']:+.3f}"
+        return (
+            f"Target Hypothesis: {hypothesis.hypothesis_id}\n"
+            f"Description: {hypothesis.target_concept}\n"
+            f"Context Anchors (hint, not matching vocabulary): "
+            f"{json.dumps(list(hypothesis.primary_anchors))}\n\n"
+            f"PRECOMPUTED bge-small SEMANTIC SIGNAL (a prior, not the answer):\n"
+            f"  cosine(dream, THIS target)              = {sig['cos_target']:.3f}\n"
+            f"  cosine(dream, nearest OTHER hypothesis) = {other_s}\n"
+            f"  margin (this - other) = {margin_s}  (positive => closer to this target => lower drift)\n"
+            f"  embedding drift prior = {sig['drift_prior']:.3f}\n\n"
+            f"Dream Report Text:\n\"\"\"\n{report_text}\n\"\"\"\n\n"
+            f"Weigh the margin as a prior, correct it where negation, metaphor, or "
+            f"morphology skews raw similarity, then give the drift score in [0,1]."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -799,19 +1071,29 @@ def _print_evaluation_report(report: dict) -> None:
 def _make_scorer(args: argparse.Namespace) -> DriftScoring:
     if args.backend == "proxy":
         return SymbolMatchScorer()
-    if args.backend == "llm":
-        scorer = LLMDriftScorer(
-            base_url=args.llm_url,
-            model=args.llm_model,
-            timeout_s=args.llm_timeout,
-            prompt_version=args.prompt_version,
+    query_prefix = BGE_QUERY_PREFIX if getattr(args, "bge_instruct", False) else args.bge_query_prefix
+    if args.backend == "bge":
+        return BgeCosineScorer(bge_model=args.bge_model, query_prefix=query_prefix, tau=args.bge_tau)
+    if args.backend in ("llm", "hybrid"):
+        api_key: Optional[str] = None
+        if args.llm_api_key_env:
+            api_key = os.environ.get(args.llm_api_key_env)
+            if not api_key:
+                log.error("--llm-api-key-env %s is set but that environment variable is empty/unset.", args.llm_api_key_env)
+                sys.exit(2)
+        common: dict[str, Any] = dict(base_url=args.llm_url, model=args.llm_model,
+                                      timeout_s=args.llm_timeout, api_key=api_key)
+        scorer: LLMDriftScorer = (
+            HybridDriftScorer(bge_model=args.bge_model, query_prefix=query_prefix, tau=args.bge_tau, **common)
+            if args.backend == "hybrid"
+            else LLMDriftScorer(prompt_version=args.prompt_version, **common)
         )
-        log.info("Running LLM preflight against %s (model=%s)", args.llm_url, args.llm_model)
+        log.info("Running LLM preflight against %s (model=%s, backend=%s)", args.llm_url, args.llm_model, args.backend)
         if not scorer.preflight():
-            log.error("LLM preflight failed. Is your local server running?")
-            log.error("  Default URL: %s (override with --llm-url)", DEFAULT_LLM_URL)
-            log.error("  Try:        ollama serve   # in another terminal")
-            log.error("  Then:       ollama pull %s", args.llm_model)
+            log.error("LLM preflight failed. Is your endpoint reachable / key valid?")
+            log.error("  URL: %s (override with --llm-url)", args.llm_url)
+            log.error("  Ollama:       ollama serve   (then: ollama pull %s)", args.llm_model)
+            log.error("  Cloud/keyed:  check --llm-api-key-env and that the key is exported.")
             log.error("Falling back to the offline proxy path is NOT automatic — re-run with --backend proxy.")
             sys.exit(2)
         return scorer
@@ -828,8 +1110,10 @@ def _main(argv: Optional[list[str]] = None) -> int:
                         help="dream-report dataset (default: %(default)s)")
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT,
                         help="output JSON report path (default: %(default)s)")
-    parser.add_argument("--backend", choices=["proxy", "llm"], default="proxy",
-                        help="drift-scoring backend (default: proxy)")
+    parser.add_argument("--backend", choices=["proxy", "llm", "bge", "hybrid"], default="proxy",
+                        help="drift-scoring backend: proxy (symbolic, on-device), bge (bge-cosine, "
+                             "on-device-capable), llm (OpenAI-compat chat), hybrid (bge signal + LLM "
+                             "cross-examiner). default: proxy")
     parser.add_argument("--llm-url", default=DEFAULT_LLM_URL,
                         help=f"OpenAI-compatible base URL (default: {DEFAULT_LLM_URL})")
     parser.add_argument("--llm-model", default=DEFAULT_LLM_MODEL,
@@ -837,7 +1121,17 @@ def _main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--llm-timeout", type=float, default=DEFAULT_LLM_TIMEOUT_S,
                         help="per-call timeout in seconds (default: %(default)s)")
     parser.add_argument("--prompt-version", choices=["v1", "v2", "r1"], default="v1",
-                        help="system prompt version (default: v1; v2 was empirically a regression, kept for the falsification record; r1 is for DeepSeek-R1 reasoning-distilled models)")
+                        help="system prompt version (default: v1; v2 was empirically a regression, kept for the falsification record; r1 is for DeepSeek-R1 reasoning-distilled models). Ignored by the hybrid backend, which uses its own prompt.")
+    parser.add_argument("--bge-model", default=DEFAULT_BGE_MODEL,
+                        help=f"sentence-transformers bge model path for the bge/hybrid backends (default: {DEFAULT_BGE_MODEL})")
+    parser.add_argument("--bge-query-prefix", default="",
+                        help="custom query-instruction prefix applied to the report (query) side for the bge/hybrid backends (default: none)")
+    parser.add_argument("--bge-instruct", action="store_true",
+                        help="use BAAI's bge-en-v1.5 retrieval query instruction as the report prefix (shorthand for the standard instruction)")
+    parser.add_argument("--bge-tau", type=float, default=0.1,
+                        help="softmax temperature for the contrastive bge drift prior (default 0.1; smaller = sharper; Spearman rank is invariant to it)")
+    parser.add_argument("--llm-api-key-env", default=None,
+                        help="name of an env var holding a Bearer API key for the LLM endpoint (e.g. ANTHROPIC_API_KEY for Claude via https://api.anthropic.com/v1). Ollama needs none. The key is read from the env, never taken on argv.")
     parser.add_argument("--runs", type=int, default=1,
                         help="number of evaluation runs for multi-seed evaluation; report mean +- std of Spearman rho (default: 1, single-run mode)")
     parser.add_argument("--quiet", action="store_true", help="log only warnings")
@@ -857,6 +1151,12 @@ def _main(argv: Optional[list[str]] = None) -> int:
         log.info("  %-26s anchors=%-40s tolerance=%s",
                  h, list(ctx.primary_anchors), ctx.drift_tolerance)
 
+    # Contrastive scoring: hand bge/hybrid backends every hypothesis concept so
+    # drift is scored as report-vs-own-target-vs-competitors (a relative margin),
+    # not an absolute (compressed) cosine to a single concept.
+    if hasattr(scorer, "set_contrast_contexts"):
+        scorer.set_contrast_contexts([pipeline.get_context(h) for h in pipeline.list_hypotheses()])
+
     if not args.dataset.exists():
         log.error("Dataset not found at %s", args.dataset)
         return 1
@@ -864,7 +1164,9 @@ def _main(argv: Optional[list[str]] = None) -> int:
         dataset = json.load(f)
     log.info("Loaded dataset: %s (%d reports)", args.dataset, len(dataset))
 
-    full_text = scorer if isinstance(scorer, LLMDriftScorer) else None
+    # Any scorer exposing evaluate_with_text scores on the full report text
+    # (LLM, bge, hybrid); the symbolic proxy falls through to score(symbols).
+    full_text = scorer if hasattr(scorer, "evaluate_with_text") else None
     if args.runs > 1:
         report = run_robust_evaluation(
             pipeline, dataset, full_text_scorer=full_text, runs=args.runs,
@@ -877,6 +1179,8 @@ def _main(argv: Optional[list[str]] = None) -> int:
     report["llm_url"] = args.llm_url
     report["llm_model"] = args.llm_model
     report["prompt_version"] = getattr(scorer, "prompt_version", None) if isinstance(scorer, LLMDriftScorer) else None
+    report["bge_model"] = getattr(scorer, "bge_model_path", None)
+    report["bge_signals"] = getattr(scorer, "signals", None) or None
     report["elapsed_sec"] = time.time() - t0
     report["spec_version"] = SPEC_VERSION
 
