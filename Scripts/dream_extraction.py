@@ -73,6 +73,8 @@ import logging
 import math
 import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -773,6 +775,65 @@ class HybridDriftScorer(LLMDriftScorer):
         )
 
 
+class ClaudeCLIDriftScorer(LLMDriftScorer):
+    """Text-alone drift scorer that drives a Claude model through the local
+    `claude` CLI in headless (`-p`) mode, authenticated by the user's Claude
+    subscription (e.g. a Max plan) — NO API key, no per-call API billing.
+
+    It reuses the parent's prompt-building and parsing; only the transport is
+    swapped: `_post_chat` translates the OpenAI-style payload into a
+    `claude -p --model <m> --system-prompt <sys> --output-format json <user>`
+    subprocess call and maps the CLI's JSON result back into the OpenAI shape.
+    `--system-prompt` fully replaces Claude Code's own agent prompt, so the
+    score isn't contaminated by coding-assistant context. OFFLINE-EVAL-ONLY
+    (network via the subscription); never wire into the on-device runtime."""
+
+    name: str = "claude-cli"
+
+    def __init__(self, *, model: str = "claude-sonnet-5", **kwargs: Any):
+        kwargs.setdefault("prompt_version", "v1")
+        kwargs["model"] = model
+        super().__init__(**kwargs)
+        # The CLI result can include prose around the JSON, and we can't force
+        # response_format over the CLI, so parse the tail robustly.
+        self.use_json_mode = False
+        self.tail_parse = True
+        # The parent's guard keys off :cloud / api_key / non-local base_url,
+        # none of which apply to a CLI call — warn explicitly so the offline-only
+        # boundary is loud for this network backend too.
+        log.warning(
+            "SCORER %r via the `claude` CLI (Claude subscription) is a NETWORK "
+            "scorer: OFFLINE EVAL ONLY. Do NOT ship it into the on-device runtime "
+            "(Sources/BCILLM/). See decision_registry.md entry 7.", self.model,
+        )
+
+    def preflight(self) -> bool:
+        if shutil.which("claude") is None:
+            log.error("`claude` CLI not found on PATH; the claude-cli backend needs it "
+                      "(install Claude Code and sign in with your subscription).")
+            return False
+        return True
+
+    def _post_chat(self, payload: dict[str, Any]) -> dict[str, Any]:
+        roles = {m["role"]: m["content"] for m in payload["messages"]}
+        cmd = [
+            "claude", "-p",
+            "--model", self.model,
+            "--system-prompt", roles.get("system", ""),
+            "--output-format", "json",
+            roles.get("user", ""),
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout_s)
+        if proc.returncode != 0:
+            raise RuntimeError(f"claude CLI failed (rc={proc.returncode}): {proc.stderr[:200]}")
+        result = json.loads(proc.stdout)
+        if result.get("is_error"):
+            raise RuntimeError(f"claude CLI returned an error: {str(result.get('result'))[:200]}")
+        # Map the CLI's result text back into the OpenAI chat-completions shape
+        # the parent's evaluate_with_text expects.
+        return {"choices": [{"message": {"content": result.get("result", "")}}]}
+
+
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
@@ -1071,6 +1132,14 @@ def _print_evaluation_report(report: dict) -> None:
 def _make_scorer(args: argparse.Namespace) -> DriftScoring:
     if args.backend == "proxy":
         return SymbolMatchScorer()
+    if args.backend == "claude-cli":
+        model = args.llm_model if args.llm_model != DEFAULT_LLM_MODEL else "claude-sonnet-5"
+        cli_scorer = ClaudeCLIDriftScorer(model=model, timeout_s=args.llm_timeout,
+                                          prompt_version=args.prompt_version)
+        log.info("Preflighting `claude` CLI (model=%s, subscription auth, no API key)", model)
+        if not cli_scorer.preflight():
+            sys.exit(2)
+        return cli_scorer
     query_prefix = BGE_QUERY_PREFIX if getattr(args, "bge_instruct", False) else args.bge_query_prefix
     if args.backend == "bge":
         return BgeCosineScorer(bge_model=args.bge_model, query_prefix=query_prefix, tau=args.bge_tau)
@@ -1110,10 +1179,11 @@ def _main(argv: Optional[list[str]] = None) -> int:
                         help="dream-report dataset (default: %(default)s)")
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT,
                         help="output JSON report path (default: %(default)s)")
-    parser.add_argument("--backend", choices=["proxy", "llm", "bge", "hybrid"], default="proxy",
+    parser.add_argument("--backend", choices=["proxy", "llm", "bge", "hybrid", "claude-cli"], default="proxy",
                         help="drift-scoring backend: proxy (symbolic, on-device), bge (bge-cosine, "
                              "on-device-capable), llm (OpenAI-compat chat), hybrid (bge signal + LLM "
-                             "cross-examiner). default: proxy")
+                             "cross-examiner), claude-cli (Claude via the `claude` CLI on your "
+                             "subscription, no API key). default: proxy")
     parser.add_argument("--llm-url", default=DEFAULT_LLM_URL,
                         help=f"OpenAI-compatible base URL (default: {DEFAULT_LLM_URL})")
     parser.add_argument("--llm-model", default=DEFAULT_LLM_MODEL,
