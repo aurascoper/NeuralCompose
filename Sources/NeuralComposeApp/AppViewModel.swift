@@ -137,6 +137,17 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// which this never reads or modifies.
     @Published public var worldModelDemoEnabled: Bool = false
 
+    /// Experimental, opt-in spoken-generation loop (see `SpokenGenerationLoop`,
+    /// `SpokenGenerationHonesty`). Off by default and session-scoped like every
+    /// other opt-in here. Owns a running `Task`, so — unlike the view-lifecycle
+    /// `worldModelDemoEnabled` — it needs a `didSet` to start/stop that loop.
+    @Published public var spokenGenerationLoopEnabled: Bool = false {
+        didSet {
+            guard oldValue != spokenGenerationLoopEnabled else { return }
+            reconcileSpokenGenerationLoop()
+        }
+    }
+
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
@@ -210,6 +221,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// not extended by the view model.
     public weak var commandDispatcher: AppCommandDispatcher?
     private let dialecticEngine: DialecticEngine
+    /// Experimental spoken-generation loop, built lazily on first enable so its
+    /// adaptation closure can capture a fully-initialized `self`. Nil while off.
+    private var spokenLoop: SpokenGenerationLoop?
+    /// Serializes start/stop of `spokenLoop` so a fast toggle on→off can never
+    /// leave a started loop with no handle to stop it — each reconcile awaits the
+    /// previous one, then applies the latest toggle value.
+    private var spokenLoopReconcile: Task<Void, Never>?
 
     // ── Per-start resources (recreated each call to start()) ─────────────
     private var composition: TextCompositionController?
@@ -567,7 +585,53 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
+    /// Drives `spokenLoop` toward the current toggle value, serialized through a
+    /// single chained task so overlapping enable/disable events apply in order
+    /// (a sync-start / async-stop race could otherwise orphan a running loop).
+    private func reconcileSpokenGenerationLoop() {
+        let previous = spokenLoopReconcile
+        let shouldRun = spokenGenerationLoopEnabled
+        spokenLoopReconcile = Task { [weak self] in
+            _ = await previous?.value
+            guard let self else { return }
+            if shouldRun {
+                await self.ensureSpokenLoopRunning()
+            } else {
+                await self.ensureSpokenLoopStopped()
+            }
+        }
+    }
+
+    /// Built lazily on first enable (not in `init`, so the adaptation closure
+    /// captures a fully-initialized `self`). Steers generation with a
+    /// **signal-quality-only** adaptation (`SignalQualityGenerationRules` — an
+    /// electrode-contact / hardware-confidence bucket), deliberately NOT the
+    /// combined `detectedAdaptation`, which folds in the heuristic spectral
+    /// state; that keeps the loop's "not a brain read" caveat true.
+    private func ensureSpokenLoopRunning() async {
+        guard spokenLoop == nil else { return }
+        let loop = SpokenGenerationLoop(
+            generator: container.predictorResolved.generator,
+            speaker: voiceOutput,
+            adaptationProvider: { [weak self] in
+                await MainActor.run {
+                    SignalQualityGenerationRules.adaptation(for: self?.signalQuality)
+                }
+            }
+        )
+        spokenLoop = loop
+        await loop.start()
+    }
+
+    private func ensureSpokenLoopStopped() async {
+        await spokenLoop?.stop()
+        spokenLoop = nil
+    }
+
     public func stop() async {
+        // Always silence the experimental spoken loop, even when the pipeline
+        // itself isn't running — its lifecycle is independent of `isRunning`.
+        if spokenGenerationLoopEnabled { spokenGenerationLoopEnabled = false }
         guard isRunning else { return }
         await stopCalibrationRecording()
         await stopImaginedSpeechSession()
