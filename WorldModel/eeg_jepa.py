@@ -55,11 +55,29 @@ class JEPATransitionDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tens
     """
 
     def __init__(self, jsonl_path: str | Path, normalize: bool = True,
-                 mean: torch.Tensor | None = None, std: torch.Tensor | None = None):
+                 mean: torch.Tensor | None = None, std: torch.Tensor | None = None,
+                 clip_sigma: float = 8.0, log_features: bool = False,
+                 log_epsilon: float = 1e-6):
+        if clip_sigma <= 0:
+            raise ValueError(f"clip_sigma must be positive, got {clip_sigma}")
+        if log_epsilon <= 0:
+            raise ValueError(f"log_epsilon must be positive, got {log_epsilon}")
         self.path = Path(jsonl_path)
         self.normalize = normalize
+        self.clip_sigma = clip_sigma
+        self.log_features = log_features
+        self.log_epsilon = log_epsilon
         self.transitions = self._load_records()
         self.pre_action_windows, self.actions, self.post_action_windows = self._make_tensors()
+
+        if log_features:
+            # EEG band/channel powers are heavy-tailed (~1/f): raw theta energy dwarfs
+            # beta, so a plain z-score lets high-power bands swamp low-power ones. Log-
+            # compress the dynamic range first. Powers are >= 0, but clamp_min(0) guards
+            # any future/FP negative before log; the stats below are then computed in
+            # log-space and __getitem__ normalizes the (now log-space) stored windows.
+            self.pre_action_windows = torch.log(self.pre_action_windows.clamp_min(0.0) + self.log_epsilon)
+            self.post_action_windows = torch.log(self.post_action_windows.clamp_min(0.0) + self.log_epsilon)
 
         self.sequence_length = self.pre_action_windows.shape[1]
         self.state_dim = self.pre_action_windows.shape[2]
@@ -206,8 +224,12 @@ class JEPATransitionDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tens
         pre = self.pre_action_windows[index]
         post = self.post_action_windows[index]
         if self.normalize:
-            pre = (pre - self.mean) / self.std
-            post = (post - self.mean) / self.std
+            # Clamp the z-scored output: a near-dead channel whose std sits just
+            # above the 1e-6 floor would otherwise divide a tiny deviation by a
+            # tiny std and emit pathologically large (but finite) magnitudes that
+            # dominate the latent space. The floor stops NaNs; this stops blowups.
+            pre = ((pre - self.mean) / self.std).clamp(-self.clip_sigma, self.clip_sigma)
+            post = ((post - self.mean) / self.std).clamp(-self.clip_sigma, self.clip_sigma)
         return pre, self.actions[index], post
 
     def export_normalization_constants(self, filepath: str | Path = "eeg_norm_stats.json") -> Path:
@@ -225,6 +247,9 @@ class JEPATransitionDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tens
             "state_feature_names": self.state_feature_names,
             "mean": self.mean.tolist(),
             "std": self.std.tolist(),
+            "clip_sigma": self.clip_sigma,
+            "log_features": self.log_features,
+            "log_epsilon": self.log_epsilon,
         }, indent=2))
         return path
 
@@ -370,15 +395,19 @@ def train_jepa(
     return model, history
 
 
-def _smoke_record(index: int, sequence_length: int = 5) -> dict[str, Any]:
+def _smoke_record(index: int, sequence_length: int = 5,
+                  saturated_channel: int | None = None) -> dict[str, Any]:
     def state(time: int, offset: float) -> dict[str, Any]:
         value = float(index * 10 + time) + offset
+        channel_powers = [value + 1.5, value + 2.0]
+        if saturated_channel is not None:
+            channel_powers[saturated_channel] = 7.0
         return {
             "timestamp": 1_700_000_000.0 + value,
             "alphaPower": value,
             "betaPower": value + 0.5,
             "thetaPower": value + 1.0,
-            "channelPowers": [value + 1.5, value + 2.0],
+            "channelPowers": channel_powers,
         }
 
     return {
@@ -419,6 +448,35 @@ def smoke_test() -> None:
         norm_path = dataset.export_normalization_constants(Path(temporary_directory) / "eeg_norm_stats.json")
         stats = json.loads(norm_path.read_text())
         assert len(stats["mean"]) == dataset.state_dim and len(stats["std"]) == dataset.state_dim
+        assert stats["clip_sigma"] == dataset.clip_sigma
+
+        # Saturated / near-dead channel: one channelPowers slot is pinned constant,
+        # so its variance is zero. clamp_min(1e-6) keeps it finite, and the output
+        # clip bounds every feature — proving a dead AF7 can't blow up the latents.
+        saturated_path = Path(temporary_directory) / "saturated.jsonl"
+        with saturated_path.open("w", encoding="utf-8") as output:
+            for index in range(8):
+                output.write(json.dumps(_smoke_record(index, saturated_channel=1)) + "\n")
+        clamped = JEPATransitionDataset(saturated_path, clip_sigma=1.0)
+        bounded = torch.stack([clamped[i][0] for i in range(len(clamped))])
+        assert torch.isfinite(bounded).all()
+        assert bounded.abs().max().item() <= 1.0 + 1e-5
+        # The clip must actually engage: the same data unclamped exceeds the bound.
+        unclamped = JEPATransitionDataset(saturated_path, clip_sigma=1e9)
+        wide = torch.stack([unclamped[i][0] for i in range(len(unclamped))])
+        assert wide.abs().max().item() > 1.0
+
+        # Log-feature path: log-compress heavy-tailed powers, then z-score. Must stay
+        # finite (log_epsilon guards log(0)) even with a saturated channel and zero-valued
+        # features, and stay bounded by the output clip.
+        logged = JEPATransitionDataset(saturated_path, log_features=True, clip_sigma=8.0)
+        logged_states = torch.stack([logged[i][0] for i in range(len(logged))])
+        assert torch.isfinite(logged_states).all()
+        assert logged_states.abs().max().item() <= 8.0 + 1e-5
+        log_norm_path = logged.export_normalization_constants(
+            Path(temporary_directory) / "eeg_norm_log.json")
+        log_stats = json.loads(log_norm_path.read_text())
+        assert log_stats["log_features"] is True and log_stats["log_epsilon"] > 0
 
         model, history = train_jepa(
             loader,
@@ -452,6 +510,14 @@ def main() -> None:
     parser.add_argument("--export-norm", type=Path, default=None,
                         help="also write the normalization constants JSON to this path (inspection only)")
     parser.add_argument("--no-normalize", action="store_true")
+    parser.add_argument("--clip-sigma", type=float, default=8.0,
+                        help="cap normalized band-power magnitude at ±clip_sigma; guards a "
+                             "near-dead channel whose std sits just above the 1e-6 floor")
+    parser.add_argument("--log-features", action="store_true",
+                        help="log-compress heavy-tailed (~1/f) band/channel powers before "
+                             "z-scoring, so high-power bands don't swamp low-power ones")
+    parser.add_argument("--log-epsilon", type=float, default=1e-6,
+                        help="additive constant inside log(x+eps) when --log-features is set")
     parser.add_argument("--smoke-test", action="store_true")
     args = parser.parse_args()
 
@@ -462,7 +528,9 @@ def main() -> None:
     if args.dataset is None:
         parser.error("--dataset is required unless --smoke-test is used")
 
-    dataset = JEPATransitionDataset(args.dataset, normalize=not args.no_normalize)
+    dataset = JEPATransitionDataset(args.dataset, normalize=not args.no_normalize,
+                                    clip_sigma=args.clip_sigma,
+                                    log_features=args.log_features, log_epsilon=args.log_epsilon)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     config = EEGJEPAConfig(
         latent_dim=args.latent_dim,
@@ -488,7 +556,8 @@ def main() -> None:
         # Normalize the held-out set with the TRAIN mean/std — never its own.
         val_dataset = JEPATransitionDataset(
             args.val_dataset, normalize=not args.no_normalize,
-            mean=dataset.mean, std=dataset.std,
+            mean=dataset.mean, std=dataset.std, clip_sigma=args.clip_sigma,
+            log_features=args.log_features, log_epsilon=args.log_epsilon,
         )
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
         model.encoder.eval()
@@ -513,6 +582,9 @@ def main() -> None:
             "sequence_length": dataset.sequence_length,
             "normalization_mean": dataset.mean,
             "normalization_std": dataset.std,
+            "normalization_clip_sigma": dataset.clip_sigma,
+            "normalization_log_features": dataset.log_features,
+            "normalization_log_epsilon": dataset.log_epsilon,
             "encoder_state_dict": model.encoder.state_dict(),
             "predictor_state_dict": model.predictor.state_dict(),
             "final_loss": history[-1],
