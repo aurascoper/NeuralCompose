@@ -166,3 +166,110 @@ The system ships regardless. The platform is useful independently of the empiric
 - [`docs/Math.md`](Math.md) — derivations behind the README equations.
 - [`docs/Validation.md`](Validation.md) — the 5-condition protocol and current results.
 - [`docs/Research.md`](Research.md) — the D8 pre-registration plan.
+
+---
+
+## Dream-Mode Design Audit (2026-07-19, paste-as-wrapper)
+
+A second design input landed in this repo on 2026-07-19: a paste containing
+(a) a `hypothesis_registry.json` schema with **routing** (primary_anchors /
+semantic_domain / drift_tolerance), **cascades** (on_drift_timeout /
+on_arousal / on_lucidity_detected), and **policies** (intervention_intensity
+/ require_debounce / allowed_tones), plus a global_policies block; (b) a
+Python `DreamExtractionPipeline` (denoise + symbol ID + analogical mapping
+against a hypothesis); (c) a `HypothesisRegistry` config-manager class; (d)
+a refactored `DreamSessionFSM` that reads cooldowns and intervention limits
+from the JSON; (e) a `Codable` Swift schema for the same JSON; (f) a Swift
+`actor DreamSessionFSM`; and (g) a Random Forest sleep-stage classifier
+sketch (4-class, relative band power, exports to CoreML).
+
+This section records the review of that paste against the canonical D1–D8
+design above. The paste is integrated as a design input per the paste-driven
+rule (the paste IS the design; integrate verbatim, don't re-litigate settled
+points). The Stage 3.4/3.5/4 boundary contract is treated as active by
+default — see `Evaluation/reports/decision_registry.md` entry 7.
+
+### What the paste integrates cleanly
+
+- The **routing/cascades/policies** schema is a useful enrichment of the
+  existing Hypothesis Registry conventions. It extends the schema with three
+  optional fields per hypothesis; the existing 3.4-A through 3.5-P entries
+  are unaffected. See `Evaluation/corpora/dream_mode_hypothesis_registry.json`
+  (extracted 2026-07-19 to keep the Stage 3.4/3.5 baseline immutable);
+  hypotheses S-1 through S-4, plus an `example_hypotheses_for_schema_validation`
+  block with the two pasted examples (hyp_fear_failure_01,
+  hyp_safe_exploration_01) for shape validation.
+- The **Python offline extraction + drift scoring** shape is the right MVP
+  for the offline tier (S-2). It will require a human-rated baseline before
+  drift can be used as a cascade trigger — LLM self-evaluated drift is a
+  known weak point for models under 30B and must be validated.
+- The **Random Forest sleep-stage classifier** sketch (S-3) is fine for a
+  pipeline-extraction test on synthetic data. No labeled sleep-staging
+  dataset exists in the repo; `Recordings/` contains Muse validation
+  recordings and one calibration labels file, not PSG.
+- The **Swift `actor DreamSessionFSM`** shape (S-4) is the right foundation
+  for Stage 4. Concrete type to delegate to is `AVSpeechSynthesizerService`
+  in `Sources/BCIVoice/`, not a fabricated `HypnosisSynthesizer` singleton.
+  The cascade handlers map cleanly to the schema's `on_arousal`,
+  `on_drift_timeout`, `on_lucidity_detected` keys.
+
+### What the paste gets wrong against the actual repo
+
+- **"iOS app / CoreBluetooth delegate queue / iOS bundle"** — wrong target.
+  This is a macOS app. The EEG stream comes from BrainFlow, not
+  CoreBluetooth. `Sources/NeuralComposeApp` is an executable target
+  (`Package.swift` line 137), not an iOS bundle. AVFoundation's
+  `AVSpeechSynthesizer` works on both, but the framing should be macOS.
+- **"`HypnosisSynthesizer` actor we built previously"** — fabricated prior
+  art. The real TTS path is `Sources/BCIVoice/AVSpeechSynthesizerService.swift`
+  (an `actor SpeechSynthesizing` conforming type using AVFoundation, with
+  `speak(_:) async throws` and `stopSpeaking() async`). No such
+  `HypnosisSynthesizer` exists in this repo.
+- **The Swift actor's `cascade(to:)` method** has a real Swift-concurrency
+  bug if ported verbatim: `var updatedFSM = self; _ = updatedFSM.loadHypothesis(...);
+  self.activeHypothesisID = updatedFSM.activeHypothesisID; ...` is a
+  no-op pattern on actor stored properties. Stage 4 implementation must
+  inline mutation in the actor's isolated body, not copy-and-reassign.
+- **"CoreML for Stage 4 iOS integration"** in the Random Forest sketch —
+  should read "CoreML for the macOS deployment path matching
+  `BCIClassifier`'s existing ANE-preferred CoreML wrapper" (see
+  `Sources/BCIClassifier/`).
+- **"Why Random Forest over Deep Learning"** rationale — opinionated, not
+  evidence-based. Conflates JEPA (a `WorldModel/` research spike, decoupled
+  per `CLAUDE.md`) with the EEG pipeline. Remove from the final schema doc.
+- **The `hypothesis_registry.json` filename** in the paste is the same
+  filename as the existing Stage 3.4/3.5 hypothesis registry at
+  `Evaluation/corpora/hypothesis_registry.json`. The two artifacts have
+  different schemas and different governance roles. The dream-mode
+  hypotheses were initially inlined as a `stage_4_sleep_dream_mode` block
+  in the existing file, then **extracted 2026-07-19** to
+  `Evaluation/corpora/dream_mode_hypothesis_registry.json` to keep the
+  Stage 3.4/3.5 evaluation baseline immutable. The two registries are
+  now decoupled at the filesystem level.
+
+### Schema extension conventions
+
+When a new design input extends the Hypothesis Registry, the convention is
+to add a new top-level key (e.g. `stage_4_sleep_dream_mode`) with a
+`_meta` block (version, source inputs, boundary contract, llm candidate,
+tts path, model note) and a `hypotheses` array following the existing
+schema (id, title, question, metric, success_criterion, expected_effect_size,
+status, status_note). Pre-registration of design inputs is a schema review,
+not an evidence gate; status_note records what was reviewed and what is
+unproven.
+
+### Repo target map (when Stage 4 opens)
+
+| Paste component | Repo target | Tier |
+|---|---|---|
+| `SymbolicCache` SQLite schema | `Scripts/dream_extraction.py` (creates `data/symbolic_cache.db`) | Offline |
+| `DreamExtractionPipeline` | `Scripts/dream_extraction.py` (model-agnostic, qwen2.5-0.5b candidate) | Offline |
+| `HypothesisRegistry` config manager | `Scripts/hypothesis_registry.py` (thin wrapper around the JSON) | Offline |
+| `PrimerGenerator` | `Scripts/primer_generator.py` (bakes audio fixtures for `BCIVoice` to load) | Offline |
+| `DreamSessionFSM` (Python) | `Sources/BCICore/Sleep/SleepSessionFSM.swift` (D4) | Production, Swift |
+| Python `DreamSessionFSM` (replay) | `Scripts/dream_session_replay.py` (consumes recorded EEG CSV + Swift FSM output, reports divergence) | Offline |
+| `subprocess.Popen(['say'])` | `Sources/BCIVoice/AVSpeechSynthesizerService.speak(_:)` (D5, D6a) | Production, Swift |
+| Hypothesis Registry (governance) | `Evaluation/corpora/dream_mode_hypothesis_registry.json` (extracted, single source of truth) | Governance |
+| Risk Register | Already in `SLEEP_CYCLE_DESIGN.md` §6 (full 10-row table) | Governance |
+| Safety requirements | Already in `SLEEP_CYCLE_DESIGN.md` §6a (audio, sleep, hardware, user) | Governance |
+| Pilot feasibility study | `docs/Research.md` D8 plan (N=30, OSF pre-registration, Bayes factors) | Governance + design |

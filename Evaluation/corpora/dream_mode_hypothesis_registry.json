@@ -1,0 +1,118 @@
+{
+  "_meta": {
+    "version": 1,
+    "created": "2026-07-19",
+    "moved_from": "Evaluation/corpora/hypothesis_registry.json::stage_4_sleep_dream_mode (extracted 2026-07-19 to keep the Stage 3.4/3.5 evaluation baseline immutable)",
+    "source_inputs": [
+      "NeuralCompose_dream_prompt.md (D1-D8 design brief, 2026-07-10)",
+      "Pasted design: routing/cascades/policies schema (offline tooling tier, paste-as-wrapper)",
+      "Pasted design: Random Forest 4-class sleep stage classifier sketch (offline pipeline test)"
+    ],
+    "boundary_contract": "Stage 3.4/3.5/4 — production runtime (FSM, TTS cues, dream-analysis LLM) deferred to Stage 4. Python extraction + drift scoring against a human-rated baseline can land now.",
+    "llm_candidate": "qwen2.5-0.5b (per decision_registry.md entry 2, Accepted)",
+    "tts_path": "Sources/BCIVoice/AVSpeechSynthesizerService.swift (existing, no new target)",
+    "model_note": "minimax-m3 in the paste text refers to the assistant, not the dream-mode LLM. qwen2.5-0.5b is the candidate per user direction 2026-07-19."
+  },
+  "hypotheses": [
+    {
+      "id": "S-1-routing-cascades-policies-schema",
+      "title": "Routing/cascades/policies schema for dream-mode hypothesis registry",
+      "question": "Does the routing/cascades/policies schema (primary_anchors, semantic_domain, drift_tolerance; on_drift_timeout / on_arousal / on_lucidity_detected cascade targets; intervention_intensity + require_debounce / allowed_tones policy block; global max_interventions_per_rem_cycle + global_cooldown_seconds + abort_on_repeated_arousal + arousal_threshold_count) capture the relevant design degrees of freedom without bloating into a free-form config?",
+      "metric": "Schema expressiveness vs current set of 2 example hypotheses (hyp_fear_failure_01, hyp_safe_exploration_01); can the schema represent the brief's D6 safety requirements (60 dB SPL cap, max 5 TMR cues/night, 15-min minimum interval, max 2 hypnopompic wake attempts, sustained-wake abort at 2.5 min, 100ms abort path, battery/thermal/disk preflight) without per-hypothesis ad-hoc fields?",
+      "success_criterion": "All D6 safety constraints are representable as either global_policies (shared across hypotheses) or per-hypothesis policies (where the constraint is hypothesis-specific, e.g., intervention_intensity:low forbids 'Assertive, grounding' tone for trauma-related hypotheses).",
+      "expected_effect_size": {
+        "schema_fields_required_for_d6": "5-8 fields total",
+        "global_policies_count": "4-6 (matches existing example)",
+        "per_hypothesis_policies_count": "3-5"
+      },
+      "status": "pre-registered",
+      "status_note": "Schema reviewed 2026-07-19 against the existing Stage 3.4/3.5 hypothesis_registry.json conventions. Conforms to the same shape (id, title, question, metric, success_criterion, expected_effect_size, status, status_note). The routing/cascades/policies blocks extend the schema with three new optional fields; the existing stage_3_4 and stage_3_5 entries are unaffected. Pre-registration is a schema review, not an evidence gate; the hypothesis is registered as a design input, not as a testable empirical claim."
+    },
+    {
+      "id": "S-2-python-offline-extraction-human-rated-drift",
+      "title": "Python offline dream-report extraction with human-rated drift baseline",
+      "question": "Does the three-pass extraction pipeline (denoise -> symbol identification -> analogical mapping) produce drift scores that correlate with human raters' judgments of dream-target alignment, at a level sufficient to use drift as a cascade trigger?",
+      "metric": "Spearman correlation between LLM-self-evaluated drift_score and human-rater alignment rating on a held-out set of N>=30 dream reports (per D8 H4: 'non-trivial agreement with human raters')",
+      "success_criterion": "Spearman rho >= 0.5 (medium correlation); F1 of high-drift/low-drift binary classification (threshold = drift_tolerance per hypothesis) >= 0.7",
+      "expected_effect_size": {
+        "spearman_rho": "0.4-0.7 (LLM self-eval is a known weak point; medium correlation is plausible, high is unlikely)",
+        "f1_high_vs_low_drift": "0.6-0.8"
+      },
+      "status": "pre-registered",
+      "status_note": "LLM self-evaluated drift_score is a known weak point for models under 30B parameters. The pipeline must validate against a human-rated baseline before drift can be used as a cascade trigger; otherwise it is an unvalidated heuristic. Synthetic dream reports can be used to test the pipeline extraction end-to-end (denoise + symbol identification + mapping), but the drift-vs-rater correlation requires real labeled data. Candidate LLM: qwen2.5-0.5b per decision_registry.md entry 2; inference via local OpenAI-compatible server (vLLM / MLX-Server / Ollama), not the in-process MLX runtime. Brief's Risk Register: 'LLM primer generation' is Medium status; 'LLM dream report analogy extraction' is Low status. Stage 3.5 = offline evaluation only; no production change."
+    },
+    {
+      "id": "S-3-random-forest-sleep-stage-classifier-synthetic",
+      "title": "Random Forest 4-class sleep-stage classifier on synthetic 30s EEG epochs",
+      "question": "Does a Random Forest on relative band power (delta/theta/alpha/beta) achieve cross-subject macro F1 >= 0.6 on a 4-class (Wake, N1, N2_N3, REM) synthetic dataset that mimics Muse's 4-channel frontal derivation?",
+      "metric": "Macro F1, per-class sensitivity/specificity, Cohen's kappa on LOSO-style splits (synthetic, but with per-subject channel noise injected to simulate cross-subject variability)",
+      "success_criterion": "Macro F1 >= 0.6 across 4 classes on synthetic; Cohen's kappa >= 0.5",
+      "expected_effect_size": {
+        "macro_f1_synthetic": "0.55-0.75",
+        "cohen_kappa_synthetic": "0.4-0.6",
+        "feature_count": "4 (relative band powers); brief-flagged as below the literature floor for cross-subject generalization, may need expansion to relative+absolute band powers + theta/alpha ratio + alpha dropout ratio + spindle/slow wave counts (D1 SleepFeatures)"
+      },
+      "status": "pre-registered",
+      "status_note": "No labeled sleep-staging dataset exists in the repo. Recordings/ contains Muse validation (eyes-open/closed alpha, 2026-07-10) and one calibration labels file, not PSG. A synthetic data generator is the right MVP for the offline pipeline test, with the explicit caveat that cross-subject real-data performance is unproven until a labeled dataset is acquired. Brief's Risk Register names 'Domain shift from PSG datasets (central/occipital channels vs frontal)' as the largest expected source of error — this should be called out as a calibration observation, not a normative threshold. The paste's 'Why Random Forest over Deep Learning' rationale conflates JEPA (a WorldModel/ research spike, decoupled per CLAUDE.md) with the EEG pipeline; the rationale is opinionated, not evidence-based, and should be removed from the final schema doc."
+    },
+    {
+      "id": "S-4-stage-4-swift-actor-fsm-deferred",
+      "title": "Swift DreamSessionFSM actor (Stage 4, deferred)",
+      "question": "When Stage 4 evidence gates open, does a Swift `actor DreamSessionFSM` (with `stateHistory` debounce, AASM-aware transition rules, global_policies-driven cooldowns, `Codable HypothesisRegistry` loaded at launch, cascade handlers for on_arousal / on_drift_timeout / on_lucidity_detected) match the Python offline prototype's behavior on recorded EEG, and does it compose cleanly with the existing `Sources/BCIVoice/AVSpeechSynthesizerService` for the TTS cue path?",
+      "metric": "Replay equivalence: Swift FSM output state transitions over a recorded EEG CSV match the Python offline prototype's output on the same input within tolerance (no transition divergence on N>=20 epochs); BCIVoice composition: TTS cue path completes one full speak/cancel cycle without dropping EEG frames",
+      "success_criterion": "Replay equivalence >= 95% on stable REM transitions; BCIVoice composition passes a 5-min soak test with no dropped frames",
+      "expected_effect_size": {
+        "replay_equivalence_rate": "0.90-0.99 (debounce + AASM rules are deterministic; small differences expected at boundaries)",
+        "tts_compose_soak_minutes": "5-10",
+        "actor_state_property_bug": "The pasted Python FSM's `cascade(to:)` method has a Swift-concurrency bug if ported verbatim: `var updatedFSM = self; _ = updatedFSM.loadHypothesis(...); self.activeHypothesisID = updatedFSM.activeHypothesisID; ...` is a no-op pattern on actor stored properties. Stage 4 implementation must inline mutation in the actor's isolated body."
+      },
+      "status": "pre-registered",
+      "status_note": "Deferred per Stage 3.4/3.5/4 boundary contract (AA6545F1 / EF7BC788 / B4BBC32A). The pasted Swift actor design is the right SHAPE but the concrete type to delegate to is `AVSpeechSynthesizerService` (existing, BCIVoice/), not a fabricated `HypnosisSynthesizer` singleton. The pasted 'iOS app / CoreBluetooth delegate queue / iOS bundle' framing is wrong for this repo — this is a macOS app, EEG comes from BrainFlow, not CoreBluetooth. The pasted Random Forest sketch's 'CoreML for Stage 4 iOS integration' should read 'CoreML for the macOS deployment path matching BCIClassifier's existing ANE-preferred CoreML wrapper.' These framing corrections are recorded in `docs/SleepCycleDesign.md`'s audit section. The pasted `loadHypothesis` accepts the terminal cascade names `abort_to_restorative_sleep` and `trigger_active_confrontation` as string keys — these should be a Swift enum (`enum HypothesisID: String, Codable`) for type safety when the time comes."
+    }
+  ],
+  "example_hypotheses_for_schema_validation": {
+    "_note": "These two examples were extracted from the original pasted schema (hyp_fear_failure_01, hyp_safe_exploration_01) for documentation purposes. They are NOT pre-registered evidence-backed hypotheses — they are shape fixtures used by S-1 to validate the schema against the D6 safety requirements. Move to a separate fixture file when a real test corpus lands.",
+    "global_policies": {
+      "max_interventions_per_rem_cycle": 4,
+      "global_cooldown_seconds": 300,
+      "abort_on_repeated_arousal": true,
+      "arousal_threshold_count": 2
+    },
+    "hypotheses": {
+      "hyp_fear_failure_01": {
+        "target_concept": "Overcoming the fear of public failure",
+        "routing": {
+          "primary_anchors": ["stage", "audience", "falling", "forgetting", "test"],
+          "semantic_domain": "performance_anxiety",
+          "drift_tolerance": 0.65
+        },
+        "policies": {
+          "intervention_intensity": "adaptive",
+          "require_debounce": true,
+          "allowed_tones": ["Ethereal", "Grounding", "Curious"]
+        },
+        "cascades": {
+          "on_drift_timeout": "hyp_safe_exploration_01",
+          "on_arousal": "abort_to_restorative_sleep",
+          "on_lucidity_detected": "trigger_active_confrontation"
+        }
+      },
+      "hyp_safe_exploration_01": {
+        "target_concept": "Establishing a baseline feeling of physical and mental safety",
+        "routing": {
+          "primary_anchors": ["home", "shield", "light", "floating"],
+          "semantic_domain": "comfort_security",
+          "drift_tolerance": 0.80
+        },
+        "policies": {
+          "intervention_intensity": "low",
+          "require_debounce": true,
+          "allowed_tones": ["Soothing", "Ethereal"]
+        },
+        "cascades": {
+          "on_drift_timeout": "abort_to_restorative_sleep"
+        }
+      }
+    }
+  }
+}
