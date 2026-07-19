@@ -20,10 +20,29 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
     }
 
     public func speak(_ text: String) async throws {
+        try await speak(text, prosody: SpeechProsody())
+    }
+
+    public func speak(_ text: String, prosody: SpeechProsody) async throws {
         await stopSpeaking()
         let utterance = AVSpeechUtterance(string: text)
         if let voice = AVSpeechSynthesisVoice(identifier: voiceIdentifier) {
             utterance.voice = voice
+        }
+        // Apply only the fields the caller set; leave the rest at AVSpeech
+        // defaults. Clamp to AVSpeechUtterance's documented ranges.
+        if let rate = prosody.rate {
+            utterance.rate = min(AVSpeechUtteranceMaximumSpeechRate,
+                                 max(AVSpeechUtteranceMinimumSpeechRate, rate))
+        }
+        if let pitch = prosody.pitchMultiplier {
+            utterance.pitchMultiplier = min(2.0, max(0.5, pitch))
+        }
+        if let volume = prosody.volume {
+            utterance.volume = min(1.0, max(0.0, volume))
+        }
+        if let delay = prosody.preUtteranceDelay {
+            utterance.preUtteranceDelay = max(0, delay)
         }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
             pendingContinuation = continuation

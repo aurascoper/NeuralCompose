@@ -34,6 +34,7 @@ let package = Package(
         .library(name: "BCIClassifier", targets: ["BCIClassifier"]),
         .library(name: "BCILLM",        targets: ["BCILLM"]),
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
+        .library(name: "BCICloudBridge", targets: ["BCICloudBridge"]),
         .library(name: "WorldModelDemo", targets: ["WorldModelDemo"]),
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
@@ -118,6 +119,23 @@ let package = Package(
             linkerSettings: [.linkedFramework("Speech")]
         ),
 
+        // ── Cloud bridge (the ONE deliberate network-egress module) ──────
+        // Quarantines the sole runtime exception to the "No network at
+        // runtime" invariant (decision_registry.md entry 8): the opt-in
+        // Stage-5 hypnagogic loop's cloud LLM. Kept OUT of BCILLM on purpose —
+        // the boundary contract names Sources/BCILLM/ as off-limits for cloud
+        // models — and depends only on BCICore (the TextGenerating seam), with
+        // no MLX/AVFoundation. Egress is via the local `claude` CLI subprocess
+        // (Foundation.Process); no HTTP client, no API key on disk. Imported
+        // only by NeuralComposeApp; must never become a dependency of any other
+        // BCI* target.
+        .target(
+            name: "BCICloudBridge",
+            dependencies: ["BCICore"],
+            path: "Sources/BCICloudBridge",
+            swiftSettings: strictConcurrency
+        ),
+
         // ── World Model demo (synthetic-task JEPA+MPC, CoreML/ANE) ────────
         // Deliberately NOT a `BCI*`-prefixed name: every `BCI*` target is a
         // real production-pipeline stage; this is a synthetic-task research
@@ -135,7 +153,7 @@ let package = Package(
         // ── Application ──────────────────────────────────────────────────
         .executableTarget(
             name: "NeuralComposeApp",
-            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice", "WorldModelDemo"],
+            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice", "BCICloudBridge", "WorldModelDemo"],
             path: "Sources/NeuralComposeApp",
             // Info.plist lives in Resources/ for reference / Xcode builds but
             // is intentionally NOT declared as a SwiftPM resource: SwiftPM
@@ -270,6 +288,11 @@ let package = Package(
             name: "BCIVoiceTests",
             dependencies: ["BCIVoice", "BCICore"],
             path: "Tests/BCIVoiceTests"
+        ),
+        .testTarget(
+            name: "BCICloudBridgeTests",
+            dependencies: ["BCICloudBridge", "BCICore"],
+            path: "Tests/BCICloudBridgeTests"
         ),
         .testTarget(
             name: "WorldModelDemoTests",
