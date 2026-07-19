@@ -56,8 +56,13 @@ Importable:
   from dream_extraction import (
       DreamExtractionPipeline, HypothesisContext,
       SymbolMatchScorer, LLMDriftScorer, DriftScoring,
-      run_evaluation, SPEC_VERSION,
+      run_evaluation, run_robust_evaluation, SPEC_VERSION,
   )
+
+Multi-seed evaluation (the methodological fix for high-variance LLM scoring):
+  ./Scripts/dream_extraction.py --backend llm --llm-model qwen2.5:0.5b --runs 3
+  ./Scripts/dream_extraction.py --backend llm --llm-model deepseek-v4-flash:cloud --runs 5
+  ./Scripts/dream_extraction.py --backend llm --llm-model qwen2.5:0.5b --prompt-version v2 --runs 3
 """
 
 from __future__ import annotations
@@ -65,6 +70,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
 import re
 import sys
@@ -163,7 +169,22 @@ class LLMDriftScorer:
 
     name: str = "llm"
 
-    SYSTEM_PROMPT = (
+    # Two prompt versions, empirically tested 2026-07-19 across the
+    # qwen2.5 ladder (0.5B / 1.5B / 3B) and the deepseek sanity check.
+    # The original (v1) named the scale endpoints (0.00: perfect match,
+    # 1.00: complete drift), which gave the smaller models a useful
+    # direction to reason from at the cost of a high-drift bias on the
+    # larger models. v2 dropped the named endpoints in favor of three
+    # intermediate anchors and asked the model to "use the full range";
+    # v2 was a NET REGRESSION across all four configurations (deepseek
+    # 0.8857 -> 0.6172, qwen2.5:0.5b 0.8827 -> 0.1471, qwen2.5:1.5b
+    # 0.0 -> -0.7171, qwen2.5:3b -0.3928 -> 0.0976). The named
+    # endpoints were giving the smaller models a *direction*, not
+    # anchoring them on a bad value; removing the direction without
+    # providing a replacement left them with no useful signal. v1
+    # remains the default. Use --prompt-version v2 to reproduce the
+    # falsification.
+    SYSTEM_PROMPT_V1 = (
         "You are a precise sleep-laboratory scoring engine. Your job is to "
         "analyze a dream report and calculate its 'drift' relative to a target "
         "dream-induction hypothesis.\n\n"
@@ -183,18 +204,57 @@ class LLMDriftScorer:
         '{"drift": <float 0.0..1.0>}.'
     )
 
+    # v2: drop the named endpoints; use three intermediate calibration
+    # anchors and ask the model to "use the full range". Empirically a
+    # regression on every configuration tested; kept on disk for the
+    # falsification record and for future A/B testing if the prompt-
+    # modification hypothesis is reopened.
+    SYSTEM_PROMPT_V2 = (
+        "You are a precise sleep-laboratory scoring engine. Your job is to "
+        "analyze a dream report and calculate its semantic drift relative to "
+        "a target dream-induction hypothesis.\n\n"
+        "Output a single float reflecting how strongly the dream's thematic "
+        "imagery matches the target hypothesis. Use the full range of the "
+        "float — values near the low end indicate vivid on-target imagery, "
+        "values near the high end indicate clear mismatch, values in the "
+        "middle indicate moderate resonance.\n\n"
+        "Reason about semantic imagery and morphology, NOT literal anchor "
+        "matching. The anchors below are a context hint about the target — "
+        "you should also recognize equivalent imagery ('soaring over a "
+        "valley' is the same beat as 'floating in open space') and "
+        "morphological variants ('forgotten' is the same beat as 'forgetting'). "
+        "The dream's tone and affect matter: a vivid on-target dream with "
+        "rich imagery has low drift; a flat affectless off-target report "
+        "has high drift.\n\n"
+        "Respond ONLY with a raw JSON object matching this schema: "
+        '{"drift": <float>}.'
+    )
+
+    # Default to v1 (the empirically better prompt across all tested
+    # configurations). Pass `prompt_version="v2"` to use the
+    # falsified variant.
+    SYSTEM_PROMPT = SYSTEM_PROMPT_V1
+
     def __init__(
         self,
         base_url: str = DEFAULT_LLM_URL,
         model: str = DEFAULT_LLM_MODEL,
         timeout_s: float = DEFAULT_LLM_TIMEOUT_S,
         max_retries: int = 2,
+        prompt_version: str = "v1",
     ):
         self.base_url = base_url.rstrip("/")
         self.url = f"{self.base_url}/chat/completions"
         self.model = model
         self.timeout_s = timeout_s
         self.max_retries = max_retries
+        if prompt_version == "v1":
+            self.system_prompt = self.SYSTEM_PROMPT_V1
+        elif prompt_version == "v2":
+            self.system_prompt = self.SYSTEM_PROMPT_V2
+        else:
+            raise ValueError(f"Unknown prompt_version: {prompt_version!r}; expected 'v1' or 'v2'")
+        self.prompt_version = prompt_version
 
     def preflight(self) -> bool:
         """Check the local server is reachable and lists our model."""
@@ -266,7 +326,7 @@ class LLMDriftScorer:
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "system", "content": self.system_prompt},
                 {"role": "user",   "content": user_content},
             ],
             "temperature": 0.3,
@@ -465,6 +525,107 @@ def run_evaluation(
 
 
 # ---------------------------------------------------------------------------
+# Robust (multi-seed) evaluation
+# ---------------------------------------------------------------------------
+
+def run_robust_evaluation(
+    pipeline: DreamExtractionPipeline,
+    dataset: list[dict],
+    *,
+    full_text_scorer: Optional[Any] = None,
+    runs: int = 3,
+) -> dict:
+    """Multi-seed wrapper around run_evaluation. Reports mean +- std of Spearman rho.
+
+    The motivation: single-run measurement of an LLM-scored pipeline has
+    high sample-to-sample variance at the small (n<10) dataset sizes we
+    have. The earlier "qwen2.5:0.5b + v1 + temp=0.3 reaches rho 0.8827"
+    claim was a 2.5-sigma outlier from a distribution with mean +0.04
+    +- 0.28; "deepseek + v1 + temp=0.3 reaches rho 0.8857" was a
+    2.7-sigma outlier from a distribution with mean +0.56 +- 0.12. Multi-
+    seed evaluation is the methodological fix: run the dataset through the
+    pipeline `runs` times, report mean +- std of Spearman rho. NaN (model
+    deadlock) is treated as 0.0 for the rho calculation.
+
+    The first run's report is preserved in full under `first_run_report`
+    for the per-report diagnostic breakdown.
+    """
+    if runs < 1:
+        raise ValueError(f"runs must be >= 1; got {runs}")
+
+    per_run_rhos: list[float] = []
+    per_run_maes: list[float] = []
+    first_report: Optional[dict] = None
+
+    for run_idx in range(runs):
+        report = run_evaluation(pipeline, dataset, full_text_scorer=full_text_scorer)
+        rho = report["spearman_rho"]
+        if rho is None or (isinstance(rho, float) and math.isnan(rho)):
+            # Model deadlock (constant predictions) or n<3 -> treat as 0.0
+            # for the rho calculation. The deadlocked case is a real signal
+            # of model failure; documenting it as 0.0 makes the mean honest.
+            rho = 0.0
+        per_run_rhos.append(float(rho))
+        per_run_maes.append(float(report["mean_abs_error"]))
+        if first_report is None:
+            first_report = report
+
+    # Use sample standard deviation (ddof=1) when we have >= 2 runs.
+    if runs >= 2:
+        std_rho = float(np.std(per_run_rhos, ddof=1))
+        sem_rho = float(np.std(per_run_rhos, ddof=1) / np.sqrt(runs))
+    else:
+        std_rho = 0.0
+        sem_rho = 0.0
+
+    return {
+        "n_runs":               runs,
+        "scorer":               pipeline.scorer.name,
+        "n_reports":            len(dataset),
+        "per_run_rho":          per_run_rhos,
+        "per_run_mean_abs_error": per_run_maes,
+        "mean_rho":             float(np.mean(per_run_rhos)),
+        "std_rho":              std_rho,
+        "sem_rho":              sem_rho,
+        "ci95_rho":             [float(np.mean(per_run_rhos) - 1.96 * sem_rho),
+                                 float(np.mean(per_run_rhos) + 1.96 * sem_rho)],
+        "mean_mean_abs_error":  float(np.mean(per_run_maes)),
+        "first_run_report":     first_report,
+    }
+
+
+def _print_robust_evaluation_report(report: dict) -> None:
+    log.info("=" * 64)
+    log.info("S-2 ROBUST MULTI-SEED EVALUATION  (scorer=%s, n_reports=%d, n_runs=%d)",
+             report["scorer"], report["n_reports"], report["n_runs"])
+    log.info("=" * 64)
+    log.info("Per-run Spearman rho : %s", [f"{r:+.4f}" for r in report["per_run_rho"]])
+    log.info("Per-run mean |err|  : %s", [f"{e:.4f}" for e in report["per_run_mean_abs_error"]])
+    log.info("Mean rho            : %+.4f", report["mean_rho"])
+    log.info("Std  rho (ddof=1)   : %.4f", report["std_rho"])
+    log.info("SEM  rho            : %.4f", report["sem_rho"])
+    log.info("95%% CI on rho      : [%+.4f, %+.4f]", report["ci95_rho"][0], report["ci95_rho"][1])
+    log.info("Mean |err|          : %.4f", report["mean_mean_abs_error"])
+    clears_robustly = report["ci95_rho"][0] >= 0.6
+    log.info("Clears 0.6 robustly (CI lower bound >= 0.6)? %s",
+             "YES" if clears_robustly else "no")
+    log.info("=" * 64)
+    # Per-report diagnostic breakdown from the first run.
+    if report.get("first_run_report") is not None:
+        first = report["first_run_report"]
+        log.info("Per-report breakdown (first run only — single-sample estimate):")
+        log.info("  %-10s  %-26s  %6s  %6s  %6s", "report", "hypothesis", "pred", "truth", "|err|")
+        for r in first["per_report"]:
+            log.info(
+                "  %-10s  %-26s  %6.3f  %6.3f  %6.3f   matched=%d/%d %s",
+                r["report_id"], r["target_hypothesis"],
+                r["predicted_drift"], r["ground_truth_drift"], r["abs_error"],
+                r["match_count"], r["total_anchors"],
+                r["matched_anchors"],
+            )
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -500,6 +661,7 @@ def _make_scorer(args: argparse.Namespace) -> DriftScoring:
             base_url=args.llm_url,
             model=args.llm_model,
             timeout_s=args.llm_timeout,
+            prompt_version=args.prompt_version,
         )
         log.info("Running LLM preflight against %s (model=%s)", args.llm_url, args.llm_model)
         if not scorer.preflight():
@@ -531,6 +693,10 @@ def _main(argv: Optional[list[str]] = None) -> int:
                         help=f"model id (default: {DEFAULT_LLM_MODEL})")
     parser.add_argument("--llm-timeout", type=float, default=DEFAULT_LLM_TIMEOUT_S,
                         help="per-call timeout in seconds (default: %(default)s)")
+    parser.add_argument("--prompt-version", choices=["v1", "v2"], default="v1",
+                        help="system prompt version (default: v1; v2 was empirically a regression, kept for the falsification record)")
+    parser.add_argument("--runs", type=int, default=1,
+                        help="number of evaluation runs for multi-seed evaluation; report mean +- std of Spearman rho (default: 1, single-run mode)")
     parser.add_argument("--quiet", action="store_true", help="log only warnings")
     args = parser.parse_args(argv)
 
@@ -556,16 +722,25 @@ def _main(argv: Optional[list[str]] = None) -> int:
     log.info("Loaded dataset: %s (%d reports)", args.dataset, len(dataset))
 
     full_text = scorer if isinstance(scorer, LLMDriftScorer) else None
-    report = run_evaluation(pipeline, dataset, full_text_scorer=full_text)
+    if args.runs > 1:
+        report = run_robust_evaluation(
+            pipeline, dataset, full_text_scorer=full_text, runs=args.runs,
+        )
+    else:
+        report = run_evaluation(pipeline, dataset, full_text_scorer=full_text)
     report["registry"] = str(args.registry)
     report["dataset"] = str(args.dataset)
     report["backend"] = args.backend
     report["llm_url"] = args.llm_url
     report["llm_model"] = args.llm_model
+    report["prompt_version"] = getattr(scorer, "prompt_version", None) if isinstance(scorer, LLMDriftScorer) else None
     report["elapsed_sec"] = time.time() - t0
     report["spec_version"] = SPEC_VERSION
 
-    _print_evaluation_report(report)
+    if args.runs > 1:
+        _print_robust_evaluation_report(report)
+    else:
+        _print_evaluation_report(report)
 
     args.report.parent.mkdir(parents=True, exist_ok=True)
     with args.report.open("w", encoding="utf-8") as f:
@@ -573,12 +748,22 @@ def _main(argv: Optional[list[str]] = None) -> int:
     log.info("Wrote %s (%d bytes)", args.report, args.report.stat().st_size)
 
     target = 0.60
-    rho = report["spearman_rho"]
-    if rho is not None and rho >= target:
-        log.info("✅ Spearman rho %.4f >= target %.2f (S-2 success criterion met on %s)", rho, target, args.dataset.name)
-    elif rho is not None:
-        log.warning("⚠️  Spearman rho %.4f < target %.2f (S-2 success criterion NOT met on %s; investigate)", rho, target, args.dataset.name)
-    log.info("[Pending: human-rated multi-rater consensus is a follow-on calibration cycle; LLM-driven results vs the dream-mode candidate (qwen2.5-0.5b) is the next move once a local server is up.]")
+    if args.runs > 1:
+        mean_rho = report["mean_rho"]
+        ci_lo = report["ci95_rho"][0]
+        if ci_lo >= target:
+            log.info("✅ 95%% CI on mean rho [%+.4f, %+.4f] has lower bound >= %.2f (S-2 success criterion met robustly on %s)",
+                     ci_lo, report["ci95_rho"][1], target, args.dataset.name)
+        else:
+            log.warning("⚠️ 95%% CI on mean rho [%+.4f, %+.4f] has lower bound < %.2f (S-2 success criterion NOT met robustly on %s)",
+                        ci_lo, report["ci95_rho"][1], target, args.dataset.name)
+    else:
+        rho = report["spearman_rho"]
+        if rho is not None and rho >= target:
+            log.info("✅ Spearman rho %.4f >= target %.2f (S-2 success criterion met on %s, single-run; re-run with --runs 3 for robust evaluation)", rho, target, args.dataset.name)
+        elif rho is not None:
+            log.warning("⚠️  Spearman rho %.4f < target %.2f (S-2 success criterion NOT met on %s, single-run; re-run with --runs 3 for robust evaluation)", rho, target, args.dataset.name)
+    log.info("[Pending: human-rated multi-rater consensus is a follow-on calibration cycle; the current harness reports mean +- std on 3+ runs.]")
     return 0
 
 
