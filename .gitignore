@@ -47,6 +47,10 @@ venv.*.parked/
 __pycache__/
 *.pyc
 
+## Synthetic data outputs (regeneratable from Scripts/generate_synthetic_sleep.py)
+Data/*
+!Data/.gitkeep
+
 ## World Model spike — generated trajectories, regenerable via
 ## WorldModel/dataset.py (seeded, so --seed 0 reproduces exactly)
 WorldModel/data/
