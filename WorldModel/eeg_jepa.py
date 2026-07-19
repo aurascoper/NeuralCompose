@@ -54,7 +54,8 @@ class JEPATransitionDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tens
     scales while retaining a single stable normalization transform.
     """
 
-    def __init__(self, jsonl_path: str | Path, normalize: bool = True):
+    def __init__(self, jsonl_path: str | Path, normalize: bool = True,
+                 mean: torch.Tensor | None = None, std: torch.Tensor | None = None):
         self.path = Path(jsonl_path)
         self.normalize = normalize
         self.transitions = self._load_records()
@@ -68,15 +69,32 @@ class JEPATransitionDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tens
             f"channelPower[{index}]" for index in range(spatial_channels)
         ]
 
-        all_states = torch.cat(
-            [
-                self.pre_action_windows.reshape(-1, self.state_dim),
-                self.post_action_windows.reshape(-1, self.state_dim),
-            ],
-            dim=0,
-        )
-        self.mean = all_states.mean(dim=0)
-        self.std = all_states.std(dim=0, unbiased=False).clamp_min(1e-6)
+        if (mean is None) != (std is None):
+            raise ValueError("provide both mean and std, or neither")
+        if mean is not None:
+            # Reuse externally-supplied statistics (e.g. the TRAIN set's) so a
+            # validation/holdout split is z-scored on the *same* scale rather
+            # than recomputing its own — recomputing leaks the val distribution
+            # into its own normalization and makes val loss optimistic.
+            mean = torch.as_tensor(mean, dtype=torch.float32)
+            std = torch.as_tensor(std, dtype=torch.float32)
+            if mean.shape != (self.state_dim,) or std.shape != (self.state_dim,):
+                raise ValueError(
+                    f"mean/std must have shape ({self.state_dim},) to match state_dim, "
+                    f"got {tuple(mean.shape)}/{tuple(std.shape)}"
+                )
+            self.mean = mean
+            self.std = std.clamp_min(1e-6)
+        else:
+            all_states = torch.cat(
+                [
+                    self.pre_action_windows.reshape(-1, self.state_dim),
+                    self.post_action_windows.reshape(-1, self.state_dim),
+                ],
+                dim=0,
+            )
+            self.mean = all_states.mean(dim=0)
+            self.std = all_states.std(dim=0, unbiased=False).clamp_min(1e-6)
 
     def _load_records(self) -> list[dict[str, Any]]:
         if not self.path.is_file():
@@ -191,6 +209,24 @@ class JEPATransitionDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tens
             pre = (pre - self.mean) / self.std
             post = (post - self.mean) / self.std
         return pre, self.actions[index], post
+
+    def export_normalization_constants(self, filepath: str | Path = "eeg_norm_stats.json") -> Path:
+        """Write the per-feature normalization constants to JSON, for inspection.
+
+        Reproducibility / cross-checking only — deliberately NOT for the live
+        app. The shipping intent classifier (`CoreMLIntentClassifier`) consumes
+        raw 512-sample electrode windows, not these band-power/channel-power
+        features, so these stats do not belong on that path. A real-EEG JEPA
+        needs its own separately-validated encoder before anything on-device
+        consumes it (see WorldModel/EEG_INTEGRATION_DESIGN.md).
+        """
+        path = Path(filepath)
+        path.write_text(json.dumps({
+            "state_feature_names": self.state_feature_names,
+            "mean": self.mean.tolist(),
+            "std": self.std.tolist(),
+        }, indent=2))
+        return path
 
 
 @dataclass(frozen=True)
@@ -369,6 +405,21 @@ def smoke_test() -> None:
         assert action.shape == (4, 3)
         assert post.shape == (4, 5, 5)
 
+        # Leakage-free stats: a second dataset built with the first's mean/std
+        # must reuse them verbatim instead of recomputing its own.
+        shared = JEPATransitionDataset(path, mean=dataset.mean, std=dataset.std)
+        assert torch.equal(shared.mean, dataset.mean) and torch.equal(shared.std, dataset.std)
+        assert torch.isfinite(shared[0][0]).all()
+        try:
+            JEPATransitionDataset(path, mean=dataset.mean[:-1], std=dataset.std[:-1])
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("mismatched mean/std shape must raise ValueError")
+        norm_path = dataset.export_normalization_constants(Path(temporary_directory) / "eeg_norm_stats.json")
+        stats = json.loads(norm_path.read_text())
+        assert len(stats["mean"]) == dataset.state_dim and len(stats["std"]) == dataset.state_dim
+
         model, history = train_jepa(
             loader,
             state_dim=dataset.state_dim,
@@ -396,6 +447,10 @@ def main() -> None:
     parser.add_argument("--ema-tau", type=float, default=0.99)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--output", type=Path, default=Path("WorldModel/checkpoints/eeg_jepa.pt"))
+    parser.add_argument("--val-dataset", type=Path, default=None,
+                        help="held-out jepa_transitions.jsonl, z-scored with the TRAIN mean/std (leakage-free)")
+    parser.add_argument("--export-norm", type=Path, default=None,
+                        help="also write the normalization constants JSON to this path (inspection only)")
     parser.add_argument("--no-normalize", action="store_true")
     parser.add_argument("--smoke-test", action="store_true")
     args = parser.parse_args()
@@ -429,6 +484,25 @@ def main() -> None:
         device=device,
     )
 
+    if args.val_dataset is not None:
+        # Normalize the held-out set with the TRAIN mean/std — never its own.
+        val_dataset = JEPATransitionDataset(
+            args.val_dataset, normalize=not args.no_normalize,
+            mean=dataset.mean, std=dataset.std,
+        )
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+        model.encoder.eval()
+        model.predictor.eval()
+        total, batches = 0.0, 0
+        with torch.no_grad():
+            for pre_window, action, post_window in val_loader:
+                predicted = model.forward_online(pre_window.to(device), action.to(device))
+                target = model.forward_target(post_window.to(device))
+                total += F.mse_loss(predicted, target).item()
+                batches += 1
+        print(f"val loss (train-normalized, {len(val_dataset)} transitions): "
+              f"{total / max(batches, 1):.6f}")
+
     args.output.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
@@ -446,6 +520,10 @@ def main() -> None:
         args.output,
     )
     print(f"saved checkpoint: {args.output}")
+
+    if args.export_norm is not None:
+        dataset.export_normalization_constants(args.export_norm)
+        print(f"wrote normalization constants: {args.export_norm}")
 
 
 if __name__ == "__main__":
