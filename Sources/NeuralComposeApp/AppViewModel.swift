@@ -1293,7 +1293,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         isSpeaking = true
         defer { isSpeaking = false }
         do {
-            try await voiceOutput.speak(composedText)
+            // Speak sentence-by-sentence with a natural, present prosody instead
+            // of one flat prosody-less utterance (the old robotic path): each
+            // chunk carries `.wakingCoherent` (natural pace) and its 0.1s
+            // preUtteranceDelay gives audible inter-sentence pauses (rhythm).
+            for chunk in HypnagogicDialogueLoop.chunk(composedText) {
+                try await voiceOutput.speak(chunk, prosody: .wakingCoherent, onWord: nil)
+            }
         } catch {
             voiceWarning = "Speech failed: \(error.localizedDescription)"
         }

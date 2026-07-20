@@ -111,7 +111,11 @@ public actor SpokenGenerationLoop {
                 try Task.checkCancellation()
                 let spoken = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !spoken.isEmpty {
-                    try await speaker.speak(spoken)   // suspends until the utterance ends
+                    // Natural prosody + sentence-boundary pauses, not one flat
+                    // prosody-less utterance (the old robotic path).
+                    for chunk in HypnagogicDialogueLoop.chunk(spoken) {
+                        try await speaker.speak(chunk, prosody: .wakingCoherent, onWord: nil)
+                    }
                 }
             } catch is CancellationError {
                 return
