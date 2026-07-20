@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      # GoldenRecordingRegressionTests skips silently if its fixture is absent,
+      # which would let the suite "pass" vacuously (README advertises this
+      # regression). Fail CI if the committed fixture ever goes missing.
+      - name: Assert golden fixture is present
+        run: |
+          test -f Tests/BCIEEGTests/Fixtures/reference_pipeline.json \
+            || { echo "::error::Golden fixture missing — GoldenRecordingRegressionTests would skip vacuously"; exit 1; }
+
+      # Compiles every target (incl. BCILLM's MLX Metal kernels via the runner's
+      # full Xcode) — the primary gate that the whole graph builds.
+      - name: Build (all targets)
+        run: swift build
+
+      # Run the deterministic stub/mock/pure suites only: headless runners have
+      # no GPU (so MLX .eval() would fault), no `claude` CLI (network egress),
+      # no Core ML models, and no live EEG hardware. BCIEEGTests includes the
+      # golden-recording + BGE-replay regressions against the committed fixtures.
+      # The MLX-eval, egress-smoke, and hardware paths stay local-only.
+      - name: Test (deterministic suites)
+        run: |
+          swift test \
+            --filter BCICoreTests \
+            --filter BCIClassifierTests \
+            --filter BCIEEGTests \
+            --filter BCICloudBridgeTests \
+            --filter BCIVoiceTests \
+            --filter AsyncTimeout
