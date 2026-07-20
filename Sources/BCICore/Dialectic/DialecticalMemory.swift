@@ -19,6 +19,13 @@ public struct DialecticalMemory: Sendable {
     /// long the dialogue has been converging.
     public private(set) var lowTensionStreak: Int = 0
 
+    /// Texts the loop has recently *voiced* (spoken or synthesized). Synthesis
+    /// must not resurface one of these verbatim: without this, an eager-synthesis
+    /// profile (e.g. Focused) collapses to re-speaking the same central node
+    /// every turn while the fresh candidates it just generated are discarded.
+    /// Bounded to `historyWindow`.
+    private var recentlyVoiced: [String] = []
+
     public init(historyWindow: Int = 16, graphCapacity: Int = 128,
                 edgeThreshold: Float = 0.6, tensionCeiling: Float = 0.35) {
         self.historyWindow = max(1, historyWindow)
@@ -69,6 +76,14 @@ public struct DialecticalMemory: Sendable {
         lowTensionStreak = tension <= tensionCeiling ? lowTensionStreak + 1 : 0
     }
 
+    /// Records a voiced output so `synthesisCandidate` won't resurface it
+    /// verbatim on a later turn. Call whenever a turn actually speaks (spoke or
+    /// synthesized).
+    public mutating func recordVoiced(_ text: String) {
+        recentlyVoiced.append(text)
+        if recentlyVoiced.count > historyWindow { recentlyVoiced.removeFirst() }
+    }
+
     // MARK: - Synthesis (emergent third idea)
 
     /// Looks for a prior idea that bridges the two current poles — one that is
@@ -83,7 +98,10 @@ public struct DialecticalMemory: Sendable {
         let bar = lowTensionStreak >= tuning.synthesisSustainK
             ? tuning.synthesisLowBar : tuning.synthesisHighBar
 
-        let best = graph.nearestPriorNodes(to: query, limit: 6)
+        let best = graph.nearestPriorNodes(to: query, limit: 10)
+            // Never resurface something just voiced — that is the verbatim
+            // repetition an eager-synthesis profile otherwise produces.
+            .filter { !recentlyVoiced.contains($0.text) }
             .map { node -> (SemanticGraph.Node, Float) in
                 (node, DialecticalDynamics.synthesisScore(candidate: node.embedding,
                                                           thesis: thesis, antithesis: antithesis))

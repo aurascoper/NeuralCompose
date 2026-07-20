@@ -242,7 +242,7 @@ public actor HypnagogicDialecticLoop {
         let record = DialecticalCompetition(
             index: turnIndex, heard: heard, scored: scored, tension: tension,
             margin: result.margin, selectionTemperature: result.selectionTemperature,
-            outcome: result.outcome, glossScalar: gloss.value
+            outcome: result.outcome, glossScalar: gloss.value, spectralState: state
         )
         await turnLogger.log(DialecticalTurnEvent(record))
 
@@ -250,6 +250,8 @@ public actor HypnagogicDialecticLoop {
         case let .spoke(candidate), let .synthesized(candidate):
             consecutiveSilence = 0
             memory.recordReply(text: candidate.text, embedding: candidate.embedding, turnIndex: turnIndex)
+            // Block a later synthesis from re-speaking this verbatim.
+            memory.recordVoiced(candidate.text)
             // Voice the winner, blended by how the competition actually went, so
             // a close call carries the losing pole's colour (audible tension).
             let probs = DialecticalDynamics.probabilities(

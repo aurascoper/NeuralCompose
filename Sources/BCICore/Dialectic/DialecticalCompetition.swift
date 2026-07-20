@@ -133,13 +133,19 @@ public struct DialecticalCompetition: Sendable, Equatable {
     /// Selection temperature actually used (a function of tension).
     public let selectionTemperature: Float
     public let outcome: DialecticalOutcome
-    /// The `SpectralState` gloss scalar in force this turn (0 until EEG bias is
-    /// wired in at milestone 5). Recorded, never used to *select*.
+    /// The `SpectralState` gloss scalar in force this turn. Recorded, never used
+    /// to *select*.
     public let glossScalar: Float
+    /// The raw `SpectralState` behind `glossScalar` this turn, or nil when the
+    /// estimator produced nothing (stub estimator / no live EEG / rejected
+    /// window). Recorded purely for observability: `glossScalar` maps both nil
+    /// *and* a genuine `.neutralBaseline` to 0.5, so it alone cannot tell "the
+    /// EEG said neutral" from "there was no EEG" — this field can.
+    public let spectralState: SpectralState?
 
     public init(index: Int, heard: String, scored: [ScoredCandidate], tension: Float,
                 margin: Float, selectionTemperature: Float, outcome: DialecticalOutcome,
-                glossScalar: Float) {
+                glossScalar: Float, spectralState: SpectralState? = nil) {
         self.index = index
         self.heard = heard
         self.scored = scored
@@ -148,5 +154,6 @@ public struct DialecticalCompetition: Sendable, Equatable {
         self.selectionTemperature = selectionTemperature
         self.outcome = outcome
         self.glossScalar = glossScalar
+        self.spectralState = spectralState
     }
 }

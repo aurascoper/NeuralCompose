@@ -30,6 +30,11 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     /// The `SpectralState` gloss scalar in force this turn (0.5 = neutral / no
     /// EEG). A bias signal, never a cognitive read.
     public let glossScalar: Float
+    /// Raw estimator state behind `glossScalar` — the badge label
+    /// ("Relaxed" / "Neutral" / …) or nil when the estimator produced nothing
+    /// (stub / no EEG). Disambiguates a real "Neutral" from an absent state,
+    /// which `glossScalar` (0.5 for both) cannot. Optional so old logs still decode.
+    public let spectralState: String?
     /// `"spoke:<roleID>"`, `"synthesized:<roleID>"`, or `"silent"`.
     public let outcome: String
     /// The words actually voiced (nil on a silent turn).
@@ -47,6 +52,7 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
         self.margin = c.margin
         self.selectionTemperature = c.selectionTemperature
         self.glossScalar = c.glossScalar
+        self.spectralState = c.spectralState?.badgeLabel
         switch c.outcome {
         case let .spoke(cand):
             self.outcome = "spoke:\(cand.roleID)"
