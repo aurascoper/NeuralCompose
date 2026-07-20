@@ -123,19 +123,36 @@ struct SleepValidationView: View {
             Text("Sleep Validation Toolkit — Phase B")
                 .font(.headline)
             Spacer()
-            if bridgeAvailable {
-                Label("BrainFlow linked", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.caption)
-            } else {
-                Label("BrainFlow not linked — synthetic mode only",
-                      systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                    .font(.caption)
-            }
+            sourceBadge
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// EEG-source badge. Reflects the ACTUAL acquisition, not just whether the
+    /// BrainFlow bridge was compiled in. The toolkit streams from the app's live
+    /// pipeline (`liveSampleStream()`), so a live OSC / Mind Monitor session is
+    /// real EEG even though `bci_bridge_is_available()` is false (BrainFlow is an
+    /// optional system lib, not the only live source). The old label read
+    /// "BrainFlow not linked — synthetic mode only," which mis-reported exactly
+    /// that case — a live remote-phone stream shown as synthetic.
+    @ViewBuilder private var sourceBadge: some View {
+        switch viewModel?.pipelineMode.acquisition {
+        case .some(.synthetic):
+            Label("Synthetic EEG — no live source", systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .font(.caption)
+        case .some(let acquisition):  // .remotePhone (OSC) / .localMuse (BLE) / .playback
+            Label("Live EEG — \(acquisition.displayName)", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .font(.caption)
+        case .none:
+            // Pipeline not bound yet (the debug window can open before it's up).
+            Label(bridgeAvailable ? "BrainFlow linked" : "Waiting for live source…",
+                  systemImage: bridgeAvailable ? "checkmark.circle.fill" : "hourglass")
+                .foregroundStyle(bridgeAvailable ? Color.green : Color.secondary)
+                .font(.caption)
+        }
     }
 
     /// Per-channel health badge. Shows TP9, AF7, AF8, TP10 with
