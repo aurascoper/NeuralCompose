@@ -172,6 +172,12 @@ public struct AppContainer: Sendable {
         } catch {
             sentenceEmbedder = DeterministicSentenceEmbedder()
             sentenceEmbedderBackend = "stub"
+            // Surface *why* we stubbed. Without this the only signal is
+            // `embedder-stub` in health.json with no cause — which is exactly how
+            // a missing model dir (Models/* is gitignored) or a load-time
+            // .mlpackage compile failure stays a mystery. The banner still just
+            // says "stub"; this line is for the log.
+            BCILog.embedding.notice("CoreML sentence embedder unavailable, using stub: \(error.localizedDescription, privacy: .public)")
         }
         BCILog.embedding.notice("sentenceEmbedder backend: \(sentenceEmbedderBackend, privacy: .public)")
 
