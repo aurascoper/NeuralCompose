@@ -14,9 +14,26 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
 
     public init(voiceIdentifier: String? = nil) {
         self.voiceIdentifier = voiceIdentifier
+            ?? Self.bestNeuralVoiceIdentifier()                                       // prefer an installed neural voice
             ?? AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())?.identifier
             ?? "system-default"
         synthesizer.delegate = delegateProxy
+    }
+
+    /// Identifier of the best installed NEURAL (Enhanced/Premium) voice for
+    /// `language` (default: current locale), preferring Premium over Enhanced.
+    /// Returns nil when only the compact/default voice is installed — the robotic
+    /// case. macOS 14+'s downloadable Enhanced/Premium voices are neural and sound
+    /// dramatically better than the compact default, at no extra bundle cost and
+    /// still fully on-device (installed via System Settings, never fetched by the
+    /// app). Pure enumeration, no synthesis, no network.
+    public nonisolated static func bestNeuralVoiceIdentifier(language: String? = nil) -> String? {
+        let prefix = (language ?? AVSpeechSynthesisVoice.currentLanguageCode()).prefix(2).lowercased()
+        return AVSpeechSynthesisVoice.speechVoices()
+            .filter { $0.language.lowercased().hasPrefix(prefix)
+                      && $0.quality.rawValue > AVSpeechSynthesisVoiceQuality.default.rawValue }
+            .max { $0.quality.rawValue < $1.quality.rawValue }?   // highest quality wins (premium > enhanced)
+            .identifier
     }
 
     public func speak(_ text: String) async throws {
