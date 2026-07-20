@@ -39,18 +39,18 @@ public enum SignalQuality: Sendable, Equatable {
 /// unexpectedly and we are not already running synthetic, the streamTask
 /// swaps in `EEGStreamFactory.makeSynthetic()` and continues, updating
 /// `pipelineMode` so the privacy banner reflects the degraded state.
-/// Which hypnagogic engine the opt-in runs: the plain **mirror** reply
-/// (`HypnagogicDialogueLoop`) or the **dialectic** competition
+/// *Which loop* the hypnagogic opt-in runs — orthogonal to the behavioural
+/// `ContextProfile` (which shapes the dialectical dynamics). `mirror` is the
+/// plain reply (`HypnagogicDialogueLoop`); `dialectical` is the competition
 /// (`HypnagogicDialecticLoop` — two generators, persistent tension,
-/// non-deterministic resolution). Mirror is the default; dialectic makes TWO
-/// cloud calls per turn.
-public enum HypnagogicMode: String, CaseIterable, Sendable, Identifiable {
-    case mirror, dialectic
+/// non-deterministic resolution, TWO cloud calls per turn).
+public enum InteractionStyle: String, CaseIterable, Sendable, Identifiable {
+    case mirror, dialectical
     public var id: String { rawValue }
     public var label: String {
         switch self {
-        case .mirror:    return "Mirror"
-        case .dialectic: return "Dialectic"
+        case .mirror:      return "Mirror"
+        case .dialectical: return "Dialectical"
         }
     }
 }
@@ -180,12 +180,22 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
-    /// Which hypnagogic engine runs when enabled. Changing it while the loop is
-    /// active rebuilds the loop with the new engine (see
-    /// `ensureHypnagogicLoopRunning`); off by default to the plain mirror.
-    @Published public var hypnagogicMode: HypnagogicMode = .mirror {
+    /// Which loop runs when enabled (mirror vs dialectical). Changing it while
+    /// active rebuilds the loop; off by default to the plain mirror.
+    @Published public var hypnagogicStyle: InteractionStyle = .mirror {
         didSet {
-            guard oldValue != hypnagogicMode, hypnagogicLoopEnabled else { return }
+            guard oldValue != hypnagogicStyle, hypnagogicLoopEnabled else { return }
+            reconcileHypnagogicLoop()
+        }
+    }
+
+    /// Behavioural profile for the dialectical loop (focused / reflective /
+    /// contemplative). Ignored by the mirror style. Changing it while a
+    /// dialectical loop is active rebuilds it with the new preset.
+    @Published public var hypnagogicContext: ContextProfile = .reflective {
+        didSet {
+            guard oldValue != hypnagogicContext,
+                  hypnagogicLoopEnabled, hypnagogicStyle == .dialectical else { return }
             reconcileHypnagogicLoop()
         }
     }
@@ -276,8 +286,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// of the default AppContainer graph, so the network-egress path is
     /// instantiated only while the loop is enabled.
     private var hypnagogicLoop: (any HypnagogicRunnable)?
-    /// The mode of the currently-built loop, so a mode switch rebuilds it.
-    private var hypnagogicLoopMode: HypnagogicMode?
+    /// Style+profile of the currently-built loop, so a change in either rebuilds it.
+    private var hypnagogicLoopBuilt: (style: InteractionStyle, context: ContextProfile)?
     private var hypnagogicLoopReconcile: Task<Void, Never>?
 
     // ── Per-start resources (recreated each call to start()) ─────────────
@@ -700,9 +710,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// network-egress path is instantiated only when the user opts in. Requests
     /// mic + speech authorization first; if denied, flips the toggle back off.
     private func ensureHypnagogicLoopRunning() async {
-        // Already running the requested engine? Nothing to do. A mode switch
-        // tears the old loop down first.
-        if hypnagogicLoop != nil, hypnagogicLoopMode == hypnagogicMode { return }
+        // Already running the requested style+profile? Nothing to do. A change
+        // in either tears the old loop down first.
+        if hypnagogicLoop != nil,
+           hypnagogicLoopBuilt?.style == hypnagogicStyle,
+           hypnagogicLoopBuilt?.context == hypnagogicContext { return }
         await ensureHypnagogicLoopStopped()
 
         let listener = HypnagogicListener()
@@ -716,18 +728,19 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         guard hypnagogicLoopEnabled else { return }
 
         let loop: any HypnagogicRunnable
-        switch hypnagogicMode {
+        switch hypnagogicStyle {
         case .mirror:
             loop = HypnagogicDialogueLoop(
                 listener: listener,
                 generator: ClaudeCLIGenerator(),
                 speaker: voiceOutput
             )
-        case .dialectic:
+        case .dialectical:
             // Two cloud calls per turn (one per role). The gloss reads the
             // current spectral state as a heuristic BIAS (never a decoder);
             // turn logging is gated on the interaction-log opt-in, resolved at
             // build time (toggling it mid-loop takes effect on the next rebuild).
+            // The behavioural profile is a preset over the loop's tuning/cadence.
             let turnLogger: any DialecticalTurnLogging =
                 (interactionLoggingEnabled ? (interactionLogger as? any DialecticalTurnLogging) : nil)
                 ?? NullDialecticalTurnLogger()
@@ -736,19 +749,21 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 generator: ClaudeCLIGenerator(),
                 speaker: voiceOutput,
                 embedder: container.sentenceEmbedder,
+                tuning: hypnagogicContext.tuning,
                 glossProvider: { [weak self] in await self?.currentSpectralGlossState() ?? nil },
-                turnLogger: turnLogger
+                turnLogger: turnLogger,
+                config: hypnagogicContext.loopConfig()
             )
         }
         hypnagogicLoop = loop
-        hypnagogicLoopMode = hypnagogicMode
+        hypnagogicLoopBuilt = (hypnagogicStyle, hypnagogicContext)
         await loop.start()
     }
 
     private func ensureHypnagogicLoopStopped() async {
         await hypnagogicLoop?.stop()
         hypnagogicLoop = nil
-        hypnagogicLoopMode = nil
+        hypnagogicLoopBuilt = nil
     }
 
     /// The latest spectral-state gloss for the dialectic loop's fast biological

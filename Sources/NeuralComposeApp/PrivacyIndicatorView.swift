@@ -53,9 +53,11 @@ struct PrivacyIndicatorView: View {
     /// transcript text to a cloud assistant — the one deliberate runtime network
     /// exception (decision_registry entry 8). Red = "listening + text may leave."
     @Binding var hypnagogicLoopEnabled: Bool
-    /// Which hypnagogic engine runs when enabled: the plain mirror reply, or the
-    /// dialectic competition (two cloud calls/turn).
-    @Binding var hypnagogicMode: HypnagogicMode
+    /// Which loop runs when enabled: the plain mirror reply, or the dialectical
+    /// competition (two cloud calls/turn).
+    @Binding var hypnagogicStyle: InteractionStyle
+    /// Behavioural profile for the dialectical loop (focused/reflective/contemplative).
+    @Binding var hypnagogicContext: ContextProfile
 
     @State private var expanded: Bool = false
 
@@ -107,9 +109,9 @@ struct PrivacyIndicatorView: View {
                         Text("Network").bold()
                         if hypnagogicLoopEnabled {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Cloud active — Hypnagogic (\(hypnagogicMode.label))").foregroundStyle(.red)
-                                Text(hypnagogicMode == .dialectic
-                                     ? "Transcript text (never audio) may be sent to the claude CLI — two calls per turn in Dialectic mode. Opt-in exception — see decision_registry entry 8."
+                                Text("Cloud active — Hypnagogic (\(hypnagogicStyle.label))").foregroundStyle(.red)
+                                Text(hypnagogicStyle == .dialectical
+                                     ? "Transcript text (never audio) may be sent to the claude CLI — two calls per turn in Dialectical style. Opt-in exception — see decision_registry entry 8."
                                      : "Transcript text (never audio) may be sent to the claude CLI. Opt-in exception — see decision_registry entry 8.")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
@@ -224,14 +226,23 @@ struct PrivacyIndicatorView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Toggle("Run hypnagogic loop", isOn: $hypnagogicLoopEnabled)
                                 .toggleStyle(.switch)
-                            Picker("Engine", selection: $hypnagogicMode) {
-                                ForEach(HypnagogicMode.allCases) { Text($0.label).tag($0) }
+                            Picker("Style", selection: $hypnagogicStyle) {
+                                ForEach(InteractionStyle.allCases) { Text($0.label).tag($0) }
                             }
                             .pickerStyle(.segmented)
+                            if hypnagogicStyle == .dialectical {
+                                Picker("Profile", selection: $hypnagogicContext) {
+                                    ForEach(ContextProfile.allCases) { Text($0.label).tag($0) }
+                                }
+                                .pickerStyle(.segmented)
+                                Text(hypnagogicContext.summary)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             if hypnagogicLoopEnabled {
                                 Text(HypnagogicDialecticHonesty.egressCaveat)
                                     .foregroundStyle(.red)
-                                if hypnagogicMode == .dialectic {
+                                if hypnagogicStyle == .dialectical {
                                     Text(HypnagogicDialecticHonesty.dialecticCaveat)
                                         .font(.caption2)
                                         .foregroundStyle(.red)
