@@ -71,3 +71,28 @@ Entry template:
 - Next question: build the **forward metric panel** as a runnable eval over a JEPA trained on this synthetic
   data — latent multi-step rollout error, goal-conditioned MPC success, linear-probe factor recovery
   (**including an aperiodic-exponent probe**), RankMe/α-ReQ/LiDAR, VICReg var/cov, alignment/uniformity.
+
+## 3 — Forward metric panel v1 (Phase B) (2026-07-20, commit <pending>)
+- Category: Benchmark
+- Hypothesis: a runnable forward-eval panel over a JEPA trained on `synthetic_1f` data makes the transform A/B
+  measurable on *forward* numbers (prediction, factor recovery incl. chi, geometry), not just backward safety.
+- Prediction: deterministic under seed; the aperiodic exponent `chi` is recoverable from the JEPA latent
+  (well-posed information-destruction detector); geometry metrics finite + in range.
+- Implementation: `WorldModel/forward_eval.py` — trains `eeg_jepa.EEGJEPAModule` on freshly-generated
+  `synthetic_1f` transitions, then reports: `pred_error_1step` (predictor vs EMA-target-encoder latent MSE);
+  held-out linear-probe R² per known factor {pos,vel,chi,peak_amp,offset} **incl. the chi probe**; RankMe
+  (Garrido 2023); α-ReQ (Agrawal 2022); VICReg var/cov; alignment/uniformity (Wang & Isola). Reuses
+  `train_jepa` + `JEPATransitionDataset` + `synthetic_1f.generate` — no new model. Provenance: ported-from =
+  none (new); reason = the eval must exist before any transform change (evidence gate); differences = n/a.
+  Scoped to `WorldModel/` (no `Sources/`, no BCI*, no network).
+- Evidence: `venv/bin/python WorldModel/forward_eval.py --smoke-test` → **passed**: deterministic (identical
+  loss 0.135→0.067→0.035 across two runs); `pred_err=0.039`, `RankMe=4.42` (∈(0,16]), **chi_R²=0.864**,
+  `pos_R²=0.609`. → the JEPA latent **preserves the aperiodic exponent well** (0.864 vs 0.690 from the raw
+  observation) — the forward baseline the A/B must not degrade.
+- Decision: **kept** — the panel is the Phase-B forward-eval substrate. `evaluate()` is the reusable entry point.
+- Next question: extend the panel with the two DEFERRED metrics the decision rule also anchors on — (a)
+  **multi-step latent rollout error** (needs a sequential-trajectory synthetic generator) and (b)
+  **goal-conditioned MPC/CEM planning success** (needs a latent-space planner + true-env rollout) — plus LiDAR.
+  Then run the transform A/B {none, standardize, symlog, log-band-power, specparam, 1/f-flatten} × {signal,
+  nuisance} × multi-seed through `evaluate()`, keeping a transform only if it improves pred/rollout+MPC WITHOUT
+  degrading chi-recovery. **A negative result there is the target-quality outcome.**
