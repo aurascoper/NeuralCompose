@@ -24,6 +24,11 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
     }
 
     public func speak(_ text: String, prosody: SpeechProsody) async throws {
+        try await speak(text, prosody: prosody, onWord: nil)
+    }
+
+    public func speak(_ text: String, prosody: SpeechProsody,
+                      onWord: (@Sendable (SpokenWord) -> Void)?) async throws {
         await stopSpeaking()
         let utterance = AVSpeechUtterance(string: text)
         if let voice = AVSpeechSynthesisVoice(identifier: voiceIdentifier) {
@@ -46,6 +51,7 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
         }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
             pendingContinuation = continuation
+            delegateProxy.onWord = onWord
             delegateProxy.onFinish = { [weak self] in Task { await self?.resume(throwing: nil) } }
             delegateProxy.onCancel = { [weak self] in Task { await self?.resume(throwing: BCIError.cancelled) } }
             synthesizer.speak(utterance)
@@ -79,6 +85,19 @@ private final class SpeechSynthesizerDelegateProxy: NSObject, AVSpeechSynthesize
     // non-Sendable closure (CI fails to build even though older toolchains accept it).
     var onFinish: (@Sendable () -> Void)?
     var onCancel: (@Sendable () -> Void)?
+    var onWord: (@Sendable (SpokenWord) -> Void)?
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
+                           willSpeakRangeOfSpeechString characterRange: NSRange,
+                           utterance: AVSpeechUtterance) {
+        guard let onWord else { return }
+        let full = utterance.speechString as NSString
+        guard characterRange.location != NSNotFound,
+              characterRange.location >= 0,
+              characterRange.location + characterRange.length <= full.length else { return }
+        onWord(SpokenWord(text: full.substring(with: characterRange),
+                          characterOffset: characterRange.location))
+    }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         onFinish?()

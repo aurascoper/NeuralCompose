@@ -16,6 +16,13 @@ public protocol SpeechSynthesizing: Sendable {
     /// (e.g. the stub) need no change.
     func speak(_ text: String, prosody: SpeechProsody) async throws
 
+    /// Speaks with prosody AND a per-word callback fired as the synthesizer
+    /// reaches each word (best-effort — conformers without word-level timing may
+    /// never call it). Used to *ground* speech: a caller can light the referent
+    /// node of each word as it is voiced. The default ignores `onWord` and falls
+    /// back to `speak(_:prosody:)`, so existing conformers need no change.
+    func speak(_ text: String, prosody: SpeechProsody, onWord: (@Sendable (SpokenWord) -> Void)?) async throws
+
     /// Interrupts whatever is currently being spoken. Safe to call when idle.
     func stopSpeaking() async
 }
@@ -23,6 +30,24 @@ public protocol SpeechSynthesizing: Sendable {
 public extension SpeechSynthesizing {
     func speak(_ text: String, prosody: SpeechProsody) async throws {
         try await speak(text)
+    }
+
+    func speak(_ text: String, prosody: SpeechProsody, onWord: (@Sendable (SpokenWord) -> Void)?) async throws {
+        try await speak(text, prosody: prosody)
+    }
+}
+
+/// A single word as the synthesizer reaches it while speaking — surfaced from
+/// AVFoundation's `willSpeakRangeOfSpeechString` callback, but kept plain-Swift
+/// so the `SpeechSynthesizing` seam stays AVFoundation-free and spy-testable.
+public struct SpokenWord: Sendable, Equatable {
+    /// The word text (the substring of the utterance at the spoken range).
+    public let text: String
+    /// The word's character offset within the utterance (0 if unknown).
+    public let characterOffset: Int
+    public init(text: String, characterOffset: Int) {
+        self.text = text
+        self.characterOffset = characterOffset
     }
 }
 
