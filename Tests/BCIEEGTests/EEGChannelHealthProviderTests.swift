@@ -181,10 +181,13 @@ final class EEGChannelHealthProviderTests: XCTestCase {
     // MARK: - Staleness
 
     func testProviderReportsStaleAfterNoIngestForLongerThanTimeout() async {
-        // A short staleTimeoutSec (well under the test's own sleep) so
-        // the test doesn't need to wait seconds for the real default.
+        // Timing margins are deliberately generous so this stays deterministic on
+        // a loaded CI runner: staleTimeoutSec (0.3s) must be comfortably LARGER than
+        // the setup+drain time before the freshness check (else the channel is
+        // already stale when we assert healthy — a real flake at 0.05s), and the
+        // later stale-wait must be comfortably larger than the timeout.
         let (stream, continuation) = AsyncStream<EEGSample>.makeStream()
-        let p = EEGChannelHealthProvider(stream: stream, staleTimeoutSec: 0.05)
+        let p = EEGChannelHealthProvider(stream: stream, staleTimeoutSec: 0.3)
         for i in 0..<256 {
             let v = acEEGValue(rms: 50, index: i)
             continuation.yield(EEGSample(
@@ -197,8 +200,9 @@ final class EEGChannelHealthProviderTests: XCTestCase {
         let fresh = await p.currentChannelHealth(windowSeconds: 1.0)
         for s in fresh { XCTAssertEqual(s.status, .healthy) }
 
-        // Let real wall-clock time pass with no further ingest.
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Let real wall-clock time pass with no further ingest — well past the 0.3s
+        // timeout so staleness is unambiguous regardless of runner scheduling jitter.
+        try? await Task.sleep(nanoseconds: 500_000_000)
         let stale = await p.currentChannelHealth(windowSeconds: 1.0)
         continuation.finish()
 
