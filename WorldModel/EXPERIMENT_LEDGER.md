@@ -118,3 +118,28 @@ Entry template:
 - Next question: add **goal-conditioned MPC/CEM planning success** in latent space (needs a latent-space planner +
   a true-env rollout) — the last decision-rule anchor. THEN run the transform A/B × {signal, nuisance} × multi-seed
   through `evaluate()`.
+
+## 5 — Goal-conditioned MPC/CEM planning success (Phase B) (2026-07-20, commit <pending>)
+- Category: Benchmark
+- Hypothesis: the last of the three decision-rule anchors — can the JEPA's latent dynamics be *used* to plan
+  actions that reach a goal in the *true* environment? A latent CEM planner scored against the true synthetic_1f
+  dynamics measures control-usefulness, not just prediction accuracy.
+- Prediction: well-formed (success_rate ∈ [0,1], mean_final_distance ≥ 0, deterministic); on a well-trained model
+  MPC beats a random-action baseline (an undertrained *smoke* model: MPC ≈ random).
+- Implementation: `WorldModel/forward_eval.py` — `_encode_states` (render → normalize-on-TRAIN-stats → encode;
+  online encoder for start, target encoder for goal), `_cem_plan` (CEM over horizon-step action sequences,
+  predictor as the latent forward model, minimize latent distance to the goal; CPU-seeded sampling → deterministic,
+  device rollout), `_mpc_success` (per episode: sample start + goal `pos`, CEM-plan, **execute in the true env**
+  via `synthetic_1f._step`, score `|final_pos − goal| < tol`; plus a random-action baseline). Panel gains
+  `mpc_success{success_rate, mean_final_distance, random_baseline_success}`; `mpc_episodes/mpc_horizon` on
+  `evaluate()`. `WorldModel/`-only.
+- Evidence: `--smoke-test` → **passed** (deterministic): `mpc=0.17 vs rand 0.17` (1/6 each — undertrained tiny
+  model, no planning advantage yet, as predicted), `pred_err=0.039`, `rollout[1→4]=0.043→0.044`, `chi_R²=0.864`.
+  Metric plumbing validated; the MPC-beats-random *signal* is a full-model / A/B question.
+- Decision: **kept** — all THREE decision-rule anchors (pred/rollout, MPC, factor-recovery incl. chi) are now in
+  the panel. **The forward benchmark is complete.**
+- Next question: run the **transform A/B** — {none, standardize, symlog, log-band-power, specparam, 1/f-flatten} ×
+  {signal, nuisance} × multi-seed through `evaluate()`, keeping a transform only if it improves rollout+MPC WITHOUT
+  degrading chi-recovery. A negative result is the target-quality outcome. Machinery gap to close first: the arms
+  beyond the current default need a `transform` param threaded through the dataset/`evaluate()` path — {log-band-power,
+  specparam, 1/f-flatten} require the specparam front-end (Math §11.2); the A/B iteration builds that seam.

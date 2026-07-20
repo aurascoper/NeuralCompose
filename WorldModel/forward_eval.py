@@ -13,8 +13,14 @@ Metrics:
                         measured on held-out data). The forward-prediction anchor.
   - rollout_error     : closed-loop multi-step latent rollout error — roll the
                         predictor feeding its own output back in, MSE per horizon vs
-                        the EMA-target encoding of the true state. One of the two
-                        numbers the transform-A/B decision rule anchors on.
+                        the EMA-target encoding of the true state.
+  - mpc_success       : goal-conditioned CEM planning success — plan an action
+                        sequence in latent space (predictor as forward model),
+                        execute it in the TRUE env, score whether it reaches the goal
+                        pos. success_rate + mean_final_distance + a random-action
+                        baseline. rollout_error and mpc_success are the two forward
+                        numbers the transform-A/B decision rule anchors on (alongside
+                        factor recovery).
   - factor_recovery   : held-out linear-probe R² for each KNOWN latent factor
                         {pos, vel, chi, peak_amp, offset} — INCLUDING the aperiodic
                         exponent `chi`, the information-destruction detector.
@@ -26,8 +32,7 @@ Metrics:
                         (lower = more decorrelated) terms.
   - alignment / uniformity : Wang & Isola 2020, on L2-normalized latents.
 
-DEFERRED to the next Benchmark iteration (each needs new machinery, ledgered):
-  - goal-conditioned MPC/CEM success  (needs a latent-space planner + true-env rollout)
+DEFERRED (ledgered):
   - LiDAR (Thilak et al. 2024)        (needs the clean/augmented surrogate-class setup)
 
 Synthetic only. No real EEG, no hardware, no app wiring, no network. Seeded → reproducible.
@@ -235,6 +240,100 @@ def _multi_step_rollout(model, train_mean, train_std, device, *,
     }
 
 
+@torch.no_grad()
+def _encode_states(model, states, train_mean, train_std, device, use_target: bool = False) -> torch.Tensor:
+    """Encode a list of latent states into JEPA latents, normalized on the TRAIN
+    stats (routed through JEPATransitionDataset so normalization matches training
+    exactly). Goal states use the target encoder (the predictor's output space);
+    start states use the online encoder."""
+    records = [{
+        "id": f"00000000-0000-0000-0000-{i:012d}",
+        "timestamp": 1_700_000_000.0 + i,
+        "preActionWindow": [_render_state(z, t) for t in range(SEQUENCE_LENGTH)],
+        "actionVector": [0.0, 0.0, 0.0],
+        "postActionWindow": [_render_state(z, t) for t in range(SEQUENCE_LENGTH)],
+        "_latent": {k: z[k] for k in ("pos", "vel", "chi", "peak_amp", "offset")},
+    } for i, z in enumerate(states)]
+    encoder = model.target_encoder if use_target else model.encoder
+    encoder.eval()
+    with tempfile.TemporaryDirectory(prefix="neuralcompose-encstate-") as directory:
+        path = write_jsonl(records, Path(directory) / "s.jsonl")
+        ds = JEPATransitionDataset(path, mean=train_mean, std=train_std)
+        return torch.stack([
+            encoder(ds[i][0].unsqueeze(0).to(device)).squeeze(0) for i in range(len(ds))
+        ])
+
+
+@torch.no_grad()
+def _cem_plan(model, z0_lat, zg_lat, device, *, horizon, cem_iters, n_samples, elite_frac, gen) -> torch.Tensor:
+    """CEM over `horizon`-step action sequences (2 continuous dims + a fixed mode
+    bit = step%2), using the predictor as the latent forward model; minimize the
+    rolled-out final latent's distance to the goal latent. Sampling is on CPU (a
+    seeded Generator → deterministic); the predictor rollout runs on `device`.
+    Returns the best (horizon, 3) action sequence."""
+    mean = torch.zeros(horizon, 2)
+    std = torch.ones(horizon, 2)
+    n_elite = max(1, int(elite_frac * n_samples))
+    mode_bits = torch.tensor([[float(h % 2)] for h in range(horizon)])  # (horizon, 1)
+    best = torch.zeros(horizon, 2)
+    for _ in range(cem_iters):
+        noise = torch.randn(n_samples, horizon, 2, generator=gen)
+        samples = (mean.unsqueeze(0) + std.unsqueeze(0) * noise).clamp(-1.0, 1.0)  # CPU
+        z = z0_lat.unsqueeze(0).expand(n_samples, -1).contiguous().to(device)
+        for h in range(horizon):
+            act = torch.cat([samples[:, h, :].to(device),
+                             mode_bits[h].expand(n_samples, 1).to(device)], dim=1)
+            z = model.predictor(z, act)
+        costs = ((z - zg_lat.unsqueeze(0).to(device)) ** 2).sum(dim=1).cpu()
+        elite = samples[torch.topk(-costs, n_elite).indices]
+        mean = elite.mean(dim=0)
+        std = elite.std(dim=0).clamp_min(1e-3)
+        best = samples[int(torch.argmin(costs))]
+    return torch.cat([best, mode_bits], dim=1)  # (horizon, 3)
+
+
+@torch.no_grad()
+def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon=6,
+                 cem_iters=3, n_samples=64, elite_frac=0.2, mode="signal", seed=2,
+                 goal_offset=0.4, goal_tol=0.15) -> dict[str, Any]:
+    """Goal-conditioned latent MPC/CEM planning success. Per episode: sample a start
+    state + a goal `pos`, plan with CEM (the JEPA predictor as forward model), then
+    EXECUTE the plan in the TRUE synthetic_1f env (`_step`) and score whether the
+    true final pos reached the goal. A random-action policy is the baseline — the
+    JEPA-planned success rate beating it is the signal that the latent dynamics are
+    useful for control. Returns success_rate, mean_final_distance, random_baseline."""
+    rng = random.Random(seed)
+    gen = torch.Generator()
+    gen.manual_seed(seed + 7)
+    starts = [_sample_latent(rng) for _ in range(n_episodes)]
+    goal_pos = [starts[i]["pos"] + rng.uniform(-goal_offset, goal_offset) for i in range(n_episodes)]
+    goals = [{**starts[i], "pos": goal_pos[i]} for i in range(n_episodes)]
+    z0 = _encode_states(model, starts, train_mean, train_std, device, use_target=False)
+    zg = _encode_states(model, goals, train_mean, train_std, device, use_target=True)
+
+    successes, rand_successes, dists = 0, 0, []
+    for i in range(n_episodes):
+        plan = _cem_plan(model, z0[i], zg[i], device, horizon=horizon, cem_iters=cem_iters,
+                         n_samples=n_samples, elite_frac=elite_frac, gen=gen)
+        z = dict(starts[i])
+        for h in range(horizon):
+            z = _step(z, plan[h].tolist(), mode)
+        d = abs(z["pos"] - goal_pos[i])
+        dists.append(d)
+        if d < goal_tol:
+            successes += 1
+        z = dict(starts[i])
+        for h in range(horizon):
+            z = _step(z, [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0), float(h % 2)], mode)
+        if abs(z["pos"] - goal_pos[i]) < goal_tol:
+            rand_successes += 1
+    return {
+        "success_rate": successes / n_episodes,
+        "mean_final_distance": float(np.mean(dists)),
+        "random_baseline_success": rand_successes / n_episodes,
+    }
+
+
 def evaluate(
     n: int = 512,
     mode: str = "signal",
@@ -244,6 +343,8 @@ def evaluate(
     batch_size: int = 64,
     rollout_traj: int = 32,
     rollout_len: int = 8,
+    mpc_episodes: int = 20,
+    mpc_horizon: int = 6,
     device: torch.device | None = None,
     verbose: bool = True,
 ) -> dict[str, Any]:
@@ -272,12 +373,17 @@ def evaluate(
             model, dataset.mean, dataset.std, device,
             n_traj=rollout_traj, length=rollout_len, mode=mode, seed=seed + 1,
         )
+        mpc = _mpc_success(
+            model, dataset.mean, dataset.std, device,
+            n_episodes=mpc_episodes, horizon=mpc_horizon, mode=mode, seed=seed + 2,
+        )
 
         panel = {
             "config": {"n": n, "mode": mode, "seed": seed, "epochs": epochs,
                        "latent_dim": latent_dim, "final_train_loss": history[-1]},
             "pred_error_1step": _pred_error_1step(model, dataset, device),
             "rollout_error": rollout,
+            "mpc_success": mpc,
             "factor_recovery": _factor_recovery(Z_pre, factors, seed),
             "rankme": _rankme(Z_pre),
             "alpha_req": _alpha_req(Z_pre),
@@ -294,10 +400,10 @@ def evaluate(
 
 def smoke_test() -> None:
     """Tiny, fast, deterministic run; assert every metric is sane."""
-    a = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16,
-                 rollout_traj=8, rollout_len=4, device=torch.device("cpu"), verbose=False)
-    b = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16,
-                 rollout_traj=8, rollout_len=4, device=torch.device("cpu"), verbose=False)
+    a = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
+                 rollout_len=4, mpc_episodes=6, mpc_horizon=4, device=torch.device("cpu"), verbose=False)
+    b = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
+                 rollout_len=4, mpc_episodes=6, mpc_horizon=4, device=torch.device("cpu"), verbose=False)
 
     # Determinism: same seed → identical panel.
     assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True), "non-deterministic"
@@ -315,6 +421,12 @@ def smoke_test() -> None:
     assert all(np.isfinite(v) and v >= 0.0 for v in roll["per_horizon"]), roll["per_horizon"]
     assert np.isfinite(roll["step1"]) and np.isfinite(roll["final_step"])
 
+    # MPC/CEM planning success: rates in [0, 1], distance finite + non-negative.
+    mpc = a["mpc_success"]
+    assert 0.0 <= mpc["success_rate"] <= 1.0, mpc
+    assert 0.0 <= mpc["random_baseline_success"] <= 1.0, mpc
+    assert np.isfinite(mpc["mean_final_distance"]) and mpc["mean_final_distance"] >= 0.0
+
     # RankMe is an effective rank in (0, latent_dim].
     assert 0.0 < a["rankme"] <= 16.0 + 1e-6, f"rankme out of range: {a['rankme']}"
     # VICReg variance term is non-negative.
@@ -325,7 +437,8 @@ def smoke_test() -> None:
     print(f"smoke test passed "
           f"(pred_err={a['pred_error_1step']:.4f}, "
           f"rollout[1→{len(roll['per_horizon'])}]={roll['step1']:.3f}→{roll['final_step']:.3f}, "
-          f"rankme={a['rankme']:.2f}, chi_R2={a['factor_recovery']['chi']:.3f})")
+          f"mpc={mpc['success_rate']:.2f} vs rand {mpc['random_baseline_success']:.2f}, "
+          f"chi_R2={a['factor_recovery']['chi']:.3f})")
 
 
 def main() -> None:
