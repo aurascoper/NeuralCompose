@@ -44,4 +44,10 @@ jobs:
             --filter BCIEEGTests \
             --filter BCICloudBridgeTests \
             --filter BCIVoiceTests \
-            --filter AsyncTimeout
+            --filter AsyncTimeout \
+            --skip MindMonitorOSCStreamTests
+        # MindMonitorOSCStreamTests binds a real UDP socket on a FIXED high port
+        # (57182–57186, 0.0.0.0) and waits on a 1–3s stale watchdog — a genuine
+        # collision/flake risk on a headless runner. The OSC *decode* logic is
+        # covered socket-free by MuseOSCDecoderTests / MindMonitorDecoderTests,
+        # which still run. Run the socket integration test locally.
