@@ -143,3 +143,35 @@ Entry template:
   degrading chi-recovery. A negative result is the target-quality outcome. Machinery gap to close first: the arms
   beyond the current default need a `transform` param threaded through the dataset/`evaluate()` path — {log-band-power,
   specparam, 1/f-flatten} require the specparam front-end (Math §11.2); the A/B iteration builds that seam.
+
+## 6 — Transform A/B, arm 1: log-band-power into the encoder (node 33) (2026-07-20, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (dialectic node 33) feed the JEPA encoder **log-compressed** 1/f spectral state — the log-band-power
+  transform applied at the `JEPATransitionDataset` seam — instead of raw z-scored power, and it improves the forward
+  metrics (rollout + MPC). "Use the 1/f log-transform *backwards*": validated for numerical safety in Phase A, now
+  fed to the encoder and measured forward.
+- Prediction: the README predicted log-compression would **degrade chi-recovery** — the aperiodic 1/f slope may *be*
+  signal (E/I balance), so blindly compressing it could delete the most informative factor. Expected chi_R² to drop;
+  a negative result is the target-quality outcome.
+- Implementation: `WorldModel/forward_eval.py` — threaded `log_features`/`log_epsilon` (reusing `eeg_jepa`'s
+  `JEPATransitionDataset(log_features=…)`) through `evaluate()` into ALL THREE dataset constructions — train (`:358`),
+  `_multi_step_rollout` (`:223`), `_encode_states` (`:261`) — so train/rollout/MPC encode in ONE input space (a
+  mismatch would train on log windows while rollout/MPC feed raw). Added `--log-features`/`--log-epsilon` CLI +
+  `config.log_features` in the panel; smoke-test asserts the log-on path stays finite. `WorldModel/`-only. A/B:
+  {log off/on} × {signal, nuisance} × seeds {0,1,2}, n=384, 22 epochs, CPU.
+- Evidence: log ON vs OFF (means over 3 seeds):
+  - `rollout_error` 0.0079 → 0.0108 — **+37%, WORSE** (both modes).
+  - `mpc_success` 0.375 → 0.354 (signal, WORSE); 0.396 → 0.396 (nuisance, neutral).
+  - `chi_R²` 0.950 → **0.987** (+0.036, **BETTER**, both modes).
+  The prediction was **wrong on chi**: log-compression *helps* chi-recovery (log-power is linear in the 1/f exponent,
+  so the linear probe reads chi more easily) — it does not delete it.
+- Decision: **REJECT — `log_features` stays default OFF.** It fails the rule (must improve rollout+MPC without
+  degrading chi; instead it degrades rollout+MPC while *improving* chi). The real finding is a clean dissociation:
+  the transform improves a **static linear factor-probe** (chi) yet **hurts the forward dynamics + control** the world
+  model actually needs. A transform that looks good on a linear probe can be wrong for the objective — exactly what
+  the forward benchmark exists to catch; a probe-only eval would have wrongly promoted it.
+- Next question: WHY does log help the chi-probe but hurt rollout/MPC? Hypothesis: the true `synthetic_1f._step` is
+  affine in raw power, so log warps the local dynamics geometry the predictor relies on. Remaining arms {standardize,
+  symlog, specparam periodic+aperiodic, 1/f-flatten} — do any improve BOTH forward metrics AND chi? {specparam,
+  1/f-flatten} still need the specparam front-end (Math §11.2). Provisional: raw z-scored power may already be the
+  right encoder input for forward dynamics.

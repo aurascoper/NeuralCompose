@@ -207,7 +207,8 @@ def _generate_trajectories(n_traj: int, length: int, mode: str, seed: int) -> li
 @torch.no_grad()
 def _multi_step_rollout(model, train_mean, train_std, device, *,
                         n_traj: int = 32, length: int = 8, mode: str = "signal",
-                        seed: int = 1) -> dict[str, Any]:
+                        seed: int = 1, log_features: bool = False,
+                        log_epsilon: float = 1e-6) -> dict[str, Any]:
     """Closed-loop latent rollout error. Encode the first window of each trajectory,
     roll the predictor `length` steps feeding its OWN output back in (with the true
     actions), and MSE each predicted latent against the EMA-target encoding of the
@@ -220,7 +221,8 @@ def _multi_step_rollout(model, train_mean, train_std, device, *,
     records = _generate_trajectories(n_traj, length, mode, seed)
     with tempfile.TemporaryDirectory(prefix="neuralcompose-rollout-") as directory:
         path = write_jsonl(records, Path(directory) / "traj.jsonl")
-        traj = JEPATransitionDataset(path, mean=train_mean, std=train_std)
+        traj = JEPATransitionDataset(path, mean=train_mean, std=train_std,
+                                     log_features=log_features, log_epsilon=log_epsilon)
         horizon_err: list[list[float]] = [[] for _ in range(length)]
         for t in range(n_traj):
             base = t * length
@@ -241,7 +243,8 @@ def _multi_step_rollout(model, train_mean, train_std, device, *,
 
 
 @torch.no_grad()
-def _encode_states(model, states, train_mean, train_std, device, use_target: bool = False) -> torch.Tensor:
+def _encode_states(model, states, train_mean, train_std, device, use_target: bool = False,
+                   *, log_features: bool = False, log_epsilon: float = 1e-6) -> torch.Tensor:
     """Encode a list of latent states into JEPA latents, normalized on the TRAIN
     stats (routed through JEPATransitionDataset so normalization matches training
     exactly). Goal states use the target encoder (the predictor's output space);
@@ -258,7 +261,8 @@ def _encode_states(model, states, train_mean, train_std, device, use_target: boo
     encoder.eval()
     with tempfile.TemporaryDirectory(prefix="neuralcompose-encstate-") as directory:
         path = write_jsonl(records, Path(directory) / "s.jsonl")
-        ds = JEPATransitionDataset(path, mean=train_mean, std=train_std)
+        ds = JEPATransitionDataset(path, mean=train_mean, std=train_std,
+                                   log_features=log_features, log_epsilon=log_epsilon)
         return torch.stack([
             encoder(ds[i][0].unsqueeze(0).to(device)).squeeze(0) for i in range(len(ds))
         ])
@@ -295,7 +299,8 @@ def _cem_plan(model, z0_lat, zg_lat, device, *, horizon, cem_iters, n_samples, e
 @torch.no_grad()
 def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon=6,
                  cem_iters=3, n_samples=64, elite_frac=0.2, mode="signal", seed=2,
-                 goal_offset=0.4, goal_tol=0.15) -> dict[str, Any]:
+                 goal_offset=0.4, goal_tol=0.15, log_features: bool = False,
+                 log_epsilon: float = 1e-6) -> dict[str, Any]:
     """Goal-conditioned latent MPC/CEM planning success. Per episode: sample a start
     state + a goal `pos`, plan with CEM (the JEPA predictor as forward model), then
     EXECUTE the plan in the TRUE synthetic_1f env (`_step`) and score whether the
@@ -308,8 +313,10 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
     starts = [_sample_latent(rng) for _ in range(n_episodes)]
     goal_pos = [starts[i]["pos"] + rng.uniform(-goal_offset, goal_offset) for i in range(n_episodes)]
     goals = [{**starts[i], "pos": goal_pos[i]} for i in range(n_episodes)]
-    z0 = _encode_states(model, starts, train_mean, train_std, device, use_target=False)
-    zg = _encode_states(model, goals, train_mean, train_std, device, use_target=True)
+    z0 = _encode_states(model, starts, train_mean, train_std, device, use_target=False,
+                        log_features=log_features, log_epsilon=log_epsilon)
+    zg = _encode_states(model, goals, train_mean, train_std, device, use_target=True,
+                        log_features=log_features, log_epsilon=log_epsilon)
 
     successes, rand_successes, dists = 0, 0, []
     for i in range(n_episodes):
@@ -345,17 +352,28 @@ def evaluate(
     rollout_len: int = 8,
     mpc_episodes: int = 20,
     mpc_horizon: int = 6,
+    log_features: bool = False,
+    log_epsilon: float = 1e-6,
     device: torch.device | None = None,
     verbose: bool = True,
 ) -> dict[str, Any]:
-    """Train a JEPA on freshly-generated synthetic_1f data and return the panel."""
+    """Train a JEPA on freshly-generated synthetic_1f data and return the panel.
+
+    `log_features` selects the input space fed to the encoder: raw z-scored
+    band/channel power (default) or log-compressed-then-z-scored (the 1/f
+    log-transform, applied at the JEPATransitionDataset seam). It is threaded
+    identically into the train, rollout, and MPC-encode datasets so all three
+    encode in ONE space — otherwise the model trains on log windows while
+    rollout/MPC feed raw windows. This is the node-33 transform arm: measured
+    forward, kept only if it improves rollout+MPC without degrading chi-recovery.
+    """
     _seed_everything(seed)
     device = device or resolve_device()
 
     records = generate(n, mode, seed)
     with tempfile.TemporaryDirectory(prefix="neuralcompose-fwdeval-") as directory:
         path = write_jsonl(records, Path(directory) / "data.jsonl")
-        dataset = JEPATransitionDataset(path)
+        dataset = JEPATransitionDataset(path, log_features=log_features, log_epsilon=log_epsilon)
         loader = DataLoader(dataset, batch_size=min(batch_size, len(dataset)), shuffle=True)
         pre0, action0, _ = dataset[0]
         state_dim, action_dim = pre0.shape[-1], action0.shape[-1]
@@ -372,15 +390,18 @@ def evaluate(
         rollout = _multi_step_rollout(
             model, dataset.mean, dataset.std, device,
             n_traj=rollout_traj, length=rollout_len, mode=mode, seed=seed + 1,
+            log_features=log_features, log_epsilon=log_epsilon,
         )
         mpc = _mpc_success(
             model, dataset.mean, dataset.std, device,
             n_episodes=mpc_episodes, horizon=mpc_horizon, mode=mode, seed=seed + 2,
+            log_features=log_features, log_epsilon=log_epsilon,
         )
 
         panel = {
             "config": {"n": n, "mode": mode, "seed": seed, "epochs": epochs,
-                       "latent_dim": latent_dim, "final_train_loss": history[-1]},
+                       "latent_dim": latent_dim, "log_features": log_features,
+                       "final_train_loss": history[-1]},
             "pred_error_1step": _pred_error_1step(model, dataset, device),
             "rollout_error": rollout,
             "mpc_success": mpc,
@@ -434,6 +455,17 @@ def smoke_test() -> None:
     # The chi probe exists and is reported (the information-destruction detector).
     assert "chi" in a["factor_recovery"]
 
+    # The log-features (node-33) arm must stay finite end-to-end — a log(0) or a
+    # train/rollout input-space mismatch would surface here as NaN/inf.
+    c = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
+                 rollout_len=4, mpc_episodes=6, mpc_horizon=4, log_features=True,
+                 device=torch.device("cpu"), verbose=False)
+    assert c["config"]["log_features"] is True
+    assert np.isfinite(c["pred_error_1step"]), c["pred_error_1step"]
+    assert np.isfinite(c["factor_recovery"]["chi"]), c["factor_recovery"]["chi"]
+    assert all(np.isfinite(v) and v >= 0.0 for v in c["rollout_error"]["per_horizon"]), \
+        c["rollout_error"]["per_horizon"]
+
     print(f"smoke test passed "
           f"(pred_err={a['pred_error_1step']:.4f}, "
           f"rollout[1→{len(roll['per_horizon'])}]={roll['step1']:.3f}→{roll['final_step']:.3f}, "
@@ -449,13 +481,17 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--latent-dim", type=int, default=32)
+    parser.add_argument("--log-features", action="store_true",
+                        help="feed the encoder log-compressed (1/f) spectral state — the node-33 arm")
+    parser.add_argument("--log-epsilon", type=float, default=1e-6)
     args = parser.parse_args()
 
     if args.smoke_test:
         smoke_test()
         return
     evaluate(n=args.n, mode=args.mode, seed=args.seed, epochs=args.epochs,
-             latent_dim=args.latent_dim)
+             latent_dim=args.latent_dim, log_features=args.log_features,
+             log_epsilon=args.log_epsilon)
 
 
 if __name__ == "__main__":
