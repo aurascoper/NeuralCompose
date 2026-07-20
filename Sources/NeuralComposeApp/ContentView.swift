@@ -53,7 +53,8 @@ struct ContentView: View {
                 jepaTransitionCaptureEnabled: $viewModel.jepaTransitionCaptureEnabled,
                 worldModelDemoEnabled: $viewModel.worldModelDemoEnabled,
                 spokenGenerationLoopEnabled: $viewModel.spokenGenerationLoopEnabled,
-                hypnagogicLoopEnabled: $viewModel.hypnagogicLoopEnabled
+                hypnagogicLoopEnabled: $viewModel.hypnagogicLoopEnabled,
+                hypnagogicMode: $viewModel.hypnagogicMode
             )
             Divider()
 

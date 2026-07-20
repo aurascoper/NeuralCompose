@@ -53,6 +53,9 @@ struct PrivacyIndicatorView: View {
     /// transcript text to a cloud assistant — the one deliberate runtime network
     /// exception (decision_registry entry 8). Red = "listening + text may leave."
     @Binding var hypnagogicLoopEnabled: Bool
+    /// Which hypnagogic engine runs when enabled: the plain mirror reply, or the
+    /// dialectic competition (two cloud calls/turn).
+    @Binding var hypnagogicMode: HypnagogicMode
 
     @State private var expanded: Bool = false
 
@@ -104,8 +107,10 @@ struct PrivacyIndicatorView: View {
                         Text("Network").bold()
                         if hypnagogicLoopEnabled {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Cloud active — Hypnagogic mode").foregroundStyle(.red)
-                                Text("Transcript text (never audio) may be sent to the claude CLI. Opt-in exception — see decision_registry entry 8.")
+                                Text("Cloud active — Hypnagogic (\(hypnagogicMode.label))").foregroundStyle(.red)
+                                Text(hypnagogicMode == .dialectic
+                                     ? "Transcript text (never audio) may be sent to the claude CLI — two calls per turn in Dialectic mode. Opt-in exception — see decision_registry entry 8."
+                                     : "Transcript text (never audio) may be sent to the claude CLI. Opt-in exception — see decision_registry entry 8.")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -217,13 +222,22 @@ struct PrivacyIndicatorView: View {
                     GridRow {
                         Text("Hypnagogic").bold()
                         VStack(alignment: .leading, spacing: 2) {
-                            Toggle("Run hypnagogic dialogue loop", isOn: $hypnagogicLoopEnabled)
+                            Toggle("Run hypnagogic loop", isOn: $hypnagogicLoopEnabled)
                                 .toggleStyle(.switch)
-                            if hypnagogicLoopEnabled {
-                                Text("Listening on-device; transcript text may be sent to a cloud assistant. Audio never leaves the machine; nothing is persisted.")
-                                    .foregroundStyle(.red)
+                            Picker("Engine", selection: $hypnagogicMode) {
+                                ForEach(HypnagogicMode.allCases) { Text($0.label).tag($0) }
                             }
-                            Text("Experimental, manual-trigger scaffolding — not a validated intervention, not wired to any sleep detector. The one runtime network exception (decision_registry entry 8).")
+                            .pickerStyle(.segmented)
+                            if hypnagogicLoopEnabled {
+                                Text(HypnagogicDialecticHonesty.egressCaveat)
+                                    .foregroundStyle(.red)
+                                if hypnagogicMode == .dialectic {
+                                    Text(HypnagogicDialecticHonesty.dialecticCaveat)
+                                        .font(.caption2)
+                                        .foregroundStyle(.red)
+                                }
+                            }
+                            Text(HypnagogicDialecticHonesty.headerCaveat)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }

@@ -39,6 +39,22 @@ public enum SignalQuality: Sendable, Equatable {
 /// unexpectedly and we are not already running synthetic, the streamTask
 /// swaps in `EEGStreamFactory.makeSynthetic()` and continues, updating
 /// `pipelineMode` so the privacy banner reflects the degraded state.
+/// Which hypnagogic engine the opt-in runs: the plain **mirror** reply
+/// (`HypnagogicDialogueLoop`) or the **dialectic** competition
+/// (`HypnagogicDialecticLoop` — two generators, persistent tension,
+/// non-deterministic resolution). Mirror is the default; dialectic makes TWO
+/// cloud calls per turn.
+public enum HypnagogicMode: String, CaseIterable, Sendable, Identifiable {
+    case mirror, dialectic
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .mirror:    return "Mirror"
+        case .dialectic: return "Dialectic"
+        }
+    }
+}
+
 @MainActor
 public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
@@ -164,6 +180,16 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
+    /// Which hypnagogic engine runs when enabled. Changing it while the loop is
+    /// active rebuilds the loop with the new engine (see
+    /// `ensureHypnagogicLoopRunning`); off by default to the plain mirror.
+    @Published public var hypnagogicMode: HypnagogicMode = .mirror {
+        didSet {
+            guard oldValue != hypnagogicMode, hypnagogicLoopEnabled else { return }
+            reconcileHypnagogicLoop()
+        }
+    }
+
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
@@ -249,7 +275,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// generator are built lazily in `ensureHypnagogicLoopRunning` and kept OUT
     /// of the default AppContainer graph, so the network-egress path is
     /// instantiated only while the loop is enabled.
-    private var hypnagogicLoop: HypnagogicDialogueLoop?
+    private var hypnagogicLoop: (any HypnagogicRunnable)?
+    /// The mode of the currently-built loop, so a mode switch rebuilds it.
+    private var hypnagogicLoopMode: HypnagogicMode?
     private var hypnagogicLoopReconcile: Task<Void, Never>?
 
     // ── Per-start resources (recreated each call to start()) ─────────────
@@ -672,7 +700,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// network-egress path is instantiated only when the user opts in. Requests
     /// mic + speech authorization first; if denied, flips the toggle back off.
     private func ensureHypnagogicLoopRunning() async {
-        guard hypnagogicLoop == nil else { return }
+        // Already running the requested engine? Nothing to do. A mode switch
+        // tears the old loop down first.
+        if hypnagogicLoop != nil, hypnagogicLoopMode == hypnagogicMode { return }
+        await ensureHypnagogicLoopStopped()
+
         let listener = HypnagogicListener()
         let granted = await listener.requestAuthorization()
         guard granted else {
@@ -682,19 +714,47 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         // Re-check the toggle: authorization awaited, so the user may have
         // turned it back off in the meantime.
         guard hypnagogicLoopEnabled else { return }
-        let loop = HypnagogicDialogueLoop(
-            listener: listener,
-            generator: ClaudeCLIGenerator(),
-            speaker: voiceOutput
-        )
+
+        let loop: any HypnagogicRunnable
+        switch hypnagogicMode {
+        case .mirror:
+            loop = HypnagogicDialogueLoop(
+                listener: listener,
+                generator: ClaudeCLIGenerator(),
+                speaker: voiceOutput
+            )
+        case .dialectic:
+            // Two cloud calls per turn (one per role). The gloss reads the
+            // current spectral state as a heuristic BIAS (never a decoder);
+            // turn logging is gated on the interaction-log opt-in, resolved at
+            // build time (toggling it mid-loop takes effect on the next rebuild).
+            let turnLogger: any DialecticalTurnLogging =
+                (interactionLoggingEnabled ? (interactionLogger as? any DialecticalTurnLogging) : nil)
+                ?? NullDialecticalTurnLogger()
+            loop = HypnagogicDialecticLoop(
+                listener: listener,
+                generator: ClaudeCLIGenerator(),
+                speaker: voiceOutput,
+                embedder: container.sentenceEmbedder,
+                glossProvider: { [weak self] in await self?.currentSpectralGlossState() ?? nil },
+                turnLogger: turnLogger
+            )
+        }
         hypnagogicLoop = loop
+        hypnagogicLoopMode = hypnagogicMode
         await loop.start()
     }
 
     private func ensureHypnagogicLoopStopped() async {
         await hypnagogicLoop?.stop()
         hypnagogicLoop = nil
+        hypnagogicLoopMode = nil
     }
+
+    /// The latest spectral-state gloss for the dialectic loop's fast biological
+    /// clock, read on the main actor. A heuristic bias signal, never a cognitive
+    /// read (see `SpectralState.honestyCaveat`).
+    private func currentSpectralGlossState() -> SpectralState? { detectedSpectralState }
 
     public func stop() async {
         // Always silence the experimental spoken loop, even when the pipeline
