@@ -56,7 +56,7 @@ public struct SpokenWord: Sendable, Equatable {
 /// (`rate` 0…1, `pitchMultiplier` 0.5…2.0, `volume` 0…1, `preUtteranceDelay`
 /// seconds) but this type lives in BCICore so the `SpeechSynthesizing` seam
 /// stays AVFoundation-free and fully testable with spies.
-public struct SpeechProsody: Sendable, Equatable {
+public struct SpeechProsody: Sendable, Equatable, Codable {
     public var rate: Float?
     public var pitchMultiplier: Float?
     public var volume: Float?

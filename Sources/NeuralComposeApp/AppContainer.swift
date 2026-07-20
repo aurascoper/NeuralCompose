@@ -140,23 +140,28 @@ public struct AppContainer: Sendable {
         let classifier = ClassifierFactory.live()
         let predictor = await PredictorFactory.live()
         BCILog.predictor.notice("predictor backend: \(predictor.kind.rawValue, privacy: .public)")
-        // Personal Voice is opt-in (NEURALCOMPOSE_PERSONAL_VOICE=1). Personal
-        // voices appear in speechVoices() only AFTER authorization is established
-        // in THIS process, so we must AWAIT it BEFORE resolving the synthesizer's
-        // voice — otherwise selection runs first (at synthesizer construction) and
-        // always misses the personal voice, no matter how many relaunches. After
-        // the one-time system grant this returns immediately (no prompt); only the
-        // very first grant blocks on the user. Requires the bundled app — a
-        // no-bundle `swift run` cannot present the prompt (do not set the flag
-        // there). The grant is cdhash-pinned, so sign with Scripts/sign-app-local.sh
-        // to persist it across rebuilds.
-        if ProcessInfo.processInfo.environment["NEURALCOMPOSE_PERSONAL_VOICE"] == "1" {
+        // Persisted voice preferences (~/Documents/NeuralCompose/voice-profile.json,
+        // written by Scripts/voice-profile.py) OVERRIDE the env vars, so the chosen
+        // Personal Voice persists across launches without any flags.
+        let voiceProfile = VoiceProfile.loadDefault()
+        let usePersonalVoice = voiceProfile?.usePersonalVoice
+            ?? (ProcessInfo.processInfo.environment["NEURALCOMPOSE_PERSONAL_VOICE"] == "1")
+        // Personal Voice is opt-in. Personal voices appear in speechVoices() only
+        // AFTER authorization is established in THIS process, so we AWAIT it BEFORE
+        // resolving the synthesizer's voice — otherwise selection runs first (at
+        // construction) and always misses the personal voice. After the one-time
+        // system grant this returns immediately (no prompt); only the first grant
+        // blocks on the user, and only for the bundled app (a no-bundle `swift run`
+        // can't present the prompt). The grant is cdhash-pinned — sign with
+        // Scripts/sign-app-local.sh to persist it across rebuilds.
+        if usePersonalVoice {
             let granted = await AVSpeechSynthesizerService.requestPersonalVoiceAuthorization()
             BCILog.voice.notice("personal voice authorization: \(granted ? "granted" : "not granted", privacy: .public)")
         }
-        // Voice output auto-selects the best voice (Personal Voice → Premium/
-        // Enhanced → compact); NEURALCOMPOSE_VOICE_ID pins a specific one.
-        let voiceIdentifier = ProcessInfo.processInfo.environment["NEURALCOMPOSE_VOICE_ID"]
+        // Voice auto-selects the best voice (Personal → Premium/Enhanced → compact);
+        // the profile's voiceIdentifier, else NEURALCOMPOSE_VOICE_ID, pins one.
+        let voiceIdentifier = voiceProfile?.voiceIdentifier
+            ?? ProcessInfo.processInfo.environment["NEURALCOMPOSE_VOICE_ID"]
         let voiceOutput = VoiceOutputFactory.live(voiceIdentifier: voiceIdentifier)
         BCILog.voice.notice("voice output resolved: \(voiceOutput.synthesizer.voiceIdentifier, privacy: .public)")
         let voiceInput = VoiceInputFactory.live()
