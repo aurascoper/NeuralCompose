@@ -74,8 +74,11 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
 /// small proxy bridges delegate callbacks back into the actor via plain
 /// closures.
 private final class SpeechSynthesizerDelegateProxy: NSObject, AVSpeechSynthesizerDelegate, @unchecked Sendable {
-    var onFinish: (() -> Void)?
-    var onCancel: (() -> Void)?
+    // @Sendable: these are assigned self-capturing `Task { await … }` closures from
+    // the actor. Newer Swift 6 toolchains treat the setters as `sending` and reject a
+    // non-Sendable closure (CI fails to build even though older toolchains accept it).
+    var onFinish: (@Sendable () -> Void)?
+    var onCancel: (@Sendable () -> Void)?
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         onFinish?()
