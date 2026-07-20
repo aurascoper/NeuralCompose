@@ -2,6 +2,18 @@ import XCTest
 @testable import BCICore
 @testable import BCIEEG
 
+/// A realistic AC EEG-like sample value whose windowed RMS ≈ `rms`. Real EEG is
+/// ~0-mean AC, so the real-EEG demean (subtract the window mean before RMS, per
+/// the amplitude-metrics calibration fix) is a near-no-op and the measured RMS
+/// lands on `rms`. A constant DC level, by contrast, demeans to ~0 and is
+/// correctly read as a dead channel — which is why these tests feed AC wherever
+/// a live/healthy (or saturated) channel is intended. Internal (not private) so
+/// `FanOutHealthValidationTests` in the same target can share it.
+func acEEGValue(rms: Float, index i: Int, hz: Double = 10, sampleRate: Double = 256) -> Float {
+    let amplitude = rms * Float(2.0.squareRoot())   // RMS of A·sin(2πft) = A/√2
+    return amplitude * Float(sin(2.0 * .pi * hz * Double(i) / sampleRate))
+}
+
 final class EEGChannelHealthProviderTests: XCTestCase {
 
     // MARK: - Lifecycle
@@ -39,17 +51,19 @@ final class EEGChannelHealthProviderTests: XCTestCase {
 
     // MARK: - RMS computation
 
-    func testProviderReportsCorrectRMSForConstantSignal() async {
-        // DC signal of amplitude A on every channel. The reported
-        // RMS should equal A exactly (RMS of a constant == the
-        // constant).
-        let amplitude: Float = 50
+    func testConstantDCSignalDemeansToDeadChannel() async {
+        // A pure-DC signal (constant amplitude, zero AC) is the signature of a
+        // flat / lifted electrode. After the real-EEG demean (subtract the
+        // window mean before RMS), its RMS collapses to ~0, so it is correctly
+        // reported .dead — the DC offset no longer masquerades as signal energy,
+        // which is exactly the measurement bug the demean fix addressed.
+        let dc: Float = 50
         let (stream, continuation) = AsyncStream<EEGSample>.makeStream()
         let p = EEGChannelHealthProvider(stream: stream)
         for i in 0..<256 {
             continuation.yield(EEGSample(
                 timestamp: TimeInterval(i) / 256.0,
-                channels: [amplitude, amplitude, amplitude, amplitude]
+                channels: [dc, dc, dc, dc]
             ))
         }
         try? await Task.sleep(nanoseconds: 50_000_000)
@@ -58,9 +72,9 @@ final class EEGChannelHealthProviderTests: XCTestCase {
 
         XCTAssertEqual(states.count, 4)
         for s in states {
-            XCTAssertEqual(s.status, .healthy)
+            XCTAssertEqual(s.status, .dead)
             XCTAssertEqual(s.samples, 256)
-            XCTAssertEqual(s.rms, amplitude, accuracy: 0.001)
+            XCTAssertEqual(s.rms, 0, accuracy: 0.001)
         }
     }
 
@@ -103,10 +117,10 @@ final class EEGChannelHealthProviderTests: XCTestCase {
         for i in 0..<256 {
             let t = TimeInterval(i) / 256.0
             let ch: [Float] = [
-                20,   // TP9: healthy
-                500,  // AF7: saturated
-                0.5,  // AF8: dead
-                20    // TP10: healthy
+                acEEGValue(rms: 20, index: i),   // TP9: healthy AC (RMS 20)
+                acEEGValue(rms: 500, index: i),  // AF7: saturated AC (RMS 500 > 200)
+                0.5,                             // AF8: flat DC → demeans to dead
+                acEEGValue(rms: 20, index: i)    // TP10: healthy AC (RMS 20)
             ]
             continuation.yield(EEGSample(timestamp: t, channels: ch))
         }
@@ -136,11 +150,12 @@ final class EEGChannelHealthProviderTests: XCTestCase {
             stream: stream,
             ringSeconds: 4.0
         )
-        // 1024 samples = 4 s at 256 Hz. First 512 saturated, last
-        // 512 healthy.
+        // 1024 samples = 4 s at 256 Hz. First 512 saturated AC (RMS 500),
+        // last 512 healthy AC (RMS 10). AC, not DC, so the demean leaves the
+        // RMS on its target instead of collapsing it to a dead channel.
         for i in 0..<1024 {
             let t = TimeInterval(i) / 256.0
-            let v: Float = i < 512 ? 500 : 10
+            let v = acEEGValue(rms: i < 512 ? 500 : 10, index: i)
             continuation.yield(EEGSample(timestamp: t, channels: [v, v, v, v]))
         }
         try? await Task.sleep(nanoseconds: 50_000_000)
@@ -152,15 +167,10 @@ final class EEGChannelHealthProviderTests: XCTestCase {
             XCTAssertEqual(s.status, .healthy)
         }
 
-        // windowSeconds: 4.0 → 1024 samples → catches everything,
-        // the saturated and healthy halves average to a value
-        // that's still .healthy. (The healthy half dominates: 10
-        // vs 500 squared is 100 vs 250000, so the mean square is
-        // ~125050, sqrt is ~354 — still saturated. The window
-        // is so big it averages them.)
-        // We don't make a strong claim about the 4 s window's
-        // status here; the point is the window size changes the
-        // answer.
+        // windowSeconds: 4.0 → 1024 samples → catches the whole ring (both
+        // the saturated and healthy halves). We don't make a strong claim
+        // about the combined window's status here; the point is only that the
+        // window size changes which samples are measured.
         let all = await p.currentChannelHealth(windowSeconds: 4.0)
         for s in all {
             XCTAssertEqual(s.samples, 1024)
@@ -176,9 +186,10 @@ final class EEGChannelHealthProviderTests: XCTestCase {
         let (stream, continuation) = AsyncStream<EEGSample>.makeStream()
         let p = EEGChannelHealthProvider(stream: stream, staleTimeoutSec: 0.05)
         for i in 0..<256 {
+            let v = acEEGValue(rms: 50, index: i)
             continuation.yield(EEGSample(
                 timestamp: TimeInterval(i) / 256.0,
-                channels: [50, 50, 50, 50]
+                channels: [v, v, v, v]
             ))
         }
         try? await Task.sleep(nanoseconds: 20_000_000) // let the drain catch up
@@ -195,8 +206,10 @@ final class EEGChannelHealthProviderTests: XCTestCase {
         for s in stale {
             XCTAssertEqual(s.status, .stale, "\(s.channel) should report .stale once no sample has arrived for longer than staleTimeoutSec")
             // rms/samples still carry the frozen diagnostic values —
-            // staleness overrides only the status, not the readings.
-            XCTAssertEqual(s.rms, 50, accuracy: 0.001)
+            // staleness overrides only the status, not the readings. The AC
+            // signal's windowed RMS ≈ 50 (loose tolerance: partial-period
+            // windowing + demean leave small numeric slack, not exact equality).
+            XCTAssertEqual(s.rms, 50, accuracy: 1.0)
         }
     }
 
@@ -219,9 +232,11 @@ final class EEGChannelHealthProviderTests: XCTestCase {
         let p = EEGChannelHealthProvider(stream: stream, staleTimeoutSec: 0.2)
         for round in 0..<3 {
             for i in 0..<64 {
+                let idx = round * 64 + i
+                let v = acEEGValue(rms: 50, index: idx)
                 continuation.yield(EEGSample(
-                    timestamp: TimeInterval(round * 64 + i) / 256.0,
-                    channels: [50, 50, 50, 50]
+                    timestamp: TimeInterval(idx) / 256.0,
+                    channels: [v, v, v, v]
                 ))
             }
             try? await Task.sleep(nanoseconds: 50_000_000) // < staleTimeoutSec
@@ -239,9 +254,10 @@ final class EEGChannelHealthProviderTests: XCTestCase {
         let (stream, continuation) = AsyncStream<EEGSample>.makeStream()
         let p = EEGChannelHealthProvider(stream: stream)
         for i in 0..<512 {
+            let v = acEEGValue(rms: 25, index: i)
             continuation.yield(EEGSample(
                 timestamp: TimeInterval(i) / 256.0,
-                channels: [25, 25, 25, 25]
+                channels: [v, v, v, v]
             ))
         }
         try? await Task.sleep(nanoseconds: 50_000_000)
