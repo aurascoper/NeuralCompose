@@ -202,7 +202,7 @@
         "embedding": "routing:short_command->fastest, technical->best, uncertain->confidence_gated",
         "generator": "routing:short_command->fastest, long->quality",
         "latency_budget_s": "per_query: 2.0-15.0",
-        "use_case": "Production intent \u2014 maximizes real-world communication rate"
+        "use_case": "Production intent — maximizes real-world communication rate"
       }
     ]
   }

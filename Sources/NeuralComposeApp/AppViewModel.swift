@@ -6,6 +6,7 @@ import BCIEEG
 import BCIClassifier
 import BCILLM
 import BCIVoice
+import BCICloudBridge
 
 public struct CalibrationMetrics: Sendable {
     public let channelCount: Int
@@ -148,6 +149,21 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
+    /// Experimental, opt-in **hypnagogic dialogue loop** (see
+    /// `HypnagogicDialogueLoop`). Off by default and session-scoped. UNLIKE every
+    /// other opt-in here, when enabled it (a) captures microphone audio during
+    /// listen turns and (b) may send transcript *text* to a cloud LLM via the
+    /// `claude` CLI — the sole deliberate exception to "No network at runtime"
+    /// (decision_registry entry 8). Audio stays on-device (on-device STT); only
+    /// text can leave; nothing is persisted. Manual trigger only — NOT wired to
+    /// any sleep-stage detector. The privacy banner must reflect this while active.
+    @Published public var hypnagogicLoopEnabled: Bool = false {
+        didSet {
+            guard oldValue != hypnagogicLoopEnabled else { return }
+            reconcileHypnagogicLoop()
+        }
+    }
+
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
@@ -228,6 +244,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// leave a started loop with no handle to stop it — each reconcile awaits the
     /// previous one, then applies the latest toggle value.
     private var spokenLoopReconcile: Task<Void, Never>?
+    /// Experimental hypnagogic loop + its serializing reconcile task, mirroring
+    /// the spoken-loop pattern. Nil while off. Its mic listener and cloud
+    /// generator are built lazily in `ensureHypnagogicLoopRunning` and kept OUT
+    /// of the default AppContainer graph, so the network-egress path is
+    /// instantiated only while the loop is enabled.
+    private var hypnagogicLoop: HypnagogicDialogueLoop?
+    private var hypnagogicLoopReconcile: Task<Void, Never>?
 
     // ── Per-start resources (recreated each call to start()) ─────────────
     private var composition: TextCompositionController?
@@ -628,10 +651,56 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         spokenLoop = nil
     }
 
+    /// Serializes hypnagogic-loop start/stop through a single chained task, same
+    /// as `reconcileSpokenGenerationLoop`, so a fast toggle can't orphan a loop.
+    private func reconcileHypnagogicLoop() {
+        let previous = hypnagogicLoopReconcile
+        let shouldRun = hypnagogicLoopEnabled
+        hypnagogicLoopReconcile = Task { [weak self] in
+            _ = await previous?.value
+            guard let self else { return }
+            if shouldRun {
+                await self.ensureHypnagogicLoopRunning()
+            } else {
+                await self.ensureHypnagogicLoopStopped()
+            }
+        }
+    }
+
+    /// Built lazily on first enable. Constructs the on-device mic listener and
+    /// the cloud `claude-cli` generator HERE (not in AppContainer) so the
+    /// network-egress path is instantiated only when the user opts in. Requests
+    /// mic + speech authorization first; if denied, flips the toggle back off.
+    private func ensureHypnagogicLoopRunning() async {
+        guard hypnagogicLoop == nil else { return }
+        let listener = HypnagogicListener()
+        let granted = await listener.requestAuthorization()
+        guard granted else {
+            hypnagogicLoopEnabled = false   // @MainActor: safe to set directly
+            return
+        }
+        // Re-check the toggle: authorization awaited, so the user may have
+        // turned it back off in the meantime.
+        guard hypnagogicLoopEnabled else { return }
+        let loop = HypnagogicDialogueLoop(
+            listener: listener,
+            generator: ClaudeCLIGenerator(),
+            speaker: voiceOutput
+        )
+        hypnagogicLoop = loop
+        await loop.start()
+    }
+
+    private func ensureHypnagogicLoopStopped() async {
+        await hypnagogicLoop?.stop()
+        hypnagogicLoop = nil
+    }
+
     public func stop() async {
         // Always silence the experimental spoken loop, even when the pipeline
         // itself isn't running — its lifecycle is independent of `isRunning`.
         if spokenGenerationLoopEnabled { spokenGenerationLoopEnabled = false }
+        if hypnagogicLoopEnabled { hypnagogicLoopEnabled = false }
         guard isRunning else { return }
         await stopCalibrationRecording()
         await stopImaginedSpeechSession()

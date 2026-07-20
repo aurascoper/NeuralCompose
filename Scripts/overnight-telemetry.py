@@ -18,6 +18,7 @@ Each line is a JSON object:
 import argparse
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -65,6 +66,25 @@ def get_free_disk_gb(path="/"):
     try:
         st = os.statvfs(path)
         return st.f_bavail * st.f_frsize / (1024 ** 3)
+    except Exception:
+        return None
+
+
+def get_git_sha():
+    """Short git SHA of the repo this script runs from, or None.
+
+    Stamped into every metrics line so a morning review can tell whether a
+    long-running overnight process was pinned to code that predates a later
+    capture fix — the exact trap behind the night-2026-07-18 blind run, where
+    the process launched ~3h before the symlink-follow fix was committed and
+    never reloaded it.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.stdout.strip() or None
     except Exception:
         return None
 
@@ -148,16 +168,111 @@ def _fmt(value, width, prec):
     return f"{value:>{width}.{prec}f}"
 
 
-def check_ble_connected():
-    """Check if a BrainFlow/Muse process is running (proxy for BLE)."""
+def check_ble_connected(process_name="NeuralCompose"):
+    """True if the app process is running — an app-liveness proxy for BLE.
+
+    The prior version ran ``pgrep -f "NeuralCompose|brainflow|musel"``, which
+    matched THIS logger's own command line (its ``--night-dir`` argument contains
+    'NeuralCompose'), so it self-satisfied and reported connected even with the
+    app dead — a monitor that can be true just by observing itself. Match the
+    app binary's ``comm`` instead (no python/shell/caffeinate process shares that
+    comm), and exclude our own PID/parent defensively. This is app-liveness, not
+    a true BLE-link probe — only the app can see the actual link — but it is at
+    least decoupled from the logger's own existence. Field name kept as
+    ``ble_connected`` for metrics.jsonl / overnight-review back-compat.
+    """
     try:
         result = subprocess.run(
-            ["pgrep", "-f", "NeuralCompose|brainflow|musel"],
+            ["ps", "-A", "-o", "pid,comm"],
             capture_output=True, text=True, timeout=5
         )
-        return len(result.stdout.strip()) > 0
+        own = {os.getpid(), os.getppid()}
+        for line in result.stdout.strip().split("\n")[1:]:
+            parts = line.strip().split(None, 1)
+            if len(parts) == 2 and parts[0].isdigit():
+                pid, comm = int(parts[0]), parts[1]
+                if pid not in own and process_name.lower() in comm.lower():
+                    return True
+        return False
     except Exception:
         return False
+
+
+def evaluate_capture_health(prev_samples, samples, elapsed_min, ever_flowed,
+                            flat_ticks, *, warmup_min, stall_ticks):
+    """Decide whether the capture has failed. Pure function (no I/O) for testability.
+
+    Returns ``(flat_ticks, ever_flowed, failed, reason)``.
+
+    Two failure modes, both aborts under the chosen policy:
+      - ``stalled_mid_stream``: samples grew, then stopped advancing for
+        ``stall_ticks`` consecutive ticks — the stream silently died mid-record.
+      - ``never_started``: no growth at all past ``warmup_min`` for ``stall_ticks``
+        consecutive ticks — covers both a dead/idle app and an ``eeg_session``
+        symlink pinned to a stale, already-complete session (samples read as a
+        large but constant number, never advancing). This is exactly the
+        night-2026-07-18 state.
+
+    During warm-up with no data yet (app + eeg_session symlink may not be up),
+    flat ticks do not accumulate, so the legitimate startup window can't trip it.
+    """
+    advanced = prev_samples is not None and samples > prev_samples
+    if advanced:
+        return 0, True, False, None
+    # No new samples this tick.
+    if ever_flowed or elapsed_min >= warmup_min:
+        flat_ticks += 1
+    failed = flat_ticks >= stall_ticks
+    reason = ("stalled_mid_stream" if ever_flowed else "never_started") if failed else None
+    return flat_ticks, ever_flowed, failed, reason
+
+
+def abort_capture(night_dir, reason, last_entry, flat_ticks, interval, metrics_path):
+    """Fail loud and release the machine (the 'abort + release + FAILED marker' policy).
+
+    Writes CAPTURE_FAILED.json (so the morning review reads a loud failure instead
+    of a false green), terminates caffeinate via its pid file so the Mac is free to
+    sleep, and returns — the caller exits, stopping telemetry. Deliberately does NOT
+    kill the app; an idle app holds no sleep assertion, caffeinate is what pins the
+    machine awake.
+    """
+    now = datetime.now(timezone.utc)
+    detail = {
+        "never_started": ("No EEG samples were ever recorded past warm-up — the app either "
+                          "wasn't recording or eeg_session points at a stale, non-growing session."),
+        "stalled_mid_stream": ("EEG recording grew and then stopped for the stall window while the "
+                               "app was still up — the stream silently died."),
+    }.get(reason, reason)
+    marker = night_dir / "CAPTURE_FAILED.json"
+    payload = {
+        "failed_at": now.isoformat(),
+        "reason": reason,
+        "detail": detail,
+        "flat_ticks": flat_ticks,
+        "stall_window_s": flat_ticks * interval,
+        "elapsed_min": last_entry.get("elapsed_min"),
+        "last_metrics": last_entry,
+        "metrics_path": str(metrics_path),
+        "policy": "abort+release: telemetry exits and caffeinate is terminated so the Mac may sleep.",
+    }
+    try:
+        marker.write_text(json.dumps(payload, indent=2, default=str))
+    except OSError as e:
+        print(f"  ⚠ could not write {marker.name}: {e}")
+
+    killed = []
+    caff_pid_file = night_dir / ".caffeinate.pid"
+    try:
+        pid = int(caff_pid_file.read_text().strip())
+        os.kill(pid, signal.SIGTERM)
+        killed.append(pid)
+    except (FileNotFoundError, ValueError, ProcessLookupError, PermissionError, OSError):
+        pass
+
+    print()
+    print(f"  ✗ CAPTURE FAILED ({reason}) after {last_entry.get('elapsed_min', 0):.1f} min — {detail}")
+    print(f"    Wrote {marker.name}; terminated caffeinate {killed or '(none found)'}; "
+          f"telemetry exiting so the Mac can sleep.")
 
 
 def main():
@@ -169,7 +284,12 @@ def main():
     parser.add_argument("--process-name", type=str, default="NeuralCompose",
                         help="Process name to track (default: NeuralCompose)")
     parser.add_argument("--stall-ticks", type=int, default=3,
-                        help="flag a recording stall after this many ticks with no new samples while BLE is up")
+                        help="abort after this many consecutive ticks with no new EEG samples")
+    parser.add_argument("--warmup-min", type=float, default=10.0,
+                        help="grace period (min) before a never-started (0-sample) run counts as a "
+                             "failure — covers app launch + eeg_session symlink appearing (default: 10)")
+    parser.add_argument("--no-abort", action="store_true",
+                        help="detect and log stalls but do NOT abort/kill caffeinate (legacy log-only behavior)")
     args = parser.parse_args()
 
     # Determine night directory
@@ -182,18 +302,23 @@ def main():
 
     metrics_path = night_dir / "metrics.jsonl"
     start_time = datetime.now(timezone.utc)
+    git_sha = get_git_sha()
 
     print(f"Overnight telemetry logger")
     print(f"  Night dir:    {night_dir}")
     print(f"  Metrics:      {metrics_path}")
     print(f"  Interval:     {args.interval}s")
     print(f"  Process:      {args.process_name}")
+    print(f"  Code:         git {git_sha or '(unknown)'}")
+    print(f"  Watchdog:     {'log-only (--no-abort)' if args.no_abort else 'abort+release'} "
+          f"after {args.stall_ticks} flat ticks; warm-up {args.warmup_min:.0f}m")
     print(f"  Started:      {start_time.isoformat()}")
     print(f"  Press Ctrl+C to stop.")
     print()
 
     prev_samples = None
     flat_ticks = 0
+    ever_flowed = False
     try:
         while True:
             now = datetime.now(timezone.utc)
@@ -203,31 +328,31 @@ def main():
                 "rss_mb": get_rss_mb(args.process_name),
                 "cpu_pct": get_cpu_pct(args.process_name),
                 "free_disk_gb": get_free_disk_gb(),
-                "ble_connected": check_ble_connected(),
+                "ble_connected": check_ble_connected(args.process_name),
                 "samples_received": count_samples_csv(night_dir),
                 "recording_size_mb": round(get_recording_size_mb(night_dir), 1),
                 "fsm_state": get_app_state(night_dir),
                 "packet_loss": None,  # populated if app writes it
                 "osc_queue_depth": None,  # populated if app writes it
+                "telemetry_git_sha": git_sha,
             }
 
-            # Recording-stall detector: if the EEG CSV stops growing while the
-            # app/BLE is still up, the headset has silently stalled — surface it
-            # rather than logging a flat line for hours. Complements the in-app
-            # stream-stall watchdog (AppViewModel.nextOrStall), which drives live
-            # retry/fallback; this is the out-of-band observer that lands in
-            # metrics.jsonl for overnight-review.
-            # Only a recording that was flowing and then stopped counts as a
-            # stall (samples > 0); "never started" is a different failure that
-            # overnight-review already flags, and gating on it avoids a spurious
-            # stall during the warm-up before the eeg_session symlink appears.
+            # Zero-throughput watchdog: catch the state that ran blind for 22h
+            # on night-2026-07-18 — telemetry alive but no EEG being written,
+            # whether because no recording session started or a live one stalled.
+            # Un-gated from the old `samples > 0` guard (which could never fire
+            # when the symlink pointed at a stale, non-growing session) and no
+            # longer keyed on the ble_connected proxy. Complements the in-app
+            # stream-stall watchdog (AppViewModel.nextOrStall), which only guards
+            # an ACTIVE stream; this is the out-of-band observer that catches
+            # "app up but not recording."
             samples = entry["samples_received"]
-            if prev_samples is not None and samples <= prev_samples and samples > 0 and entry["ble_connected"]:
-                flat_ticks += 1
-            else:
-                flat_ticks = 0
+            flat_ticks, ever_flowed, failed, reason = evaluate_capture_health(
+                prev_samples, samples, entry["elapsed_min"], ever_flowed, flat_ticks,
+                warmup_min=args.warmup_min, stall_ticks=args.stall_ticks)
             prev_samples = samples
-            entry["recording_stalled"] = flat_ticks >= args.stall_ticks
+            entry["recording_stalled"] = failed
+            entry["stall_reason"] = reason
 
             with open(metrics_path, "a") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
@@ -237,13 +362,19 @@ def main():
                   f"RSS={_fmt(entry['rss_mb'], 7, 1)}MB "
                   f"CPU={_fmt(entry['cpu_pct'], 5, 1)}% "
                   f"Disk={_fmt(entry['free_disk_gb'], 5, 1)}GB "
-                  f"BLE={'Y' if entry['ble_connected'] else 'N'} "
+                  f"App={'Y' if entry['ble_connected'] else 'N'} "
                   f"Samples={entry['samples_received']:>8d} "
                   f"Rec={entry['recording_size_mb']:>7.1f}MB "
                   f"FSM={entry['fsm_state']}")
-            if entry["recording_stalled"]:
-                print(f"  ⚠ STALL: no new EEG samples for {flat_ticks} ticks "
-                      f"(~{flat_ticks * args.interval}s) while BLE is up — recording may be dead.")
+
+            if failed:
+                if args.no_abort:
+                    print(f"  ⚠ STALL ({reason}): no new EEG samples for {flat_ticks} ticks "
+                          f"(~{flat_ticks * args.interval}s) — recording is dead (log-only mode).")
+                    flat_ticks = 0  # re-arm so it can flag again later
+                else:
+                    abort_capture(night_dir, reason, entry, flat_ticks, args.interval, metrics_path)
+                    return
 
             time.sleep(args.interval)
 

@@ -1,0 +1,44 @@
+[
+  {
+    "report_id": "dream_01",
+    "text": "I was on a stage in front of a huge audience and completely forgot my lines. People were staring.",
+    "target_hypothesis": "hyp_fear_failure_01",
+    "ground_truth_drift": 0.20,
+    "calibration_note": "Three anchors present (stage, audience, forgetting). Human-style GT reflects a low-drift report: the canonical fear-failure imagery is on the surface, but the dream also includes the exposure-and-acceptance beat ('people were staring' — the dreamer stayed on stage). The proxy counts 3/5 anchors -> predicted drift 0.40; the human gives additional credit for the acceptance beat -> 0.20."
+  },
+  {
+    "report_id": "dream_02",
+    "text": "I was on a stage and started falling, but I caught myself on the edge. I couldn't get back up.",
+    "target_hypothesis": "hyp_fear_failure_01",
+    "ground_truth_drift": 0.40,
+    "calibration_note": "Two anchors present (stage, falling). Moderate drift: the imagery is fear-failure-adjacent but the dreamer is stuck mid-fall rather than experiencing the canonical embarrassment beat. Proxy: 2/5 -> 0.60. Human: 0.40."
+  },
+  {
+    "report_id": "dream_03",
+    "text": "I was walking and the ground started shaking. I think there was a test, but I can't remember what it was about.",
+    "target_hypothesis": "hyp_fear_failure_01",
+    "ground_truth_drift": 0.70,
+    "calibration_note": "One anchor (test) in a non-canonical context. High drift: the test imagery is present but the surrounding narrative (ground shaking, can't remember) reads as ambient anxiety rather than performance anxiety. Proxy: 1/5 -> 0.80. Human: 0.70."
+  },
+  {
+    "report_id": "dream_04",
+    "text": "I was sitting at a desk eating an apple. The walls were yellow. Nothing happened.",
+    "target_hypothesis": "hyp_fear_failure_01",
+    "ground_truth_drift": 0.95,
+    "calibration_note": "Zero anchors. Maximum drift: a fully off-target report. The proxy's 1.00 vs the human's 0.95 is the known small bias where the proxy treats 'no anchor hit' as the absolute maximum but a human rater gives marginal credit for any narrative content within the same session block. Proxy: 0/5 -> 1.00. Human: 0.95."
+  },
+  {
+    "report_id": "dream_05",
+    "text": "I was floating in a warm home, with a shield of light around me. I felt completely safe.",
+    "target_hypothesis": "hyp_safe_exploration_01",
+    "ground_truth_drift": 0.15,
+    "calibration_note": "All four anchors present (floating, home, shield, light). Very low drift: full canonical coverage plus an explicit affect marker ('completely safe'). Proxy: 4/4 -> 0.00. Human: 0.15 (small positive drift because the explicit affect marker is rare even in on-target reports — the proxy doesn't weight affect at all)."
+  },
+  {
+    "report_id": "dream_06",
+    "text": "I was sitting in a house eating an apple. The light was dim. Nothing else happened.",
+    "target_hypothesis": "hyp_safe_exploration_01",
+    "ground_truth_drift": 0.65,
+    "calibration_note": "One anchor (home) in a flat affectless context. The 'house' token matches 'home' directly; the 'light' token is present but refers to physical lighting rather than the comfort/illumination semantic. Proxy: 1/4 -> 0.75. Human: 0.65 (slight credit for the comfort-adjacent context: sitting in a home)."
+  }
+]

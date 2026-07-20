@@ -63,8 +63,11 @@ type that can change at any time is a type nobody can rely on.
 
 No outbound network calls at runtime. No telemetry. No analytics. No
 "phone home." The default mode is fully offline; the user opts in to
-anything that touches the network (currently: the OSC remote source),
-and the opt-in is surfaced in the privacy indicator.
+anything that touches the network — the LAN OSC remote EEG source, and,
+as a single deliberate and recorded exception, the opt-in Stage-5
+hypnagogic loop's cloud LLM (which sends *transcript text only*, never
+audio, and is off by default; see `decision_registry.md` entry 8) — and
+every such opt-in is surfaced in the privacy indicator.
 
 Local defaults also make the system testable in air-gapped
 environments, which matters for clinical or research settings.

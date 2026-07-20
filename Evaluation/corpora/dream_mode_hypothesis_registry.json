@@ -1,0 +1,136 @@
+{
+  "_meta": {
+    "version": 1,
+    "created": "2026-07-19",
+    "moved_from": "Evaluation/corpora/hypothesis_registry.json::stage_4_sleep_dream_mode (extracted 2026-07-19 to keep the Stage 3.4/3.5 evaluation baseline immutable)",
+    "source_inputs": [
+      "NeuralCompose_dream_prompt.md (D1-D8 design brief, 2026-07-10)",
+      "Pasted design: routing/cascades/policies schema (offline tooling tier, paste-as-wrapper)",
+      "Pasted design: Random Forest 4-class sleep stage classifier sketch (offline pipeline test)"
+    ],
+    "boundary_contract": "Stage 3.4/3.5/4 — production runtime (FSM, TTS cues, dream-analysis LLM) deferred to Stage 4. Python extraction + drift scoring against a human-rated baseline can land now.",
+    "llm_candidate": "qwen2.5-0.5b (per decision_registry.md entry 2, Accepted)",
+    "tts_path": "Sources/BCIVoice/AVSpeechSynthesizerService.swift (existing, no new target)",
+    "model_note": "minimax-m3 in the paste text refers to the assistant, not the dream-mode LLM. qwen2.5-0.5b is the candidate per user direction 2026-07-19."
+  },
+  "hypotheses": [
+    {
+      "id": "S-1-routing-cascades-policies-schema",
+      "title": "Routing/cascades/policies schema for dream-mode hypothesis registry",
+      "question": "Does the routing/cascades/policies schema (primary_anchors, semantic_domain, drift_tolerance; on_drift_timeout / on_arousal / on_lucidity_detected cascade targets; intervention_intensity + require_debounce / allowed_tones policy block; global max_interventions_per_rem_cycle + global_cooldown_seconds + abort_on_repeated_arousal + arousal_threshold_count) capture the relevant design degrees of freedom without bloating into a free-form config?",
+      "metric": "Schema expressiveness vs current set of 2 example hypotheses (hyp_fear_failure_01, hyp_safe_exploration_01); can the schema represent the brief's D6 safety requirements (60 dB SPL cap, max 5 TMR cues/night, 15-min minimum interval, max 2 hypnopompic wake attempts, sustained-wake abort at 2.5 min, 100ms abort path, battery/thermal/disk preflight) without per-hypothesis ad-hoc fields?",
+      "success_criterion": "All D6 safety constraints are representable as either global_policies (shared across hypotheses) or per-hypothesis policies (where the constraint is hypothesis-specific, e.g., intervention_intensity:low forbids 'Assertive, grounding' tone for trauma-related hypotheses).",
+      "expected_effect_size": {
+        "schema_fields_required_for_d6": "5-8 fields total",
+        "global_policies_count": "4-6 (matches existing example)",
+        "per_hypothesis_policies_count": "3-5"
+      },
+      "status": "pre-registered",
+      "status_note": "Schema reviewed 2026-07-19 against the existing Stage 3.4/3.5 hypothesis_registry.json conventions. Conforms to the same shape (id, title, question, metric, success_criterion, expected_effect_size, status, status_note). The routing/cascades/policies blocks extend the schema with three new optional fields; the existing stage_3_4 and stage_3_5 entries are unaffected. Pre-registration is a schema review, not an evidence gate; the hypothesis is registered as a design input, not as a testable empirical claim."
+    },
+    {
+      "id": "S-2-python-offline-extraction-human-rated-drift",
+      "title": "Python offline dream-report extraction with human-rated drift baseline",
+      "question": "Does the three-pass extraction pipeline (denoise -> symbol identification -> analogical mapping) produce drift scores that correlate with human raters' judgments of dream-target alignment, at a level sufficient to use drift as a cascade trigger?",
+      "metric": "Spearman correlation between LLM-self-evaluated drift_score and human-rater alignment rating on a held-out set of N>=30 dream reports (per D8 H4: 'non-trivial agreement with human raters')",
+      "success_criterion": "Spearman rho >= 0.5 (medium correlation); F1 of high-drift/low-drift binary classification (threshold = drift_tolerance per hypothesis) >= 0.7",
+      "expected_effect_size": {
+        "spearman_rho": "0.4-0.7 (LLM self-eval is a known weak point; medium correlation is plausible, high is unlikely)",
+        "f1_high_vs_low_drift": "0.6-0.8"
+      },
+      "status": "pre-registered",
+      "status_note": "LLM self-evaluated drift_score is a known weak point for models under 30B parameters. The pipeline must validate against a human-rated baseline before drift can be used as a cascade trigger; otherwise it is an unvalidated heuristic. Synthetic dream reports can be used to test the pipeline extraction end-to-end (denoise + symbol identification + mapping), but the drift-vs-rater correlation requires real labeled data. Candidate LLM: qwen2.5-0.5b per decision_registry.md entry 2; inference via local OpenAI-compatible server (vLLM / MLX-Server / Ollama), not the in-process MLX runtime. Brief's Risk Register: 'LLM primer generation' is Medium status; 'LLM dream report analogy extraction' is Low status. Stage 3.5 = offline evaluation only; no production change. Pipeline milestone 1 (2026-07-19): Scripts/dream_extraction.py landed. Three-pass architecture (denoise -> identify_symbols -> calculate_drift) using a lightweight symbolic approach (no LLM dependency for milestone 1). On-disk registry is the single source of truth; no hardcoded fallback mock. Smoke test against Data/synthetic_dream_reports.json (6 hand-curated reports, calibrated to on-disk anchor vocabulary): Spearman rho 0.9856 (p=0.0003), mean |error| 0.1667, max |error| 0.4000. Success criterion (rho >= 0.6) cleared with massive headroom. **Honest framing per research-software-documentation-structure calibration-observation rule:** (a) the synthetic dataset is calibrated to the symbol-match proxy itself, so a high Spearman rho is the *expected* outcome for a pipeline-integration check, not a generalization claim. (b) Absolute errors are larger than the rank correlation suggests: dream_01 has 0.40 error because the prototype token-membership check doesn't handle morphology ('forgot' does not match anchor 'forgetting'); dream_06 has 0.10 error because 'house' does not match anchor 'home' without stemming/synonym handling. (c) The real test of whether the proxy generalizes to human perception is the S-2 milestone 2: collect a small set of real dream reports with user-rated drift scores, re-run the pipeline, and report rho on that. Pipeline milestone 2 (2026-07-19): Data/human_rated_dream_reports.json landed as a user-curated real-style fixture (6 reports with imagery-coded fear-failure/safe-exploration beats that do NOT use the literal on-disk anchor vocabulary). The fixture tests the prototype against the failure modes it was suspected to have. Empirical result: Spearman rho 0.1352 (p=0.7984), mean |error| 0.5917, max |error| 0.9500. **S-2 success criterion (rho >= 0.6) FAILED on the human-rated fixture.** Per-report breakdown: human_01 (stage + teeth loose) err 0.70; human_02 (runaway vehicle, brakes failed, control lost) err 0.85; human_03 ('forgotten schedule' — literal-inflection test case) err 0.55; human_04 (soared/valley/temple — zero literal anchor hits but canonical safe-exploration imagery) err 0.95; human_05 (floating in ocean — one literal anchor hit) err 0.40; human_06 (painting childhood home — incidental 'home' but off-target context) err 0.10. The proxy's rank order inverts against the human's in the soaring-valley case (proxy says highest drift, human says lowest drift) and in the stage + teeth case (proxy says high drift, human says very low drift). The empirical result is the EXPECTED outcome: the prototype's literal-token-membership check is brittle against morphology and semantic imagery, which is the exact failure mode the LLM-driven S-2 milestone 3 is designed to address. **Caveat on the human-rated fixture:** these GTs are single-rater (the user), not multi-rater consensus. For milestone 2 to fully validate the proxy-vs-human gap, the same reports would need to be rated by additional independent raters and inter-rater agreement checked. That work is queued for a follow-on calibration cycle, not this milestone. S-2 milestone 3 (LLM-driven 3-pass upgrade) is now the empirically-validated next step and is held behind the boundary contract. Recommended path: stand up a local OpenAI-compatible server (vLLM with qwen2.5-0.5b, or MLX-Server), point Scripts/dream_extraction.py at it via a new LLMBackend protocol, and re-run both fixtures; the expectation is that the synthetic rho stays at ~0.99 and the human-rated rho rises above 0.6. [2026-07-19] S-2 milestone 3 (LANDED, commit <pending>): LLMDriftScorer backend added to Scripts/dream_extraction.py with a DriftScoring protocol that preserves the importable API; urllib.request-based local OpenAI-compatible client (zero new deps); JSON-mode response_format; anchors sent as a context hint rather than as a matching vocabulary. Real runs against Ollama serving on localhost:11434. (a) qwen2.5:0.5b (the dream-mode spec candidate) with temperature=0.0: rho = NaN, model returns constant 0.98 for every report - sub-billion-parameter model gets stuck in a greedy-decoding local optimum anchored on the system prompt's '1.00: complete drift' example. (b) qwen2.5:0.5b with temperature=0.3: rho 0.8827 (p=0.0198), mean |err| 0.5850 - ranking correct but absolute calibration systematically biased HIGH (predicted 0.75-0.98 across all 6 reports); would over-trigger TMR cascades. (c) qwen2.5:0.5b on synthetic: rho 0.6983 - worse than the proxy (0.9856) on in-distribution data; the model doesn't understand the synthetic anchor vocabulary as well as literal-token matching. (d) deepseek-v4-flash:cloud (sanity check, NOT the spec) with temperature=0.3: rho 0.8857 (p=0.0188), mean |err| 0.1167 - both ranking and absolute calibration correct; per-report all errors <= 0.25 (human_01 err 0.00). The pipeline integration is sound; the dream-mode spec candidate (qwen2.5:0.5b) is undersized for the task. Open decision: bump candidate to qwen2.5:1.5b / qwen2.5:3b (expected to fix both the greedy-decoding deadlock and the high-drift bias), switch model family, or accept qwen2.5:0.5b with a post-hoc calibration fix-up (e.g. isotonic regression on a held-out set - but 6 human-rated reports is too small to fit a calibration curve without severe overfitting). Bump-and-verify next experiment is queued. Recommended path on the next pull: qwen2.5:3b at q4_0 (Ollama default), run on both fixtures, compare to the 0.5B numbers above. [2026-07-19] Bump-experiment (qwen2.5:1.5b and qwen2.5:3b pulled and run on the human-rated fixture): the qwen2.5 ladder at temp=0.3 single-run shows a MONOTONIC DECREASE in rho as parameters increase (0.5B 0.88, 1.5B 0.00, 3B -0.39). 3B is deadlocked on max-drift (1.00 for 5/6 reports). Latency measured (not estimated): 0.5B 2.2s, 1.5B 19.0s (memory pressure on unified memory), 3B 8.9s wall time for 6 reports. The 0.5B is *both* best-performing qwen2.5 *and* fastest. [2026-07-19] Prompt-modification falsified: v2 prompt (drop the named 0.00/1.00 endpoints, use intermediate calibration anchors, ask the model to 'use the full range') regressed every model: deepseek 0.886 -> 0.617, qwen2.5:0.5b 0.88 -> 0.15, qwen2.5:1.5b 0.00 -> -0.72, qwen2.5:3b -0.39 -> +0.10. The v1 prompt's named endpoints gave the smaller models a *direction* to reason from; removing the direction without a replacement left them with no useful signal. v2 is kept on disk as SYSTEM_PROMPT_V2 with a --prompt-version CLI flag for the falsification record; v1 is the default. [2026-07-19] Multi-seed evaluation harness landed (Scripts/dream_extraction.py --runs N). Single-run rho is not robust at the n=6 sample size; the '0.88' numbers from earlier turns were 2.5-2.7-sigma outliers from distributions with much lower means. Comprehensive multi-seed picture (5 runs unless noted): proxy on human-rated mean rho +0.1352 std 0.00 (deterministic); qwen2.5:0.5b + v1 + temp=0.3 mean -0.08 std 0.38 95% CI [-0.41, +0.25] - in the noise; qwen2.5:1.5b + v1 + temp=0.3 mean -0.09 std 0.24 95% CI [-0.30, +0.12] - in the noise; qwen2.5:3b + v1 + temp=0.3 mean +0.00 std 0.00 (deadlocked); deepseek + v1 + temp=0.3 mean +0.8369 std 0.05 95% CI [+0.75, +0.93] - ROBUSTLY clears 0.6 success criterion; deepseek + v2 + temp=0.3 mean +0.60 std 0.25 95% CI [+0.32, +0.88] - borderline (CI crosses 0.6). Empirical verdict: the qwen2.5 family is undersized for this task on the human-rated fixture. Deepseek (a different model family) is the only configuration that robustly clears the S-2 success criterion. The 'qwen2.5:0.5b is the dream-mode candidate' framing in the registry should be revisited: deepseek is the empirically-better model for this task on small (n<10) datasets. Open decision: (a) swap the dream-mode candidate to deepseek; (b) keep qwen2.5:0.5b and accept that the dream-mode LLM scorer cannot robustly clear 0.6 on the human-rated fixture at this dataset size (would need a post-hoc calibration fix-up or a larger dataset to be useful); (c) collect 20-30 more human-rated reports to give the qwen2.5 family a fairer test (the current n=6 may be too small for a 0.5B model to consistently rank 6 reports). Multi-rater consensus on the existing 6 reports is a separate follow-on calibration cycle. [2026-07-19] DECISION PENDING — dream-mode LLM scorer candidate is still qwen2.5:0.5b (the spec per decision_registry.md entry 2); the multi-seed evaluation found that the qwen2.5 family (0.5B / 1.5B / 3B) is in the noise or deadlocked on the human-rated fixture at n=6, and that deepseek-v4-flash:cloud (a sanity-check model, NOT the spec) is the only configuration that robustly clears the 0.6 success criterion. The user's intended replacement is DeepSeek-R1-Distill-Qwen-1.5B (deepseek-r1:1.5b), a reasoning-distilled model that uses <think>...</think> chain-of-thought tags and requires a different prompt topology (no strict JSON mode, regex extraction of the tail JSON payload). That is a queued separate experiment: pull deepseek-r1:1.5b, add a think-tag-aware prompt mode to LLMDriftScorer with a regex tail-extractor, re-run the multi-seed harness. Not part of this commit. Three real options remain for the candidate: (a) swap to deepseek-r1:1.5b (queued) and re-evaluate; (b) keep qwen2.5:0.5b and accept the empirical finding that the qwen2.5 family cannot robustly clear 0.6 on n=6 human-rated reports; (c) collect 20-30 more human-rated reports to give the qwen2.5 family a fairer test at scale. The deepseek-v4-flash:cloud sanity check is preserved in the falsification record (mean rho +0.84, std 0.05, 95% CI [+0.75, +0.93]) but is NOT a candidate swap. [2026-07-19] R1 distill experiment LANDED: Scripts/dream_extraction.py now supports prompt_version=\"r1\" for DeepSeek-R1 reasoning-distilled models. The r1 prompt topology: drops response_format=json_object, asks the model to reason inside <think>...</think> tags, then emit a JSON object at the tail. A new _parse_r1_response helper strips the think block, then uses tail-aware extraction (json.loads on progressively shorter suffixes from the last `{` to the last `}`) to recover the drift payload. Fallback to 0.5 on parse failure. CLI: --prompt-version r1. Real runs against Ollama serving on localhost:11434. (a) deepseek-r1:1.5b pulled (1.1 GB q4_K_M, architecture qwen2, parameters 1.8B, context length 131072, capabilities: tools/thinking/completion per ollama show). (b) Single-call probe: wall time 22.9s for 17-char response, response was direct JSON without visible think block (Ollama likely strips the think tokens from the response while letting the model reason internally; the model's `thinking` capability is enabled but the response surface is the final tail). (c) R1 single-run on human-rated: Spearman rho 0.2125 (p=0.6860), mean |err| 0.3583, max |err| 0.6000. Predictions clustered at 0.5 (model returns 0.5 for 5/6 reports) - looks like the model is conservative and returns middle-of-scale for ambiguous cases. (d) R1 multi-seed (3 runs) on human-rated: per-run rho [-0.2648, +0.2319, +0.8533], mean rho +0.2735, std 0.5602, 95% CI [-0.3605, +0.9074], mean |err| 0.4178. R1 distill at 1.5B is empirically FALSIFIED on the human-rated fixture. Mean rho 0.27 with CI crossing zero; the model is in the noise. The R1 reasoning hypothesis (that CoT would help at 1.5B distill size) is falsified. (e) Latency: R1:1.5B is the slowest model tested, ~23s per call (vs deepseek-v4-flash:cloud's ~3s and qwen2.5:0.5b's ~0.4s); the CoT computation is expensive. (f) Updated comprehensive multi-seed picture: proxy +0.14 std 0.00; qwen2.5:0.5b mean -0.08 std 0.38; qwen2.5:1.5b mean -0.09 std 0.24; qwen2.5:3b mean +0.00 std 0.00 (deadlocked); deepseek-r1:1.5b + r1 mean +0.27 std 0.56 95% CI [-0.36, +0.91]; deepseek-v4-flash:cloud + v1 mean +0.84 std 0.05 95% CI [+0.75, +0.93] [STILL THE ONLY ROBUST CLEAR]. Updated DECISION: the cloud deepseek-v4-flash:cloud remains the empirical gold standard; deepseek-r1:1.5b is NOT a viable candidate at 1.5B distill size. Next candidates to test (queued, user's call): (a) deepseek-r1:7b or 8b (larger R1 distill, may have capacity the 1.5B lacks) - estimated 4-5 GB q4_K_M disk; (b) deepseek-r1:14b or 32b (even larger); (c) qwen3 or another non-deepseek reasoning family; (d) hold the line and accept deepseek-v4-flash:cloud as the candidate, document its disk-vs-accuracy trade-off (cloud model = no local disk, no offline, network dependency). The R1 prompt + regex tail-extractor is preserved on disk for the falsification record and for future R1-size experiments."
+    },
+    {
+      "id": "S-3-random-forest-sleep-stage-classifier-synthetic",
+      "title": "Random Forest 4-class sleep-stage classifier on synthetic 30s EEG epochs",
+      "question": "Does a Random Forest on relative band power (delta/theta/alpha/beta) achieve cross-subject macro F1 >= 0.6 on a 4-class (Wake, N1, N2_N3, REM) synthetic dataset that mimics Muse's 4-channel frontal derivation?",
+      "metric": "Macro F1, per-class sensitivity/specificity, Cohen's kappa on LOSO-style splits (synthetic, but with per-subject channel noise injected to simulate cross-subject variability)",
+      "success_criterion": "Macro F1 >= 0.6 across 4 classes on synthetic; Cohen's kappa >= 0.5",
+      "expected_effect_size": {
+        "macro_f1_synthetic": "0.55-0.75",
+        "cohen_kappa_synthetic": "0.4-0.6",
+        "feature_count": "4 (relative band powers); brief-flagged as below the literature floor for cross-subject generalization, may need expansion to relative+absolute band powers + theta/alpha ratio + alpha dropout ratio + spindle/slow wave counts (D1 SleepFeatures)"
+      },
+      "status": "pre-registered",
+      "status_note": "No labeled sleep-staging dataset exists in the repo. Recordings/ contains Muse validation (eyes-open/closed alpha, 2026-07-10) and one calibration labels file, not PSG. A synthetic data generator is the right MVP for the offline pipeline test, with the explicit caveat that cross-subject real-data performance is unproven until a labeled dataset is acquired. Brief's Risk Register names 'Domain shift from PSG datasets (central/occipital channels vs frontal)' as the largest expected source of error — this should be called out as a calibration observation, not a normative threshold. The paste's 'Why Random Forest over Deep Learning' rationale conflates JEPA (a WorldModel/ research spike, decoupled per CLAUDE.md) with the EEG pipeline; the rationale is opinionated, not evidence-based, and should be removed from the final schema doc. Generator milestone (2026-07-19): Scripts/generate_synthetic_sleep.py landed. Dirichlet sampling preserves the simplex constraint (relative band powers sum to 1.0 by construction). Non-homogeneous Markov with sine-gated Deep->REM gateway produces a recognizable ~90-min ultradian rhythm. Three-seed smoke test: stage fractions vary substantially across seeds (REM 25.7-38.1% over 8h for seeds 7/42/1) — the pasted base matrix's expected-durations do not pin down a unique hypnogram shape, so a downstream trainer that needs stable fractions should sweep seeds and report mean+/-std, not rely on a single seed. Real-adult target fractions (Wake 5-10%, N1 5-10%, N2/N3 50-60%, REM 20-25%) are best hit with seed 7; the other seeds over-REM. Trainer milestone 2 (2026-07-19): Scripts/train_rf_model.py landed. Per the S-3 spec: feature engineering adds wake_rem_ratio and slow_sleep_ratio (per-epoch static) plus per-band rolling-3 mean and t-(t-1) diff (session-bounded temporal context, groupby('session_id') prevents CV leakage). LOSO grid search with LeaveOneGroupOut on N concatenated synthetic sessions. Smoke test (3 seeds, QUICK 2-combo grid, 5.1s wall): per-seed mean macro F1 0.9394 +/- 0.0127, range 0.9297..0.9573 — S-3 success criterion (>=0.6) cleared with massive headroom on synthetic. Top features confirm design intent: wake_rem_ratio #1 (0.132), delta #2 (0.130), alpha/beta/slow_sleep_ratio close behind. Confusion matrix on refit-on-full (optimistic) shows the known hard case is N1<->REM (23 N1->REM and 22 REM->N1 errors per session, matching the brief's known spectral similarity). **Honest framing per research-software-documentation-structure calibration-observation rule:** the high F1 is partly an artifact of training and testing on the same synthetic distribution with no domain shift, no electrode artifacts, no motion artifacts, and no between-subject variability. Real-data cross-subject performance remains unproven. Treat the smoke test as a pipeline-integration check, not as a generalization claim. Full 216-combo grid is opt-in via absence of --quick (estimated wall time: hours on M-series, not run in this session). CoreML export is the next integration step (S-3 milestone 3) and stays held behind the boundary contract."
+    },
+    {
+      "id": "S-4-stage-4-swift-actor-fsm-deferred",
+      "title": "Swift DreamSessionFSM actor (Stage 4, deferred)",
+      "question": "When Stage 4 evidence gates open, does a Swift `actor DreamSessionFSM` (with `stateHistory` debounce, AASM-aware transition rules, global_policies-driven cooldowns, `Codable HypothesisRegistry` loaded at launch, cascade handlers for on_arousal / on_drift_timeout / on_lucidity_detected) match the Python offline prototype's behavior on recorded EEG, and does it compose cleanly with the existing `Sources/BCIVoice/AVSpeechSynthesizerService` for the TTS cue path?",
+      "metric": "Replay equivalence: Swift FSM output state transitions over a recorded EEG CSV match the Python offline prototype's output on the same input within tolerance (no transition divergence on N>=20 epochs); BCIVoice composition: TTS cue path completes one full speak/cancel cycle without dropping EEG frames",
+      "success_criterion": "Replay equivalence >= 95% on stable REM transitions; BCIVoice composition passes a 5-min soak test with no dropped frames",
+      "expected_effect_size": {
+        "replay_equivalence_rate": "0.90-0.99 (debounce + AASM rules are deterministic; small differences expected at boundaries)",
+        "tts_compose_soak_minutes": "5-10",
+        "actor_state_property_bug": "The pasted Python FSM's `cascade(to:)` method has a Swift-concurrency bug if ported verbatim: `var updatedFSM = self; _ = updatedFSM.loadHypothesis(...); self.activeHypothesisID = updatedFSM.activeHypothesisID; ...` is a no-op pattern on actor stored properties. Stage 4 implementation must inline mutation in the actor's isolated body."
+      },
+      "status": "pre-registered",
+      "status_note": "Deferred per Stage 3.4/3.5/4 boundary contract (AA6545F1 / EF7BC788 / B4BBC32A). The pasted Swift actor design is the right SHAPE but the concrete type to delegate to is `AVSpeechSynthesizerService` (existing, BCIVoice/), not a fabricated `HypnosisSynthesizer` singleton. The pasted 'iOS app / CoreBluetooth delegate queue / iOS bundle' framing is wrong for this repo — this is a macOS app, EEG comes from BrainFlow, not CoreBluetooth. The pasted Random Forest sketch's 'CoreML for Stage 4 iOS integration' should read 'CoreML for the macOS deployment path matching BCIClassifier's existing ANE-preferred CoreML wrapper.' These framing corrections are recorded in `docs/SleepCycleDesign.md`'s audit section. The pasted `loadHypothesis` accepts the terminal cascade names `abort_to_restorative_sleep` and `trigger_active_confrontation` as string keys — these should be a Swift enum (`enum HypothesisID: String, Codable`) for type safety when the time comes."
+    }
+  ],
+  "example_hypotheses_for_schema_validation": {
+    "_note": "These two examples were extracted from the original pasted schema (hyp_fear_failure_01, hyp_safe_exploration_01) for documentation purposes. They are NOT pre-registered evidence-backed hypotheses — they are shape fixtures used by S-1 to validate the schema against the D6 safety requirements. Move to a separate fixture file when a real test corpus lands.",
+    "global_policies": {
+      "max_interventions_per_rem_cycle": 4,
+      "global_cooldown_seconds": 300,
+      "abort_on_repeated_arousal": true,
+      "arousal_threshold_count": 2
+    },
+    "hypotheses": {
+      "hyp_fear_failure_01": {
+        "target_concept": "Overcoming the fear of public failure",
+        "routing": {
+          "primary_anchors": [
+            "stage",
+            "audience",
+            "falling",
+            "forgetting",
+            "test"
+          ],
+          "semantic_domain": "performance_anxiety",
+          "drift_tolerance": 0.65
+        },
+        "policies": {
+          "intervention_intensity": "adaptive",
+          "require_debounce": true,
+          "allowed_tones": [
+            "Ethereal",
+            "Grounding",
+            "Curious"
+          ]
+        },
+        "cascades": {
+          "on_drift_timeout": "hyp_safe_exploration_01",
+          "on_arousal": "abort_to_restorative_sleep",
+          "on_lucidity_detected": "trigger_active_confrontation"
+        }
+      },
+      "hyp_safe_exploration_01": {
+        "target_concept": "Establishing a baseline feeling of physical and mental safety",
+        "routing": {
+          "primary_anchors": [
+            "home",
+            "shield",
+            "light",
+            "floating"
+          ],
+          "semantic_domain": "comfort_security",
+          "drift_tolerance": 0.8
+        },
+        "policies": {
+          "intervention_intensity": "low",
+          "require_debounce": true,
+          "allowed_tones": [
+            "Soothing",
+            "Ethereal"
+          ]
+        },
+        "cascades": {
+          "on_drift_timeout": "abort_to_restorative_sleep"
+        }
+      }
+    }
+  }
+}

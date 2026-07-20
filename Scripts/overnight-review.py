@@ -132,6 +132,20 @@ def load_exceptions(night_dir):
     return exceptions
 
 
+def get_git_sha():
+    """Short git SHA of this repo, or None — to compare against the SHA a night's
+    telemetry stamped, flagging runs pinned to code that predates a later fix."""
+    try:
+        repo_root = Path(__file__).resolve().parent.parent
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.stdout.strip() or None
+    except Exception:
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Morning review of overnight recording")
     parser.add_argument("--night-dir", type=str, default=None)
@@ -146,6 +160,24 @@ def main():
     print(f"=== Overnight Review: {night_dir.name} ===")
     print(f"Directory: {night_dir}")
     print()
+
+    # Loud failure banner: the telemetry watchdog writes CAPTURE_FAILED.json when
+    # it aborts a zero-throughput run. If present, the night failed by definition —
+    # surface it before anything else so it can't read "healthy" below.
+    failed_marker = night_dir / "CAPTURE_FAILED.json"
+    capture_failed = None
+    if failed_marker.exists():
+        try:
+            capture_failed = json.loads(failed_marker.read_text())
+        except (OSError, json.JSONDecodeError):
+            capture_failed = {"reason": "unknown", "detail": "(CAPTURE_FAILED.json unreadable)"}
+        print(f"## ✗ CAPTURE FAILED")
+        print(f"  Reason:   {capture_failed.get('reason', '?')}")
+        print(f"  Detail:   {capture_failed.get('detail', '')}")
+        print(f"  Failed:   {capture_failed.get('failed_at', '?')} "
+              f"(after {capture_failed.get('elapsed_min', '?')} min)")
+        print(f"  The watchdog aborted this run and released the machine — no usable capture.")
+        print()
 
     metrics = load_metrics(night_dir)
     cues = load_cue_log(night_dir)
@@ -300,6 +332,9 @@ def main():
     # so a near-zero-duration or EEG-less night can't silently read "healthy".
     print(f"## Summary")
     issues = []
+    if capture_failed:
+        issues.append(f"CAPTURE FAILED ({capture_failed.get('reason', '?')}) — "
+                      f"watchdog aborted this run; see CAPTURE_FAILED.json")
     if not metrics:
         issues.append("no telemetry data (metrics.jsonl missing or empty)")
     else:
@@ -315,12 +350,35 @@ def main():
             second_half = sum(rss_values[len(rss_values)//2:]) / (len(rss_values) - len(rss_values)//2)
             if first_half > 0 and second_half / first_half >= 1.2:
                 issues.append("possible memory leak (RSS grew >20% first half vs second half)")
+        # Zero-throughput: telemetry never counted a single EEG sample. On
+        # night-2026-07-18 this was true for all 1365 ticks yet the night read
+        # "healthy" — the check that would have caught it.
+        max_samples = max((m.get("samples_received") or 0) for m in metrics)
+        if max_samples == 0:
+            issues.append("telemetry counted 0 EEG samples for the entire run "
+                          "(no recording session, or a blind/pre-fix telemetry sink)")
+        # Stale-code guard: a long-running process pinned to code that predates a
+        # later capture fix is the root enabler of the 7-18 blind run.
+        shas = {m.get("telemetry_git_sha") for m in metrics if m.get("telemetry_git_sha")}
+        current_sha = get_git_sha()
+        if shas and current_sha and current_sha not in shas:
+            issues.append(f"telemetry ran stale code (git {'/'.join(sorted(shas))}) — "
+                          f"HEAD is now {current_sha}; a fix may not have been active during capture")
     if exceptions:
         issues.append(f"{len(exceptions)} crash/exception file(s) found")
     if not eeg_dir:
         issues.append("no EEG session found for this night")
-    elif eeg_minutes is not None and eeg_minutes < 60:
-        issues.append(f"EEG span only {eeg_minutes:.1f} min — not a plausible overnight session")
+    else:
+        if eeg_minutes is not None and eeg_minutes < 60:
+            issues.append(f"EEG span only {eeg_minutes:.1f} min — not a plausible overnight session")
+        # Span mismatch: EEG far shorter than telemetry means the recorder stopped
+        # (or the eeg_session symlink is stale) long before telemetry did — the
+        # 81-min-vs-1367-min tell that read "healthy" on night-2026-07-18.
+        telemetry_min = metrics[-1].get("elapsed_min", 0) if metrics else 0
+        if eeg_minutes is not None and telemetry_min > 60 and eeg_minutes < 0.5 * telemetry_min:
+            issues.append(f"EEG span ({eeg_minutes:.0f} min) far shorter than telemetry duration "
+                          f"({telemetry_min:.0f} min) — recording stopped long before telemetry did "
+                          f"(stale eeg_session symlink or dead recorder)")
 
     if not issues:
         print(f"  ✓ Session looks healthy. Ready for analysis.")

@@ -32,6 +32,12 @@ Recordings/golden/*
 !Recordings/golden/README.md
 !Recordings/golden/report/
 
+## Secrets — never commit API keys / tokens. `.env` holds HF_API_TOKEN and
+## (optionally) ANTHROPIC_API_KEY for the offline dream-mode eval tool.
+.env
+.env.*
+!.env.example
+
 ## Editors
 .vscode/
 .idea/
@@ -46,6 +52,12 @@ venv/
 venv.*.parked/
 __pycache__/
 *.pyc
+
+## Synthetic data outputs (regeneratable from Scripts/generate_synthetic_sleep.py)
+Data/*
+!Data/.gitkeep
+!Data/synthetic_dream_reports.json
+!Data/human_rated_dream_reports.json
 
 ## World Model spike — generated trajectories, regenerable via
 ## WorldModel/dataset.py (seeded, so --seed 0 reproduces exactly)
