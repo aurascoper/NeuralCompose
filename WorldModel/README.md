@@ -649,6 +649,30 @@ full framing; the short version is the same one this file has used
 throughout: prove the architecture (now including the on-device CoreML/ANE
 leg) on the toy task before any real-EEG decision is made.
 
+## 1/f normalizer transform — integrated, backward-validated only (2026-07-20)
+
+The optional 1/f log-transform + `clip_sigma` output cap for `eeg_jepa.py`'s
+`JEPATransitionDataset` (developed on `fix/preflight-gates-2-3`) are now on this
+branch via cherry-pick. **Its status is "hypothesis under test," not "validated."**
+The evidence is entirely *backward* (safe, not beneficial): the `--smoke-test`
+guards prove finiteness under `log(0)`, boundedness by `clip_sigma`, and export
+round-trip — never that it *improves* any metric. The forward A/B was deferred
+until real capture data exists; none does (ADR-006), so the forward evaluation is
+being built **synthetically** — see `RESEARCH_spectral_geometry.md` and
+`EXPERIMENT_LEDGER.md`.
+
+Defaults: `log_features=False` (the log block is skipped → strict identity for the
+1/f feature) and `clip_sigma=8.0` (a no-op on well-behaved data — on the smoke-test
+records `max|z| ≈ 1.6 ≪ 8`, so the clamp fires only for near-dead-channel outliers,
+its intended guard). Net: **default = identity in practice.**
+
+Open scientific question (per the research doc): the 1/f / aperiodic component may
+be *signal*, not nuisance — its slope tracks E/I balance — so blind log-compression
+could *delete* the most informative feature. Phase B tests exactly this, on
+synthetic data with a dial-able aperiodic exponent, guarding aperiodic-factor
+recovery. Preferred input ordering there is specparam periodic+aperiodic channels
+first, log band-power only if the benchmark earns it.
+
 ## Explicitly out of scope for this spike (so far)
 
 - Runtime use of real EEG data: the app can now collect and train from a
