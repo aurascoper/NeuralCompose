@@ -1289,15 +1289,23 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// Reads the current composed sentence aloud. Explicit-trigger only —
     /// never invoked automatically on word commit.
     public func speak() async {
-        guard !isSpeaking, !composedText.isEmpty else { return }
+        await speak(text: composedText)
+    }
+
+    /// Speaks arbitrary `text` in the resolved voice (the Personal Voice when
+    /// active) with the Stage-2 confidence-wobble. Backs the composed-sentence
+    /// path above and external triggers — the `neuralcompose://speak?text=` URL
+    /// scheme (→ a Siri Shortcut). No-ops on empty text or while already speaking.
+    public func speak(text: String) async {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isSpeaking, !text.isEmpty else { return }
         isSpeaking = true
         defer { isSpeaking = false }
         do {
-            // Speak phrase-by-phrase with a confidence-*wobbled* prosody (Stage 2):
-            // hedged clauses softer/slower/rising, committed ones firmer/falling,
-            // so the voice doesn't land every clause identically (the robotic
-            // tell). Replaces the old single flat prosody-less utterance.
-            for (phrase, prosody) in ProsodyWobble.plan(composedText) {
+            // Phrase-by-phrase confidence-*wobbled* prosody (Stage 2): hedged
+            // clauses softer/slower/rising, committed ones firmer/falling, so the
+            // voice doesn't land every clause identically (the robotic tell).
+            for (phrase, prosody) in ProsodyWobble.plan(text) {
                 try await voiceOutput.speak(phrase, prosody: prosody, onWord: nil)
             }
         } catch {

@@ -26,5 +26,16 @@
     <string>NeuralCompose can receive EEG over your local network from the Mind Monitor app (a Muse headband streaming via OSC), as an alternative to a direct Bluetooth connection. EEG stays on your local network and is never sent to the internet.</string>
     <key>NSHumanReadableCopyright</key>
     <string>NeuralCompose — local-only research prototype.</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.neuralcompose.app.url</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>neuralcompose</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
