@@ -176,7 +176,9 @@ principles.
 
 ## Playback & synchronization math
 
-Live BLE acquisition is a noisy clock — inter-sample gaps jitter with radio
+Live acquisition is a noisy clock — inter-sample gaps jitter with radio
+conditions and OS scheduling (over BLE), or with network latency (a remote
+Muse streamed over OSC), so recorded timestamps never land on a perfect grid.
 `PlaybackEEGStream.normalized` resamples a recording onto an
 exact uniform grid before replay, via linear interpolation between the
 two nearest recorded samples $(t_a, x_a)$, $(t_b, x_b)$:
@@ -283,7 +285,12 @@ $$
 where $r_n$ is the repeat count for period $n$. Decoder stability
 additionally records loop period and repeat count.
 
-For complete derivations and notation, see [`docs/Math.md`](docs/Math.md).
+For complete derivations and notation, see [`docs/Math.md`](docs/Math.md) —
+including §11, the cross-project measurement primitives ($(\mathrm{PR}, \alpha)$
+eigenspectrum descriptors, aperiodic-adjusted spectral features via specparam,
+and the trajectory-novelty functional $N_{\mathrm{PR}}$) that tie the awake
+pipeline, the WorldModel JEPA spike, and the sleep study to one shared set of
+instruments — and its companion upgrades in [`docs/Research.md`](docs/Research.md).
 
 ## Repository layout
 
