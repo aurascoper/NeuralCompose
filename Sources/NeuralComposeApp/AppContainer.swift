@@ -140,7 +140,23 @@ public struct AppContainer: Sendable {
         let classifier = ClassifierFactory.live()
         let predictor = await PredictorFactory.live()
         BCILog.predictor.notice("predictor backend: \(predictor.kind.rawValue, privacy: .public)")
-        let voiceOutput = VoiceOutputFactory.live()
+        // Voice output auto-selects the best voice (Personal Voice → Premium/
+        // Enhanced → compact); NEURALCOMPOSE_VOICE_ID pins a specific one.
+        let voiceIdentifier = ProcessInfo.processInfo.environment["NEURALCOMPOSE_VOICE_ID"]
+        let voiceOutput = VoiceOutputFactory.live(voiceIdentifier: voiceIdentifier)
+        // Personal Voice is opt-in (NEURALCOMPOSE_PERSONAL_VOICE=1). Request its
+        // authorization OFF the launch path: an unanswered prompt — or a no-bundle
+        // `swift run`, where the prompt can't present — must not wedge launch.
+        // Personal voices appear in speechVoices() only after the grant, so the
+        // user's own on-device voice is auto-selected on the NEXT launch — and
+        // persistently, if signed with Scripts/sign-app-local.sh (the grant is
+        // cdhash-pinned, so ad-hoc rebuilds otherwise re-prompt).
+        if ProcessInfo.processInfo.environment["NEURALCOMPOSE_PERSONAL_VOICE"] == "1" {
+            Task.detached {
+                let granted = await AVSpeechSynthesizerService.requestPersonalVoiceAuthorization()
+                BCILog.voice.notice("personal voice authorization: \(granted ? "granted" : "not granted", privacy: .public)")
+            }
+        }
         let voiceInput = VoiceInputFactory.live()
         // The voice command recognizer is constructed with a
         // parser closure that wraps `FuzzyCommandRecognizer`

@@ -14,7 +14,8 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
 
     public init(voiceIdentifier: String? = nil) {
         self.voiceIdentifier = voiceIdentifier
-            ?? Self.bestNeuralVoiceIdentifier()                                       // prefer an installed neural voice
+            ?? Self.bestPersonalVoiceIdentifier()                                     // the user's own on-device voice (if authorized)
+            ?? Self.bestNeuralVoiceIdentifier()                                       // else best installed Premium/Enhanced
             ?? AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())?.identifier
             ?? "system-default"
         synthesizer.delegate = delegateProxy
@@ -34,6 +35,31 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
                       && $0.quality.rawValue > AVSpeechSynthesisVoiceQuality.default.rawValue }
             .max { $0.quality.rawValue < $1.quality.rawValue }?   // highest quality wins (premium > enhanced)
             .identifier
+    }
+
+    /// Identifier of an installed **Personal Voice** — the user's own voice,
+    /// recorded and compiled entirely on-device (System Settings → Accessibility →
+    /// Personal Voice). Personal voices report `.default` quality, so they are
+    /// invisible to `bestNeuralVoiceIdentifier`; this is a separate selector keyed
+    /// on the `.isPersonalVoice` trait. Returns nil until the app has been granted
+    /// personal-voice authorization (`requestPersonalVoiceAuthorization`) — before
+    /// that, personal voices do not appear in `speechVoices()`. Prefers a voice for
+    /// `language` (default: current locale), else any personal voice.
+    public nonisolated static func bestPersonalVoiceIdentifier(language: String? = nil) -> String? {
+        let prefix = (language ?? AVSpeechSynthesisVoice.currentLanguageCode()).prefix(2).lowercased()
+        let personal = AVSpeechSynthesisVoice.speechVoices().filter { $0.voiceTraits.contains(.isPersonalVoice) }
+        return (personal.first { $0.language.lowercased().hasPrefix(prefix) } ?? personal.first)?.identifier
+    }
+
+    /// Request authorization to use the user's Personal Voice (macOS 14+). Mirrors
+    /// the repo's `requestAuthorization()` convention — gate on `.authorized`,
+    /// return `Bool` — but the API is already async, so no continuation bridge.
+    /// Requires the user to have enabled System Settings → Accessibility → Personal
+    /// Voice → "Allow Apps to Request to Use". Fully on-device; presents a one-time
+    /// consent prompt (per app code identity). Do not await on a launch path that
+    /// must not block — an unanswered prompt does not return until the user responds.
+    public nonisolated static func requestPersonalVoiceAuthorization() async -> Bool {
+        await AVSpeechSynthesizer.requestPersonalVoiceAuthorization() == .authorized
     }
 
     public func speak(_ text: String) async throws {

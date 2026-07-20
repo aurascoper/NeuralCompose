@@ -12,16 +12,24 @@ final class VoiceFactoryTests: XCTestCase {
         XCTAssertTrue(resolved.synthesizer is AVSpeechSynthesizerService)
     }
 
-    func testVoiceOutputWarningTracksNeuralVoiceAvailability() {
-        // The install hint appears IFF no Enhanced/Premium neural voice is
-        // installed for the current language. The presence of a neural voice is
-        // environment-dependent, but the relationship is an invariant.
-        let hasNeural = AVSpeechSynthesizerService.bestNeuralVoiceIdentifier() != nil
+    func testVoiceOutputWarningTracksVoiceAvailability() {
+        // The install hint appears IFF neither a Personal Voice (authorized) nor
+        // an Enhanced/Premium neural voice is available for the current language.
+        // Availability is environment-dependent, but the relationship is invariant.
+        let hasGoodVoice = AVSpeechSynthesizerService.bestPersonalVoiceIdentifier() != nil
+            || AVSpeechSynthesizerService.bestNeuralVoiceIdentifier() != nil
         let resolved = VoiceOutputFactory.live()
-        XCTAssertEqual(resolved.warning == nil, hasNeural)
-        if let id = AVSpeechSynthesizerService.bestNeuralVoiceIdentifier() {
-            XCTAssertFalse(id.isEmpty)
-        }
+        XCTAssertEqual(resolved.warning == nil, hasGoodVoice)
+    }
+
+    func testVoiceOutputPinsProvidedVoiceIdentifier() {
+        // A pinned identifier (e.g. a Personal Voice id from NEURALCOMPOSE_VOICE_ID)
+        // flows through to the synthesizer and suppresses the install hint.
+        let pin = "com.apple.speech.personalvoice.TEST-INVARIANT"
+        let resolved = VoiceOutputFactory.live(voiceIdentifier: pin)
+        XCTAssertEqual(resolved.kind, .live)
+        XCTAssertEqual(resolved.synthesizer.voiceIdentifier, pin)
+        XCTAssertNil(resolved.warning)
     }
 
     func testVoiceInputFactoryFallsBackToStubWhenUnavailable() {
