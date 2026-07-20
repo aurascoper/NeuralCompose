@@ -26,6 +26,11 @@ public struct AppContainer: Sendable {
     /// dependency-free deterministic stub; test-overridable like everything
     /// else here.
     public let sentenceEmbedder: any SentenceEmbedder
+    /// The resolved sentence-embedder backend ("coreml" | "stub"). The embedder
+    /// protocol carries no kind of its own, so we capture it here for the health
+    /// watchdog: a stub embedder silently degrades both the dialectic scoring
+    /// AND the spectral estimator's honesty gate.
+    public let sentenceEmbedderKind: String
     /// Milestone B state source — real MLX-backed if `Models/EEGEncoder/`
     /// resolves and its anchor space is trusted, stub otherwise. Resolved
     /// *after* `sentenceEmbedder` in `makeDefault()`: the estimator needs
@@ -97,6 +102,7 @@ public struct AppContainer: Sendable {
         windowingConfig: EEGWindowingConfig,
         smootherConfig: IntentSmoother.Config = .init(),
         sentenceEmbedder: any SentenceEmbedder = DeterministicSentenceEmbedder(),
+        sentenceEmbedderKind: String = "stub",
         spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved = .init(
             estimator: StubSpectralStateEstimator(), kind: .stub, warning: nil
         ),
@@ -116,6 +122,7 @@ public struct AppContainer: Sendable {
         self.windowingConfig = windowingConfig
         self.smootherConfig = smootherConfig
         self.sentenceEmbedder = sentenceEmbedder
+        self.sentenceEmbedderKind = sentenceEmbedderKind
         self.spectralEstimatorResolved = spectralEstimatorResolved
         self.interactionLogger = interactionLogger
         self.jepaTransitionCapture = jepaTransitionCapture
@@ -196,6 +203,7 @@ public struct AppContainer: Sendable {
             metrics: metrics,
             windowingConfig: windowingConfig,
             sentenceEmbedder: sentenceEmbedder,
+            sentenceEmbedderKind: sentenceEmbedderBackend,
             spectralEstimatorResolved: spectralEstimator,
             interactionLogger: interactionLogger,
             jepaTransitionCapture: jepaTransitionCapture,

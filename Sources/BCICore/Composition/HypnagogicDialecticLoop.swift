@@ -82,7 +82,11 @@ public actor HypnagogicDialecticLoop {
     public private(set) var isRunning = false
     private var silenceIndex = 0
     private var consecutiveSilence = 0
-    private var turnIndex = 0
+    /// Number of completed turns this loop instance — exposed for the health
+    /// watchdog to detect a stalled or dead loop (no turns while listening).
+    public private(set) var turnIndex = 0
+    /// Wall-clock of the last completed turn (health watchdog).
+    public private(set) var lastTurnAt: Date?
     /// Tension carried from the previous turn — shapes this turn's prompts.
     private var standingTension: Float = 0
     /// The semantic-graph memory the dialectic lives in (centroids, recurrence,
@@ -266,6 +270,7 @@ public actor HypnagogicDialecticLoop {
                 try await speakChunks(nextSilenceCue(), prosody: config.prosody)
             }
         }
+        lastTurnAt = Date()
         turnIndex += 1
     }
 
