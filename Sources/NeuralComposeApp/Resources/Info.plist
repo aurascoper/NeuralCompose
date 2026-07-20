@@ -22,6 +22,8 @@
     <string>NeuralCompose captures microphone audio (a) while you press and hold the dictation button, and (b) during listening turns of the opt-in Hypnagogic mode while that mode is active. In every case audio is transcribed entirely on-device via Apple's Speech framework and never leaves your machine. Hypnagogic mode is off by default and is shown in the privacy banner while active; only the resulting transcript text — never audio — may be sent to a cloud assistant.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>NeuralCompose uses on-device speech recognition to transcribe your speech — while you press and hold the dictation button, and during the opt-in Hypnagogic mode while it is active. Transcription is performed on-device only.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>NeuralCompose can receive EEG over your local network from the Mind Monitor app (a Muse headband streaming via OSC), as an alternative to a direct Bluetooth connection. EEG stays on your local network and is never sent to the internet.</string>
     <key>NSHumanReadableCopyright</key>
     <string>NeuralCompose — local-only research prototype.</string>
 </dict>
