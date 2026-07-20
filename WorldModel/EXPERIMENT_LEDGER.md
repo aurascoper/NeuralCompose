@@ -53,3 +53,21 @@ Entry template:
   latent factors) and the forward metric panel, so the transform can finally be A/B'd on a *forward* number,
   with the aperiodic-exponent-recovery guard. **A negative result ("log-compression hurts on 1/f-dependent
   factors") is the target-quality outcome.**
+
+## 2 — Synthetic 1/f generator (Phase B) (2026-07-20, commit <pending>)
+- Category: Benchmark
+- Hypothesis: a controllable synthetic generator with a dial-able aperiodic exponent + known factors makes
+  "is 1/f signal or nuisance?" *measurable* on synthetic data (no hardware).
+- Prediction: the aperiodic exponent `chi` is linearly recoverable from the rendered observation (a well-posed
+  factor-recovery target); `mode="signal"` couples chi to the dynamics, `mode="nuisance"` does not.
+- Implementation: `WorldModel/synthetic_1f.py` — emits `JEPATransition` JSONL (the schema
+  `eeg_jepa.JEPATransitionDataset` reads), latent `{pos, vel, chi, peak_amp, offset}`, `signal`/`nuisance`
+  modes, band power(f)=10^offset·f^(−chi)(+alpha peak); ground-truth factors attached under `_latent` (ignored
+  by the dataset, read by the Phase-B probes).
+- Evidence: `venv/bin/python WorldModel/synthetic_1f.py --smoke-test` → **passed**: deterministic under seed;
+  `JEPATransitionDataset` loads it (state shape (5,5)); **chi-recovery R²=0.690** (target well-posed);
+  signal-mode chi changes post-velocity, nuisance-mode does not (`|Δvel|<1e-9`).
+- Decision: kept — the generator is the Phase-B substrate for the A/B.
+- Next question: build the **forward metric panel** as a runnable eval over a JEPA trained on this synthetic
+  data — latent multi-step rollout error, goal-conditioned MPC success, linear-probe factor recovery
+  (**including an aperiodic-exponent probe**), RankMe/α-ReQ/LiDAR, VICReg var/cov, alignment/uniformity.
