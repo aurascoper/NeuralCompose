@@ -47,6 +47,14 @@ fi
 if [[ -n "${NEURALCOMPOSE_MUSE_MAC:-}" ]]; then
     ENV_ARGS+=(--env "NEURALCOMPOSE_MUSE_MAC=$NEURALCOMPOSE_MUSE_MAC")
 fi
+# Opt-in co-dev-loop launch overrides (default unset → not forwarded, no change
+# in behaviour). See run-dialectical-waking.sh and AppViewModel autostart.
+if [[ -n "${NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART:-}" ]]; then
+    ENV_ARGS+=(--env "NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART=$NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART")
+fi
+if [[ -n "${NEURALCOMPOSE_INTERACTION_LOG:-}" ]]; then
+    ENV_ARGS+=(--env "NEURALCOMPOSE_INTERACTION_LOG=$NEURALCOMPOSE_INTERACTION_LOG")
+fi
 
 echo "Running NeuralCompose with native Muse S BLE..."
 echo "  BOARD_PROFILE: $BOARD_PROFILE"
@@ -55,6 +63,9 @@ if [[ -n "${NEURALCOMPOSE_MUSE_SERIAL_NUMBER:-}" ]]; then
 fi
 if [[ -n "${NEURALCOMPOSE_MUSE_MAC:-}" ]]; then
     echo "  MAC_ADDRESS: $NEURALCOMPOSE_MUSE_MAC"
+fi
+if [[ -n "${NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART:-}" ]]; then
+    echo "  HYPNAGOGIC_AUTOSTART: $NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART (⚠️ cloud egress while active)"
 fi
 echo ""
 

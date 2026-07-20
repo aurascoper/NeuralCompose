@@ -390,6 +390,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.composition = composition
         await composition.start()
         applyAdaptiveGeneration()
+        // Opt-in, default no-op: honour NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART so a
+        // scripted live run can start the loop without the UI toggle (all auth +
+        // egress-disclosure gates preserved). Fires once — start() is guarded.
+        applyHypnagogicAutostartFromEnvironment()
 
         // ── snapshots → UI (MainActor) ────────────────────────────────────
         snapshotTask = Task {
@@ -689,6 +693,38 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         spokenLoop = nil
     }
 
+    /// Opt-in autostart override (default: no-op) for a scriptable, reproducible
+    /// hypnagogic run — the co-development loop's launch hook. Set
+    /// `NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART=<style>[:<profile>]`, e.g.
+    /// `dialectical:focused`, to enable the loop at launch WITHOUT the UI toggle.
+    /// Every existing gate still holds: enabling flows through the same
+    /// `reconcileHypnagogicLoop()` path, so the mic/speech auth prompt fires and
+    /// the red cloud-egress banner shows while active. Unset ⇒ nothing happens.
+    /// `NEURALCOMPOSE_INTERACTION_LOG=1` additionally enables local turn logging
+    /// (ADR-005) so a scripted run captures `dialectic-turns-<day>.jsonl`.
+    private func applyHypnagogicAutostartFromEnvironment() {
+        let env = ProcessInfo.processInfo.environment
+        if let log = env["NEURALCOMPOSE_INTERACTION_LOG"]?.lowercased(),
+           log == "1" || log == "true" {
+            interactionLoggingEnabled = true
+        }
+        guard let raw = env["NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART"]?
+            .trimmingCharacters(in: .whitespaces).lowercased(), !raw.isEmpty else { return }
+        let parts = raw.split(separator: ":", maxSplits: 1)
+        guard let style = InteractionStyle(rawValue: String(parts[0])) else {
+            BCILog.pipeline.notice(
+                "hypnagogic autostart: unknown style '\(String(parts[0]), privacy: .public)', ignoring")
+            return
+        }
+        hypnagogicStyle = style
+        if parts.count > 1, let profile = ContextProfile(rawValue: String(parts[1])) {
+            hypnagogicContext = profile
+        }
+        BCILog.pipeline.notice(
+            "hypnagogic autostart: enabling \(style.rawValue, privacy: .public)/\(self.hypnagogicContext.rawValue, privacy: .public) — cloud-egress banner shows while active")
+        hypnagogicLoopEnabled = true   // → reconcileHypnagogicLoop() (auth prompt + banner)
+    }
+
     /// Serializes hypnagogic-loop start/stop through a single chained task, same
     /// as `reconcileSpokenGenerationLoop`, so a fast toggle can't orphan a loop.
     private func reconcileHypnagogicLoop() {
@@ -741,14 +777,23 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // turn logging is gated on the interaction-log opt-in, resolved at
             // build time (toggling it mid-loop takes effect on the next rebuild).
             // The behavioural profile is a preset over the loop's tuning/cadence.
+            //
+            // The current profiles (focused/reflective/contemplative) are all
+            // WAKING, so the loop runs the waking role set + a lucid waking
+            // system prompt — a coherent exchange, not sleep onset. The
+            // sleep-mirror roles/prompt stay reserved for the future wind-down /
+            // hypnagogic / dream rungs on the mode ladder.
             let turnLogger: any DialecticalTurnLogging =
                 (interactionLoggingEnabled ? (interactionLogger as? any DialecticalTurnLogging) : nil)
                 ?? NullDialecticalTurnLogger()
             loop = HypnagogicDialecticLoop(
                 listener: listener,
-                generator: ClaudeCLIGenerator(),
+                generator: ClaudeCLIGenerator(
+                    systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
+                ),
                 speaker: voiceOutput,
                 embedder: container.sentenceEmbedder,
+                roles: DialecticalRole.wakingRoles,
                 tuning: hypnagogicContext.tuning,
                 glossProvider: { [weak self] in await self?.currentSpectralGlossState() ?? nil },
                 turnLogger: turnLogger,
