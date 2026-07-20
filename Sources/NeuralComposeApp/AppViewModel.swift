@@ -1293,12 +1293,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         isSpeaking = true
         defer { isSpeaking = false }
         do {
-            // Speak sentence-by-sentence with a natural, present prosody instead
-            // of one flat prosody-less utterance (the old robotic path): each
-            // chunk carries `.wakingCoherent` (natural pace) and its 0.1s
-            // preUtteranceDelay gives audible inter-sentence pauses (rhythm).
-            for chunk in HypnagogicDialogueLoop.chunk(composedText) {
-                try await voiceOutput.speak(chunk, prosody: .wakingCoherent, onWord: nil)
+            // Speak phrase-by-phrase with a confidence-*wobbled* prosody (Stage 2):
+            // hedged clauses softer/slower/rising, committed ones firmer/falling,
+            // so the voice doesn't land every clause identically (the robotic
+            // tell). Replaces the old single flat prosody-less utterance.
+            for (phrase, prosody) in ProsodyWobble.plan(composedText) {
+                try await voiceOutput.speak(phrase, prosody: prosody, onWord: nil)
             }
         } catch {
             voiceWarning = "Speech failed: \(error.localizedDescription)"
