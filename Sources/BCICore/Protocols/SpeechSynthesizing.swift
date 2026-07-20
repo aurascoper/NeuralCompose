@@ -58,4 +58,41 @@ public struct SpeechProsody: Sendable, Equatable {
         volume: 0.6,
         preUtteranceDelay: 0.4
     )
+
+    /// The coherence pole's voice in the dialectic loop — identical to
+    /// `hypnagogic` (calm, flat, slow).
+    public static let hypnagogicStabilizer = hypnagogic
+
+    /// The displacement pole's voice — a touch quicker and brighter so the
+    /// dreaming undercurrent is *audibly* different, while staying inside the
+    /// same arousal-safe envelope (still slow and soft, never harsh or sudden).
+    public static let hypnagogicDreamer = SpeechProsody(
+        rate: 0.42,
+        pitchMultiplier: 0.98,
+        volume: 0.6,
+        preUtteranceDelay: 0.3
+    )
+
+    /// Weighted mean of several prosodies — the mechanism that makes tension
+    /// *audible*: a spoken turn is voiced by blending the role voices in
+    /// proportion to the competition's probabilities, so a close call carries
+    /// the losing pole's colour even though only the winner's words are said.
+    /// Each field is averaged only over the contributors that specify it (a
+    /// `nil` field abstains); non-positive weights are ignored. Returns an
+    /// all-`nil` prosody when nothing contributes.
+    public static func blend(_ weighted: [(prosody: SpeechProsody, weight: Float)]) -> SpeechProsody {
+        func mean<T: BinaryFloatingPoint>(_ get: (SpeechProsody) -> T?) -> T? {
+            var acc: T = 0, wsum: T = 0
+            for (p, w) in weighted where w > 0 {
+                if let v = get(p) { let wt = T(w); acc += v * wt; wsum += wt }
+            }
+            return wsum > 0 ? acc / wsum : nil
+        }
+        return SpeechProsody(
+            rate: mean { $0.rate },
+            pitchMultiplier: mean { $0.pitchMultiplier },
+            volume: mean { $0.volume },
+            preUtteranceDelay: mean { $0.preUtteranceDelay }
+        )
+    }
 }
