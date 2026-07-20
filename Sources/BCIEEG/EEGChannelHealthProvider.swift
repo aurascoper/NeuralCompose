@@ -201,15 +201,26 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
             let window = min(windowSamples, count)
             let perChannel: [(rms: Float, samples: Int)] = (0..<channelCount).map { ch in
                 guard window > 0 else { return (0, 0) }
+                // First pass: per-channel DC baseline over the window. Real EEG
+                // (Muse ~800µV offset over OSC) would otherwise dominate the RMS
+                // and peg every channel to `.saturated`; RMS of the demeaned (AC)
+                // signal is the quality metric we actually want. Synthetic data
+                // is ~0-mean, so this is a no-op there.
+                var dc: Float = 0
+                for offset in 0..<window {
+                    let idx = (writeIndex &- 1 &- offset &+ capacity) % capacity
+                    dc += buffers[ch][idx]
+                }
+                dc /= Float(window)
                 var sumSq: Float = 0
                 for offset in 0..<window {
                     // Most recent first: writeIndex - 1 - offset.
                     let idx = (writeIndex &- 1 &- offset &+ capacity) % capacity
-                    let v = buffers[ch][idx]
+                    let v = buffers[ch][idx] - dc
                     sumSq += v * v
                 }
-                let mean = sumSq / Float(window)
-                return (sqrtf(mean), window)
+                let meanSquare = sumSq / Float(window)
+                return (sqrtf(meanSquare), window)
             }
             let ts = lastTimestamp
             lock.unlock()

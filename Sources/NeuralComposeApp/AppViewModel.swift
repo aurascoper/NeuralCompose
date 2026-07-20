@@ -1357,8 +1357,16 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         for ch in window.samples {
             let n = Float(ch.count)
             if n == 0 { continue }
+            // Real EEG (e.g. Muse over OSC / Mind Monitor) carries a large
+            // per-channel DC baseline (~800µV) that synthetic data never had.
+            // Subtract it so RMS measures the AC signal amplitude, not the
+            // offset — otherwise every channel sits far above the 200µV ceiling
+            // and a perfectly good stream is misreported as `.lost`.
+            var mean: Float = 0
+            for v in ch { mean += v }
+            mean /= n
             var sumSq: Float = 0
-            for v in ch { sumSq += v * v }
+            for v in ch { let d = v - mean; sumSq += d * d }
             let rms = (sumSq / n).squareRoot()
             if rms >= 5 && rms <= 200 { inRange += 1 }
         }

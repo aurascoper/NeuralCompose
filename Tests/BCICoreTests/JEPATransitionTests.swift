@@ -66,8 +66,13 @@ final class JEPATransitionTests: XCTestCase {
 
         XCTAssertEqual(state.timestamp, 100)
         XCTAssertEqual(state.channelPowers.count, 2)
-        XCTAssertEqual(state.channelPowers[0], 12.5, accuracy: 0.0001)
-        XCTAssertEqual(state.channelPowers[1], 12.5, accuracy: 0.0001)
+        // channelPowers = demeaned-RMS². FeatureExtractor removes each channel's
+        // DC baseline before RMS (real EEG carries an ~800µV offset; capturing
+        // its raw power would be dominated by DC, not signal). So:
+        //   ch0 [3,4] → mean 3.5 → [-0.5, 0.5] → rms² = 0.25
+        //   ch1 [0,5] → mean 2.5 → [-2.5, 2.5] → rms² = 6.25
+        XCTAssertEqual(state.channelPowers[0], 0.25, accuracy: 0.0001)
+        XCTAssertEqual(state.channelPowers[1], 6.25, accuracy: 0.0001)
         XCTAssertTrue(state.alphaPower.isFinite)
         XCTAssertTrue(state.betaPower.isFinite)
         XCTAssertTrue(state.thetaPower.isFinite)
