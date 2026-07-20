@@ -268,11 +268,223 @@ $$
 
 ### Joint Embeddings
 
-For multiple embedding models,
+The equation
 
-$$
-\mathbf{z} = \frac{\operatorname{concat}(w_i\,\mathbf{v}_i)}{\left\|\operatorname{concat}(w_i\,\mathbf{v}_i)\right\|_2}
-$$
+[
+\mathbf{z} =
+\frac{\operatorname{concat}(w_i,\mathbf{v}_i)}
+{\left|\operatorname{concat}(w_i,\mathbf{v}_i)\right|_2}
+]
+
+means:
+
+1. Multiply each embedding vector (\mathbf{v}_i) by its scalar weight (w_i).
+2. Concatenate the weighted vectors into one long vector.
+3. Compute its L2 norm.
+4. Normalize the concatenated vector to unit length.
+
+Assuming:
+
+* `weights = [w1, w2, ...]`
+* `vectors = [[...], [...], ...]`
+* all vectors are floating point arrays
+
+---
+
+# Swift
+
+```swift
+func jointEmbedding(
+    weights: [Float],
+    vectors: [[Float]]
+) -> [Float] {
+    precondition(weights.count == vectors.count)
+
+    var concatenated: [Float] = []
+
+    for (w, v) in zip(weights, vectors) {
+        concatenated.append(contentsOf: v.map { $0 * w })
+    }
+
+    let norm = sqrt(concatenated.reduce(0) { $0 + $1 * $1 })
+
+    guard norm > 0 else {
+        return concatenated
+    }
+
+    return concatenated.map { $0 / norm }
+}
+```
+
+---
+
+# C++
+
+```cpp
+#include <vector>
+#include <cmath>
+
+std::vector<float> jointEmbedding(
+    const std::vector<float>& weights,
+    const std::vector<std::vector<float>>& vectors)
+{
+    std::vector<float> z;
+
+    for (size_t i = 0; i < vectors.size(); ++i)
+        for (float x : vectors[i])
+            z.push_back(weights[i] * x);
+
+    float norm = 0.f;
+    for (float x : z)
+        norm += x * x;
+
+    norm = std::sqrt(norm);
+
+    if (norm > 0.f)
+        for (float& x : z)
+            x /= norm;
+
+    return z;
+}
+```
+
+---
+
+# C
+
+```c
+#include <math.h>
+#include <stddef.h>
+
+void joint_embedding(
+    const float *weights,
+    const float *vectors[],
+    const size_t lengths[],
+    size_t n_vectors,
+    float *output)
+{
+    size_t idx = 0;
+
+    for (size_t i = 0; i < n_vectors; ++i)
+        for (size_t j = 0; j < lengths[i]; ++j)
+            output[idx++] = weights[i] * vectors[i][j];
+
+    float norm = 0.0f;
+
+    for (size_t i = 0; i < idx; ++i)
+        norm += output[i] * output[i];
+
+    norm = sqrtf(norm);
+
+    if (norm > 0.0f)
+        for (size_t i = 0; i < idx; ++i)
+            output[i] /= norm;
+}
+```
+
+---
+
+# Python (NumPy)
+
+```python
+import numpy as np
+
+def joint_embedding(weights, vectors):
+    weighted = [
+        w * np.asarray(v, dtype=float)
+        for w, v in zip(weights, vectors)
+    ]
+
+    z = np.concatenate(weighted)
+
+    norm = np.linalg.norm(z)
+
+    if norm > 0:
+        z /= norm
+
+    return z
+```
+
+---
+
+# Julia
+
+```julia
+using LinearAlgebra
+
+function joint_embedding(weights, vectors)
+    weighted = [
+        w .* v
+        for (w, v) in zip(weights, vectors)
+    ]
+
+    z = vcat(weighted...)
+
+    n = norm(z)
+
+    n == 0 && return z
+
+    return z ./ n
+end
+```
+
+---
+
+# Rust
+
+```rust
+pub fn joint_embedding(
+    weights: &[f32],
+    vectors: &[Vec<f32>],
+) -> Vec<f32> {
+    assert_eq!(weights.len(), vectors.len());
+
+    let mut z = Vec::new();
+
+    for (w, v) in weights.iter().zip(vectors.iter()) {
+        for x in v {
+            z.push(w * x);
+        }
+    }
+
+    let norm = z
+        .iter()
+        .map(|x| x * x)
+        .sum::<f32>()
+        .sqrt();
+
+    if norm > 0.0 {
+        for x in &mut z {
+            *x /= norm;
+        }
+    }
+
+    z
+}
+```
+
+---
+
+## Mathematical pseudocode
+
+All six implementations perform the same computation:
+
+```text
+z = []
+
+for each embedding i:
+    z.append(weight_i * embedding_i)
+
+norm = sqrt(sum(z²))
+
+if norm > 0:
+    z = z / norm
+
+return z
+```
+
+This formulation is directly applicable to your `SentenceEmbedder` abstraction in NeuralCompose. It also generalizes naturally to combining embeddings from multiple backends (e.g., BGE, E5, MiniLM, or future models) into a single normalized joint embedding while preserving cosine similarity semantics.
+
 
 ### Decoder Stability
 
