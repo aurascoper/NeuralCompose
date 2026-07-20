@@ -54,7 +54,13 @@ public enum SpectralStateEstimatorFactory {
         let chosenDir = modelDirectory ?? resolveDefaultDirectory()
 
         guard FileManager.default.fileExists(atPath: chosenDir.path) else {
-            return stubResolved(warning: nil)
+            // Surface *why* we stubbed. Without this the missing-model path was
+            // silent (warning: nil) — the only signal was `estimator-stub` in
+            // health.json with no cause, which is exactly how a missing
+            // Models/EEGEncoder stayed a mystery. Mirrors the embedder's
+            // fallback log in AppContainer.
+            BCILog.spectral.notice("Spectral encoder model not found at \(chosenDir.path, privacy: .public); using stub estimator")
+            return stubResolved(warning: "Spectral encoder model directory not found at \(chosenDir.path); using stub estimator.")
         }
 
         // Same crash-safety rationale as PredictorFactory: a failed
