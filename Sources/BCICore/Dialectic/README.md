@@ -126,6 +126,23 @@ and the unresolved tension is carried into the next turn (metastability),
 bounded so the loop never stalls permanently. Saying less is a legitimate move,
 not a failure mode.
 
+## Interaction style × context profile
+
+Two orthogonal, honestly-named axes control the experience. Neither implies the
+Muse detects or induces a physiological state — they describe *how the dialogue
+behaves*.
+
+- **`InteractionStyle`** (app-level) — *which loop runs*: `mirror` (the plain
+  reply) or `dialectical` (the competition).
+- **`ContextProfile`** (`ContextProfile.swift`) — *how the dialectical loop
+  behaves*, as a preset over the existing `Tuning` + cadence knobs (no new
+  dynamics):
+  - **Focused** — coherent, grounded, resolves readily, rarely silent
+    (↑coherence, ↓novelty, eager synthesis, high `highTension`, short cadence).
+  - **Reflective** — the shipped defaults: gentle exploration, persistent tension.
+  - **Contemplative** — *less, not more*: low novelty pressure, suppressed
+    synthesis, high tolerance for unresolved tension and silence, slow cadence.
+
 ## File map
 
 | File | Role |
@@ -137,6 +154,7 @@ not a failure mode.
 | `DialecticalMemory.swift` | graph + centroids + entropy/drift + the two-tier synthesis gate |
 | `DialecticalField.swift` | slow clock: the weights as a leaky integrator with inertia; the tunable `target` policy |
 | `SpectralGloss.swift` | fast clock: EMA-smoothed `SpectralState` → bias scalar |
+| `ContextProfile.swift` | focused / reflective / contemplative presets over the tuning + cadence knobs |
 | `../Composition/HypnagogicDialecticLoop.swift` | the actor tying it together |
 | `../Composition/HypnagogicRunnable.swift` | the lifecycle both hypnagogic loops share |
 | `../Telemetry/DialecticalTurnEvent.swift` | opt-in per-turn record + logging seam |
