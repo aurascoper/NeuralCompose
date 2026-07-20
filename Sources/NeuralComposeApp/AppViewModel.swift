@@ -300,6 +300,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// The mode of the currently-built loop, so a change rebuilds it.
     private var hypnagogicLoopBuilt: HypnagogicMode?
     private var hypnagogicLoopReconcile: Task<Void, Never>?
+    /// Stable relay of the dialectic loop's spoken-node events (Stage 1d). The
+    /// 3D workspace subscribes here once at bind time, decoupled from loop
+    /// lifetime: each dialectic loop's `spokenNodeStream()` is forwarded into
+    /// this channel, so the subscription survives mode changes and rebuilds.
+    /// On-device only — nothing here leaves the machine.
+    private let spokenNodeRelay = AsyncMulticastChannel<SpokenNodeEvent>(capacity: 32)
+    private var spokenNodeForwardTask: Task<Void, Never>?
 
     // ── Per-start resources (recreated each call to start()) ─────────────
     private var composition: TextCompositionController?
@@ -851,10 +858,21 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
         hypnagogicLoop = loop
         hypnagogicLoopBuilt = hypnagogicMode
+        // Forward this loop's spoken-node events into the stable relay the 3D
+        // workspace subscribes to (Stage 1d). Only the dialectic loop emits
+        // them; the mirror loop leaves the relay quiet.
+        spokenNodeForwardTask?.cancel()
+        if let dialectic = loop as? HypnagogicDialecticLoop {
+            let relay = spokenNodeRelay
+            let events = dialectic.spokenNodeStream()
+            spokenNodeForwardTask = Task { for await event in events { relay.send(event) } }
+        }
         await loop.start()
     }
 
     private func ensureHypnagogicLoopStopped() async {
+        spokenNodeForwardTask?.cancel()
+        spokenNodeForwardTask = nil
         await hypnagogicLoop?.stop()
         hypnagogicLoop = nil
         hypnagogicLoopBuilt = nil
@@ -976,6 +994,15 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// does not read from this.
     public func liveClassifierStream() -> AsyncStream<IntentPrediction> {
         classifierChannel?.subscribe() ?? AsyncStream<IntentPrediction> { $0.finish() }
+    }
+
+    /// Spoken-node events from the active dialectic loop (Stage 1d) — the
+    /// grounding signal the 3D workspace consumes to place + light concept
+    /// nodes per voiced word. A stable relay: subscribing once survives loop
+    /// mode changes and rebuilds, and stays quiet (but live) when no dialectic
+    /// is running. Diagnostic/visualization only; on-device.
+    public func spokenNodeStream() -> AsyncStream<SpokenNodeEvent> {
+        spokenNodeRelay.subscribe()
     }
 
     public func resetComposition(seed: String = "") async {
