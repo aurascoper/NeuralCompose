@@ -134,6 +134,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// `applyAdaptiveGeneration()` falls back to `signalQuality` in that case.
     @Published public private(set) var detectedSpectralState: SpectralState?
 
+    /// The latest app-watchdog health snapshot (nil until the pipeline starts).
+    /// Drives the degraded banner; the same snapshot is written each tick to
+    /// `~/Documents/NeuralCompose/health.json`.
+    @Published public private(set) var healthSnapshot: HealthSnapshot?
+
     /// Off by default, mirroring `adaptiveComplexityEnabled`'s opt-in shape:
     /// no interaction is logged locally until the user explicitly turns
     /// this on (see `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`).
@@ -323,6 +328,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private var snapshotTask: Task<Void, Never>?
     private var carouselTask: Task<Void, Never>?
     private var metricsTask: Task<Void, Never>?
+    private var healthTask: Task<Void, Never>?
+    /// Always-on watchdog file writer (health.json + health-<day>.jsonl). Not
+    /// gated by any opt-in — it records diagnostic metadata only, no transcripts.
+    private let healthLogger = HealthLogger()
 
     public init(container: AppContainer) {
         self.container = container
@@ -427,6 +436,34 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 if Task.isCancelled { break }
                 let snap = metricsRef.snapshot()
                 await MainActor.run { self?.metricsSnapshot = snap }
+            }
+        }
+
+        // ── health watchdog — 0.5 Hz (off-main): assemble a HealthSnapshot from
+        //    the resolved backend kinds + pipeline state + EEG throughput, write
+        //    it to health.json, and publish it for the degraded banner. Always
+        //    on; observes only, never changes runtime behaviour.
+        let healthLoggerRef = healthLogger
+        let healthStartedAt = Date()
+        let wantedProfile = (ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] ?? "synthetic").lowercased()
+        let expectedLive = wantedProfile.contains("muse") || wantedProfile.contains("athena")
+        var lastWindowCount = metricsRef.snapshot().windowing.count
+        var lastWindowAt = healthStartedAt
+        healthTask = Task.detached(priority: .utility) { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                if Task.isCancelled { break }
+                let nowWindows = metricsRef.snapshot().windowing.count
+                let now = Date()
+                let dt = max(0.001, now.timeIntervalSince(lastWindowAt))
+                let wps = Double(nowWindows &- lastWindowCount) / dt
+                lastWindowCount = nowWindows
+                lastWindowAt = now
+                guard let snap = await self?.assembleHealthSnapshot(
+                    now: now, uptime: now.timeIntervalSince(healthStartedAt),
+                    windowsPerSecond: wps, expectedLive: expectedLive) else { continue }
+                await healthLoggerRef.write(snap)
+                await MainActor.run { self?.healthSnapshot = snap }
             }
         }
 
@@ -819,6 +856,54 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// read (see `SpectralState.honestyCaveat`).
     private func currentSpectralGlossState() -> SpectralState? { detectedSpectralState }
 
+    /// Assembles a `HealthSnapshot` from the resolved backend kinds, the pipeline
+    /// mode, EEG throughput, and the dialectic loop's turn liveness. Read-only —
+    /// the watchdog observes runtime state, never changes it.
+    private func assembleHealthSnapshot(now: Date, uptime: Double,
+                                        windowsPerSecond wps: Double,
+                                        expectedLive: Bool) async -> HealthSnapshot {
+        let mode = pipelineMode
+        let estimatorKind = container.spectralEstimatorResolved.kind.rawValue
+        let embedderKind = container.sentenceEmbedderKind
+        let predictorKind = container.predictorResolved.kind.rawValue
+        let classifierKind = container.classifierResolved.kind.rawValue
+
+        var turnCount: Int?
+        var lastTurnAt: Date?
+        if let dialectic = hypnagogicLoop as? HypnagogicDialecticLoop {
+            turnCount = await dialectic.turnIndex
+            lastTurnAt = await dialectic.lastTurnAt
+        }
+        let loopRunning = hypnagogicLoop != nil
+        let secondsSinceLastTurn = lastTurnAt.map { now.timeIntervalSince($0) }
+
+        // Gloss stuck: a live MLX estimator that still produces no state while
+        // windows are flowing (past warmup) — the exact failure that hid behind
+        // glossScalar == 0.5 all night.
+        let state = detectedSpectralState
+        let glossStuck = estimatorKind == "mlx" && state == nil && wps > 0 && uptime > 8
+
+        let degraded = HealthSnapshot.degradedReasons(
+            acquisition: mode.acquisition.rawValue, expectedLive: expectedLive,
+            estimatorKind: estimatorKind, embedderKind: embedderKind,
+            predictorKind: predictorKind, classifierKind: classifierKind,
+            windowsPerSecond: wps, uptimeSeconds: uptime,
+            glossStuck: glossStuck, loopRunning: loopRunning,
+            secondsSinceLastTurn: secondsSinceLastTurn)
+
+        return HealthSnapshot(
+            timestamp: now, uptimeSeconds: uptime,
+            acquisition: mode.acquisition.rawValue, transport: mode.transport.rawValue,
+            signalQuality: signalQuality.map { String(describing: $0) }, windowsPerSecond: wps,
+            estimatorKind: estimatorKind, embedderKind: embedderKind,
+            predictorKind: predictorKind, classifierKind: classifierKind,
+            fullyLive: mode.isFullyLive, substitutionSummary: mode.substitutionSummary,
+            spectralState: state?.badgeLabel, glossStuck: glossStuck,
+            loopMode: hypnagogicLoopBuilt?.rawValue, loopRunning: loopRunning,
+            turnCount: turnCount, secondsSinceLastTurn: secondsSinceLastTurn,
+            degraded: degraded)
+    }
+
     public func stop() async {
         // Always silence the experimental spoken loop, even when the pipeline
         // itself isn't running — its lifecycle is independent of `isRunning`.
@@ -833,6 +918,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         classifyTask?.cancel(); classifyTask = nil
         carouselTask?.cancel(); carouselTask = nil
         metricsTask?.cancel();  metricsTask = nil
+        healthTask?.cancel();   healthTask = nil
         snapshotTask?.cancel(); snapshotTask = nil
 
         // Finish channels so any straggling iterators terminate cleanly.

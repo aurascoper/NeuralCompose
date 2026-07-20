@@ -57,6 +57,8 @@ struct PrivacyIndicatorView: View {
     /// `focused`/`reflective`/`contemplative` (the dialectic competition, two
     /// cloud calls/turn).
     @Binding var hypnagogicMode: HypnagogicMode
+    /// Latest app-watchdog snapshot for the degraded badge (read-only display).
+    var health: HealthSnapshot? = nil
 
     @State private var expanded: Bool = false
 
@@ -103,6 +105,21 @@ struct PrivacyIndicatorView: View {
                     GridRow {
                         Text("Predictor").bold()
                         Text(mode.predictor.rawValue)
+                    }
+                    GridRow {
+                        Text("Watchdog").bold()
+                        if let h = health, !h.degraded.isEmpty {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("DEGRADED — \(h.degraded.joined(separator: ", "))")
+                                    .font(.caption2).foregroundStyle(.red)
+                                Text("~/Documents/NeuralCompose/health.json")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                        } else if health != nil {
+                            Text("Healthy").foregroundStyle(.green)
+                        } else {
+                            Text("—").foregroundStyle(.secondary)
+                        }
                     }
                     GridRow {
                         Text("Network").bold()
