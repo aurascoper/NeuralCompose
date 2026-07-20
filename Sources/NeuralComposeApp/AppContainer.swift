@@ -140,23 +140,25 @@ public struct AppContainer: Sendable {
         let classifier = ClassifierFactory.live()
         let predictor = await PredictorFactory.live()
         BCILog.predictor.notice("predictor backend: \(predictor.kind.rawValue, privacy: .public)")
+        // Personal Voice is opt-in (NEURALCOMPOSE_PERSONAL_VOICE=1). Personal
+        // voices appear in speechVoices() only AFTER authorization is established
+        // in THIS process, so we must AWAIT it BEFORE resolving the synthesizer's
+        // voice — otherwise selection runs first (at synthesizer construction) and
+        // always misses the personal voice, no matter how many relaunches. After
+        // the one-time system grant this returns immediately (no prompt); only the
+        // very first grant blocks on the user. Requires the bundled app — a
+        // no-bundle `swift run` cannot present the prompt (do not set the flag
+        // there). The grant is cdhash-pinned, so sign with Scripts/sign-app-local.sh
+        // to persist it across rebuilds.
+        if ProcessInfo.processInfo.environment["NEURALCOMPOSE_PERSONAL_VOICE"] == "1" {
+            let granted = await AVSpeechSynthesizerService.requestPersonalVoiceAuthorization()
+            BCILog.voice.notice("personal voice authorization: \(granted ? "granted" : "not granted", privacy: .public)")
+        }
         // Voice output auto-selects the best voice (Personal Voice → Premium/
         // Enhanced → compact); NEURALCOMPOSE_VOICE_ID pins a specific one.
         let voiceIdentifier = ProcessInfo.processInfo.environment["NEURALCOMPOSE_VOICE_ID"]
         let voiceOutput = VoiceOutputFactory.live(voiceIdentifier: voiceIdentifier)
-        // Personal Voice is opt-in (NEURALCOMPOSE_PERSONAL_VOICE=1). Request its
-        // authorization OFF the launch path: an unanswered prompt — or a no-bundle
-        // `swift run`, where the prompt can't present — must not wedge launch.
-        // Personal voices appear in speechVoices() only after the grant, so the
-        // user's own on-device voice is auto-selected on the NEXT launch — and
-        // persistently, if signed with Scripts/sign-app-local.sh (the grant is
-        // cdhash-pinned, so ad-hoc rebuilds otherwise re-prompt).
-        if ProcessInfo.processInfo.environment["NEURALCOMPOSE_PERSONAL_VOICE"] == "1" {
-            Task.detached {
-                let granted = await AVSpeechSynthesizerService.requestPersonalVoiceAuthorization()
-                BCILog.voice.notice("personal voice authorization: \(granted ? "granted" : "not granted", privacy: .public)")
-            }
-        }
+        BCILog.voice.notice("voice output resolved: \(voiceOutput.synthesizer.voiceIdentifier, privacy: .public)")
         let voiceInput = VoiceInputFactory.live()
         // The voice command recognizer is constructed with a
         // parser closure that wraps `FuzzyCommandRecognizer`

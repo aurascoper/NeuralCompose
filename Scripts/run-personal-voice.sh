@@ -10,10 +10,9 @@
 # instead of re-prompting each time (the cdhash changes on every ad-hoc rebuild).
 #
 # First run:  answer the "NeuralCompose would like to use your Personal Voice"
-#             prompt → Allow. The voice is not yet selected THIS launch (personal
-#             voices appear in the voice list only after the grant).
-# Next run:   the app auto-selects your Personal Voice (Personal → Premium →
-#             compact). Quit and re-run this script once after granting.
+#             prompt → Allow. The app AWAITS authorization before resolving its
+#             voice, so your Personal Voice is selected THIS launch (no re-run).
+# Later runs: the grant is remembered (no prompt); the voice is selected at launch.
 #
 # Prereqs: System Settings → Accessibility → Personal Voice → a compiled voice +
 # "Allow Apps to Request to Use" enabled.
@@ -51,5 +50,5 @@ if [[ -n "${NEURALCOMPOSE_VOICE_ID:-}" ]]; then
 fi
 
 echo "==> Launching (profile: $PROFILE, Personal Voice: ON)…"
-echo "    First run: Allow the Personal Voice prompt, then quit & re-run to hear it."
+echo "    When the Personal Voice prompt appears, click Allow — the voice activates this launch."
 open -n "${ENV_ARGS[@]}" "$REPO_ROOT/.build/NeuralCompose.app"
