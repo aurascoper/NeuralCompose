@@ -11,12 +11,25 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: macos-15
+    # macos-26 → Xcode 26 → Swift 6.3.x, matching the developer toolchain.
+    # macos-15's Swift 6.1.2 had over-eager region-based-isolation diagnostics
+    # (false-positive "sending 'self' risks causing data races" on @MainActor
+    # Sendable types, e.g. AppViewModel's detached pipeline tasks) that Swift 6.2
+    # relaxed. It fails to build correct code that Xcode 26 accepts. The Swift
+    # version guard below fails fast if the runner ever regresses.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
       - name: Swift version
-        run: swift --version
+        run: |
+          swift --version
+          # This package builds under Swift 6.2+ (Xcode 26+). Fail fast and
+          # legibly if the runner regresses to an older toolchain, whose
+          # region-isolation false-positives would otherwise surface as a wall
+          # of confusing "sending 'self'" build errors.
+          swift --version 2>&1 | grep -qE "Swift version (6\.[2-9]|[7-9]\.)" \
+            || { echo "::error::Need Swift 6.2+ (Xcode 26+); this runner has an older toolchain"; exit 1; }
 
       # GoldenRecordingRegressionTests skips silently if its fixture is absent,
       # which would let the suite "pass" vacuously (README advertises this
