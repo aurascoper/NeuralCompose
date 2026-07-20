@@ -133,7 +133,12 @@ final class AppLoader: ObservableObject {
     /// the pipeline is up; otherwise queues it for when `load()` finishes, so a
     /// cold-start `open neuralcompose://…` still speaks. Unrecognized URLs are ignored.
     func handle(_ url: URL) {
-        guard let command = URLCommand.parse(url) else { return }
+        guard let command = URLCommand.parse(url) else {
+            // A mistyped/unknown neuralcompose:// URL (e.g. a Shortcut typo) would
+            // otherwise vanish with no audio and no trace — leave a log breadcrumb.
+            BCILog.voice.notice("ignored unrecognized URL: \(url.absoluteString, privacy: .public)")
+            return
+        }
         if viewModel != nil, dispatcher != nil {
             Task { await run(command) }
         } else {

@@ -55,13 +55,17 @@ public enum ProsodyWobble {
 
     private static func clamp(_ x: Float, _ lo: Float, _ hi: Float) -> Float { min(max(x, lo), hi) }
 
+    // A stopword floor: only HIGH-information commitment markers count. Near-zero-
+    // information auxiliaries ("is", "will", "may") are deliberately excluded — they
+    // appear in almost every clause (including hedged ones), so scoring them as
+    // signal collapses the per-clause commitment variance the wobble exists to create.
     private static let hedges: Set<String> = [
         "maybe", "perhaps", "might", "could", "possibly", "probably", "seems", "seem",
         "guess", "think", "suppose", "sort", "kind", "somewhat", "apparently",
-        "presumably", "likely", "roughly", "approximately", "unsure", "arguably", "may",
+        "presumably", "likely", "roughly", "approximately", "unsure", "arguably",
     ]
     private static let intensifiers: Set<String> = [
         "clearly", "obviously", "definitely", "certainly", "always", "never", "must",
-        "exactly", "precisely", "undoubtedly", "surely", "absolutely", "is", "will",
+        "exactly", "precisely", "undoubtedly", "surely", "absolutely",
     ]
 }

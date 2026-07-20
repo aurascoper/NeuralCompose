@@ -36,7 +36,16 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
     /// Load the profile, or nil if the file is absent / unreadable / malformed.
     /// Never throws — a bad profile must not block launch.
     public static func loadDefault() -> VoiceProfile? {
+        // Absent file → nil silently (the intended, launch-safe fallback to env/auto).
         guard let url = defaultURL(), let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(VoiceProfile.self, from: data)
+        do {
+            return try JSONDecoder().decode(VoiceProfile.self, from: data)
+        } catch {
+            // Present but undecodable (e.g. a hand-edit typo) — still don't block
+            // launch, but leave a breadcrumb so a silently-ignored profile isn't a
+            // mystery, matching the app's "log why we fell back" discipline elsewhere.
+            BCILog.voice.notice("voice-profile.json present but undecodable; using env/auto defaults: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
     }
 }

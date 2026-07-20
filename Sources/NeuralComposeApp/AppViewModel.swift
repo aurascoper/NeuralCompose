@@ -376,10 +376,15 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // equivalent failure path.
             self.startupWarning = w
         }
-        if let w = container.voiceOutputResolved.warning {
-            self.voiceWarning = w
-        } else if let w = container.voiceInputResolved.warning {
-            self.voiceWarning = w
+        // Route the voice-output/input launch warnings to the RENDERED
+        // startupWarning (PrivacyIndicatorView) — the same precedent this change
+        // set for the spectral estimator above. Otherwise the actionable "record a
+        // Personal Voice / install a neural voice" hint lands in `voiceWarning`,
+        // which no view binds, and never reaches the user. Don't clobber an
+        // already-set startupWarning (a classifier/predictor/spectral warning wins).
+        if self.startupWarning == nil {
+            self.startupWarning = container.voiceOutputResolved.warning
+                ?? container.voiceInputResolved.warning
         }
         if let w = container.voiceCommandResolved.warning {
             self.commandWarning = w
