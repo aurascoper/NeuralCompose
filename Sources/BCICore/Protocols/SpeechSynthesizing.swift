@@ -73,6 +73,26 @@ public struct SpeechProsody: Sendable, Equatable {
         preUtteranceDelay: 0.3
     )
 
+    /// The coherence pole's voice in a **waking** dialectic — present and
+    /// natural-paced (near the AVSpeechUtterance default rate), NOT the slow
+    /// arousal-safe hypnagogic envelope. Used by the waking role set for the
+    /// Focused / Reflective / Contemplative profiles.
+    public static let wakingCoherent = SpeechProsody(
+        rate: 0.5,
+        pitchMultiplier: 1.0,
+        volume: 0.9,
+        preUtteranceDelay: 0.1
+    )
+
+    /// The displacement pole's **waking** voice — a touch quicker and brighter
+    /// so the opposing voice is audibly distinct, without the sleepy slowness.
+    public static let wakingDivergent = SpeechProsody(
+        rate: 0.54,
+        pitchMultiplier: 1.06,
+        volume: 0.9,
+        preUtteranceDelay: 0.05
+    )
+
     /// Weighted mean of several prosodies — the mechanism that makes tension
     /// *audible*: a spoken turn is voiced by blending the role voices in
     /// proportion to the competition's probabilities, so a close call carries

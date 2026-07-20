@@ -41,6 +41,7 @@ let package = Package(
         .executable(name: "MLXProbe", targets: ["MLXProbe"]),
         .executable(name: "SpectralProbe", targets: ["SpectralProbe"]),
         .executable(name: "GenerationEval", targets: ["GenerationEval"]),
+        .executable(name: "dialectic-smoke", targets: ["DialecticSmoke"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -237,6 +238,19 @@ let package = Package(
             name: "GenerationEval",
             dependencies: ["BCILLM", "BCICore", "BCIClassifier"],
             path: "Sources/GenerationEval",
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── Sonnet-5 runtime smoke (co-dev loop, Phase 1) ─────────────────
+        // Sibling executable that drives the real ClaudeCLIGenerator +
+        // waking role prompts end-to-end, with no EEG/GUI, to prove the
+        // Sonnet-5 runtime agent is reachable before a live session. Depends
+        // only on BCICore (the roles/prompts) + BCICloudBridge (the sole
+        // network-egress module) — no MLX, so it builds under CLT.
+        .executableTarget(
+            name: "DialecticSmoke",
+            dependencies: ["BCICore", "BCICloudBridge"],
+            path: "Sources/DialecticSmoke",
             swiftSettings: strictConcurrency
         ),
 

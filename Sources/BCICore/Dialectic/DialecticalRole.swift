@@ -106,3 +106,58 @@ public extension DialecticalRole {
         voiceProsody: .hypnagogicDreamer
     )
 }
+
+public extension DialecticalRole {
+
+    /// The **waking** two-role default — lucid, position-holding voices for the
+    /// Focused / Reflective / Contemplative profiles, where the point is a
+    /// coherent exchange rather than sleep onset. Same objectives and sampling
+    /// regime as the sleep roles; only the register (prompt language + voice)
+    /// changes. Selected by the app for the `.dialectical` interaction style;
+    /// the sleep roles above stay reserved for the future wind-down / hypnagogic
+    /// / dream rungs. These prompt shapers are the user's knob — the literal
+    /// instructions behind the spoken turns — so tune them to taste.
+    static let wakingRoles: [DialecticalRole] = [.coherenceSeekingWaking, .displacementSeekingWaking]
+
+    /// Waking faithful pole: find the clearest thread in what was heard and
+    /// carry it forward, sharpened and grounded. Low temperature.
+    static let coherenceSeekingWaking = DialecticalRole(
+        id: "coherence-seeking",
+        temperature: 0.45,
+        promptShaper: { heard, _ in
+            """
+            In a live dialogue, the other person just said: "\(heard)"
+
+            Respond as the voice that seeks coherence: find the strongest, \
+            clearest thread in what they said and carry it forward faithfully — \
+            sharpen it, ground it, make it more precise. Do not drift away from \
+            it or hedge. At most three sentences. Output only your reply.
+            """
+        },
+        objective: { $0.coherence },
+        voiceProsody: .wakingCoherent
+    )
+
+    /// Waking divergent pole: refuse to restate; open the idea from a genuinely
+    /// different angle. How hard it pushes scales with the standing tension.
+    /// High temperature.
+    static let displacementSeekingWaking = DialecticalRole(
+        id: "displacement-seeking",
+        temperature: 1.0,
+        promptShaper: { heard, tension in
+            let reach = tension >= 0.6
+                ? "Push hard against it — surface the tension, the counter-position, or the angle it ignores."
+                : "Introduce a genuinely different angle — a reframing, an analogy, or an overlooked possibility."
+            return """
+            In a live dialogue, the other person just said: "\(heard)"
+
+            Respond as the voice that seeks displacement: do not restate or \
+            simply agree. \(reach) Offer one distinct, substantive move that \
+            opens the idea rather than closing it. At most three sentences. \
+            Output only your reply.
+            """
+        },
+        objective: { $0.novelty },
+        voiceProsody: .wakingDivergent
+    )
+}

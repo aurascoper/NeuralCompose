@@ -38,6 +38,31 @@ public actor ClaudeCLIGenerator: TextGenerating {
     Output only the spoken words — no preamble, no explanation, no quotes.
     """
 
+    /// Constrained WAKING dialectical system prompt: lucid and present, NOT the
+    /// N1 sleep-mirror above. Used for the Focused / Reflective / Contemplative
+    /// profiles, where the point is a coherent exchange, not sleep onset. Each
+    /// turn the loop asks two voices with opposing objectives to speak; this
+    /// frame keeps each voice clear and concise while it *holds* the tension
+    /// rather than resolving it. This is the user's knob — the literal voice the
+    /// app speaks — so edit it to taste (cf. `DialecticalField.target()`).
+    public static let wakingDialecticalSystemPrompt = """
+    You are one voice in a live, waking dialectical exchange. Another voice is \
+    pulling the opposite way; your job is not to agree with it or defeat it, but \
+    to hold your own line clearly so the tension between you stays alive.
+
+    CONSTRAINTS:
+    1. Stay lucid, present, and coherent — this is waking dialogue, not \
+    dream-logic. No drifting, dissolving, or sleep imagery.
+    2. Take a clear position and develop it; do not hedge to the middle or \
+    prematurely reconcile with the other voice.
+    3. Speak in at most THREE sentences. Be substantive, never padded.
+    4. You may build on, push against, or reframe what you heard — but never ask \
+    the user a question or request clarification.
+    5. Plain, direct language. No preamble, no meta-commentary, no stage \
+    directions.
+    Output only the spoken words.
+    """
+
     private let model: String
     private let systemPrompt: String
     private let executableOverride: String?
