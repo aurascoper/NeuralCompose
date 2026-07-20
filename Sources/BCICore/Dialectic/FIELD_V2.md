@@ -14,8 +14,8 @@ deferred until the shipped v1 engine has accumulated real interaction experience
 ## Why now, and why not yet
 
 The v1 engine ([`README.md`](README.md), [`MATH.md`](MATH.md)) has stabilized: competition,
-trajectory, semantic graph, silence, synthesis, two clocks, and the `InteractionStyle × ContextProfile`
-split. Those are **observable dynamics** — each is measured or resolved from a single turn.
+trajectory, semantic graph, silence, synthesis, two clocks, and the single `HypnagogicMode`
+(mirror + the dialectic profiles). Those are **observable dynamics** — each is measured or resolved from a single turn.
 
 `fieldEnergy` is different in kind: it is a **latent state variable**. Once it exists it touches nearly
 every subsystem — competition, `τ(T)`, the silence and synthesis thresholds, tuning, telemetry, and

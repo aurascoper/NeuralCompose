@@ -12,7 +12,7 @@
 # The mic/speech authorization prompt and the red cloud-egress banner STILL gate
 # the run — this override only flips the same opt-in the in-app UI toggle would.
 #
-#   ./Scripts/run-dialectical-waking.sh [profile]   # profile: focused|reflective|contemplative
+#   ./Scripts/run-dialectical-waking.sh [mode]   # mode: focused|reflective|contemplative (default reflective)
 #
 # ⚠️ CLOUD EGRESS: dialectical mode makes TWO `claude` (Sonnet 5) calls per turn;
 #    only transcript TEXT leaves the machine (audio + STT stay on-device). Opt-in,
@@ -23,10 +23,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-PROFILE="${1:-focused}"
-case "$PROFILE" in
+MODE="${1:-reflective}"
+case "$MODE" in
     focused|reflective|contemplative) ;;
-    *) echo "error: profile must be focused|reflective|contemplative (got '$PROFILE')" >&2; exit 2 ;;
+    *) echo "error: mode must be focused|reflective|contemplative (got '$MODE')" >&2; exit 2 ;;
 esac
 
 # Live EEG → SpectralGloss needs a BrainFlow-linked binary; a stub build silently
@@ -37,10 +37,10 @@ if ! otool -L .build/debug/NeuralCompose 2>/dev/null | grep -q "libBoardControll
 fi
 
 export NEURALCOMPOSE_BOARD_PROFILE="${NEURALCOMPOSE_BOARD_PROFILE:-muses}"
-export NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART="dialectical:${PROFILE}"
+export NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART="${MODE}"
 export NEURALCOMPOSE_INTERACTION_LOG=1
 
-echo "→ live dialectical/waking run — profile=${PROFILE}, board=${NEURALCOMPOSE_BOARD_PROFILE}"
+echo "→ live dialectical/waking run — mode=${MODE}, board=${NEURALCOMPOSE_BOARD_PROFILE}"
 echo "  telemetry → ~/Documents/NeuralCompose/InteractionLogs/dialectic-turns-$(date +%Y-%m-%d).jsonl"
 echo "  ⚠️ two Sonnet-5 cloud calls/turn while active (text only); grant mic + Bluetooth when prompted."
 echo ""

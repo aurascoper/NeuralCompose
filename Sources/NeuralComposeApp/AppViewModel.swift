@@ -39,18 +39,32 @@ public enum SignalQuality: Sendable, Equatable {
 /// unexpectedly and we are not already running synthetic, the streamTask
 /// swaps in `EEGStreamFactory.makeSynthetic()` and continues, updating
 /// `pipelineMode` so the privacy banner reflects the degraded state.
-/// *Which loop* the hypnagogic opt-in runs — orthogonal to the behavioural
-/// `ContextProfile` (which shapes the dialectical dynamics). `mirror` is the
-/// plain reply (`HypnagogicDialogueLoop`); `dialectical` is the competition
-/// (`HypnagogicDialecticLoop` — two generators, persistent tension,
-/// non-deterministic resolution, TWO cloud calls per turn).
-public enum InteractionStyle: String, CaseIterable, Sendable, Identifiable {
-    case mirror, dialectical
+/// The single hypnagogic interaction mode — one axis, replacing the old
+/// `InteractionStyle × ContextProfile` split. `mirror` is the plain reply
+/// (`HypnagogicDialogueLoop`, ONE cloud call/turn); `focused` / `reflective` /
+/// `contemplative` run the dialectic competition (`HypnagogicDialecticLoop`,
+/// persistent tension, non-deterministic resolution, TWO cloud calls/turn) at
+/// the matching `ContextProfile` tuning. "Dialectical" is no longer a separate
+/// toggle: choosing `reflective` — the canonical dialectical behaviour — *is*
+/// choosing dialectical.
+public enum HypnagogicMode: String, CaseIterable, Sendable, Identifiable {
+    case mirror, focused, reflective, contemplative
     public var id: String { rawValue }
+
+    /// The dialectic tuning profile for this mode, or nil for `mirror` (the
+    /// non-competing reply loop). The non-mirror rawValues line up with
+    /// `ContextProfile`, so this is a direct lift.
+    public var profile: ContextProfile? { ContextProfile(rawValue: rawValue) }
+
+    /// Whether this mode runs the dialectic loop (two cloud calls/turn).
+    public var isDialectical: Bool { profile != nil }
+
     public var label: String {
         switch self {
-        case .mirror:      return "Mirror"
-        case .dialectical: return "Dialectical"
+        case .mirror:        return "Mirror"
+        case .focused:       return "Focused"
+        case .reflective:    return "Reflective"
+        case .contemplative: return "Contemplative"
         }
     }
 }
@@ -180,22 +194,14 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
-    /// Which loop runs when enabled (mirror vs dialectical). Changing it while
-    /// active rebuilds the loop; off by default to the plain mirror.
-    @Published public var hypnagogicStyle: InteractionStyle = .mirror {
+    /// The hypnagogic interaction mode when the loop is enabled: `mirror` (plain
+    /// reply, one cloud call/turn) or `focused` / `reflective` / `contemplative`
+    /// (the dialectic loop at that tuning, two cloud calls/turn). Changing it
+    /// while active rebuilds the loop. Defaults to the plain mirror — the
+    /// lower-egress option.
+    @Published public var hypnagogicMode: HypnagogicMode = .mirror {
         didSet {
-            guard oldValue != hypnagogicStyle, hypnagogicLoopEnabled else { return }
-            reconcileHypnagogicLoop()
-        }
-    }
-
-    /// Behavioural profile for the dialectical loop (focused / reflective /
-    /// contemplative). Ignored by the mirror style. Changing it while a
-    /// dialectical loop is active rebuilds it with the new preset.
-    @Published public var hypnagogicContext: ContextProfile = .reflective {
-        didSet {
-            guard oldValue != hypnagogicContext,
-                  hypnagogicLoopEnabled, hypnagogicStyle == .dialectical else { return }
+            guard oldValue != hypnagogicMode, hypnagogicLoopEnabled else { return }
             reconcileHypnagogicLoop()
         }
     }
@@ -286,8 +292,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// of the default AppContainer graph, so the network-egress path is
     /// instantiated only while the loop is enabled.
     private var hypnagogicLoop: (any HypnagogicRunnable)?
-    /// Style+profile of the currently-built loop, so a change in either rebuilds it.
-    private var hypnagogicLoopBuilt: (style: InteractionStyle, context: ContextProfile)?
+    /// The mode of the currently-built loop, so a change rebuilds it.
+    private var hypnagogicLoopBuilt: HypnagogicMode?
     private var hypnagogicLoopReconcile: Task<Void, Never>?
 
     // ── Per-start resources (recreated each call to start()) ─────────────
@@ -710,18 +716,18 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
         guard let raw = env["NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART"]?
             .trimmingCharacters(in: .whitespaces).lowercased(), !raw.isEmpty else { return }
-        let parts = raw.split(separator: ":", maxSplits: 1)
-        guard let style = InteractionStyle(rawValue: String(parts[0])) else {
+        // Single token: mirror | focused | reflective | contemplative. Tolerate
+        // the legacy "<style>:<profile>" form by taking the last segment
+        // (`dialectical:reflective` → `reflective`, `mirror` → `mirror`).
+        let token = String(raw.split(separator: ":").last ?? Substring(raw))
+        guard let mode = HypnagogicMode(rawValue: token) else {
             BCILog.pipeline.notice(
-                "hypnagogic autostart: unknown style '\(String(parts[0]), privacy: .public)', ignoring")
+                "hypnagogic autostart: unknown mode '\(raw, privacy: .public)' (want mirror|focused|reflective|contemplative), ignoring")
             return
         }
-        hypnagogicStyle = style
-        if parts.count > 1, let profile = ContextProfile(rawValue: String(parts[1])) {
-            hypnagogicContext = profile
-        }
+        hypnagogicMode = mode
         BCILog.pipeline.notice(
-            "hypnagogic autostart: enabling \(style.rawValue, privacy: .public)/\(self.hypnagogicContext.rawValue, privacy: .public) — cloud-egress banner shows while active")
+            "hypnagogic autostart: enabling \(mode.rawValue, privacy: .public) — cloud-egress banner shows while active")
         hypnagogicLoopEnabled = true   // → reconcileHypnagogicLoop() (auth prompt + banner)
     }
 
@@ -746,11 +752,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// network-egress path is instantiated only when the user opts in. Requests
     /// mic + speech authorization first; if denied, flips the toggle back off.
     private func ensureHypnagogicLoopRunning() async {
-        // Already running the requested style+profile? Nothing to do. A change
-        // in either tears the old loop down first.
-        if hypnagogicLoop != nil,
-           hypnagogicLoopBuilt?.style == hypnagogicStyle,
-           hypnagogicLoopBuilt?.context == hypnagogicContext { return }
+        // Already running the requested mode? Nothing to do. A change tears the
+        // old loop down first.
+        if hypnagogicLoop != nil, hypnagogicLoopBuilt == hypnagogicMode { return }
         await ensureHypnagogicLoopStopped()
 
         let listener = HypnagogicListener()
@@ -764,25 +768,17 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         guard hypnagogicLoopEnabled else { return }
 
         let loop: any HypnagogicRunnable
-        switch hypnagogicStyle {
-        case .mirror:
-            loop = HypnagogicDialogueLoop(
-                listener: listener,
-                generator: ClaudeCLIGenerator(),
-                speaker: voiceOutput
-            )
-        case .dialectical:
-            // Two cloud calls per turn (one per role). The gloss reads the
-            // current spectral state as a heuristic BIAS (never a decoder);
-            // turn logging is gated on the interaction-log opt-in, resolved at
-            // build time (toggling it mid-loop takes effect on the next rebuild).
-            // The behavioural profile is a preset over the loop's tuning/cadence.
+        if let profile = hypnagogicMode.profile {
+            // Dialectical (focused/reflective/contemplative). Two cloud calls per
+            // turn (one per role). The gloss reads the current spectral state as a
+            // heuristic BIAS (never a decoder); turn logging is gated on the
+            // interaction-log opt-in, resolved at build time (toggling it mid-loop
+            // takes effect on the next rebuild).
             //
-            // The current profiles (focused/reflective/contemplative) are all
-            // WAKING, so the loop runs the waking role set + a lucid waking
-            // system prompt — a coherent exchange, not sleep onset. The
-            // sleep-mirror roles/prompt stay reserved for the future wind-down /
-            // hypnagogic / dream rungs on the mode ladder.
+            // All three profiles are WAKING, so the loop runs the waking role set
+            // + a lucid waking system prompt — a coherent exchange, not sleep
+            // onset. The sleep-mirror roles/prompt stay reserved for the future
+            // wind-down / hypnagogic / dream rungs on the mode ladder.
             let turnLogger: any DialecticalTurnLogging =
                 (interactionLoggingEnabled ? (interactionLogger as? any DialecticalTurnLogging) : nil)
                 ?? NullDialecticalTurnLogger()
@@ -794,14 +790,21 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 speaker: voiceOutput,
                 embedder: container.sentenceEmbedder,
                 roles: DialecticalRole.wakingRoles,
-                tuning: hypnagogicContext.tuning,
+                tuning: profile.tuning,
                 glossProvider: { [weak self] in await self?.currentSpectralGlossState() ?? nil },
                 turnLogger: turnLogger,
-                config: hypnagogicContext.loopConfig()
+                config: profile.loopConfig()
+            )
+        } else {
+            // Mirror — the plain, non-competing reply loop (one cloud call/turn).
+            loop = HypnagogicDialogueLoop(
+                listener: listener,
+                generator: ClaudeCLIGenerator(),
+                speaker: voiceOutput
             )
         }
         hypnagogicLoop = loop
-        hypnagogicLoopBuilt = (hypnagogicStyle, hypnagogicContext)
+        hypnagogicLoopBuilt = hypnagogicMode
         await loop.start()
     }
 

@@ -1,8 +1,9 @@
 import Foundation
 
-/// A named location in the dialectic's behavioral space — orthogonal to *which*
-/// loop runs (that is the app's `InteractionStyle`). A profile is almost
-/// entirely a **preset over knobs the engine already has** (`Tuning` plus a
+/// A named location in the dialectic's behavioral space — the tuning behind the
+/// app's dialectical `HypnagogicMode`s (focused / reflective / contemplative;
+/// `mirror` runs the non-dialectic reply loop and has no profile). A profile is
+/// almost entirely a **preset over knobs the engine already has** (`Tuning` plus a
 /// couple of loop-cadence fields); it introduces no new dynamics.
 ///
 /// The names deliberately avoid sleep-stage / physiological language: they

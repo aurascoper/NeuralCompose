@@ -113,7 +113,8 @@ public extension DialecticalRole {
     /// Focused / Reflective / Contemplative profiles, where the point is a
     /// coherent exchange rather than sleep onset. Same objectives and sampling
     /// regime as the sleep roles; only the register (prompt language + voice)
-    /// changes. Selected by the app for the `.dialectical` interaction style;
+    /// changes. Selected by the app for the dialectical modes (focused /
+    /// reflective / contemplative);
     /// the sleep roles above stay reserved for the future wind-down / hypnagogic
     /// / dream rungs. These prompt shapers are the user's knob — the literal
     /// instructions behind the spoken turns — so tune them to taste.

@@ -126,22 +126,22 @@ and the unresolved tension is carried into the next turn (metastability),
 bounded so the loop never stalls permanently. Saying less is a legitimate move,
 not a failure mode.
 
-## Interaction style × context profile
+## Interaction mode
 
-Two orthogonal, honestly-named axes control the experience. Neither implies the
-Muse detects or induces a physiological state — they describe *how the dialogue
-behaves*.
+A single, honestly-named `HypnagogicMode` controls the experience — it does not
+imply the Muse detects or induces any physiological state; it describes *how the
+dialogue behaves*:
 
-- **`InteractionStyle`** (app-level) — *which loop runs*: `mirror` (the plain
-  reply) or `dialectical` (the competition).
-- **`ContextProfile`** (`ContextProfile.swift`) — *how the dialectical loop
-  behaves*, as a preset over the existing `Tuning` + cadence knobs (no new
-  dynamics):
-  - **Focused** — coherent, grounded, resolves readily, rarely silent
-    (↑coherence, ↓novelty, eager synthesis, high `highTension`, short cadence).
-  - **Reflective** — the shipped defaults: gentle exploration, persistent tension.
-  - **Contemplative** — *less, not more*: low novelty pressure, suppressed
-    synthesis, high tolerance for unresolved tension and silence, slow cadence.
+- **Mirror** — the plain reply (`HypnagogicDialogueLoop`), one cloud call/turn.
+- **Focused** — dialectic, coherent and grounded: resolves readily, rarely silent.
+- **Reflective** — dialectic at the shipped defaults: gentle exploration, persistent tension.
+- **Contemplative** — dialectic, *less not more*: low novelty pressure, suppressed
+  synthesis, high tolerance for unresolved tension and silence, slow cadence.
+
+"Dialectical" is **not** a separate toggle — the three non-mirror modes *are* the
+dialectic loop (two cloud calls/turn). Internally each non-mirror mode maps to a
+`ContextProfile` (`ContextProfile.swift`) — a preset over the existing `Tuning` +
+cadence knobs, no new dynamics; `Reflective` is exactly `.default`.
 
 ## File map
 

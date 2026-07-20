@@ -52,7 +52,8 @@ gated contract.
   extension seam exactly as designed ("adding a role is data, not control flow").
 
 - **Reproducible, still-gated live runs.** A new opt-in launch override
-  `NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART=<style>[:<profile>]` (default unset → no-op)
+  `NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART=<mode>` (`mirror`|`focused`|`reflective`|`contemplative`;
+  default unset → no-op; the legacy `<style>:<profile>` form is still tolerated)
   enables the loop at launch without the UI toggle, so a session is scriptable from
   a seed. It flows through the *same* `reconcileHypnagogicLoop()` path, so every
   existing gate holds: the mic/speech authorization prompt still fires and the red
