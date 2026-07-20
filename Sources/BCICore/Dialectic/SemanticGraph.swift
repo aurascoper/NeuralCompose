@@ -15,8 +15,10 @@ public struct SemanticGraph: Sendable {
         public let text: String
         public let embedding: Embedding
         public let turnIndex: Int
-        /// Whether this was a heard utterance or a spoken reply — kept for
-        /// diagnostics; recurrence treats both alike.
+        /// Whether this was a heard utterance or a spoken reply. The general
+        /// recurrence lookup (`nearestPriorNodes`) treats both alike, but
+        /// `DialecticalMemory.synthesisCandidate` resurfaces only `.reply` nodes
+        /// so a synthesis never echoes the user's own heard input back.
         public let kind: Kind
         public enum Kind: String, Sendable, Equatable { case heard, reply }
     }

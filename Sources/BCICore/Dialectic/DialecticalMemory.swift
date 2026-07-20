@@ -99,8 +99,14 @@ public struct DialecticalMemory: Sendable {
             ? tuning.synthesisLowBar : tuning.synthesisHighBar
 
         let best = graph.nearestPriorNodes(to: query, limit: 10)
-            // Never resurface something just voiced — that is the verbatim
-            // repetition an eager-synthesis profile otherwise produces.
+            // A synthesis reconciles the poles from a prior *reply* (something the
+            // dialogue itself said) — never the user's own heard input, which
+            // reads as parroting their words back. `nearestPriorNodes` stays
+            // kind-agnostic (it's the general recurrence primitive); the .reply
+            // restriction lives here, where synthesis is chosen.
+            .filter { $0.kind == .reply }
+            // Nor resurface something just voiced — the verbatim repetition an
+            // eager-synthesis profile otherwise produces.
             .filter { !recentlyVoiced.contains($0.text) }
             .map { node -> (SemanticGraph.Node, Float) in
                 (node, DialecticalDynamics.synthesisScore(candidate: node.embedding,

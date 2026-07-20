@@ -53,8 +53,9 @@ final class DialecticalMemoryTests: XCTestCase {
 
     func testResurfacedBridgingIdeaBecomesSynthesisCandidate() {
         var m = DialecticalMemory(historyWindow: 8, tensionCeiling: 0.35)
-        // A prior idea sitting close to both of the poles we'll present later.
-        m.recordHeard(text: "the tide remembers", embedding: emb([1, 1, 0]), turnIndex: 0)
+        // A prior *reply* sitting close to both of the poles we'll present later
+        // (synthesis reconciles from replies, not from heard input).
+        m.recordReply(text: "the tide remembers", embedding: emb([1, 1, 0]), turnIndex: 0)
 
         let thesis = emb([1, 0, 0])
         let antithesis = emb([0, 1, 0])
@@ -66,8 +67,8 @@ final class DialecticalMemoryTests: XCTestCase {
 
     func testNoBridgingIdeaMeansNoSynthesis() {
         var m = DialecticalMemory(historyWindow: 8, tensionCeiling: 0.35)
-        // A prior idea aligned with only ONE pole — reconciles nothing.
-        m.recordHeard(text: "only thesis", embedding: emb([1, 0, 0]), turnIndex: 0)
+        // A prior reply aligned with only ONE pole — reconciles nothing.
+        m.recordReply(text: "only thesis", embedding: emb([1, 0, 0]), turnIndex: 0)
         let synth = m.synthesisCandidate(thesis: emb([1, 0, 0]), antithesis: emb([0, 1, 0]),
                                          tuning: .default)
         XCTAssertNil(synth, "an idea close to one pole only does not clear the strict bar")
@@ -81,12 +82,12 @@ final class DialecticalMemoryTests: XCTestCase {
         let antithesis = emb([0, 1, 0])
 
         var opposed = DialecticalMemory(historyWindow: 8, tensionCeiling: 0.35)
-        opposed.recordHeard(text: "bridge", embedding: bridge, turnIndex: 0)
+        opposed.recordReply(text: "bridge", embedding: bridge, turnIndex: 0)
         XCTAssertNil(opposed.synthesisCandidate(thesis: thesis, antithesis: antithesis, tuning: .default),
                      "below the strict bar while the poles are opposed")
 
         var converged = DialecticalMemory(historyWindow: 8, tensionCeiling: 0.35)
-        converged.recordHeard(text: "bridge", embedding: bridge, turnIndex: 0)
+        converged.recordReply(text: "bridge", embedding: bridge, turnIndex: 0)
         for _ in 0..<DialecticalDynamics.Tuning.default.synthesisSustainK {
             converged.observe(tension: 0.1)   // a run of low-tension turns
         }
