@@ -1,8 +1,12 @@
 # Research
 
 This document describes the planned research program for the platform. It is
-the pre-registration companion to `SLEEP_CYCLE_DESIGN.md` §14. The platform
-is the engineering contribution; this is the empirical one.
+the pre-registration companion to `SLEEP_CYCLE_DESIGN.md` §14 — i.e. the plan
+for **D8**, the eighth and final module of the D1–D8 sleep-cycle design: the
+pilot human evaluation study (§14). ("D" is a design-deliverable index; "D8"
+here is **not** the BCI senses of the term — not an 8-direction pathing
+algorithm, an 8-channel electrode array, or a downsample-by-8 layer.) The
+platform is the engineering contribution; this is the empirical one.
 
 ## Research Question
 

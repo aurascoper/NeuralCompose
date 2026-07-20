@@ -8,6 +8,8 @@
 
 This document specifies the type-level design for a new sleep-cycle mode in NeuralCompose. It does not contain runnable code. The output of this document is a set of types, protocols, and contracts that make implementation mechanical. Every heuristic carries a confidence rating (High / Medium / Low). Every claim about scientific status is marked established / plausible / unproven.
 
+**D1–D8 legend** (the eight design modules, specified in §7–§14): **D1** sleep-stage model + prediction types (§7) · **D2** staging protocol + Core ML classifier (§8) · **D3** stage smoother (§9) · **D4** sleep-session FSM (§10) · **D5** dream-session controller (§11) · **D6** dream-analysis LLM protocol (§12) · **D7** post-sleep analysis pipeline (§13) · **D8** experimental evaluation plan (§14) — the pilot human study, whose pre-registration is `docs/Research.md`. "D" is a **design-deliverable** index — not an EEG channel count, a cursor-direction (8-way) algorithm, or a downsample-by-8 factor.
+
 ---
 
 ## §1 Assumptions and Design Decisions

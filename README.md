@@ -354,7 +354,7 @@ swift test --filter GoldenRecordingRegressionTests
 | Per-channel RMS, alpha power, and blink detection are observable on consumer Muse hardware | **Established** |
 | Deterministic playback + CI regression against real hardware data | **Established** |
 | 4-class sleep staging from Muse S is achievable at research accuracy | **Plausible** — domain shift from PSG is the largest expected error source |
-| TMR cues + LLM dream analysis improves engineering insight | **Unproven** — D8 crossover, pre-registration pending |
+| TMR cues + LLM dream analysis improves engineering insight | **Unproven** — the D8 pilot evaluation study (§14 crossover), pre-registration pending |
 | 5-class AASM sleep staging on Muse S | **Hardware-limited** — no chin EMG, atonia is the defining REM criterion |
 
 The platform ships regardless of the unproven claims — the validation
