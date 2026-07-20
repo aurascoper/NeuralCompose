@@ -96,3 +96,25 @@ Entry template:
   Then run the transform A/B {none, standardize, symlog, log-band-power, specparam, 1/f-flatten} × {signal,
   nuisance} × multi-seed through `evaluate()`, keeping a transform only if it improves pred/rollout+MPC WITHOUT
   degrading chi-recovery. **A negative result there is the target-quality outcome.**
+
+## 4 — Multi-step latent rollout (Phase B) (2026-07-20, commit <pending>)
+- Category: Benchmark
+- Hypothesis: the panel needs a *multi-step* (not just 1-step) forward number; a closed-loop latent rollout over
+  sequential-trajectory synthetic data measures how prediction error compounds — one of the two metrics the
+  transform-A/B decision rule anchors on (alongside factor recovery; MPC-success still to come).
+- Prediction: deterministic under seed; 1-step rollout error ≈ `pred_error_1step` (both 1-step MSE); error
+  grows-or-holds with horizon.
+- Implementation: `WorldModel/forward_eval.py` — `_generate_trajectories` (n chained single-step transitions per
+  trajectory, reusing `synthetic_1f._sample_latent/_step/_render_state`) + `_multi_step_rollout` (encode the first
+  window, roll the predictor *closed-loop* with the true actions, MSE each horizon vs the EMA-target encoding;
+  trajectory windows z-scored on the **TRAIN** mean/std so they live in the JEPA input space). Added
+  `rollout_error{per_horizon, step1, final_step, mean}` to the panel + `rollout_traj/rollout_len` params on
+  `evaluate()`. Provenance: new; reuses `train_jepa` + `JEPATransitionDataset(mean,std)` + the synthetic_1f
+  dynamics. `WorldModel/`-only, no Sources/, no network.
+- Evidence: `venv/bin/python WorldModel/forward_eval.py --smoke-test` → **passed** (deterministic): `pred_err=0.039`,
+  **`rollout[1→4]=0.043→0.044`** (step1 ≈ pred_err_1step ✓; near-flat → the latent dynamics are stable over 4 steps
+  on this generator), `rankme=4.42`, `chi_R²=0.864` (unchanged).
+- Decision: **kept** — `rollout_error` is the second forward number for the A/B.
+- Next question: add **goal-conditioned MPC/CEM planning success** in latent space (needs a latent-space planner +
+  a true-env rollout) — the last decision-rule anchor. THEN run the transform A/B × {signal, nuisance} × multi-seed
+  through `evaluate()`.

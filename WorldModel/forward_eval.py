@@ -7,10 +7,14 @@ is the point (see RESEARCH_spectral_geometry.md §"No label-free metric is a tru
 oracle"). This iteration establishes the panel infrastructure; the A/B over
 transform arms is a later iteration that reuses `evaluate()`.
 
-Metrics (this iteration):
+Metrics:
   - pred_error_1step  : MSE between the predictor's next-latent and the EMA target
                         encoder's next-latent (the JEPA's own forward objective,
                         measured on held-out data). The forward-prediction anchor.
+  - rollout_error     : closed-loop multi-step latent rollout error — roll the
+                        predictor feeding its own output back in, MSE per horizon vs
+                        the EMA-target encoding of the true state. One of the two
+                        numbers the transform-A/B decision rule anchors on.
   - factor_recovery   : held-out linear-probe R² for each KNOWN latent factor
                         {pos, vel, chi, peak_amp, offset} — INCLUDING the aperiodic
                         exponent `chi`, the information-destruction detector.
@@ -23,7 +27,6 @@ Metrics (this iteration):
   - alignment / uniformity : Wang & Isola 2020, on L2-normalized latents.
 
 DEFERRED to the next Benchmark iteration (each needs new machinery, ledgered):
-  - multi-step latent rollout error   (needs sequential-trajectory synthetic data)
   - goal-conditioned MPC/CEM success  (needs a latent-space planner + true-env rollout)
   - LiDAR (Thilak et al. 2024)        (needs the clean/augmented surrogate-class setup)
 
@@ -54,7 +57,15 @@ from eeg_jepa import (  # noqa: E402
     resolve_device,
     train_jepa,
 )
-from synthetic_1f import generate, write_jsonl  # noqa: E402
+import random  # noqa: E402
+from synthetic_1f import (  # noqa: E402
+    generate,
+    write_jsonl,
+    _sample_latent,
+    _step,
+    _render_state,
+    SEQUENCE_LENGTH,
+)
 
 FACTOR_NAMES = ["pos", "vel", "chi", "peak_amp", "offset"]
 
@@ -163,6 +174,67 @@ def _alignment_uniformity(Z_pre: torch.Tensor, Z_post: torch.Tensor, t: float = 
     return alignment, uniformity
 
 
+def _generate_trajectories(n_traj: int, length: int, mode: str, seed: int) -> list[dict[str, Any]]:
+    """`n_traj` independent trajectories, each `length` CHAINED single-step
+    transitions (post_i == pre_{i+1}), flattened in trajectory-major order into the
+    JEPATransition record schema. Reuses the synthetic_1f dynamics so multi-step
+    rollout is measured on the same generator the JEPA trained on. Trajectory t
+    occupies records [t*length : (t+1)*length]."""
+    rng = random.Random(seed)
+    records: list[dict[str, Any]] = []
+    for traj in range(n_traj):
+        z = _sample_latent(rng)
+        for step in range(length):
+            action = [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0), float(step % 2)]
+            z_next = _step(z, action, mode)
+            records.append({
+                "id": f"00000000-0000-0000-{traj % 10000:04d}-{step:012d}",
+                "timestamp": 1_700_000_000.0 + traj * length + step,
+                "preActionWindow": [_render_state(z, t) for t in range(SEQUENCE_LENGTH)],
+                "actionVector": action,
+                "postActionWindow": [_render_state(z_next, t) for t in range(SEQUENCE_LENGTH)],
+                "_latent": {k: z[k] for k in ("pos", "vel", "chi", "peak_amp", "offset")},
+            })
+            z = z_next
+    return records
+
+
+@torch.no_grad()
+def _multi_step_rollout(model, train_mean, train_std, device, *,
+                        n_traj: int = 32, length: int = 8, mode: str = "signal",
+                        seed: int = 1) -> dict[str, Any]:
+    """Closed-loop latent rollout error. Encode the first window of each trajectory,
+    roll the predictor `length` steps feeding its OWN output back in (with the true
+    actions), and MSE each predicted latent against the EMA-target encoding of the
+    true state at that horizon. Trajectory windows are z-scored on the TRAIN stats
+    so they live in the JEPA's input space. Returns per-horizon mean error, 1..length
+    (error typically grows with the horizon as prediction error compounds)."""
+    model.encoder.eval()
+    model.predictor.eval()
+    model.target_encoder.eval()
+    records = _generate_trajectories(n_traj, length, mode, seed)
+    with tempfile.TemporaryDirectory(prefix="neuralcompose-rollout-") as directory:
+        path = write_jsonl(records, Path(directory) / "traj.jsonl")
+        traj = JEPATransitionDataset(path, mean=train_mean, std=train_std)
+        horizon_err: list[list[float]] = [[] for _ in range(length)]
+        for t in range(n_traj):
+            base = t * length
+            pre0, _, _ = traj[base]
+            z_pred = model.encoder(pre0.unsqueeze(0).to(device))
+            for h in range(length):
+                _, action, post = traj[base + h]
+                z_pred = model.predictor(z_pred, action.unsqueeze(0).to(device))
+                target = model.target_encoder(post.unsqueeze(0).to(device))
+                horizon_err[h].append(F.mse_loss(z_pred, target).item())
+    per_horizon = [float(np.mean(errors)) for errors in horizon_err]
+    return {
+        "per_horizon": per_horizon,
+        "step1": per_horizon[0],
+        "final_step": per_horizon[-1],
+        "mean": float(np.mean(per_horizon)),
+    }
+
+
 def evaluate(
     n: int = 512,
     mode: str = "signal",
@@ -170,6 +242,8 @@ def evaluate(
     epochs: int = 30,
     latent_dim: int = 32,
     batch_size: int = 64,
+    rollout_traj: int = 32,
+    rollout_len: int = 8,
     device: torch.device | None = None,
     verbose: bool = True,
 ) -> dict[str, Any]:
@@ -194,11 +268,16 @@ def evaluate(
         Z_pre, Z_post = _encode_all(model, dataset, device)
         var_term, cov_term = _vicreg_terms(Z_pre)
         alignment, uniformity = _alignment_uniformity(Z_pre, Z_post)
+        rollout = _multi_step_rollout(
+            model, dataset.mean, dataset.std, device,
+            n_traj=rollout_traj, length=rollout_len, mode=mode, seed=seed + 1,
+        )
 
         panel = {
             "config": {"n": n, "mode": mode, "seed": seed, "epochs": epochs,
                        "latent_dim": latent_dim, "final_train_loss": history[-1]},
             "pred_error_1step": _pred_error_1step(model, dataset, device),
+            "rollout_error": rollout,
             "factor_recovery": _factor_recovery(Z_pre, factors, seed),
             "rankme": _rankme(Z_pre),
             "alpha_req": _alpha_req(Z_pre),
@@ -216,9 +295,9 @@ def evaluate(
 def smoke_test() -> None:
     """Tiny, fast, deterministic run; assert every metric is sane."""
     a = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16,
-                 device=torch.device("cpu"), verbose=False)
+                 rollout_traj=8, rollout_len=4, device=torch.device("cpu"), verbose=False)
     b = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16,
-                 device=torch.device("cpu"), verbose=False)
+                 rollout_traj=8, rollout_len=4, device=torch.device("cpu"), verbose=False)
 
     # Determinism: same seed → identical panel.
     assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True), "non-deterministic"
@@ -230,6 +309,12 @@ def smoke_test() -> None:
     for name, r2 in a["factor_recovery"].items():
         assert np.isfinite(r2), f"factor_recovery[{name}] not finite"
 
+    # Multi-step rollout: per-horizon list of the right length, all finite + non-negative.
+    roll = a["rollout_error"]
+    assert len(roll["per_horizon"]) == 4, f"rollout horizons: {roll['per_horizon']}"
+    assert all(np.isfinite(v) and v >= 0.0 for v in roll["per_horizon"]), roll["per_horizon"]
+    assert np.isfinite(roll["step1"]) and np.isfinite(roll["final_step"])
+
     # RankMe is an effective rank in (0, latent_dim].
     assert 0.0 < a["rankme"] <= 16.0 + 1e-6, f"rankme out of range: {a['rankme']}"
     # VICReg variance term is non-negative.
@@ -238,9 +323,9 @@ def smoke_test() -> None:
     assert "chi" in a["factor_recovery"]
 
     print(f"smoke test passed "
-          f"(pred_err={a['pred_error_1step']:.4f}, rankme={a['rankme']:.2f}, "
-          f"chi_R2={a['factor_recovery']['chi']:.3f}, "
-          f"pos_R2={a['factor_recovery']['pos']:.3f})")
+          f"(pred_err={a['pred_error_1step']:.4f}, "
+          f"rollout[1→{len(roll['per_horizon'])}]={roll['step1']:.3f}→{roll['final_step']:.3f}, "
+          f"rankme={a['rankme']:.2f}, chi_R2={a['factor_recovery']['chi']:.3f})")
 
 
 def main() -> None:
