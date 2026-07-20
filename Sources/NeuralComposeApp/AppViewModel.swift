@@ -595,7 +595,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                             }
                         } catch let bci as BCIError {
                             metrics.recordError(bci)
-                            await MainActor.run { self?.lastError = bci.description }
+                            await self?.setLastError(bci.description)
                         }
                     }
                     // Clean completion: for live, the Muse likely auto-powered
@@ -603,11 +603,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     // a clean exit means we're done.
                 } catch let bci as BCIError {
                     metrics.recordError(bci)
-                    await MainActor.run { self?.lastError = bci.description }
+                    await self?.setLastError(bci.description)
                 } catch {
                     let bci = BCIError.streamFailed(reason: error.localizedDescription)
                     metrics.recordError(bci)
-                    await MainActor.run { self?.lastError = bci.description }
+                    await self?.setLastError(bci.description)
                 }
                 await current.stream.stop()
                 if Task.isCancelled { break }
@@ -676,12 +676,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     )
                 } catch let bci as BCIError {
                     metrics.recordError(bci)
-                    await MainActor.run { self?.lastError = bci.description }
+                    await self?.setLastError(bci.description)
                     continue
                 } catch {
                     let bci = BCIError.classifierInferenceFailed(reason: error.localizedDescription)
                     metrics.recordError(bci)
-                    await MainActor.run { self?.lastError = bci.description }
+                    await self?.setLastError(bci.description)
                     continue
                 }
                 // Broadcast the raw (pre-smoothing) prediction to diagnostic
@@ -692,6 +692,15 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             }
         }
     }
+
+    /// Sets `lastError` on the main actor. Invoked from the detached pipeline
+    /// tasks via `await self?.setLastError(...)` rather than
+    /// `MainActor.run { self?.lastError = ... }` — a direct isolated-method call
+    /// hops to the main actor without tripping Swift 6 region isolation's
+    /// "sending 'self' risks causing data races" on the closure capture (the
+    /// closure would capture `self`, which the detached task also uses across
+    /// later loop iterations).
+    private func setLastError(_ description: String) { lastError = description }
 
     /// Drives `spokenLoop` toward the current toggle value, serialized through a
     /// single chained task so overlapping enable/disable events apply in order
