@@ -76,6 +76,11 @@ public actor HypnagogicDialecticLoop {
     /// Opt-in persistence of each turn's competition. Null by default.
     private let turnLogger: any DialecticalTurnLogging
     private let config: Config
+    /// Broadcast of spoken-node events for grounding the voice in the 3D
+    /// workspace (Stage 1b): a `place` event per voiced candidate + a
+    /// `re-brighten` event per spoken word. Opt-in — nothing is produced unless
+    /// a consumer calls `spokenNodeStream()`, and it stays entirely on-device.
+    private let spokenNodeChannel = AsyncMulticastChannel<SpokenNodeEvent>(capacity: 32)
 
     // Evolving state.
     private var loopTask: Task<Void, Never>?
@@ -256,13 +261,22 @@ public actor HypnagogicDialecticLoop {
             memory.recordReply(text: candidate.text, embedding: candidate.embedding, turnIndex: turnIndex)
             // Block a later synthesis from re-speaking this verbatim.
             memory.recordVoiced(candidate.text)
+            // Ground the voice: place (and full-brighten) this utterance's
+            // workspace node *before* speaking, then re-brighten it per word as
+            // the synthesizer voices it (`speakChunks` forwards the word events).
+            // One spoken turn ⇒ one node; `turnIndex` is its stable id.
+            let nodeID = String(turnIndex)
+            spokenNodeChannel.send(SpokenNodeEvent(
+                nodeID: nodeID, text: candidate.text, embedding: candidate.embedding,
+                word: nil, turnIndex: turnIndex))
             // Voice the winner, blended by how the competition actually went, so
             // a close call carries the losing pole's colour (audible tension).
             let probs = DialecticalDynamics.probabilities(
                 potentials: scored.map(\.potential), tau: result.selectionTemperature)
             let turnProsody = SpeechProsody.blend(
                 zip(scored, probs).map { (roleProsody(for: $0.candidate.roleID), $1) })
-            try await speakChunks(candidate.text, prosody: turnProsody)
+            try await speakChunks(candidate.text, prosody: turnProsody,
+                                  grounding: (nodeID: nodeID, embedding: candidate.embedding))
         case .silent:
             consecutiveSilence += 1
             if consecutiveSilence >= config.maxConsecutiveSilence {
@@ -296,10 +310,39 @@ public actor HypnagogicDialecticLoop {
 
     // MARK: - Speech
 
-    private func speakChunks(_ text: String, prosody: SpeechProsody) async throws {
+    /// A private stream of spoken-node events — the grounding signal the 3D
+    /// workspace subscribes to (Stage 1b). Each call returns its own
+    /// `AsyncStream`; `nonisolated` because the channel is a `Sendable` `let`,
+    /// mirroring the raw-sample fan-out (`AppViewModel.liveSampleStream()`).
+    /// Purely local: these events never leave the device.
+    public nonisolated func spokenNodeStream() -> AsyncStream<SpokenNodeEvent> {
+        spokenNodeChannel.subscribe()
+    }
+
+    /// Speaks `text` chunk-by-chunk. When `grounding` is supplied, each word the
+    /// synthesizer reaches re-brightens the utterance's workspace node via a
+    /// `SpokenNodeEvent` (best-effort — synthesizers without word timing simply
+    /// never fire it, and the initial `place` event already lit the node).
+    private func speakChunks(_ text: String, prosody: SpeechProsody,
+                             grounding: (nodeID: String, embedding: Embedding)? = nil) async throws {
+        // Capture Sendable locals so the per-word closure stays `@Sendable`
+        // (the channel is a Sendable `let`; the AV callback fires off-actor).
+        let channel = spokenNodeChannel
+        let turn = turnIndex
+        var onWord: (@Sendable (SpokenWord) -> Void)?
+        if let g = grounding {
+            let nodeID = g.nodeID, emb = g.embedding
+            onWord = { (word: SpokenWord) in
+                // `send` is @discardableResult (subscriber count); discard so
+                // the closure stays `(SpokenWord) -> Void`.
+                _ = channel.send(SpokenNodeEvent(
+                    nodeID: nodeID, text: text, embedding: emb,
+                    word: word, turnIndex: turn))
+            }
+        }
         for chunk in HypnagogicDialogueLoop.chunk(text) {
             try Task.checkCancellation()
-            try await speaker.speak(chunk, prosody: prosody)
+            try await speaker.speak(chunk, prosody: prosody, onWord: onWord)
         }
     }
 
@@ -308,5 +351,37 @@ public actor HypnagogicDialecticLoop {
         let cue = config.silenceCues[silenceIndex % config.silenceCues.count]
         silenceIndex += 1
         return cue
+    }
+}
+
+/// A spoken-node event emitted by `HypnagogicDialecticLoop` as it voices a
+/// winning candidate — the grounding signal the 3D workspace consumes to place
+/// and light a concept node per utterance, so speech carries a spatial-semantic
+/// referent rather than prosody alone. Carries the candidate's already-computed
+/// sentence embedding (for placement) so nothing is re-embedded. Purely local;
+/// never leaves the device.
+public struct SpokenNodeEvent: Sendable, Equatable {
+    /// Stable per-utterance id — the workspace's node key. One spoken turn ⇒ one
+    /// node; also the `node:<id>` vocabulary the session-time memory gate
+    /// (Stage 2) namespaces on.
+    public let nodeID: String
+    /// The full spoken candidate text (the node's label).
+    public let text: String
+    /// The candidate's sentence embedding — the workspace projects this to 3D.
+    public let embedding: Embedding
+    /// `nil` when the node is first voiced (place + full-brighten); the word
+    /// being spoken now when the synthesizer reaches it (re-brighten). Best-
+    /// effort: synthesizers without word timing only ever emit the `nil` event.
+    public let word: SpokenWord?
+    /// The originating turn index (monotonic; also the temporal ordering key).
+    public let turnIndex: Int
+
+    public init(nodeID: String, text: String, embedding: Embedding,
+                word: SpokenWord?, turnIndex: Int) {
+        self.nodeID = nodeID
+        self.text = text
+        self.embedding = embedding
+        self.word = word
+        self.turnIndex = turnIndex
     }
 }
