@@ -125,22 +125,13 @@ public actor CalibrationRecorder {
         transportEventsFileHandle = try FileHandle(forWritingTo: transportURL)
         transportEventsFileHandle?.write(Data(transportHeader.utf8))
 
-        // IMU sinks, only for transports that actually carry movement (OSC).
-        // `t_seconds` shares EEG's stream-relative clock, so accel/gyro align
-        // with eeg.csv post-hoc. Kept OSC-gated so synthetic/BrainFlow sessions
-        // don't produce empty accel/gyro files that imply movement was captured.
-        if profile == .oscRemote {
-            let imuHeader = "t_seconds,x,y,z\n"
-            let accelURL = sessionDir.appendingPathComponent("accel.csv")
-            FileManager.default.createFile(atPath: accelURL.path, contents: nil)
-            accelFileHandle = try FileHandle(forWritingTo: accelURL)
-            accelFileHandle?.write(Data(imuHeader.utf8))
-
-            let gyroURL = sessionDir.appendingPathComponent("gyro.csv")
-            FileManager.default.createFile(atPath: gyroURL.path, contents: nil)
-            gyroFileHandle = try FileHandle(forWritingTo: gyroURL)
-            gyroFileHandle?.write(Data(imuHeader.utf8))
-        }
+        // IMU sinks (accel.csv / gyro.csv) are created LAZILY, on the first
+        // movement sample (see recordMovement) — not here — so a file appears
+        // only when movement actually flows. That means no empty IMU files for
+        // synthetic/BrainFlow sessions, AND none for an OSC session that fell
+        // back to synthetic before any movement arrived (a fixed-profile gate
+        // here couldn't tell those apart). `t_seconds` shares EEG's
+        // stream-relative clock, so accel/gyro align with eeg.csv post-hoc.
 
         sessionURL = sessionDir
         windowCount = 0
@@ -209,15 +200,11 @@ public actor CalibrationRecorder {
     }
 
     /// Appends one IMU sample to `accel.csv` or `gyro.csv` (same session dir and
-    /// `t_seconds` clock as `eeg.csv`). No-op when the movement sinks weren't
-    /// opened (non-OSC session) — captured raw, no interpretation.
+    /// `t_seconds` clock as `eeg.csv`), lazily creating the file + header on the
+    /// first sample of that kind. No-op if no session is open — captured raw, no
+    /// interpretation.
     public func recordMovement(_ sample: MovementSample) {
-        let fh: FileHandle?
-        switch sample.kind {
-        case .accel: fh = accelFileHandle
-        case .gyro:  fh = gyroFileHandle
-        }
-        guard let fh else { return }
+        guard let fh = movementHandle(for: sample.kind) else { return }
         // Bind each field to a local — a single chained interpolation of four
         // String(format:) calls blows the Swift type-checker's time budget.
         let t = String(format: "%.9f", sample.timestamp)
@@ -226,6 +213,26 @@ public actor CalibrationRecorder {
         let z = String(format: "%.6f", sample.z)
         let row = "\(t),\(x),\(y),\(z)\n"
         fh.write(Data(row.utf8))
+    }
+
+    /// Returns the open handle for an IMU stream, creating `<kind>.csv` with its
+    /// header on first use. `nil` if no session dir is set.
+    private func movementHandle(for kind: MovementSample.Kind) -> FileHandle? {
+        switch kind {
+        case .accel: if let h = accelFileHandle { return h }
+        case .gyro:  if let h = gyroFileHandle { return h }
+        }
+        guard let dir = sessionURL else { return nil }
+        let name = kind == .accel ? "accel.csv" : "gyro.csv"
+        let url = dir.appendingPathComponent(name)
+        FileManager.default.createFile(atPath: url.path, contents: nil)
+        guard let handle = try? FileHandle(forWritingTo: url) else { return nil }
+        handle.write(Data("t_seconds,x,y,z\n".utf8))
+        switch kind {
+        case .accel: accelFileHandle = handle
+        case .gyro:  gyroFileHandle = handle
+        }
+        return handle
     }
 
     public func recordWindow(_ window: EEGWindow) {
