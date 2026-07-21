@@ -297,6 +297,45 @@ final class MindMonitorOSCStreamTests: XCTestCase {
                       "expected an EEG-substream-stall reason, got: \(reason)")
     }
 
+    /// C1 follow-up (PR #18 review): the supervisor reuses ONE stream instance
+    /// across live retries via stop()/start(). The per-session watchdog reference
+    /// must reset on each start(), or a retry inherits the prior attempt's stale
+    /// sample time and the reconnect grace collapses to a single ~1s tick. Checked
+    /// via the observable proxy — after a restart with no new traffic, lastHeartbeat
+    /// (reset alongside lastSampleWallClock) reads nil, not the prior session's value.
+    func testRestartResetsPerSessionWatchdogReference() async throws {
+        let port = testPort + 6
+        // Default 5s timeout so the watchdog can't fire during this quick check.
+        let stream = MindMonitorOSCStream(port: port)
+        let s1 = try await stream.start()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Consume one sample so the packet is DEFINITELY processed (heartbeat is
+        // set inside handlePacket on receipt) before we read diagnostics — the
+        // first packet also pays the connection-setup latency, so a fixed sleep
+        // would be racy.
+        let collect1 = Task { () -> EEGSample? in
+            for try await sample in s1 { return sample }
+            return nil
+        }
+        await sendUDP(makeEEGPacket([1, 2, 3, 4]), port: port)
+        let got = try await collect1.value
+        XCTAssertNotNil(got, "session 1 should receive its EEG sample")
+        XCTAssertNotNil(stream.currentDiagnostics().lastHeartbeat,
+                        "session 1 received a packet, so its heartbeat is set")
+        await stream.stop()
+        // Let the old listener release the port before the same instance rebinds.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+
+        // Restart the SAME instance, exactly as the supervisor does across retries.
+        // recordStarted() resets lastHeartbeat synchronously, before any packet,
+        // so this assertion holds regardless of rebind timing.
+        _ = try await stream.start()
+        XCTAssertNil(stream.currentDiagnostics().lastHeartbeat,
+                     "restart must reset the per-session watchdog reference — inheriting "
+                     + "session 1's stale value would collapse the retry's grace to one tick")
+        await stream.stop()
+    }
+
     /// Races `operation` against a timeout, returning `nil` on timeout
     /// instead of hanging the test indefinitely if the watchdog regresses.
     private func withTimeout<T: Sendable>(

@@ -189,6 +189,16 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
         defer { lock.unlock() }
         self.listener = newListener
         self.startNanos = startNanos
+        // Reset the per-session timing references. The supervisor reuses ONE
+        // stream instance across live retries (stop()/start() in a loop), so a
+        // reconnect must measure staleness from THIS attempt's sessionStart, not
+        // inherit the prior attempt's last sample/heartbeat — otherwise the
+        // sample watchdog's reconnect grace collapses to a single ~1s tick and
+        // tears down an otherwise-recoverable link. lastArrivalNanos is cleared
+        // too so the first post-restart inter-arrival isn't a cross-session gap.
+        self.lastSampleWallClock = nil
+        self.lastHeartbeat = nil
+        self.lastArrivalNanos = nil
     }
 
     @discardableResult
