@@ -23,15 +23,22 @@ public struct StreamDiagnostics: Sendable, Equatable {
     /// count as `samplesYielded` — it's a transport-level receive count,
     /// not a sample count.
     public var packetsReceived: Int
-    /// Genuinely **malformed** input — a datagram whose OSC decode threw. This
-    /// is a real packet-loss/corruption signal. Routine non-EEG traffic does NOT
-    /// land here: `/muse/acc` + `/muse/gyro` are counted as `movementYielded`,
-    /// and other known-but-unhandled addresses (`/muse/batt`, `/muse/elements`)
-    /// as `ignoredNonEEG` — so a healthy link keeps this near zero.
+    /// Genuinely **malformed** input — a datagram whose OSC decode threw, OR a
+    /// message at a known EEG/movement address whose value count is short (a
+    /// truncated `/muse/eeg`/`/muse/acc`/`/muse/gyro`). Both are real
+    /// loss/corruption. Routine non-EEG traffic does NOT land here: `/muse/acc`
+    /// + `/muse/gyro` count as `movementYielded`, and other known addresses
+    /// (`/muse/batt`, `/muse/elements`) as `ignoredNonEEG` — so a healthy link
+    /// keeps this near zero.
     public var packetsDropped: Int
-    /// `MovementSample`s (accel/gyro) yielded on the transport's movement
-    /// channel — 0 for transports without an IMU.
+    /// `MovementSample`s (accel/gyro) actually **enqueued** on the movement
+    /// channel — 0 for transports without an IMU. Counts delivery, not
+    /// production (see `movementBufferDropped`).
     public var movementYielded: Int
+    /// IMU samples evicted because the bounded movement buffer was full (the
+    /// drain stalled). Non-zero means silent movement loss is happening —
+    /// surfaced here so it isn't invisible.
+    public var movementBufferDropped: Int
     /// Decoded messages at a known non-EEG, non-movement address
     /// (`/muse/batt`, `/muse/elements`, …) — expected traffic, deliberately
     /// separated from `packetsDropped` so it can't masquerade as packet loss.
@@ -82,6 +89,7 @@ public struct StreamDiagnostics: Sendable, Equatable {
         packetsReceived: Int = 0,
         packetsDropped: Int = 0,
         movementYielded: Int = 0,
+        movementBufferDropped: Int = 0,
         ignoredNonEEG: Int = 0,
         samplesYielded: Int = 0,
         packetLossEstimate: Double? = nil,
@@ -96,6 +104,7 @@ public struct StreamDiagnostics: Sendable, Equatable {
         self.packetsReceived = packetsReceived
         self.packetsDropped = packetsDropped
         self.movementYielded = movementYielded
+        self.movementBufferDropped = movementBufferDropped
         self.ignoredNonEEG = ignoredNonEEG
         self.samplesYielded = samplesYielded
         self.packetLossEstimate = packetLossEstimate

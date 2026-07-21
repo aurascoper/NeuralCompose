@@ -62,6 +62,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
     private var packetsReceived = 0
     private var packetsDropped = 0
     private var movementYielded = 0
+    private var movementBufferDropped = 0
     private var ignoredNonEEG = 0
     private var samplesYielded = 0
     private var lastHeartbeat: Date?
@@ -288,6 +289,15 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         }
     }
 
+    /// True for addresses this transport is expected to decode into a sample —
+    /// so a nil decode at one of them means truncation/corruption (a real drop),
+    /// not benign non-sample traffic.
+    private func isKnownSampleAddress(_ address: String) -> Bool {
+        address == MindMonitorDecoder.eegAddress
+            || address == MindMonitorDecoder.accelAddress
+            || address == MindMonitorDecoder.gyroAddress
+    }
+
     private func handlePacket(
         _ data: Data,
         continuation: AsyncThrowingStream<EEGSample, any Error>.Continuation
@@ -322,10 +332,29 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
                 } else if let movement = MindMonitorDecoder.movement(from: message, timestamp: elapsedSeconds) {
                     // /muse/acc + /muse/gyro → the parallel movement channel, NOT
                     // a drop (review finding H2). yield is thread-safe, so unlocked.
-                    lock.lock(); movementYielded += 1; lock.unlock()
-                    movementContinuation.yield(movement)
+                    // Capture the YieldResult: a full bounded buffer silently evicts
+                    // the OLDEST sample, so count that as a drop rather than masking
+                    // it (movementYielded would otherwise count production, not delivery).
+                    switch movementContinuation.yield(movement) {
+                    case .enqueued:
+                        lock.lock(); movementYielded += 1; lock.unlock()
+                    case .dropped:
+                        lock.lock(); movementBufferDropped += 1; let n = movementBufferDropped; lock.unlock()
+                        if n == 1 || n % 256 == 0 {
+                            BCILog.eeg.notice("MindMonitorOSCStream: movement buffer full — dropped \(n, privacy: .public) IMU sample(s) (drain stalled)")
+                        }
+                    case .terminated: break
+                    @unknown default: break
+                    }
+                } else if isKnownSampleAddress(message.address) {
+                    // A known EEG/movement address whose decode returned nil — i.e.
+                    // a TRUNCATED /muse/eeg (<4 floats) or /muse/acc|gyro (<3): genuine
+                    // corruption, not benign traffic. Log + count as a real drop so
+                    // H2's "no false loss" doesn't invert into "hidden real loss".
+                    BCILog.eeg.error("MindMonitorOSCStream: malformed \(message.address, privacy: .public) message (too few values) — counted as dropped")
+                    lock.lock(); packetsDropped += 1; lock.unlock()
                 } else {
-                    // Known-but-unhandled address (/muse/batt, /muse/elements, …):
+                    // Genuinely non-sample address (/muse/batt, /muse/elements, …):
                     // expected traffic, deliberately kept out of packetsDropped so
                     // it can't masquerade as packet loss.
                     lock.lock(); ignoredNonEEG += 1; lock.unlock()
@@ -362,6 +391,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
             packetsReceived: packetsReceived,
             packetsDropped: packetsDropped,
             movementYielded: movementYielded,
+            movementBufferDropped: movementBufferDropped,
             ignoredNonEEG: ignoredNonEEG,
             samplesYielded: samplesYielded,
             packetLossEstimate: nil, // no sequence numbers in Mind Monitor's OSC stream to detect gaps against

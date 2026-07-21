@@ -30,8 +30,9 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         return data
     }
 
-    /// A non-EEG message the decoder maps to `nil` (ignored, not a sample) —
-    /// used to keep the packet link "alive" while `/muse/eeg` has stopped.
+    /// A `/muse/acc` message — decoded to a `MovementSample` (not an EEG sample),
+    /// so it keeps the packet link "alive" for the stalled-`/muse/eeg` test while
+    /// exercising the movement channel rather than a drop.
     private func makeAccPacket() -> Data {
         var data = oscString("/muse/acc")
         data.append(oscString(",fff"))
@@ -362,6 +363,46 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(diag.samplesYielded, 1)
         XCTAssertEqual(diag.packetsDropped, 0,
                        "H2: /muse/acc must not inflate packetsDropped — it's movement, not loss")
+    }
+
+    /// PR #19 review finding 5: a TRUNCATED message at a known sample address
+    /// (/muse/eeg with <4 floats) is real corruption and must count as a DROP
+    /// (not be silently rebucketed as benign ignoredNonEEG). A genuinely
+    /// non-sample address (/muse/batt) stays ignoredNonEEG.
+    func testTruncatedSampleAddressCountsAsDroppedNotIgnored() async throws {
+        let port = testPort + 8
+        let stream = MindMonitorOSCStream(port: port)
+        _ = try await stream.start()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        var truncatedEEG = oscString("/muse/eeg")   // only 2 floats — truncated
+        truncatedEEG.append(oscString(",ff"))
+        for v: Float in [1, 2] {
+            var bits = v.bitPattern.bigEndian
+            withUnsafeBytes(of: &bits) { truncatedEEG.append(contentsOf: $0) }
+        }
+        var batt = oscString("/muse/batt")           // genuinely non-sample
+        batt.append(oscString(",f"))
+        var b = Float(88).bitPattern.bigEndian
+        withUnsafeBytes(of: &b) { batt.append(contentsOf: $0) }
+
+        await sendUDP(truncatedEEG, port: port)
+        await sendUDP(batt, port: port)
+        _ = await withTimeout(seconds: 2) { () -> Int in
+            var received = 0
+            while received < 2 {
+                try? await Task.sleep(nanoseconds: 20_000_000)
+                received = stream.currentDiagnostics().packetsReceived
+            }
+            return received
+        }
+        await stream.stop()
+
+        let diag = stream.currentDiagnostics()
+        XCTAssertGreaterThanOrEqual(diag.packetsDropped, 1, "truncated /muse/eeg is real loss → dropped")
+        XCTAssertGreaterThanOrEqual(diag.ignoredNonEEG, 1, "/muse/batt is benign → ignoredNonEEG")
+        XCTAssertEqual(diag.samplesYielded, 0)
+        XCTAssertEqual(diag.movementYielded, 0)
     }
 
     /// Races `operation` against a timeout, returning `nil` on timeout
