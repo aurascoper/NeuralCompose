@@ -489,6 +489,24 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         streamTask = Task.detached(priority: .userInitiated) {
             [weak self, windowing, metrics = metricsRef, channel, samples, spectralEstimatorRef, jepaTransitionCaptureRef] in
             var current = initialResolved
+            // Movement (accel/gyro) — parallel to the EEG sample loop, OSC-only.
+            // The IMU channel outlives per-attempt EEG stop()/start() cycles, so
+            // it's drained once here (not per retry) and forwarded to the active
+            // recorder, gated on the same isCalibrating as EEG recording. Cancelled
+            // when the whole streamTask ends (below). Transports without an IMU
+            // don't conform to MovementStreaming → no task, no branch elsewhere.
+            let movementTask: Task<Void, Never>? =
+                (initialResolved.stream as? any MovementStreaming).map { source in
+                    Task { [weak self] in
+                        for await movement in source.movementStream {
+                            if Task.isCancelled { break }
+                            let recorder = await MainActor.run {
+                                (self?.isCalibrating ?? false) ? self?.calibrationRecorder : nil
+                            }
+                            await recorder?.recordMovement(movement)
+                        }
+                    }
+                }
             var calibrationSampleCounter = 0
             var calibrationLastLogTime = Date()
             var liveRetries = 0
@@ -669,6 +687,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 }
             }
             await current.stream.stop()
+            movementTask?.cancel()
         }
 
         // ── window channel → classifier → smoother → composition (off-main)

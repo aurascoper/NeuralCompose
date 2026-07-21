@@ -23,12 +23,19 @@ public struct StreamDiagnostics: Sendable, Equatable {
     /// count as `samplesYielded` — it's a transport-level receive count,
     /// not a sample count.
     public var packetsReceived: Int
-    /// Decoded messages that didn't turn into an `EEGSample` — malformed
-    /// OSC, or a `/muse/*` address this decoder doesn't map yet (e.g.
-    /// `/muse/acc`). Counted per message, not per datagram: a single
-    /// bundle with one `/muse/eeg` and one `/muse/acc` element increments
-    /// this by 1 and `samplesYielded` by 1.
+    /// Genuinely **malformed** input — a datagram whose OSC decode threw. This
+    /// is a real packet-loss/corruption signal. Routine non-EEG traffic does NOT
+    /// land here: `/muse/acc` + `/muse/gyro` are counted as `movementYielded`,
+    /// and other known-but-unhandled addresses (`/muse/batt`, `/muse/elements`)
+    /// as `ignoredNonEEG` — so a healthy link keeps this near zero.
     public var packetsDropped: Int
+    /// `MovementSample`s (accel/gyro) yielded on the transport's movement
+    /// channel — 0 for transports without an IMU.
+    public var movementYielded: Int
+    /// Decoded messages at a known non-EEG, non-movement address
+    /// (`/muse/batt`, `/muse/elements`, …) — expected traffic, deliberately
+    /// separated from `packetsDropped` so it can't masquerade as packet loss.
+    public var ignoredNonEEG: Int
     /// `EEGSample`s actually produced and handed to the pipeline.
     /// `packetsReceived >= samplesYielded` is a cheap health check: a
     /// receiving-but-not-yielding transport (every datagram bundled but
@@ -74,6 +81,8 @@ public struct StreamDiagnostics: Sendable, Equatable {
         sampleRate: Double = 0,
         packetsReceived: Int = 0,
         packetsDropped: Int = 0,
+        movementYielded: Int = 0,
+        ignoredNonEEG: Int = 0,
         samplesYielded: Int = 0,
         packetLossEstimate: Double? = nil,
         packetJitterMillis: Double? = nil,
@@ -86,6 +95,8 @@ public struct StreamDiagnostics: Sendable, Equatable {
         self.sampleRate = sampleRate
         self.packetsReceived = packetsReceived
         self.packetsDropped = packetsDropped
+        self.movementYielded = movementYielded
+        self.ignoredNonEEG = ignoredNonEEG
         self.samplesYielded = samplesYielded
         self.packetLossEstimate = packetLossEstimate
         self.packetJitterMillis = packetJitterMillis

@@ -34,11 +34,19 @@ import BCICore
 /// and the diagnostics bookkeeping (arrival timing, packet counts) — see
 /// `MuseOSCDecoder` and `MindMonitorDecoder` for the decoding, which is
 /// independently unit-testable without a socket.
-public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
+public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unchecked Sendable {
 
     public let profile: MuseBoardProfile = .oscRemote
     public private(set) var effectiveSampleRate: Double = 256.0
     public let channelCount: Int = 4
+
+    /// Parallel accel/gyro channel (see `MovementStreaming`). Created ONCE in
+    /// init and never re-created or finished per `start()`, so it survives the
+    /// supervisor's stop()/start() reconnect cycles; a bounded buffer keeps an
+    /// un-drained channel from growing without limit. `movementContinuation.yield`
+    /// is thread-safe (like the EEG continuation), so it's called outside `lock`.
+    public let movementStream: AsyncStream<MovementSample>
+    private let movementContinuation: AsyncStream<MovementSample>.Continuation
 
     private let port: NWEndpoint.Port
     private let staleTimeoutSec: Double
@@ -53,6 +61,8 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
     private let interArrivalWindow = 64
     private var packetsReceived = 0
     private var packetsDropped = 0
+    private var movementYielded = 0
+    private var ignoredNonEEG = 0
     private var samplesYielded = 0
     private var lastHeartbeat: Date?
     /// Wall-clock of the most recent *EEG sample* actually yielded — distinct
@@ -85,6 +95,11 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
     public init(port: UInt16 = 5000, staleTimeoutSec: Double = 5.0) {
         self.port = NWEndpoint.Port(rawValue: port) ?? 5000
         self.staleTimeoutSec = staleTimeoutSec
+        // Bounded buffer: if nothing drains the movement channel, keep only the
+        // most recent samples rather than growing unbounded at the IMU rate.
+        var cont: AsyncStream<MovementSample>.Continuation!
+        self.movementStream = AsyncStream(bufferingPolicy: .bufferingNewest(256)) { cont = $0 }
+        self.movementContinuation = cont
     }
 
     public func start() async throws -> AsyncThrowingStream<EEGSample, any Error> {
@@ -304,11 +319,21 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
                 if let sample = MindMonitorDecoder.sample(from: message, timestamp: elapsedSeconds) {
                     lock.lock(); samplesYielded += 1; lastSampleWallClock = Date(); lock.unlock()
                     continuation.yield(sample)
+                } else if let movement = MindMonitorDecoder.movement(from: message, timestamp: elapsedSeconds) {
+                    // /muse/acc + /muse/gyro → the parallel movement channel, NOT
+                    // a drop (review finding H2). yield is thread-safe, so unlocked.
+                    lock.lock(); movementYielded += 1; lock.unlock()
+                    movementContinuation.yield(movement)
                 } else {
-                    lock.lock(); packetsDropped += 1; lock.unlock()
+                    // Known-but-unhandled address (/muse/batt, /muse/elements, …):
+                    // expected traffic, deliberately kept out of packetsDropped so
+                    // it can't masquerade as packet loss.
+                    lock.lock(); ignoredNonEEG += 1; lock.unlock()
                 }
             }
         } catch {
+            // A genuinely malformed datagram (decode threw) — the only real
+            // packet-loss/corruption signal.
             BCILog.eeg.error("MindMonitorOSCStream: dropped malformed OSC packet: \(String(describing: error))")
             lock.lock(); packetsDropped += 1; lock.unlock()
         }
@@ -336,6 +361,8 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
             sampleRate: effectiveSampleRate,
             packetsReceived: packetsReceived,
             packetsDropped: packetsDropped,
+            movementYielded: movementYielded,
+            ignoredNonEEG: ignoredNonEEG,
             samplesYielded: samplesYielded,
             packetLossEstimate: nil, // no sequence numbers in Mind Monitor's OSC stream to detect gaps against
             packetJitterMillis: jitter,
