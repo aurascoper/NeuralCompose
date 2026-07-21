@@ -55,6 +55,12 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
     private var packetsDropped = 0
     private var samplesYielded = 0
     private var lastHeartbeat: Date?
+    /// Wall-clock of the most recent *EEG sample* actually yielded — distinct
+    /// from `lastHeartbeat` (any datagram). The stall watchdog keys off THIS so
+    /// that continuing non-EEG traffic (`/muse/acc`, `/muse/gyro`, `/muse/batt`)
+    /// can't hold the link "alive" while the `/muse/eeg` substream is silently
+    /// dead (electrodes lifted, EEG toggled off).
+    private var lastSampleWallClock: Date?
     /// Best-effort — set from the most recent connection's `NWPath`, once
     /// that path resolves. `nil` until the first connection reports a path,
     /// which can lag the first received packet slightly.
@@ -64,9 +70,11 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
     ///   - port: UDP port to listen on. Must match the "OSC Port"
     ///     configured in Mind Monitor's settings. Default matches
     ///     `HARDWARE_SETUP.md`'s documented convention for this project.
-    ///   - staleTimeoutSec: If no packet arrives for longer than this, the
-    ///     stream finishes with `.streamFailed` instead of waiting on
-    ///     `receiveMessage` forever. Same failure mode as
+    ///   - staleTimeoutSec: If no *EEG sample* is produced for longer than this,
+    ///     the stream finishes with `.streamFailed` instead of waiting on
+    ///     `receiveMessage` forever. Keyed to EEG-sample throughput, not raw
+    ///     packet arrival, so continuing non-EEG traffic (`/muse/acc` etc.)
+    ///     can't mask a dead `/muse/eeg` substream. Same failure mode as
     ///     `BrainFlowService`'s equivalent watchdog: a phone that stops
     ///     sending (backgrounded, out of Tailscale range, Mind Monitor
     ///     killed) never causes an `NWConnection` error — the
@@ -125,14 +133,24 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
                 while !Task.isCancelled {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                     if Task.isCancelled { break }
-                    let staleness = self.secondsSinceLastHeartbeat(sessionStart: sessionStart)
+                    // Key the watchdog off EEG-SAMPLE throughput, not raw packet
+                    // arrival: continuing non-EEG traffic (/muse/acc, gyro, batt)
+                    // must NOT keep the link "alive" while /muse/eeg has stopped.
+                    let staleness = self.secondsSinceLastSample(sessionStart: sessionStart)
                     if staleness > self.staleTimeoutSec {
+                        // Distinguish a fully dead link (no datagrams at all) from
+                        // an EEG-substream stall (packets still arriving, but no
+                        // /muse/eeg samples). Both are failures the supervisor must
+                        // act on; the message names the likely cause.
+                        let packetsAlsoStopped =
+                            self.secondsSinceLastHeartbeat(sessionStart: sessionStart) > self.staleTimeoutSec
+                        let reason = packetsAlsoStopped
+                            ? "no OSC packets received for \(Int(staleness))s — link likely dead"
+                            : "no EEG samples for \(Int(staleness))s while other OSC traffic continues — EEG substream stalled (electrodes lifted or EEG stream off)"
                         BCILog.eeg.error(
-                            "MindMonitorOSCStream: no packets for \(staleness, format: .fixed(precision: 1))s (>\(self.staleTimeoutSec, format: .fixed(precision: 1))s timeout) — treating as a dead link"
+                            "MindMonitorOSCStream: \(reason, privacy: .public) (>\(self.staleTimeoutSec, format: .fixed(precision: 1))s timeout)"
                         )
-                        continuation.finish(throwing: BCIError.streamFailed(
-                            reason: "no OSC packets received for \(Int(staleness))s — link likely dead"
-                        ))
+                        continuation.finish(throwing: BCIError.streamFailed(reason: reason))
                         return
                     }
                 }
@@ -213,6 +231,18 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
         return Date().timeIntervalSince(reference)
     }
 
+    /// EEG-sample staleness for the watchdog. Like `secondsSinceLastHeartbeat`
+    /// but measured from the last *yielded EEG sample*, so a link still
+    /// delivering non-EEG OSC messages while `/muse/eeg` has stopped is detected
+    /// as stale. `nil` (no sample yet) measures against `sessionStart`, so a
+    /// stream that never produces a first EEG sample still fails after the timeout.
+    private func secondsSinceLastSample(sessionStart: Date) -> Double {
+        lock.lock()
+        defer { lock.unlock() }
+        let reference = lastSampleWallClock ?? sessionStart
+        return Date().timeIntervalSince(reference)
+    }
+
     // MARK: - Receiving
 
     private func receiveLoop(
@@ -262,7 +292,7 @@ public final class MindMonitorOSCStream: EEGStreaming, @unchecked Sendable {
             let messages = try MuseOSCDecoder.decodePacket(data)
             for message in messages {
                 if let sample = MindMonitorDecoder.sample(from: message, timestamp: elapsedSeconds) {
-                    lock.lock(); samplesYielded += 1; lock.unlock()
+                    lock.lock(); samplesYielded += 1; lastSampleWallClock = Date(); lock.unlock()
                     continuation.yield(sample)
                 } else {
                     lock.lock(); packetsDropped += 1; lock.unlock()

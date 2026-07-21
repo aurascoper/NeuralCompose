@@ -37,6 +37,9 @@ public enum OSCDecodingError: Error, Sendable, Equatable {
     case unsupportedTypeTag(String)
     case truncatedArgument(expected: Int, remaining: Int)
     case malformedString
+    /// A bundle nested deeper than `MuseOSCDecoder.maxBundleDepth` — rejected
+    /// rather than recursed, so a crafted packet can't exhaust the stack.
+    case bundleTooDeep(depth: Int)
 }
 
 /// Minimal OSC 1.0 message decoder — supports int32 (`i`), float32 (`f`),
@@ -68,6 +71,15 @@ public enum MuseOSCDecoder {
         return [try decode(data)]
     }
 
+    /// Hard cap on OSC bundle nesting. Mind Monitor never nests beyond one
+    /// level; the cap exists purely to stop a *crafted* packet of deeply-nested
+    /// `#bundle`s — a single 64 KB datagram can encode ~3,200 levels at ~20
+    /// bytes each — from recursing `decodeBundleElements` deep enough to
+    /// overflow the receive worker thread's (~512 KB) stack, which is an
+    /// uncatchable crash, not a throwable error. Anything past this is rejected
+    /// with `.bundleTooDeep`.
+    static let maxBundleDepth = 8
+
     private static let bundlePrefix: [UInt8] = Array("#bundle\0".utf8)
 
     private static func isBundle(_ data: Data) -> Bool {
@@ -85,7 +97,8 @@ public enum MuseOSCDecoder {
     /// (`elapsedSeconds` since the listener started), which is what
     /// windowing/ordering actually need — the timetag isn't lost data,
     /// just unused for now.
-    private static func decodeBundleElements(_ data: Data) throws -> [OSCMessage] {
+    private static func decodeBundleElements(_ data: Data, depth: Int = 0) throws -> [OSCMessage] {
+        guard depth <= maxBundleDepth else { throw OSCDecodingError.bundleTooDeep(depth: depth) }
         guard data.count >= 16 else { throw OSCDecodingError.tooShort }
         var offset = data.index(data.startIndex, offsetBy: 16)
 
@@ -103,7 +116,7 @@ public enum MuseOSCDecoder {
             let elementEnd = data.index(offset, offsetBy: size)
             let element = data[offset..<elementEnd]
             if isBundle(element) {
-                messages.append(contentsOf: try decodeBundleElements(element))
+                messages.append(contentsOf: try decodeBundleElements(element, depth: depth + 1))
             } else {
                 messages.append(try decode(element))
             }

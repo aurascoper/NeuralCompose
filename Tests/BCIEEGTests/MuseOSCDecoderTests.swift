@@ -210,4 +210,35 @@ final class MuseOSCDecoderTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - Bundle-recursion depth cap (SEC-001 / C2)
+    //
+    // A crafted packet of deeply-nested #bundles would otherwise recurse
+    // decodeBundleElements ~3,200 levels within a single 64 KB datagram and
+    // overflow the receive worker thread's stack — an uncatchable crash, not a
+    // throwable error. maxBundleDepth caps it. These pin both sides of the cap.
+
+    func testDecodePacketRejectsBundleNestedPastDepthCap() {
+        // Wrap a real message far deeper than the cap; assert a THROWN error
+        // (not a crash). Depth 20 ≫ maxBundleDepth(8).
+        var packet = makePacket(address: "/muse/eeg", floats: [1, 2, 3, 4])
+        for _ in 0..<20 { packet = makeBundle(elements: [packet]) }
+
+        XCTAssertThrowsError(try MuseOSCDecoder.decodePacket(packet)) { error in
+            guard case .bundleTooDeep = error as? OSCDecodingError else {
+                return XCTFail("expected .bundleTooDeep, got \(error)")
+            }
+        }
+    }
+
+    func testDecodePacketAllowsNestingUpToDepthCap() throws {
+        // maxBundleDepth(8) levels of wrapping decodes fine — the cap rejects
+        // only what's deeper, so legitimate (shallow) Mind Monitor nesting is
+        // unaffected. Real traffic nests at most ~1 level.
+        var packet = makePacket(address: "/muse/eeg", floats: [1, 2, 3, 4])
+        for _ in 0..<MuseOSCDecoder.maxBundleDepth { packet = makeBundle(elements: [packet]) }
+
+        let messages = try MuseOSCDecoder.decodePacket(packet)
+        XCTAssertEqual(messages.map(\.address), ["/muse/eeg"])
+    }
 }
