@@ -84,6 +84,13 @@ public enum ContextProfile: String, CaseIterable, Sendable, Identifiable {
         }
     }
 
+    /// The introspective Witness runs ONLY for Reflective — this single line is
+    /// where "Reflective is the introspective rung" is declared. Focused and
+    /// Contemplative leave it off (no third cloud call). Reflective's `Tuning`
+    /// stays `== .default`; the differentiation is this flag, not the dynamics.
+    /// See `Sources/BCICore/Dialectic/WITNESS.md`.
+    public var witnessEnabled: Bool { self == .reflective }
+
     /// A loop `Config` for this profile, preserving any non-cadence fields of
     /// `base` (listen timeout, tokens, prosody, cues, history window).
     public func loopConfig(base: HypnagogicDialecticLoop.Config = .init()) -> HypnagogicDialecticLoop.Config {
@@ -94,7 +101,8 @@ public enum ContextProfile: String, CaseIterable, Sendable, Identifiable {
             prosody: base.prosody,
             maxConsecutiveSilence: maxConsecutiveSilence,
             silenceCues: base.silenceCues,
-            historyWindow: base.historyWindow
+            historyWindow: base.historyWindow,
+            witnessEnabled: witnessEnabled
         )
     }
 }

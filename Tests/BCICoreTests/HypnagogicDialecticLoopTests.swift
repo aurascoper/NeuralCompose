@@ -79,9 +79,30 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         func stopSpeaking() async { stopCount += 1 }
     }
 
-    private func fastConfig(maxSilence: Int = 3) -> HypnagogicDialecticLoop.Config {
+    /// A witness generator that always returns a fixed sentinel and counts calls —
+    /// so a test can assert the finding is NEVER spoken and that gating works.
+    private actor WitnessSpy: TextGenerating {
+        nonisolated let isLive = false
+        nonisolated let modelIdentifier = "spy-witness"
+        private let finding: String
+        private(set) var callCount = 0
+        init(finding: String) { self.finding = finding }
+        func generate(prompt: String, maxTokens: Int, temperature: Double,
+                      cancellationID: UUID) async throws -> String {
+            callCount += 1
+            return finding
+        }
+    }
+
+    private actor CapturingTurnLogger: DialecticalTurnLogging {
+        private(set) var events: [DialecticalTurnEvent] = []
+        func log(_ event: DialecticalTurnEvent) async { events.append(event) }
+    }
+
+    private func fastConfig(maxSilence: Int = 3, witnessEnabled: Bool = false) -> HypnagogicDialecticLoop.Config {
         HypnagogicDialecticLoop.Config(listenTimeout: 0.01, interTurnDelayNanos: 1_000,
-                                       maxConsecutiveSilence: maxSilence)
+                                       maxConsecutiveSilence: maxSilence,
+                                       witnessEnabled: witnessEnabled)
     }
 
     private func poll(timeout: TimeInterval = 2.0,
@@ -92,6 +113,99 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
             try? await Task.sleep(nanoseconds: 5_000_000)
         }
         return await predicate()
+    }
+
+    // MARK: - Witness (Reflective introspection) — see WITNESS.md
+
+    func testWitnessFiresForReflectiveButIsNeverSpoken() async {
+        // The firewall invariant: the witness observes, its finding is recorded in
+        // telemetry, but it never reaches the speaker.
+        let embedder = MapEmbedder(dimension: 2, table: [
+            "the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1],
+            "WITNESS_UNSPOKEN": [0.7, 0.7],
+        ])
+        let listener = SpyListener(script: ["the sea"], loopLast: true)
+        let generator = TwoRoleGenerator(stabilizer: "calm sea", dreamer: "moon river")
+        let witness = WitnessSpy(finding: "WITNESS_UNSPOKEN")
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.5 }, turnLogger: logger, witness: witness,
+            config: fastConfig(witnessEnabled: true))
+        await loop.start()
+        let ok = await poll {
+            let c = await witness.callCount
+            let e = await logger.events.count
+            return c >= 1 && e >= 1
+        }
+        await loop.stop()
+        XCTAssertTrue(ok, "the witness must fire when enabled")
+        let spoken = await speaker.spoken.joined(separator: " ")
+        XCTAssertFalse(spoken.contains("WITNESS_UNSPOKEN"), "the witness finding is NEVER voiced")
+        let events = await logger.events
+        let ev = events.first { $0.witnessFinding != nil }
+        XCTAssertEqual(ev?.witnessFinding, "WITNESS_UNSPOKEN", "the finding is recorded in telemetry")
+        XCTAssertNotNil(ev?.witnessDistance, "witnessDistance is computed against the spoken text")
+    }
+
+    func testWitnessNeverCalledWhenDisabled() async {
+        // Gating: even with a witness injected, witnessEnabled=false (Focused/
+        // default) must never call it and must log no finding.
+        let embedder = MapEmbedder(dimension: 2, table: ["the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1]])
+        let listener = SpyListener(script: ["the sea"], loopLast: true)
+        let generator = TwoRoleGenerator(stabilizer: "calm sea", dreamer: "moon river")
+        let witness = WitnessSpy(finding: "SHOULD_NOT_FIRE")
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.5 }, turnLogger: logger, witness: witness,
+            config: fastConfig(witnessEnabled: false))
+        await loop.start()
+        let ran = await poll { (await logger.events.count) >= 2 }
+        await loop.stop()
+        XCTAssertTrue(ran, "loop ran turns")
+        let calls = await witness.callCount
+        XCTAssertEqual(calls, 0, "witness must NOT be called when disabled")
+        let events = await logger.events
+        let anyFinding = events.contains { $0.witnessFinding != nil }
+        XCTAssertFalse(anyFinding, "no witnessFinding logged when disabled")
+    }
+
+    func testSelfSimilarityRisesWhenRepliesCollapse() async {
+        // The reflexive metric: the same coherent reply wins every turn ⇒ the
+        // utterance sits on its own reply centroid ⇒ selfSimilarity → 1. Logged
+        // for every profile, independent of the witness.
+        let embedder = MapEmbedder(dimension: 2, table: ["the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1]])
+        let listener = SpyListener(script: ["the sea"], loopLast: true)
+        let generator = TwoRoleGenerator(stabilizer: "calm sea", dreamer: "moon river")
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.5 }, turnLogger: logger, config: fastConfig())
+        await loop.start()
+        let ok = await poll { (await logger.events.count) >= 3 }
+        await loop.stop()
+        XCTAssertTrue(ok)
+        let events = await logger.events
+        XCTAssertNil(events[0].selfSimilarity, "first turn has no reply centroid yet")
+        XCTAssertGreaterThan(events[1].selfSimilarity ?? 0, 0.9, "collapse onto the own centroid ⇒ ~1")
+    }
+
+    func testOldDialecticTurnLogWithoutWitnessFieldsStillDecodes() throws {
+        // Backward-compat: a pre-witness log line (no witness/self-similarity keys)
+        // must still decode, with the new fields nil.
+        let json = Data("""
+        {"index":0,"heard":"x","candidates":[],"tension":0.1,"margin":0.0,
+         "selectionTemperature":1.0,"glossScalar":0.5,"outcome":"silent"}
+        """.utf8)
+        let ev = try JSONDecoder().decode(DialecticalTurnEvent.self, from: json)
+        XCTAssertNil(ev.witnessFinding)
+        XCTAssertNil(ev.witnessDistance)
+        XCTAssertNil(ev.selfSimilarity)
+        XCTAssertNil(ev.spokenText)
     }
 
     // MARK: - Tests

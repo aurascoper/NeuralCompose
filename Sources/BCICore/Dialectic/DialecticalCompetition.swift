@@ -142,10 +142,27 @@ public struct DialecticalCompetition: Sendable, Equatable {
     /// *and* a genuine `.neutralBaseline` to 0.5, so it alone cannot tell "the
     /// EEG said neutral" from "there was no EEG" — this field can.
     public let spectralState: SpectralState?
+    /// The Witness's observation this turn ("what both poles avoided") — the
+    /// Reflective profile only; nil when the witness is off. Text only, same
+    /// privacy class as `heard`/candidates, and NEVER the spoken output. See
+    /// `Sources/BCICore/Dialectic/WITNESS.md`.
+    public let witnessFinding: String?
+    /// `1 − cos(witnessFinding, spokenEmbedding)`: how far the witness's
+    /// observation sits from what actually got voiced — the "how much was avoided"
+    /// proxy, the **reflective** metric. nil when the witness is off.
+    /// Necessary-not-sufficient (a rambling witness also scores high).
+    public let witnessDistance: Float?
+    /// `cos(spokenEmbedding, memory.replyCentroid)`: how much this turn's utterance
+    /// collapses toward the running average of the dialogue's own replies — the
+    /// **reflexive** metric (the watching collapsing into the watched). Logged for
+    /// every profile, independent of the witness; nil only before any reply exists.
+    public let selfSimilarity: Float?
 
     public init(index: Int, heard: String, scored: [ScoredCandidate], tension: Float,
                 margin: Float, selectionTemperature: Float, outcome: DialecticalOutcome,
-                glossScalar: Float, spectralState: SpectralState? = nil) {
+                glossScalar: Float, spectralState: SpectralState? = nil,
+                witnessFinding: String? = nil, witnessDistance: Float? = nil,
+                selfSimilarity: Float? = nil) {
         self.index = index
         self.heard = heard
         self.scored = scored
@@ -155,5 +172,8 @@ public struct DialecticalCompetition: Sendable, Equatable {
         self.outcome = outcome
         self.glossScalar = glossScalar
         self.spectralState = spectralState
+        self.witnessFinding = witnessFinding
+        self.witnessDistance = witnessDistance
+        self.selfSimilarity = selfSimilarity
     }
 }

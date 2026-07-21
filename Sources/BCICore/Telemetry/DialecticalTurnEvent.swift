@@ -39,6 +39,13 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     public let outcome: String
     /// The words actually voiced (nil on a silent turn).
     public let spokenText: String?
+    /// The Witness's observation ("what both poles avoided") — Reflective profile
+    /// only, nil otherwise. Text only. Optional so old logs still decode.
+    public let witnessFinding: String?
+    /// Reflective metric: distance of the witness finding from the spoken text.
+    public let witnessDistance: Float?
+    /// Reflexive metric: how much the utterance collapsed toward the reply centroid.
+    public let selfSimilarity: Float?
 
     public init(_ c: DialecticalCompetition) {
         self.index = c.index
@@ -53,6 +60,9 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
         self.selectionTemperature = c.selectionTemperature
         self.glossScalar = c.glossScalar
         self.spectralState = c.spectralState?.badgeLabel
+        self.witnessFinding = c.witnessFinding
+        self.witnessDistance = c.witnessDistance
+        self.selfSimilarity = c.selfSimilarity
         switch c.outcome {
         case let .spoke(cand):
             self.outcome = "spoke:\(cand.roleID)"
