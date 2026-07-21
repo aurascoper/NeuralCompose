@@ -49,8 +49,13 @@ public actor SpokenGenerationLoop {
     private let dialectic: DialecticEngine?
     private let adaptationProvider: @Sendable () async -> GenerationAdaptation
     private let config: Config
+    /// Opt-in per-cycle trace sink. Defaults to a no-op, so the loop records
+    /// nothing unless a real sink is injected (input→output diagnostics only).
+    private let tracer: any SpokenGenerationTraceLogging
 
     private var loopTask: Task<Void, Never>?
+    /// Monotonic cycle counter, surfaced on each `SpokenGenerationTraceEvent`.
+    private var cycleIndex = 0
     public private(set) var isRunning = false
 
     public init(
@@ -58,13 +63,15 @@ public actor SpokenGenerationLoop {
         speaker: any SpeechSynthesizing,
         dialectic: DialecticEngine? = nil,
         adaptationProvider: @escaping @Sendable () async -> GenerationAdaptation,
-        config: Config = .init()
+        config: Config = .init(),
+        tracer: any SpokenGenerationTraceLogging = NullSpokenGenerationTraceLogger()
     ) {
         self.generator = generator
         self.speaker = speaker
         self.dialectic = dialectic
         self.adaptationProvider = adaptationProvider
         self.config = config
+        self.tracer = tracer
     }
 
     /// Starts the loop if it is not already running. Idempotent.
@@ -88,15 +95,23 @@ public actor SpokenGenerationLoop {
 
     private func run() async {
         while !Task.isCancelled {
-            do {
-                let adaptation = await adaptationProvider()
-                let cancellationID = UUID()
-                // Same soft-priming assembly as TextCompositionController.requestPredictions:
-                // prepend the signal-quality styleInstruction ahead of the seed, if any.
-                let prompt = adaptation.styleInstruction.isEmpty
-                    ? config.seedPrompt
-                    : "\(adaptation.styleInstruction)\n\(config.seedPrompt)"
+            let adaptation = await adaptationProvider()
+            let cancellationID = UUID()
+            // Same soft-priming assembly as TextCompositionController.requestPredictions:
+            // prepend the signal-quality styleInstruction ahead of the seed, if any.
+            let prompt = adaptation.styleInstruction.isEmpty
+                ? config.seedPrompt
+                : "\(adaptation.styleInstruction)\n\(config.seedPrompt)"
 
+            // Captured for the per-cycle trace regardless of which branch runs.
+            // The flags track *actual execution*, not intent, so a trace never
+            // claims a step happened on a cycle where it threw first.
+            var generated: String?
+            var usedDialectic = false
+            var spoke = false
+            var errorText: String?
+
+            do {
                 var text = try await generator.generate(
                     prompt: prompt,
                     maxTokens: config.maxTokens,
@@ -106,9 +121,11 @@ public actor SpokenGenerationLoop {
 
                 if config.useDialectic, let dialectic {
                     text = try await dialectic.refine(text, cancellationID: cancellationID).synthesis
+                    usedDialectic = true   // the refine pass ran to completion
                 }
 
                 try Task.checkCancellation()
+                generated = text
                 let spoken = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !spoken.isEmpty {
                     // Confidence-wobbled prosody + sentence-boundary pauses, not
@@ -117,16 +134,35 @@ public actor SpokenGenerationLoop {
                     for (phrase, prosody) in ProsodyWobble.plan(spoken) {
                         try await speaker.speak(phrase, prosody: prosody, onWord: nil)
                     }
+                    spoke = true   // set only after the full utterance was voiced
                 }
             } catch is CancellationError {
                 return
             } catch {
                 // A generation/speech failure — including `BCIError.cancelled`
                 // raised by `stopSpeaking()` — lands here. If we were cancelled,
-                // exit; otherwise fall through to the delay and retry rather than
-                // spinning hot on a persistent error.
+                // exit; otherwise record the error for the trace and fall through
+                // to the delay and retry rather than spinning hot on it.
                 if Task.isCancelled { return }
+                errorText = String(describing: error)
             }
+
+            // One trace per completed cycle — success OR swallowed error, never the
+            // cancellation/stop path. No-op unless a sink was injected. This is what
+            // lets a debugger tell *broken* (error non-nil) from *starved* (identical
+            // prompt→generated across cycles), and read signal quality (temperature /
+            // styleInstruction) as an independent stream.
+            await tracer.log(SpokenGenerationTraceEvent(
+                index: cycleIndex,
+                temperature: adaptation.temperature,
+                styleInstruction: adaptation.styleInstruction,
+                maxTokens: config.maxTokens,
+                usedDialectic: usedDialectic,
+                prompt: prompt,
+                generated: generated,
+                spoke: spoke,
+                error: errorText))
+            cycleIndex += 1
 
             do {
                 try await Task.sleep(nanoseconds: config.interUtteranceDelayNanos)

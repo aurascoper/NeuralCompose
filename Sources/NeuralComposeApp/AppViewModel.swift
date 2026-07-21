@@ -739,6 +739,24 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// state; that keeps the loop's "not a brain read" caveat true.
     private func ensureSpokenLoopRunning() async {
         guard spokenLoop == nil else { return }
+        // Per-cycle trace (input→output + the signal-quality knobs) to
+        // `spoken-trace-<day>.jsonl`, gated on the same interaction-log opt-in as
+        // dialectic turns; off ⇒ NullSpokenGenerationTraceLogger (records nothing).
+        let tracer: any SpokenGenerationTraceLogging
+        if interactionLoggingEnabled {
+            if let sink = interactionLogger as? any SpokenGenerationTraceLogging {
+                tracer = sink
+            } else {
+                // Enabled, but the injected logger can't take spoken traces — make
+                // the no-op VISIBLE rather than silently dropping the stream (the
+                // exact silent-failure class this trace exists to eliminate).
+                BCILog.pipeline.notice(
+                    "interaction logging enabled but the injected logger does not support spoken-generation traces — spoken-trace stream disabled")
+                tracer = NullSpokenGenerationTraceLogger()
+            }
+        } else {
+            tracer = NullSpokenGenerationTraceLogger()
+        }
         let loop = SpokenGenerationLoop(
             generator: container.predictorResolved.generator,
             speaker: voiceOutput,
@@ -746,7 +764,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 await MainActor.run {
                     SignalQualityGenerationRules.adaptation(for: self?.signalQuality)
                 }
-            }
+            },
+            tracer: tracer
         )
         spokenLoop = loop
         await loop.start()
