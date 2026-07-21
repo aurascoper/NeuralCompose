@@ -208,7 +208,7 @@ def _generate_trajectories(n_traj: int, length: int, mode: str, seed: int) -> li
 def _multi_step_rollout(model, train_mean, train_std, device, *,
                         n_traj: int = 32, length: int = 8, mode: str = "signal",
                         seed: int = 1, log_features: bool = False,
-                        log_epsilon: float = 1e-6) -> dict[str, Any]:
+                        log_epsilon: float = 1e-6, symlog: bool = False) -> dict[str, Any]:
     """Closed-loop latent rollout error. Encode the first window of each trajectory,
     roll the predictor `length` steps feeding its OWN output back in (with the true
     actions), and MSE each predicted latent against the EMA-target encoding of the
@@ -222,7 +222,7 @@ def _multi_step_rollout(model, train_mean, train_std, device, *,
     with tempfile.TemporaryDirectory(prefix="neuralcompose-rollout-") as directory:
         path = write_jsonl(records, Path(directory) / "traj.jsonl")
         traj = JEPATransitionDataset(path, mean=train_mean, std=train_std,
-                                     log_features=log_features, log_epsilon=log_epsilon)
+                                     log_features=log_features, log_epsilon=log_epsilon, symlog=symlog)
         horizon_err: list[list[float]] = [[] for _ in range(length)]
         for t in range(n_traj):
             base = t * length
@@ -244,7 +244,7 @@ def _multi_step_rollout(model, train_mean, train_std, device, *,
 
 @torch.no_grad()
 def _encode_states(model, states, train_mean, train_std, device, use_target: bool = False,
-                   *, log_features: bool = False, log_epsilon: float = 1e-6) -> torch.Tensor:
+                   *, log_features: bool = False, log_epsilon: float = 1e-6, symlog: bool = False) -> torch.Tensor:
     """Encode a list of latent states into JEPA latents, normalized on the TRAIN
     stats (routed through JEPATransitionDataset so normalization matches training
     exactly). Goal states use the target encoder (the predictor's output space);
@@ -262,7 +262,7 @@ def _encode_states(model, states, train_mean, train_std, device, use_target: boo
     with tempfile.TemporaryDirectory(prefix="neuralcompose-encstate-") as directory:
         path = write_jsonl(records, Path(directory) / "s.jsonl")
         ds = JEPATransitionDataset(path, mean=train_mean, std=train_std,
-                                   log_features=log_features, log_epsilon=log_epsilon)
+                                   log_features=log_features, log_epsilon=log_epsilon, symlog=symlog)
         return torch.stack([
             encoder(ds[i][0].unsqueeze(0).to(device)).squeeze(0) for i in range(len(ds))
         ])
@@ -300,7 +300,7 @@ def _cem_plan(model, z0_lat, zg_lat, device, *, horizon, cem_iters, n_samples, e
 def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon=6,
                  cem_iters=3, n_samples=64, elite_frac=0.2, mode="signal", seed=2,
                  goal_offset=0.4, goal_tol=0.15, log_features: bool = False,
-                 log_epsilon: float = 1e-6) -> dict[str, Any]:
+                 log_epsilon: float = 1e-6, symlog: bool = False) -> dict[str, Any]:
     """Goal-conditioned latent MPC/CEM planning success. Per episode: sample a start
     state + a goal `pos`, plan with CEM (the JEPA predictor as forward model), then
     EXECUTE the plan in the TRUE synthetic_1f env (`_step`) and score whether the
@@ -314,9 +314,9 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
     goal_pos = [starts[i]["pos"] + rng.uniform(-goal_offset, goal_offset) for i in range(n_episodes)]
     goals = [{**starts[i], "pos": goal_pos[i]} for i in range(n_episodes)]
     z0 = _encode_states(model, starts, train_mean, train_std, device, use_target=False,
-                        log_features=log_features, log_epsilon=log_epsilon)
+                        log_features=log_features, log_epsilon=log_epsilon, symlog=symlog)
     zg = _encode_states(model, goals, train_mean, train_std, device, use_target=True,
-                        log_features=log_features, log_epsilon=log_epsilon)
+                        log_features=log_features, log_epsilon=log_epsilon, symlog=symlog)
 
     successes, rand_successes, dists = 0, 0, []
     for i in range(n_episodes):
@@ -354,6 +354,7 @@ def evaluate(
     mpc_horizon: int = 6,
     log_features: bool = False,
     log_epsilon: float = 1e-6,
+    symlog: bool = False,
     device: torch.device | None = None,
     verbose: bool = True,
 ) -> dict[str, Any]:
@@ -373,7 +374,7 @@ def evaluate(
     records = generate(n, mode, seed)
     with tempfile.TemporaryDirectory(prefix="neuralcompose-fwdeval-") as directory:
         path = write_jsonl(records, Path(directory) / "data.jsonl")
-        dataset = JEPATransitionDataset(path, log_features=log_features, log_epsilon=log_epsilon)
+        dataset = JEPATransitionDataset(path, log_features=log_features, log_epsilon=log_epsilon, symlog=symlog)
         loader = DataLoader(dataset, batch_size=min(batch_size, len(dataset)), shuffle=True)
         pre0, action0, _ = dataset[0]
         state_dim, action_dim = pre0.shape[-1], action0.shape[-1]
@@ -390,18 +391,18 @@ def evaluate(
         rollout = _multi_step_rollout(
             model, dataset.mean, dataset.std, device,
             n_traj=rollout_traj, length=rollout_len, mode=mode, seed=seed + 1,
-            log_features=log_features, log_epsilon=log_epsilon,
+            log_features=log_features, log_epsilon=log_epsilon, symlog=symlog,
         )
         mpc = _mpc_success(
             model, dataset.mean, dataset.std, device,
             n_episodes=mpc_episodes, horizon=mpc_horizon, mode=mode, seed=seed + 2,
-            log_features=log_features, log_epsilon=log_epsilon,
+            log_features=log_features, log_epsilon=log_epsilon, symlog=symlog,
         )
 
         panel = {
             "config": {"n": n, "mode": mode, "seed": seed, "epochs": epochs,
                        "latent_dim": latent_dim, "log_features": log_features,
-                       "final_train_loss": history[-1]},
+                       "symlog": symlog, "final_train_loss": history[-1]},
             "pred_error_1step": _pred_error_1step(model, dataset, device),
             "rollout_error": rollout,
             "mpc_success": mpc,
@@ -466,6 +467,17 @@ def smoke_test() -> None:
     assert all(np.isfinite(v) and v >= 0.0 for v in c["rollout_error"]["per_horizon"]), \
         c["rollout_error"]["per_horizon"]
 
+    # The symlog (node-7) arm must likewise stay finite end-to-end; log1p(0)=0 so a
+    # dead channel maps to 0 instead of log_features' large-negative epsilon floor.
+    s = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
+                 rollout_len=4, mpc_episodes=6, mpc_horizon=4, symlog=True,
+                 device=torch.device("cpu"), verbose=False)
+    assert s["config"]["symlog"] is True
+    assert np.isfinite(s["pred_error_1step"]), s["pred_error_1step"]
+    assert np.isfinite(s["factor_recovery"]["chi"]), s["factor_recovery"]["chi"]
+    assert all(np.isfinite(v) and v >= 0.0 for v in s["rollout_error"]["per_horizon"]), \
+        s["rollout_error"]["per_horizon"]
+
     print(f"smoke test passed "
           f"(pred_err={a['pred_error_1step']:.4f}, "
           f"rollout[1→{len(roll['per_horizon'])}]={roll['step1']:.3f}→{roll['final_step']:.3f}, "
@@ -484,6 +496,8 @@ def main() -> None:
     parser.add_argument("--log-features", action="store_true",
                         help="feed the encoder log-compressed (1/f) spectral state — the node-33 arm")
     parser.add_argument("--log-epsilon", type=float, default=1e-6)
+    parser.add_argument("--symlog", action="store_true",
+                        help="feed the encoder signed-log1p spectral state — the node-7 arm (no epsilon floor)")
     args = parser.parse_args()
 
     if args.smoke_test:
@@ -491,7 +505,7 @@ def main() -> None:
         return
     evaluate(n=args.n, mode=args.mode, seed=args.seed, epochs=args.epochs,
              latent_dim=args.latent_dim, log_features=args.log_features,
-             log_epsilon=args.log_epsilon)
+             log_epsilon=args.log_epsilon, symlog=args.symlog)
 
 
 if __name__ == "__main__":
