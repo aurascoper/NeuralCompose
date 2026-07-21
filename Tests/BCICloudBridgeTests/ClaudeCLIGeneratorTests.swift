@@ -42,4 +42,18 @@ final class ClaudeCLIGeneratorTests: XCTestCase {
         XCTAssertTrue(p.contains("NEVER ask questions"))
         XCTAssertTrue(p.contains("TWO short"))
     }
+
+    func testWitnessSystemPromptIsSeparateAndWaking() {
+        // The witness prompt must be a DISTINCT constant (never the poles' prompt),
+        // must stay in the waking register (no sleep imagery — it ships pre-GATE),
+        // and must forbid the witness from addressing the user.
+        XCTAssertNotEqual(ClaudeCLIGenerator.witnessSystemPrompt,
+                          ClaudeCLIGenerator.wakingDialecticalSystemPrompt)
+        let p = ClaudeCLIGenerator.witnessSystemPrompt.lowercased()
+        for word in ["drift", "dissolv", "sleep", "dream"] {
+            XCTAssertFalse(p.contains(word), "witness prompt must stay waking (found '\(word)')")
+        }
+        XCTAssertTrue(p.contains("never address the user"))
+        XCTAssertTrue(p.contains("avoid"), "its job is to name what was avoided")
+    }
 }

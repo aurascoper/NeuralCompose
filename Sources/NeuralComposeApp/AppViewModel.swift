@@ -828,10 +828,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         let loop: any HypnagogicRunnable
         if let profile = hypnagogicMode.profile {
             // Dialectical (focused/reflective/contemplative). Two cloud calls per
-            // turn (one per role). The gloss reads the current spectral state as a
-            // heuristic BIAS (never a decoder); turn logging is gated on the
-            // interaction-log opt-in, resolved at build time (toggling it mid-loop
-            // takes effect on the next rebuild).
+            // turn (one per role) — plus a THIRD for Reflective's introspective
+            // Witness (WITNESS.md), which observes but is never voiced. The gloss
+            // reads the current spectral state as a heuristic BIAS (never a
+            // decoder); turn logging is gated on the interaction-log opt-in,
+            // resolved at build time (toggling it mid-loop takes effect on the
+            // next rebuild).
             //
             // All three profiles are WAKING, so the loop runs the waking role set
             // + a lucid waking system prompt — a coherent exchange, not sleep
@@ -851,6 +853,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 tuning: profile.tuning,
                 glossProvider: { [weak self] in await self?.currentSpectralGlossState() ?? nil },
                 turnLogger: turnLogger,
+                // Reflective (and only Reflective) gets the introspective Witness —
+                // a non-voiced third generator that names what both poles avoided
+                // (WITNESS.md). This is the third cloud call; Focused/Contemplative
+                // leave it nil.
+                witness: profile.witnessEnabled
+                    ? ClaudeCLIGenerator(systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt)
+                    : nil,
                 config: profile.loopConfig()
             )
         } else {

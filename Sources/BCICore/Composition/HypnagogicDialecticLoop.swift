@@ -41,6 +41,12 @@ public actor HypnagogicDialecticLoop {
         public var silenceCues: [String]
         /// How many recent turns feed the history/reply centroids.
         public var historyWindow: Int
+        /// Enable the introspective Witness (a non-voiced observer). Set true ONLY
+        /// for the Reflective profile — this is what makes Reflective a real rung
+        /// vs Focused (see `Sources/BCICore/Dialectic/WITNESS.md`). Off ⇒ no
+        /// witness generation, no extra cloud call; the reflexive `selfSimilarity`
+        /// metric is still logged regardless.
+        public var witnessEnabled: Bool
 
         public init(
             listenTimeout: TimeInterval = 15,
@@ -49,7 +55,8 @@ public actor HypnagogicDialecticLoop {
             prosody: SpeechProsody = .hypnagogic,
             maxConsecutiveSilence: Int = 3,
             silenceCues: [String] = HypnagogicDialogueLoop.defaultSilenceCues,
-            historyWindow: Int = 16
+            historyWindow: Int = 16,
+            witnessEnabled: Bool = false
         ) {
             self.listenTimeout = listenTimeout
             self.interTurnDelayNanos = interTurnDelayNanos
@@ -58,12 +65,17 @@ public actor HypnagogicDialecticLoop {
             self.maxConsecutiveSilence = maxConsecutiveSilence
             self.silenceCues = silenceCues
             self.historyWindow = historyWindow
+            self.witnessEnabled = witnessEnabled
         }
     }
 
     // Injected seams.
     private let listener: any HypnagogicListening
     private let generator: any TextGenerating
+    /// The introspective Witness generator (Reflective only) — a SEPARATE
+    /// `TextGenerating` with a relaxed system prompt (`witnessSystemPrompt`). nil ⇒
+    /// no witness pass. Its output is never voiced and never fed to the poles.
+    private let witness: (any TextGenerating)?
     private let speaker: any SpeechSynthesizing
     private let embedder: any SentenceEmbedder
     private let roles: [DialecticalRole]
@@ -112,10 +124,12 @@ public actor HypnagogicDialecticLoop {
         random: @escaping @Sendable () -> Double = { Double.random(in: 0..<1) },
         glossProvider: @escaping @Sendable () async -> SpectralState? = { nil },
         turnLogger: any DialecticalTurnLogging = NullDialecticalTurnLogger(),
+        witness: (any TextGenerating)? = nil,
         config: Config = .init()
     ) {
         self.listener = listener
         self.generator = generator
+        self.witness = witness
         self.speaker = speaker
         self.embedder = embedder
         self.roles = roles
@@ -248,10 +262,59 @@ public actor HypnagogicDialecticLoop {
         memory.observe(tension: tension)
         standingTension = tension
 
+        // Introspection (the Reflective rung — see WITNESS.md). Two ORTHOGONAL
+        // signals, deliberately not one dial: (1) the reflexive metric —
+        // `selfSimilarity`, how much this turn's utterance collapses onto the
+        // dialogue's own reply centroid (logged for EVERY profile, on-device);
+        // (2) the Witness — a non-voiced observer naming what BOTH poles avoided
+        // (Reflective only, one extra cloud call). Neither is ever spoken, and the
+        // witness finding never re-enters the poles' prompts (so they can't game it).
+        let spokenEmb: Embedding? = {
+            switch result.outcome {
+            case let .spoke(c), let .synthesized(c): return c.embedding
+            case .silent: return scored.max { $0.potential < $1.potential }?.candidate.embedding
+            }
+        }()
+        let selfSimilarity: Float? = spokenEmb.flatMap { emb in
+            replyCentroid.map { DialecticalDynamics.normalized(emb.cosineSimilarity(to: $0)) }
+        }
+        var witnessFinding: String?
+        var witnessDistance: Float?
+        // `witnessAttempted` records that the Witness RAN this turn, independent of
+        // whether it produced a finding — so a persistently-failing witness (an
+        // all-nil Reflective run) is not silently mistaken for a Focused run in the
+        // rollup (reflective_active is derived from attempts, not findings).
+        let witnessAttempted = config.witnessEnabled && witness != nil
+        if config.witnessEnabled, let witness {
+            do {
+                let finding = try await witness.generate(
+                    prompt: Self.witnessPrompt(heard: heard, candidates: candidateTexts.map(\.text)),
+                    maxTokens: config.maxTokens, temperature: 1.0, cancellationID: UUID()
+                ).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !finding.isEmpty {
+                    witnessFinding = finding
+                    if let spokenEmb, let findingEmb = try? await embedder.encode([finding]).first {
+                        witnessDistance = 1 - DialecticalDynamics.normalized(findingEmb.cosineSimilarity(to: spokenEmb))
+                    }
+                }
+            } catch is CancellationError {
+                // Stopping mid-call — not a failure; the checkCancellation below aborts cleanly.
+            } catch {
+                // A witness failure must NOT break the turn — but it must NOT be
+                // silent either: a persistently-failing witness would make Reflective
+                // look byte-identical to Focused. Leave a trace.
+                let idx = turnIndex
+                BCILog.pipeline.notice("witness generate failed (turn \(idx, privacy: .public)): \(error.localizedDescription, privacy: .public)")
+            }
+            try Task.checkCancellation()
+        }
+
         let record = DialecticalCompetition(
             index: turnIndex, heard: heard, scored: scored, tension: tension,
             margin: result.margin, selectionTemperature: result.selectionTemperature,
-            outcome: result.outcome, glossScalar: gloss.value, spectralState: state
+            outcome: result.outcome, glossScalar: gloss.value, spectralState: state,
+            witnessFinding: witnessFinding, witnessDistance: witnessDistance,
+            selfSimilarity: selfSimilarity, witnessAttempted: witnessAttempted
         )
         await turnLogger.log(DialecticalTurnEvent(record))
 
@@ -286,6 +349,16 @@ public actor HypnagogicDialecticLoop {
         }
         lastTurnAt = Date()
         turnIndex += 1
+    }
+
+    /// The Witness's user prompt: the heard input + both poles' candidate texts,
+    /// so it can name what the pair avoided. Pure; the *observing* stance lives in
+    /// `ClaudeCLIGenerator.witnessSystemPrompt`.
+    static func witnessPrompt(heard: String, candidates: [String]) -> String {
+        let voices = candidates.enumerated()
+            .map { "Voice \($0.offset + 1): \($0.element)" }
+            .joined(separator: "\n")
+        return "They heard: \(heard)\n\n\(voices)\n\nWhat did both voices avoid noticing?"
     }
 
     /// The voice of the role that produced a candidate (the base prosody for an

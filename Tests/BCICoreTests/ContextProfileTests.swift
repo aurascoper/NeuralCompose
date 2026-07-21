@@ -47,4 +47,15 @@ final class ContextProfileTests: XCTestCase {
         XCTAssertEqual(cfg.interTurnDelayNanos, 6_000_000_000)
         XCTAssertEqual(cfg.maxTokens, HypnagogicDialecticLoop.Config().maxTokens, "non-cadence fields preserved")
     }
+
+    func testWitnessEnabledOnlyForReflective() {
+        // The single declaration of "Reflective is the introspective rung." The
+        // Tuning stays default (see testReflectiveIsExactlyTheShippedDefault); the
+        // differentiation is this flag, threaded into loopConfig.
+        XCTAssertTrue(ContextProfile.reflective.witnessEnabled)
+        XCTAssertFalse(ContextProfile.focused.witnessEnabled)
+        XCTAssertFalse(ContextProfile.contemplative.witnessEnabled)
+        XCTAssertTrue(ContextProfile.reflective.loopConfig().witnessEnabled)
+        XCTAssertFalse(ContextProfile.focused.loopConfig().witnessEnabled)
+    }
 }
