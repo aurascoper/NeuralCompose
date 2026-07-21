@@ -73,4 +73,34 @@ final class MindMonitorDecoderTests: XCTestCase {
         ])
         XCTAssertNil(MindMonitorDecoder.sample(from: message, timestamp: 0))
     }
+
+    // MARK: - Movement (accel / gyro)
+
+    func testMapsAccelMessageToMovementSample() {
+        let message = OSCMessage(address: "/muse/acc", arguments: [.float(0.1), .float(-0.2), .float(0.98)])
+        let m = MindMonitorDecoder.movement(from: message, timestamp: 3.0)
+        XCTAssertEqual(m?.kind, .accel)
+        XCTAssertEqual(m?.timestamp, 3.0)
+        XCTAssertEqual(m.map { [$0.x, $0.y, $0.z] }, [0.1, -0.2, 0.98])
+    }
+
+    func testMapsGyroMessageToMovementSample() {
+        let message = OSCMessage(address: "/muse/gyro", arguments: [.float(1), .float(2), .float(3), .float(4)])
+        let m = MindMonitorDecoder.movement(from: message, timestamp: 0)
+        XCTAssertEqual(m?.kind, .gyro)
+        XCTAssertEqual(m.map { [$0.x, $0.y, $0.z] }, [1, 2, 3], "uses the first 3 floats")
+    }
+
+    func testMovementIgnoresEEGAndUnknownAddresses() {
+        for address in ["/muse/eeg", "/muse/batt", "/muse/elements/blink"] {
+            let message = OSCMessage(address: address, arguments: [.float(1), .float(2), .float(3)])
+            XCTAssertNil(MindMonitorDecoder.movement(from: message, timestamp: 0),
+                         "\(address) is not a movement message")
+        }
+    }
+
+    func testMovementIgnoresFewerThanThreeFloats() {
+        let tooFew = OSCMessage(address: "/muse/acc", arguments: [.float(1), .float(2)])
+        XCTAssertNil(MindMonitorDecoder.movement(from: tooFew, timestamp: 0))
+    }
 }

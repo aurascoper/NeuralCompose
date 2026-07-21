@@ -103,15 +103,9 @@ final class MindMonitorOSCStreamTests: XCTestCase {
             }
         }
 
-        // One address this decoder doesn't map (dropped, not fatal), then
+        // One /muse/acc (now captured as MOVEMENT, not dropped — H2 fix), then
         // one valid EEG packet.
-        var accPacket = oscString("/muse/acc")
-        accPacket.append(oscString(",fff"))
-        for v: Float in [0.1, 0.2, 0.3] {
-            var bits = v.bitPattern.bigEndian
-            withUnsafeBytes(of: &bits) { accPacket.append(contentsOf: $0) }
-        }
-        await sendUDP(accPacket, port: testPort + 1)
+        await sendUDP(makeAccPacket(), port: testPort + 1)
         await sendUDP(makeEEGPacket([10, 20, 30, 40]), port: testPort + 1)
 
         _ = try await collectTask.value
@@ -120,7 +114,8 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         let diagnostics = stream.currentDiagnostics()
         XCTAssertEqual(diagnostics.transport, "OSC (Mind Monitor)")
         XCTAssertGreaterThanOrEqual(diagnostics.packetsReceived, 2)
-        XCTAssertGreaterThanOrEqual(diagnostics.packetsDropped, 1) // the /muse/acc packet
+        XCTAssertGreaterThanOrEqual(diagnostics.movementYielded, 1) // the /muse/acc packet (movement)
+        XCTAssertEqual(diagnostics.packetsDropped, 0) // nothing malformed (H2: acc is not a drop)
         XCTAssertGreaterThanOrEqual(diagnostics.samplesYielded, 1) // the /muse/eeg packet
         // packetsReceived counts datagrams; samplesYielded counts decoded
         // EEG samples — never the other way around for this fixture (one
@@ -334,6 +329,39 @@ final class MindMonitorOSCStreamTests: XCTestCase {
                      "restart must reset the per-session watchdog reference — inheriting "
                      + "session 1's stale value would collapse the retry's grace to one tick")
         await stream.stop()
+    }
+
+    /// Accel/gyro must be yielded on the parallel movement channel and must NOT
+    /// be counted as `packetsDropped` (OSC review finding H2 — non-EEG traffic
+    /// was inflating a "packet loss" metric).
+    func testMovementYieldedAndNotCountedAsDropped() async throws {
+        let port = testPort + 7
+        let stream = MindMonitorOSCStream(port: port)
+        let eegStream = try await stream.start()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        let movementTask = Task { () -> MovementSample? in
+            for await m in stream.movementStream { return m }
+            return nil
+        }
+        let eegTask = Task { () -> EEGSample? in
+            do { for try await s in eegStream { return s } } catch {}
+            return nil
+        }
+
+        await sendUDP(makeAccPacket(), port: port)           // movement (/muse/acc)
+        await sendUDP(makeEEGPacket([1, 2, 3, 4]), port: port) // eeg
+
+        let movement = (await withTimeout(seconds: 3) { await movementTask.value }) ?? nil
+        _ = await withTimeout(seconds: 3) { await eegTask.value }
+        await stream.stop()
+
+        XCTAssertEqual(movement?.kind, .accel, "an accel packet must be yielded on the movement channel")
+        let diag = stream.currentDiagnostics()
+        XCTAssertGreaterThanOrEqual(diag.movementYielded, 1)
+        XCTAssertGreaterThanOrEqual(diag.samplesYielded, 1)
+        XCTAssertEqual(diag.packetsDropped, 0,
+                       "H2: /muse/acc must not inflate packetsDropped — it's movement, not loss")
     }
 
     /// Races `operation` against a timeout, returning `nil` on timeout

@@ -13,6 +13,8 @@ import BCICore
 /// the stream — not an error, just a message this decoder doesn't need yet.
 public enum MindMonitorDecoder {
     public static let eegAddress = "/muse/eeg"
+    public static let accelAddress = "/muse/acc"
+    public static let gyroAddress = "/muse/gyro"
 
     /// Returns an `EEGSample` if `message` is a `/muse/eeg` message with at
     /// least 4 float arguments, timestamped at `timestamp`. Only the first
@@ -46,5 +48,22 @@ public enum MindMonitorDecoder {
         let floats = message.floatArguments
         guard floats.count >= 4 else { return nil }
         return EEGSample(timestamp: timestamp, channels: Array(floats.prefix(4)))
+    }
+
+    /// Returns a `MovementSample` if `message` is a `/muse/acc` or `/muse/gyro`
+    /// message with at least 3 float arguments (x, y, z), timestamped on the
+    /// stream's arrival clock (same base as `sample(from:)`). `nil` for any
+    /// other address or fewer than 3 floats. Parallel to `sample(from:)`, never
+    /// merged with it — movement is captured, not fed into the EEG pipeline.
+    public static func movement(from message: OSCMessage, timestamp: TimeInterval) -> MovementSample? {
+        let kind: MovementSample.Kind
+        switch message.address {
+        case accelAddress: kind = .accel
+        case gyroAddress:  kind = .gyro
+        default: return nil
+        }
+        let f = message.floatArguments
+        guard f.count >= 3 else { return nil }
+        return MovementSample(timestamp: timestamp, kind: kind, x: f[0], y: f[1], z: f[2])
     }
 }
