@@ -79,17 +79,24 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         func stopSpeaking() async { stopCount += 1 }
     }
 
-    /// A witness generator that always returns a fixed sentinel and counts calls —
-    /// so a test can assert the finding is NEVER spoken and that gating works.
+    private struct WitnessFailure: Error {}
+
+    /// A witness generator that returns a fixed sentinel (or throws) and counts
+    /// calls — so a test can assert the finding is never spoken, that gating works,
+    /// and that a FAILING witness is still recorded as attempted.
     private actor WitnessSpy: TextGenerating {
         nonisolated let isLive = false
         nonisolated let modelIdentifier = "spy-witness"
         private let finding: String
+        private let shouldThrow: Bool
         private(set) var callCount = 0
-        init(finding: String) { self.finding = finding }
+        init(finding: String, shouldThrow: Bool = false) {
+            self.finding = finding; self.shouldThrow = shouldThrow
+        }
         func generate(prompt: String, maxTokens: Int, temperature: Double,
                       cancellationID: UUID) async throws -> String {
             callCount += 1
+            if shouldThrow { throw WitnessFailure() }
             return finding
         }
     }
@@ -171,6 +178,35 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         let events = await logger.events
         let anyFinding = events.contains { $0.witnessFinding != nil }
         XCTAssertFalse(anyFinding, "no witnessFinding logged when disabled")
+    }
+
+    func testFailingWitnessIsAttemptedButProducesNoFinding() async {
+        // A witness that throws every turn must NOT break the loop, but must be
+        // distinguishable from a disabled one: witnessAttempted=true, finding=nil,
+        // and the turn still speaks. (Otherwise a broken Reflective run masquerades
+        // as Focused in the rollup.)
+        let embedder = MapEmbedder(dimension: 2, table: ["the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1]])
+        let listener = SpyListener(script: ["the sea"], loopLast: true)
+        let generator = TwoRoleGenerator(stabilizer: "calm sea", dreamer: "moon river")
+        let witness = WitnessSpy(finding: "UNUSED", shouldThrow: true)
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.5 }, turnLogger: logger, witness: witness,
+            config: fastConfig(witnessEnabled: true))
+        await loop.start()
+        let ok = await poll {
+            let c = await witness.callCount
+            let s = await speaker.spoken.count
+            return c >= 1 && s >= 1
+        }
+        await loop.stop()
+        XCTAssertTrue(ok, "the turn still speaks even though the witness fails")
+        let events = await logger.events
+        let ev = events.first { $0.witnessAttempted == true }
+        XCTAssertNotNil(ev, "witnessAttempted is true even when the call throws")
+        XCTAssertNil(ev?.witnessFinding, "a failed witness produces no finding")
     }
 
     func testSelfSimilarityRisesWhenRepliesCollapse() async {

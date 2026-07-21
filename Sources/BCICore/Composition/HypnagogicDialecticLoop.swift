@@ -280,17 +280,33 @@ public actor HypnagogicDialecticLoop {
         }
         var witnessFinding: String?
         var witnessDistance: Float?
+        // `witnessAttempted` records that the Witness RAN this turn, independent of
+        // whether it produced a finding — so a persistently-failing witness (an
+        // all-nil Reflective run) is not silently mistaken for a Focused run in the
+        // rollup (reflective_active is derived from attempts, not findings).
+        let witnessAttempted = config.witnessEnabled && witness != nil
         if config.witnessEnabled, let witness {
-            let finding = (try? await witness.generate(
-                prompt: Self.witnessPrompt(heard: heard, candidates: candidateTexts.map(\.text)),
-                maxTokens: config.maxTokens, temperature: 1.0, cancellationID: UUID()
-            ))?.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let finding, !finding.isEmpty {
-                witnessFinding = finding
-                if let spokenEmb, let findingEmb = try? await embedder.encode([finding]).first {
-                    witnessDistance = 1 - DialecticalDynamics.normalized(findingEmb.cosineSimilarity(to: spokenEmb))
+            do {
+                let finding = try await witness.generate(
+                    prompt: Self.witnessPrompt(heard: heard, candidates: candidateTexts.map(\.text)),
+                    maxTokens: config.maxTokens, temperature: 1.0, cancellationID: UUID()
+                ).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !finding.isEmpty {
+                    witnessFinding = finding
+                    if let spokenEmb, let findingEmb = try? await embedder.encode([finding]).first {
+                        witnessDistance = 1 - DialecticalDynamics.normalized(findingEmb.cosineSimilarity(to: spokenEmb))
+                    }
                 }
+            } catch is CancellationError {
+                // Stopping mid-call — not a failure; the checkCancellation below aborts cleanly.
+            } catch {
+                // A witness failure must NOT break the turn — but it must NOT be
+                // silent either: a persistently-failing witness would make Reflective
+                // look byte-identical to Focused. Leave a trace.
+                let idx = turnIndex
+                BCILog.pipeline.notice("witness generate failed (turn \(idx, privacy: .public)): \(error.localizedDescription, privacy: .public)")
             }
+            try Task.checkCancellation()
         }
 
         let record = DialecticalCompetition(
@@ -298,7 +314,7 @@ public actor HypnagogicDialecticLoop {
             margin: result.margin, selectionTemperature: result.selectionTemperature,
             outcome: result.outcome, glossScalar: gloss.value, spectralState: state,
             witnessFinding: witnessFinding, witnessDistance: witnessDistance,
-            selfSimilarity: selfSimilarity
+            selfSimilarity: selfSimilarity, witnessAttempted: witnessAttempted
         )
         await turnLogger.log(DialecticalTurnEvent(record))
 

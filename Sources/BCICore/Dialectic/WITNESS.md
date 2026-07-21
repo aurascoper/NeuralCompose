@@ -64,14 +64,20 @@ non-voiced **observation** layer, not a new dialogue algorithm.
 
 ## Telemetry
 
-Three optional fields on `DialecticalCompetition` → `DialecticalTurnEvent`
+Four optional fields on `DialecticalCompetition` → `DialecticalTurnEvent`
 (→ `dialectic-turns-<day>.jsonl`), all `Optional` so old logs still decode:
-`witnessFinding: String?`, `witnessDistance: Float?`, `selfSimilarity: Float?`.
-`Scripts/session-seed.py` rolls them up into `witness_turns`,
-`mean_witness_distance`, `mean_self_similarity`, `reflective_active`
-(`witness_turns > 0`), and `reflexive_collapse_warn`. "Reflective differs from
-Focused" becomes: compare a Focused vs a Reflective session rollup (the former has
-`witness_turns == 0`).
+`witnessFinding: String?`, `witnessDistance: Float?`, `selfSimilarity: Float?`,
+and `witnessAttempted: Bool?`. **`witnessAttempted` records that the Witness *ran*,
+independent of whether it produced a finding** — so a persistently-failing witness
+(an all-nil Reflective run) is not silently mistaken for a disabled one. A witness
+error is caught (the turn never breaks) but **logged** (`BCILog.pipeline`), and
+cancellation is re-checked rather than swallowed. `Scripts/session-seed.py` rolls
+them up into `witness_attempts`, `witness_turns` (findings), `mean_witness_distance`,
+`mean_self_similarity`, `reflective_active` (**derived from attempts, not
+findings**), `witness_silent_warn` (attempts > 0 but 0 findings — the witness is
+failing), and `reflexive_collapse_warn`. "Reflective differs from Focused" becomes:
+compare a Focused vs a Reflective session rollup (the former has
+`witness_attempts == 0`).
 
 ## Privacy boundary
 

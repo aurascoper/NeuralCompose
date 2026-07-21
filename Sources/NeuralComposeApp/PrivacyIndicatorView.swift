@@ -127,7 +127,7 @@ struct PrivacyIndicatorView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Cloud active — Hypnagogic (\(hypnagogicMode.label))").foregroundStyle(.red)
                                 Text(hypnagogicMode.isDialectical
-                                     ? "Transcript text (never audio) may be sent to the claude CLI — two calls per turn in the dialectical modes. Opt-in exception — see decision_registry entry 8."
+                                     ? "Transcript text (never audio) may be sent to the claude CLI — \(hypnagogicMode.profile?.witnessEnabled == true ? "three" : "two") calls per turn in the dialectical modes\(hypnagogicMode.profile?.witnessEnabled == true ? " (Reflective adds a non-voiced Witness)" : ""). Opt-in exception — see decision_registry entry 8."
                                      : "Transcript text (never audio) may be sent to the claude CLI. Opt-in exception — see decision_registry entry 8.")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
@@ -255,7 +255,7 @@ struct PrivacyIndicatorView: View {
                                 Text(HypnagogicDialecticHonesty.egressCaveat)
                                     .foregroundStyle(.red)
                                 if hypnagogicMode.isDialectical {
-                                    Text(HypnagogicDialecticHonesty.dialecticCaveat)
+                                    Text(HypnagogicDialecticHonesty.dialecticCaveat(reflective: hypnagogicMode.profile?.witnessEnabled == true))
                                         .font(.caption2)
                                         .foregroundStyle(.red)
                                 }

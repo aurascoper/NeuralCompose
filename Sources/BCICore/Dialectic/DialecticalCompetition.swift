@@ -157,12 +157,17 @@ public struct DialecticalCompetition: Sendable, Equatable {
     /// **reflexive** metric (the watching collapsing into the watched). Logged for
     /// every profile, independent of the witness; nil only before any reply exists.
     public let selfSimilarity: Float?
+    /// Whether the Witness RAN this turn (Reflective) — true even if the call
+    /// failed or produced no finding, so a broken witness is distinguishable from a
+    /// disabled one. `reflective_active` in the rollup derives from this, not from
+    /// `witnessFinding`. nil in pre-Witness logs.
+    public let witnessAttempted: Bool?
 
     public init(index: Int, heard: String, scored: [ScoredCandidate], tension: Float,
                 margin: Float, selectionTemperature: Float, outcome: DialecticalOutcome,
                 glossScalar: Float, spectralState: SpectralState? = nil,
                 witnessFinding: String? = nil, witnessDistance: Float? = nil,
-                selfSimilarity: Float? = nil) {
+                selfSimilarity: Float? = nil, witnessAttempted: Bool? = nil) {
         self.index = index
         self.heard = heard
         self.scored = scored
@@ -175,5 +180,6 @@ public struct DialecticalCompetition: Sendable, Equatable {
         self.witnessFinding = witnessFinding
         self.witnessDistance = witnessDistance
         self.selfSimilarity = selfSimilarity
+        self.witnessAttempted = witnessAttempted
     }
 }

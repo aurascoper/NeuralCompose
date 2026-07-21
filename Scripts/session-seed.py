@@ -80,10 +80,12 @@ class TelemetryRollup:
     gloss_distinct: int = 0
     live_eeg_influence: bool = False   # gloss_variance > epsilon
     # Reflective-rung introspection (see Sources/BCICore/Dialectic/WITNESS.md).
-    witness_turns: int = 0                          # turns where the Witness fired
+    witness_attempts: int = 0                       # turns the Witness RAN (Reflective), success or not
+    witness_turns: int = 0                          # turns the Witness produced a finding
     mean_witness_distance: Optional[float] = None   # reflective metric: "how much was avoided"
     mean_self_similarity: Optional[float] = None    # reflexive metric: collapse toward the reply centroid
-    reflective_active: bool = False                 # witness_turns > 0 — this run ran the Witness
+    reflective_active: bool = False                 # the Witness mechanism RAN (attempts or findings > 0)
+    witness_silent_warn: bool = False               # attempts > 0 but 0 findings — witness likely failing
     reflexive_collapse_warn: bool = False           # mean_self_similarity > threshold
 
     def to_json(self) -> dict[str, Any]:
@@ -96,10 +98,12 @@ class TelemetryRollup:
             "gloss_variance": _round(self.gloss_variance, 6),
             "gloss_distinct_values": self.gloss_distinct,
             "live_eeg_influence": self.live_eeg_influence,
+            "witness_attempts": self.witness_attempts,
             "witness_turns": self.witness_turns,
             "mean_witness_distance": _round(self.mean_witness_distance),
             "mean_self_similarity": _round(self.mean_self_similarity),
             "reflective_active": self.reflective_active,
+            "witness_silent_warn": self.witness_silent_warn,
             "reflexive_collapse_warn": self.reflexive_collapse_warn,
         }
 
@@ -120,6 +124,7 @@ def roll_up_telemetry(path: Optional[Path]) -> TelemetryRollup:
     outcomes: dict[str, int] = {"spoke": 0, "silent": 0, "synthesized": 0}
     tensions: list[float] = []
     glosses: list[float] = []
+    witness_attempts = 0
     witness_turns = 0
     witness_distances: list[float] = []
     self_sims: list[float] = []
@@ -143,6 +148,8 @@ def roll_up_telemetry(path: Optional[Path]) -> TelemetryRollup:
                 tensions.append(float(ev["tension"]))
             if isinstance(ev.get("glossScalar"), (int, float)):
                 glosses.append(float(ev["glossScalar"]))
+            if ev.get("witnessAttempted") is True:
+                witness_attempts += 1
             if isinstance(ev.get("witnessFinding"), str) and ev["witnessFinding"].strip():
                 witness_turns += 1
             if isinstance(ev.get("witnessDistance"), (int, float)):
@@ -163,12 +170,17 @@ def roll_up_telemetry(path: Optional[Path]) -> TelemetryRollup:
     # Reflective-rung introspection rollup (WITNESS.md). reflective_active
     # distinguishes a Reflective run (Witness fired) from Focused (0 witness turns);
     # reflexive_collapse_warn flags replies collapsing onto their own centroid.
+    roll.witness_attempts = witness_attempts
     roll.witness_turns = witness_turns
     if witness_distances:
         roll.mean_witness_distance = sum(witness_distances) / len(witness_distances)
     if self_sims:
         roll.mean_self_similarity = sum(self_sims) / len(self_sims)
-    roll.reflective_active = witness_turns > 0
+    # reflective_active = the Witness mechanism RAN (attempts, or findings for
+    # pre-attempt logs) — NOT "produced a finding", so an all-failing witness is
+    # still distinguishable from a disabled one (witness_silent_warn flags it).
+    roll.reflective_active = witness_attempts > 0 or witness_turns > 0
+    roll.witness_silent_warn = witness_attempts > 0 and witness_turns == 0
     roll.reflexive_collapse_warn = (roll.mean_self_similarity or 0.0) > REFLEXIVE_COLLAPSE_THRESHOLD
     return roll
 
@@ -268,12 +280,15 @@ def cmd_refresh(seed_id: str, telemetry_dir: Path) -> int:
     print(f"    turns={roll.turns} [{_fmt_outcomes(roll.outcomes)}] "
           f"mean_tension={_round(roll.mean_tension)} "
           f"live_eeg_influence={roll.live_eeg_influence} (gloss var={_round(roll.gloss_variance, 6)})")
-    print(f"    reflective_active={roll.reflective_active} (witness_turns={roll.witness_turns}, "
-          f"mean_witness_distance={_round(roll.mean_witness_distance)}) "
+    print(f"    reflective_active={roll.reflective_active} (witness_attempts={roll.witness_attempts}, "
+          f"findings={roll.witness_turns}, mean_witness_distance={_round(roll.mean_witness_distance)}) "
           f"self_similarity={_round(roll.mean_self_similarity)}")
     if roll.turns and not roll.live_eeg_influence:
         print("  ⚠️ gloss variance ~0 — run was text-only (stub estimator or synthetic stream), "
               "no live-EEG bias reached the dialogue.")
+    if roll.witness_silent_warn:
+        print(f"  ⚠️ witness silent — {roll.witness_attempts} attempts, 0 findings; the Witness cloud call "
+              "is likely failing (a Reflective run would masquerade as Focused).")
     if roll.reflexive_collapse_warn:
         print(f"  ⚠️ reflexive collapse — mean self-similarity {_round(roll.mean_self_similarity)} > "
               f"{REFLEXIVE_COLLAPSE_THRESHOLD}; replies are converging onto their own centroid.")

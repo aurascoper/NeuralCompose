@@ -46,6 +46,9 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     public let witnessDistance: Float?
     /// Reflexive metric: how much the utterance collapsed toward the reply centroid.
     public let selfSimilarity: Float?
+    /// Whether the Witness ran this turn (Reflective) — distinguishes a broken /
+    /// finding-less witness from a disabled one. nil in pre-Witness logs.
+    public let witnessAttempted: Bool?
 
     public init(_ c: DialecticalCompetition) {
         self.index = c.index
@@ -63,6 +66,7 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
         self.witnessFinding = c.witnessFinding
         self.witnessDistance = c.witnessDistance
         self.selfSimilarity = c.selfSimilarity
+        self.witnessAttempted = c.witnessAttempted
         switch c.outcome {
         case let .spoke(cand):
             self.outcome = "spoke:\(cand.roleID)"
