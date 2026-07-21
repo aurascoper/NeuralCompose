@@ -739,6 +739,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// state; that keeps the loop's "not a brain read" caveat true.
     private func ensureSpokenLoopRunning() async {
         guard spokenLoop == nil else { return }
+        // Per-cycle trace (input→output + the signal-quality knobs) to
+        // `spoken-trace-<day>.jsonl`, gated on the same interaction-log opt-in as
+        // dialectic turns; off ⇒ NullSpokenGenerationTraceLogger (records nothing).
+        let tracer: any SpokenGenerationTraceLogging =
+            (interactionLoggingEnabled ? (interactionLogger as? any SpokenGenerationTraceLogging) : nil)
+            ?? NullSpokenGenerationTraceLogger()
         let loop = SpokenGenerationLoop(
             generator: container.predictorResolved.generator,
             speaker: voiceOutput,
@@ -746,7 +752,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 await MainActor.run {
                     SignalQualityGenerationRules.adaptation(for: self?.signalQuality)
                 }
-            }
+            },
+            tracer: tracer
         )
         spokenLoop = loop
         await loop.start()

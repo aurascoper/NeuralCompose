@@ -15,7 +15,7 @@ import BCICore
 /// Files rotate daily (`interactions-<yyyy-MM-dd>.jsonl`), mirroring the
 /// dated-session convention `Recordings/night-<date>/` already uses, so no
 /// single file grows unbounded across a long-running install.
-public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging {
+public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, SpokenGenerationTraceLogging {
     private let directory: URL
     private let encoder: JSONEncoder
     private let dayFormatter: DateFormatter
@@ -55,6 +55,14 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging {
     public func log(_ event: DialecticalTurnEvent) async {
         write(event, prefix: "dialectic-turns",
               day: dayFormatter.string(from: Date()), id: "turn-\(event.index)")
+    }
+
+    /// Per-cycle spoken-loop traces go to their own `spoken-trace-<day>.jsonl`
+    /// stream — the input→output diagnostic for broken-vs-starved. Like the
+    /// dialectic stream it carries no timestamp, so the day is stamped at write.
+    public func log(_ event: SpokenGenerationTraceEvent) async {
+        write(event, prefix: "spoken-trace",
+              day: dayFormatter.string(from: Date()), id: "cycle-\(event.index)")
     }
 
     private func write<E: Encodable>(_ event: E, prefix: String, day: String, id: String) {
