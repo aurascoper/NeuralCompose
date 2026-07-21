@@ -49,6 +49,11 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     /// Whether the Witness ran this turn (Reflective) — distinguishes a broken /
     /// finding-less witness from a disabled one. nil in pre-Witness logs.
     public let witnessAttempted: Bool?
+    /// The generator identity that produced the candidates this turn
+    /// (runtime / transport / provider / model / promptProfile /
+    /// interactionStyle / promptHash). Optional so pre-fingerprint
+    /// logs still decode. See `Sources/BCICore/Telemetry/GeneratorFingerprint.swift`.
+    public let generatorFingerprint: GeneratorFingerprint?
 
     public init(_ c: DialecticalCompetition) {
         self.index = c.index
@@ -67,6 +72,7 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
         self.witnessDistance = c.witnessDistance
         self.selfSimilarity = c.selfSimilarity
         self.witnessAttempted = c.witnessAttempted
+        self.generatorFingerprint = c.generatorFingerprint
         switch c.outcome {
         case let .spoke(cand):
             self.outcome = "spoke:\(cand.roleID)"
