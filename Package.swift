@@ -42,6 +42,7 @@ let package = Package(
         .executable(name: "SpectralProbe", targets: ["SpectralProbe"]),
         .executable(name: "GenerationEval", targets: ["GenerationEval"]),
         .executable(name: "dialectic-smoke", targets: ["DialecticSmoke"]),
+        .executable(name: "dialectic-session", targets: ["DialecticSession"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -251,6 +252,15 @@ let package = Package(
             name: "DialecticSmoke",
             dependencies: ["BCICore", "BCICloudBridge"],
             path: "Sources/DialecticSmoke",
+            swiftSettings: strictConcurrency
+        ),
+        // Headless scripted runner of the FULL dialectic loop (real Sonnet calls +
+        // the reflective Witness) — the seed-002 Focused-vs-Reflective experiment.
+        // Same dep shape as DialecticSmoke (no MLX; builds under CLT).
+        .executableTarget(
+            name: "DialecticSession",
+            dependencies: ["BCICore", "BCICloudBridge"],
+            path: "Sources/DialecticSession",
             swiftSettings: strictConcurrency
         ),
 

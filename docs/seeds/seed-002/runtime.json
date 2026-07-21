@@ -18,10 +18,11 @@
   ],
   "benchmarks": {
     "sonnet5_runtime_smoke": "PASS \u2014 dialectic-smoke returned lucid, oppositional waking candidates for both roles",
-    "test_suite": "164 tests, 0 failures (BCICore + BCICloudBridge + BCIVoice)",
-    "brainflow_build": "PASS \u2014 .build/debug/NeuralCompose links libBoardController; brainflow-linked marker present"
+    "test_suite": "443 tests, 0 failures / 5 skipped (BCICore + BCICloudBridge + BCIVoice + app)",
+    "brainflow_build": "PASS \u2014 .build/debug/NeuralCompose links libBoardController; brainflow-linked marker present",
+    "witness_validation": "PASS (live, dialectic-session harness, 3-turn scripted input, real Sonnet): Focused reflective_active=False / witness_attempts=0; Reflective reflective_active=True / witness_attempts=3 / witness_turns=3 / mean_witness_distance=0.345 / no witness_silent_warn; selfSimilarity logged for both (0.71 / 0.74). Witness findings named a shared blind spot (both poles framed it as a solo problem). seed-002 reflective-vs-reflexive hypothesis CONFIRMED."
   },
-  "next_experiment": "Run a Focused session and a Reflective session on the same input, then session-seed.py refresh 002: Reflective should show witness_turns>0 / reflective_active=true (Focused: 0) and a mean_witness_distance; watch mean_self_similarity for reflexive collapse in both. Still pending: live Muse-S glossScalar variance > 0.",
+  "next_experiment": "reflective-vs-reflexive is validated live (see witness_validation). Next: the Contemplative rung (does its reluctant-synthesis / high-silence tuning behave on the same harness?), and STILL pending live Muse-S glossScalar variance > 0 (needs --with-brainflow + real estimator + seated electrodes).",
   "generated_from": {
     "git": {
       "branch": "feature/spoken-generation-loop",
