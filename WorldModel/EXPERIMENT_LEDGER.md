@@ -193,3 +193,16 @@ Entry template:
 - Evidence: `venv/bin/python WorldModel/forward_eval.py --smoke-test` passes with symlog=True run finite (pred_err/chi/rollout all finite); full A/B pending (launched to background this fire).
 - Decision: PENDING — Benchmark next fire. A/B {symlog off/on} x {signal, nuisance} x seeds {0,1,2}, n=384, 22 epochs, CPU. Keep symlog ONLY if it improves rollout+MPC without degrading chi (same rule as node 33).
 - Next question: compare symlog's A/B against node 33's `log_features` numbers (rollout 0.0079 -> 0.0108 WORSE, chi 0.950 -> 0.987 BETTER). Does symlog's zero-preserving log recover the chi gain without the rollout/MPC harm?
+
+## 9 — Transform A/B, arm 3 benchmark: symlog is forward-metric-neutral (2026-07-21, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 8) symlog recovers log_features' chi gain WITHOUT its rollout/MPC harm, because `log1p(0)=0` removes the epsilon-floor outlier that `log_features` created at dead channels.
+- Prediction: symlog improves-or-matches chi while keeping rollout+MPC at least as good as the standardized baseline.
+- Implementation: ran {symlog off/on} x {signal, nuisance} x seeds {0,1,2}, n=384, 22 epochs, CPU (background nohup, 12 cells).
+- Evidence (pooled OFF -> ON, +/- is seed pstdev):
+  - rollout_mean 0.0120+/-0.0022 -> 0.0122+/-0.0015 (delta +0.0002 — an order of magnitude BELOW the +/-0.0022 seed noise: NO significant change; NOT the +37% harm log_features caused).
+  - mpc_success 0.342+/-0.151 -> 0.358+/-0.137 (delta +0.017, within the large +/-0.15 noise — directionally up, not significant).
+  - chi 0.9501+/-0.0026 -> 0.9545+/-0.0055 (delta +0.0044; chi is the tightest metric — a small consistent gain).
+  Contrast with node 33 log_features: rollout +37% WORSE, MPC worse. symlog's forward-metric harm is GONE.
+- Decision: DO NOT PROMOTE — symlog stays default OFF, but for a DIFFERENT reason than log_features: not because it harms the forward metrics (it does not — they are flat within noise) but because it does not clearly IMPROVE them (the keep-bar). Chi-only improvement is insufficient (node 33's lesson: the forward metrics are the objective, not the linear probe). The node-8 hypothesis is CONFIRMED: the epsilon floor was the source of log_features' rollout harm — removing it (symlog) drops the rollout degradation from +37% to ~0.
+- Next question: two arms remain — specparam (periodic+aperiodic) and 1/f-flatten — both blocked on the specparam front-end (Math §11.2), a larger build than a one-line transform. Accumulating result across arms: standardize = baseline (node 7), log_features = reject (node 33), symlog = neutral (node 9) — NO input-space transform has yet improved the forward metrics over the standardized baseline, strengthening node 33's provisional "raw z-scored power is already the right encoder input for forward dynamics." Decide next fire: build the specparam front-end, or declare the transform-A/B line converged (raw z-score wins) and pivot.
