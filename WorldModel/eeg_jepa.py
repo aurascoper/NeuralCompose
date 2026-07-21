@@ -530,6 +530,9 @@ def main() -> None:
                              "z-scoring, so high-power bands don't swamp low-power ones")
     parser.add_argument("--log-epsilon", type=float, default=1e-6,
                         help="additive constant inside log(x+eps) when --log-features is set")
+    parser.add_argument("--symlog", action="store_true",
+                        help="signed-log1p compress powers before z-scoring (node-7 arm; "
+                             "mutually exclusive with --log-features, no epsilon floor)")
     parser.add_argument("--smoke-test", action="store_true")
     args = parser.parse_args()
 
@@ -542,7 +545,8 @@ def main() -> None:
 
     dataset = JEPATransitionDataset(args.dataset, normalize=not args.no_normalize,
                                     clip_sigma=args.clip_sigma,
-                                    log_features=args.log_features, log_epsilon=args.log_epsilon)
+                                    log_features=args.log_features, log_epsilon=args.log_epsilon,
+                                    symlog=args.symlog)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     config = EEGJEPAConfig(
         latent_dim=args.latent_dim,
@@ -570,6 +574,7 @@ def main() -> None:
             args.val_dataset, normalize=not args.no_normalize,
             mean=dataset.mean, std=dataset.std, clip_sigma=args.clip_sigma,
             log_features=args.log_features, log_epsilon=args.log_epsilon,
+            symlog=args.symlog,
         )
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
         model.encoder.eval()

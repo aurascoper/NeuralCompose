@@ -363,13 +363,15 @@ def evaluate(
 ) -> dict[str, Any]:
     """Train a JEPA on freshly-generated synthetic_1f data and return the panel.
 
-    `log_features` selects the input space fed to the encoder: raw z-scored
-    band/channel power (default) or log-compressed-then-z-scored (the 1/f
-    log-transform, applied at the JEPATransitionDataset seam). It is threaded
-    identically into the train, rollout, and MPC-encode datasets so all three
-    encode in ONE space — otherwise the model trains on log windows while
-    rollout/MPC feed raw windows. This is the node-33 transform arm: measured
-    forward, kept only if it improves rollout+MPC without degrading chi-recovery.
+    `log_features` and `symlog` select the input space fed to the encoder: raw
+    z-scored band/channel power (default), log-compressed-then-z-scored (the 1/f
+    log-transform, node-33 arm), or signed-log1p-then-z-scored (`symlog`, node-7
+    arm — same compression without log_features' epsilon-floor outlier at dead
+    channels). They are mutually exclusive and each threaded identically into the
+    train, rollout, and MPC-encode datasets so all three encode in ONE space —
+    otherwise the model trains on transformed windows while rollout/MPC feed raw
+    ones. Each is a transform arm: measured forward, kept only if it improves
+    rollout+MPC without degrading chi-recovery.
     """
     _seed_everything(seed)
     device = device or resolve_device()
@@ -407,7 +409,8 @@ def evaluate(
             "config": {"n": n, "mode": mode, "seed": seed, "epochs": epochs,
                        "latent_dim": latent_dim, "log_features": log_features,
                        "symlog": symlog, "mpc_cem_iters": mpc_cem_iters,
-                       "mpc_n_samples": mpc_n_samples, "final_train_loss": history[-1]},
+                       "mpc_n_samples": mpc_n_samples, "mpc_elite_frac": mpc_elite_frac,
+                       "final_train_loss": history[-1]},
             "pred_error_1step": _pred_error_1step(model, dataset, device),
             "rollout_error": rollout,
             "mpc_success": mpc,
