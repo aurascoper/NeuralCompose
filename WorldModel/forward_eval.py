@@ -352,6 +352,9 @@ def evaluate(
     rollout_len: int = 8,
     mpc_episodes: int = 20,
     mpc_horizon: int = 6,
+    mpc_cem_iters: int = 3,
+    mpc_n_samples: int = 64,
+    mpc_elite_frac: float = 0.2,
     log_features: bool = False,
     log_epsilon: float = 1e-6,
     symlog: bool = False,
@@ -396,13 +399,15 @@ def evaluate(
         mpc = _mpc_success(
             model, dataset.mean, dataset.std, device,
             n_episodes=mpc_episodes, horizon=mpc_horizon, mode=mode, seed=seed + 2,
+            cem_iters=mpc_cem_iters, n_samples=mpc_n_samples, elite_frac=mpc_elite_frac,
             log_features=log_features, log_epsilon=log_epsilon, symlog=symlog,
         )
 
         panel = {
             "config": {"n": n, "mode": mode, "seed": seed, "epochs": epochs,
                        "latent_dim": latent_dim, "log_features": log_features,
-                       "symlog": symlog, "final_train_loss": history[-1]},
+                       "symlog": symlog, "mpc_cem_iters": mpc_cem_iters,
+                       "mpc_n_samples": mpc_n_samples, "final_train_loss": history[-1]},
             "pred_error_1step": _pred_error_1step(model, dataset, device),
             "rollout_error": rollout,
             "mpc_success": mpc,
@@ -498,6 +503,11 @@ def main() -> None:
     parser.add_argument("--log-epsilon", type=float, default=1e-6)
     parser.add_argument("--symlog", action="store_true",
                         help="feed the encoder signed-log1p spectral state — the node-7 arm (no epsilon floor)")
+    parser.add_argument("--mpc-cem-iters", type=int, default=3,
+                        help="CEM refinement iterations for the MPC planner (node-10 knob)")
+    parser.add_argument("--mpc-n-samples", type=int, default=64,
+                        help="CEM population size for the MPC planner (node-10 knob)")
+    parser.add_argument("--mpc-elite-frac", type=float, default=0.2)
     args = parser.parse_args()
 
     if args.smoke_test:
@@ -505,7 +515,9 @@ def main() -> None:
         return
     evaluate(n=args.n, mode=args.mode, seed=args.seed, epochs=args.epochs,
              latent_dim=args.latent_dim, log_features=args.log_features,
-             log_epsilon=args.log_epsilon, symlog=args.symlog)
+             log_epsilon=args.log_epsilon, symlog=args.symlog,
+             mpc_cem_iters=args.mpc_cem_iters, mpc_n_samples=args.mpc_n_samples,
+             mpc_elite_frac=args.mpc_elite_frac)
 
 
 if __name__ == "__main__":
