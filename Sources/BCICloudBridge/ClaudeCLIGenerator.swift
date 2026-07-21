@@ -22,21 +22,16 @@ public actor ClaudeCLIGenerator: TextGenerating {
     /// Constrained hypnagogic-mirror system prompt: passive, no questions, ≤2
     /// soft sentences. Kept here as the default so callers can't accidentally
     /// point this network path at an unconstrained prompt.
-    public static let hypnagogicSystemPrompt = """
-    You are a passive, resonant mirror for a user in a hypnagogic (N1, \
-    sleep-onset) state. Your only job is to keep them gently suspended in \
-    dream-logic without waking them.
-
-    CONSTRAINTS:
-    1. NEVER ask questions or request clarification.
-    2. Accept any fragmented, bizarre, or nonsensical input as real; never \
-    point out logical gaps or analyze it.
-    3. Reply in at most TWO short, rhythmic sentences.
-    4. Favor soft, sinking imagery (drifting, dissolving, floating, warm, dim, \
-    slow); never sharp, urgent, or alarming content.
-    5. Simply mirror and gently expand the imagery.
-    Output only the spoken words — no preamble, no explanation, no quotes.
-    """
+    ///
+    /// The text is loaded from `Sources/BCICloudBridge/Prompts/hypnagogic.md`
+    /// (ADR-009 invariant #1: prompt profiles are repository resources, not
+    /// code on the runtime). The Markdown file is the source of truth; this
+    /// computed property is a load-by-name convenience for the legacy
+    /// `static let` call sites. The loaded text is byte-identical to the
+    /// pre-extraction value.
+    public static var hypnagogicSystemPrompt: String {
+        (try? PromptProfile.hypnagogic.load()) ?? ""
+    }
 
     /// Constrained WAKING dialectical system prompt: lucid and present, NOT the
     /// N1 sleep-mirror above. Used for the Focused / Reflective / Contemplative
@@ -45,23 +40,11 @@ public actor ClaudeCLIGenerator: TextGenerating {
     /// frame keeps each voice clear and concise while it *holds* the tension
     /// rather than resolving it. This is the user's knob — the literal voice the
     /// app speaks — so edit it to taste (cf. `DialecticalField.target()`).
-    public static let wakingDialecticalSystemPrompt = """
-    You are one voice in a live, waking dialectical exchange. Another voice is \
-    pulling the opposite way; your job is not to agree with it or defeat it, but \
-    to hold your own line clearly so the tension between you stays alive.
-
-    CONSTRAINTS:
-    1. Stay lucid, present, and coherent — this is waking dialogue, not \
-    dream-logic. No drifting, dissolving, or sleep imagery.
-    2. Take a clear position and develop it; do not hedge to the middle or \
-    prematurely reconcile with the other voice.
-    3. Speak in at most THREE sentences. Be substantive, never padded.
-    4. You may build on, push against, or reframe what you heard — but never ask \
-    the user a question or request clarification.
-    5. Plain, direct language. No preamble, no meta-commentary, no stage \
-    directions.
-    Output only the spoken words.
-    """
+    ///
+    /// Source: `Sources/BCICloudBridge/Prompts/waking-dialectical.md`.
+    public static var wakingDialecticalSystemPrompt: String {
+        (try? PromptProfile.wakingDialectical.load()) ?? ""
+    }
 
     /// The Witness's system prompt — a NON-VOICED introspective observer for the
     /// Reflective profile (see `Sources/BCICore/Dialectic/WITNESS.md`). Unlike the
@@ -71,21 +54,11 @@ public actor ClaudeCLIGenerator: TextGenerating {
     /// NEVER heard by the poles or the user — it only feeds telemetry/prosody, so
     /// the poles cannot learn to satisfy it. Waking register (no sleep imagery —
     /// this ships on a waking rung).
-    public static let witnessSystemPrompt = """
-    You observe a two-voice dialectical exchange from outside it. You are never \
-    heard by those two voices or by the user; you never speak into the dialogue.
-
-    Your only task: name, in ONE sentence, what BOTH voices just avoided noticing \
-    about what was said — the question neither asked, the angle neither took, the \
-    assumption both left unexamined. Look for the blind spot they share, not a \
-    third position of your own.
-
-    CONSTRAINTS:
-    1. Stay lucid, plain, and present — this is waking observation of a live exchange.
-    2. One sentence. Name the avoidance concretely; do not summarize what they said.
-    3. Never address the user; never propose what should be said next.
-    Output only that single observation.
-    """
+    ///
+    /// Source: `Sources/BCICloudBridge/Prompts/witness.md`.
+    public static var witnessSystemPrompt: String {
+        (try? PromptProfile.witness.load()) ?? ""
+    }
 
     private let model: String
     private let systemPrompt: String

@@ -131,10 +131,16 @@ let package = Package(
         // (Foundation.Process); no HTTP client, no API key on disk. Imported
         // only by NeuralComposeApp; must never become a dependency of any other
         // BCI* target.
+        //
+        // The `Prompts/` subdirectory is the source of truth for system
+        // prompts (ADR-009 invariant #1: prompt profiles are repository
+        // resources, not code on the runtime). Declared as a processed
+        // resource so each `.md` is a `Bundle.module`-accessible URL.
         .target(
             name: "BCICloudBridge",
             dependencies: ["BCICore"],
             path: "Sources/BCICloudBridge",
+            resources: [.process("Prompts")],
             swiftSettings: strictConcurrency
         ),
 
