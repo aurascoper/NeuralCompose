@@ -104,7 +104,10 @@ public actor SpokenGenerationLoop {
                 : "\(adaptation.styleInstruction)\n\(config.seedPrompt)"
 
             // Captured for the per-cycle trace regardless of which branch runs.
+            // The flags track *actual execution*, not intent, so a trace never
+            // claims a step happened on a cycle where it threw first.
             var generated: String?
+            var usedDialectic = false
             var spoke = false
             var errorText: String?
 
@@ -118,19 +121,20 @@ public actor SpokenGenerationLoop {
 
                 if config.useDialectic, let dialectic {
                     text = try await dialectic.refine(text, cancellationID: cancellationID).synthesis
+                    usedDialectic = true   // the refine pass ran to completion
                 }
 
                 try Task.checkCancellation()
                 generated = text
                 let spoken = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !spoken.isEmpty {
-                    spoke = true
                     // Confidence-wobbled prosody + sentence-boundary pauses, not
                     // one flat prosody-less utterance (the old robotic path):
                     // hedged clauses softer/slower, committed ones firmer.
                     for (phrase, prosody) in ProsodyWobble.plan(spoken) {
                         try await speaker.speak(phrase, prosody: prosody, onWord: nil)
                     }
+                    spoke = true   // set only after the full utterance was voiced
                 }
             } catch is CancellationError {
                 return
@@ -153,7 +157,7 @@ public actor SpokenGenerationLoop {
                 temperature: adaptation.temperature,
                 styleInstruction: adaptation.styleInstruction,
                 maxTokens: config.maxTokens,
-                usedDialectic: config.useDialectic && dialectic != nil,
+                usedDialectic: usedDialectic,
                 prompt: prompt,
                 generated: generated,
                 spoke: spoke,

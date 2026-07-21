@@ -23,7 +23,8 @@ public struct SpokenGenerationTraceEvent: Codable, Sendable, Equatable {
     public let styleInstruction: String
     /// The generation token budget for this cycle (`Config.maxTokens`).
     public let maxTokens: Int
-    /// Whether the optional `DialecticEngine` refine pass actually ran this cycle.
+    /// Whether the optional `DialecticEngine` refine pass ran *to completion* this
+    /// cycle — false when it was disabled, absent, or threw before finishing.
     public let usedDialectic: Bool
     /// The fully assembled prompt that went in — the "what fed it" half. A run of
     /// identical prompts across cycles is the signature of a *starved* loop.
@@ -31,8 +32,9 @@ public struct SpokenGenerationTraceEvent: Codable, Sendable, Equatable {
     /// The raw generated text — the "what came out" half. `nil` when generation
     /// (or the refine pass) threw before producing text; see `error`.
     public let generated: String?
-    /// Whether a non-empty utterance was actually voiced this cycle. `false` with a
-    /// non-nil `generated` means the model produced only whitespace.
+    /// Whether a non-empty utterance was voiced *to completion* this cycle. With a
+    /// non-nil `generated`: `false` and `error == nil` means the model produced only
+    /// whitespace; `false` with `error` set means voicing was attempted but threw.
     public let spoke: Bool
     /// The description of a swallowed non-cancellation failure (generation or
     /// speech), or `nil` on a clean cycle. This is what makes the *broken* case

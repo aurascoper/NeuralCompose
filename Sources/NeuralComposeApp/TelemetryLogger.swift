@@ -20,8 +20,8 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
     private let encoder: JSONEncoder
     private let dayFormatter: DateFormatter
 
-    /// One open handle per stream prefix (`interactions`, `dialectic-turns`),
-    /// each rotating daily. Keyed so the two streams never share a file.
+    /// One open handle per stream prefix (`interactions`, `dialectic-turns`,
+    /// `spoken-trace`), each rotating daily. Keyed so the streams never share a file.
     private var streams: [String: (day: String, handle: FileHandle)] = [:]
 
     public init(directory: URL) {

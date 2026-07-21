@@ -742,9 +742,21 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         // Per-cycle trace (input→output + the signal-quality knobs) to
         // `spoken-trace-<day>.jsonl`, gated on the same interaction-log opt-in as
         // dialectic turns; off ⇒ NullSpokenGenerationTraceLogger (records nothing).
-        let tracer: any SpokenGenerationTraceLogging =
-            (interactionLoggingEnabled ? (interactionLogger as? any SpokenGenerationTraceLogging) : nil)
-            ?? NullSpokenGenerationTraceLogger()
+        let tracer: any SpokenGenerationTraceLogging
+        if interactionLoggingEnabled {
+            if let sink = interactionLogger as? any SpokenGenerationTraceLogging {
+                tracer = sink
+            } else {
+                // Enabled, but the injected logger can't take spoken traces — make
+                // the no-op VISIBLE rather than silently dropping the stream (the
+                // exact silent-failure class this trace exists to eliminate).
+                BCILog.pipeline.notice(
+                    "interaction logging enabled but the injected logger does not support spoken-generation traces — spoken-trace stream disabled")
+                tracer = NullSpokenGenerationTraceLogger()
+            }
+        } else {
+            tracer = NullSpokenGenerationTraceLogger()
+        }
         let loop = SpokenGenerationLoop(
             generator: container.predictorResolved.generator,
             speaker: voiceOutput,

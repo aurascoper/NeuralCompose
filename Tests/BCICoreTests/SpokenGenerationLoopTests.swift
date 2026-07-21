@@ -39,6 +39,15 @@ final class SpokenGenerationLoopTests: XCTestCase {
     }
     private enum BoomError: Error { case boom }
 
+    /// Throws on every utterance — models a speech failure *after* generation
+    /// already succeeded, so `spoke` must stay false while `generated` is captured.
+    private struct BoomSpeaker: SpeechSynthesizing {
+        nonisolated let isLive = false
+        nonisolated let voiceIdentifier = "boom-voice"
+        func speak(_ text: String) async throws { throw BoomError.boom }
+        func stopSpeaking() async {}
+    }
+
     /// Accumulates every per-cycle trace event the loop emits.
     private actor SpyTraceLogger: SpokenGenerationTraceLogging {
         private(set) var events: [SpokenGenerationTraceEvent] = []
@@ -198,5 +207,29 @@ final class SpokenGenerationLoopTests: XCTestCase {
         XCTAssertFalse(first.spoke, "nothing was voiced on a failed cycle")
         let spokenCount = await speaker.spoken.count
         XCTAssertEqual(spokenCount, 0, "a broken generator must produce no speech")
+    }
+
+    func testTraceFlagsTrackActualExecutionNotIntent() async {
+        // Generation succeeds but speech throws. The flags must reflect what
+        // *happened*, not what was attempted: `generated` is captured (generation
+        // ran), but `spoke` is false (nothing voiced to completion) and `error` is
+        // set. A trace claiming spoke=true here would undercut the whole diagnostic.
+        let tracer = SpyTraceLogger()
+        let loop = SpokenGenerationLoop(
+            generator: SpyGenerator(response: "a full sentence"),
+            speaker: BoomSpeaker(),
+            adaptationProvider: { .raw }, config: fastConfig(), tracer: tracer)
+        await loop.start()
+        _ = await poll { await tracer.events.count >= 1 }
+        await loop.stop()
+
+        let events = await tracer.events
+        XCTAssertGreaterThanOrEqual(events.count, 1)
+        let first = events[0]
+        XCTAssertEqual(first.generated, "a full sentence",
+                       "generation succeeded, so generated must be captured")
+        XCTAssertFalse(first.spoke, "speech threw, so nothing was voiced to completion")
+        XCTAssertNotNil(first.error, "the speech failure must be surfaced on the trace")
+        XCTAssertTrue(first.error?.contains("boom") ?? false)
     }
 }
