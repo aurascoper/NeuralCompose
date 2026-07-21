@@ -27,15 +27,15 @@
   ],
   "durationSeconds" : 304.55078125,
   "intentCounts" : {
-    "jawClench" : 79,
-    "select" : 224
+    "jawClench" : 109,
+    "select" : 194
   },
-  "meanConfidence" : 0.9216933,
+  "meanConfidence" : 0.91562957,
   "sampleCount" : 77966,
   "sampleRate" : 256,
   "sceneCheckpoints" : [
     {
-      "edgeIntensity" : 0.25125003,
+      "edgeIntensity" : 0.24380404,
       "edgeTintDescription" : "1.00,0.55,0.25",
       "label" : "25%",
       "nodeBrightness" : {
@@ -46,7 +46,7 @@
       }
     },
     {
-      "edgeIntensity" : 0.41609064,
+      "edgeIntensity" : 0.40438184,
       "edgeTintDescription" : "1.00,0.85,0.20",
       "label" : "50%",
       "nodeBrightness" : {
@@ -57,7 +57,7 @@
       }
     },
     {
-      "edgeIntensity" : 0.5399692,
+      "edgeIntensity" : 0.53150964,
       "edgeTintDescription" : "1.00,0.85,0.20",
       "label" : "75%",
       "nodeBrightness" : {
@@ -68,7 +68,7 @@
       }
     },
     {
-      "edgeIntensity" : 0.62947154,
+      "edgeIntensity" : 0.62335944,
       "edgeTintDescription" : "1.00,0.85,0.20",
       "label" : "100%",
       "nodeBrightness" : {

@@ -1,0 +1,39 @@
+{
+  "seed_id": "001",
+  "part": "architecture",
+  "content_version": 1,
+  "architecture_version": "2026-07-19",
+  "field_version": "v1 implemented; v2 (fieldEnergy) spec-only — Sources/BCICore/Dialectic/FIELD_V2.md",
+  "modules": [
+    {"name": "BCICore", "role": "pure-Swift models, protocols, ring buffer, intent FSM, and the dialectic engine (Sources/BCICore/Dialectic/). No third-party deps."},
+    {"name": "BCIEEG", "role": "EEG streams: BrainFlow facade + synthetic + playback; supervisor retry/backoff -> synthetic fallback."},
+    {"name": "BCIClassifier", "role": "Core ML intent classifier (ANE-preferred) + mock; CoreMLSentenceEmbedder (BGE-small-en-v1.5)."},
+    {"name": "BCILLM", "role": "ISOLATED MLX adapter: next-word predictor, tokenizer, spectral-state estimator. The ONLY MLX-importing target."},
+    {"name": "BCIVoice", "role": "on-device STT (Speech.framework) + AVSpeechSynthesizer TTS."},
+    {"name": "BCICloudBridge", "role": "the ONE network-egress module: ClaudeCLIGenerator (claude -p, Sonnet 5, no API key). Must never be a dependency of any BCI* target."},
+    {"name": "NeuralComposeApp", "role": "SwiftUI app; AppContainer composition root; AppViewModel."},
+    {"name": "WorldModelDemo", "role": "synthetic-task JEPA+MPC research demo, decoupled from the EEG pipeline."}
+  ],
+  "invariants": [
+    "MLX isolation: import MLX only in BCILLM — one runtime copy in the linked binary.",
+    "No network at runtime EXCEPT BCICloudBridge/ClaudeCLIGenerator, used only by the opt-in Stage-5 hypnagogic loop (decision_registry entry 8).",
+    "Stub-by-default: missing model -> mock, missing weights -> stub, bridge stub -> synthetic EEG; the privacy banner reflects the active path.",
+    "App talks to subsystems through BCICore protocols only.",
+    "Strict concurrency + ExistentialAny enabled on every target.",
+    "SpectralState is a heuristic gloss/bias, never a cognitive decode — 4-ch Muse cannot support mental-state claims.",
+    "Track A (jaw/blink/rest carousel + dwell-select) is the only supported typing path; Track B (imagined speech) is experimental and pre-registration-gated."
+  ],
+  "public_api_seams": [
+    {"protocol": "TextGenerating", "file": "Sources/BCICore/Protocols/TextGenerating.swift", "conformers": ["ClaudeCLIGenerator (Sonnet 5, cloud)", "MLXNextWordPredictor / StubNextWordPredictor (on-device)"]},
+    {"protocol": "SpeechSynthesizing", "file": "Sources/BCICore/Protocols/SpeechSynthesizing.swift", "conformers": ["AVSpeechSynthesizerService", "StubSpeechSynthesizer"]},
+    {"protocol": "SentenceEmbedder", "conformers": ["CoreMLSentenceEmbedder (BGE-small-en-v1.5, dim 384)", "DeterministicSentenceEmbedder (stub)"]},
+    {"protocol": "HypnagogicRunnable", "file": "Sources/BCICore/Composition/HypnagogicRunnable.swift", "conformers": ["HypnagogicDialogueLoop (mirror)", "HypnagogicDialecticLoop (dialectical)"]}
+  ],
+  "dialectic_engine": {
+    "location": "Sources/BCICore/Dialectic/ + Composition/HypnagogicDialecticLoop.swift",
+    "axes": "InteractionStyle{mirror,dialectical} x ContextProfile{focused,reflective,contemplative}",
+    "per_turn": "two DialecticalRoles generate -> embed -> score(coherence/resonance/novelty) -> compete (tension-sharpened softmax, injected RNG) -> spoke | silent | synthesized; two clocks: SpectralGloss (fast EMA) biases DialecticalField (slow inertia), combined only inside compete.",
+    "registers": "WAKING role set (DialecticalRole.wakingRoles) + ClaudeCLIGenerator.wakingDialecticalSystemPrompt for the three current (waking) profiles; the sleep-mirror roles + hypnagogicSystemPrompt are reserved for the future wind-down / hypnagogic / dream rungs.",
+    "telemetry": "opt-in DialecticalTurnEvent -> ~/Documents/NeuralCompose/InteractionLogs/dialectic-turns-<day>.jsonl"
+  }
+}

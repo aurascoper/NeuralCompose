@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    # macos-26 → Xcode 26 → Swift 6.3.x, matching the developer toolchain.
+    # macos-15's Swift 6.1.2 had over-eager region-based-isolation diagnostics
+    # (false-positive "sending 'self' risks causing data races" on @MainActor
+    # Sendable types, e.g. AppViewModel's detached pipeline tasks) that Swift 6.2
+    # relaxed. It fails to build correct code that Xcode 26 accepts. The Swift
+    # version guard below fails fast if the runner ever regresses.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: |
+          swift --version
+          # This package builds under Swift 6.2+ (Xcode 26+). Fail fast and
+          # legibly if the runner regresses to an older toolchain, whose
+          # region-isolation false-positives would otherwise surface as a wall
+          # of confusing "sending 'self'" build errors.
+          swift --version 2>&1 | grep -qE "Swift version (6\.[2-9]|[7-9]\.)" \
+            || { echo "::error::Need Swift 6.2+ (Xcode 26+); this runner has an older toolchain"; exit 1; }
+
+      # GoldenRecordingRegressionTests skips silently if its fixture is absent,
+      # which would let the suite "pass" vacuously (README advertises this
+      # regression). Fail CI if the committed fixture ever goes missing.
+      - name: Assert golden fixture is present
+        run: |
+          test -f Tests/BCIEEGTests/Fixtures/reference_pipeline.json \
+            || { echo "::error::Golden fixture missing — GoldenRecordingRegressionTests would skip vacuously"; exit 1; }
+
+      # Compiles every target (incl. BCILLM's MLX Metal kernels via the runner's
+      # full Xcode) — the primary gate that the whole graph builds.
+      - name: Build (all targets)
+        run: swift build
+
+      # Run the deterministic stub/mock/pure suites only: headless runners have
+      # no GPU (so MLX .eval() would fault), no `claude` CLI (network egress),
+      # no Core ML models, and no live EEG hardware. BCIEEGTests includes the
+      # golden-recording + BGE-replay regressions against the committed fixtures.
+      # The MLX-eval, egress-smoke, and hardware paths stay local-only.
+      - name: Test (deterministic suites)
+        run: |
+          swift test \
+            --filter BCICoreTests \
+            --filter BCIClassifierTests \
+            --filter BCIEEGTests \
+            --filter BCICloudBridgeTests \
+            --filter BCIVoiceTests \
+            --filter AsyncTimeout \
+            --skip MindMonitorOSCStreamTests
+        # MindMonitorOSCStreamTests binds a real UDP socket on a FIXED high port
+        # (57182–57186, 0.0.0.0) and waits on a 1–3s stale watchdog — a genuine
+        # collision/flake risk on a headless runner. The OSC *decode* logic is
+        # covered socket-free by MuseOSCDecoderTests / MindMonitorDecoderTests,
+        # which still run. Run the socket integration test locally.

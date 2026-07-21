@@ -111,7 +111,12 @@ public actor SpokenGenerationLoop {
                 try Task.checkCancellation()
                 let spoken = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !spoken.isEmpty {
-                    try await speaker.speak(spoken)   // suspends until the utterance ends
+                    // Confidence-wobbled prosody + sentence-boundary pauses, not
+                    // one flat prosody-less utterance (the old robotic path):
+                    // hedged clauses softer/slower, committed ones firmer.
+                    for (phrase, prosody) in ProsodyWobble.plan(spoken) {
+                        try await speaker.speak(phrase, prosody: prosody, onWord: nil)
+                    }
                 }
             } catch is CancellationError {
                 return

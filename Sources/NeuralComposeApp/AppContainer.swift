@@ -26,6 +26,11 @@ public struct AppContainer: Sendable {
     /// dependency-free deterministic stub; test-overridable like everything
     /// else here.
     public let sentenceEmbedder: any SentenceEmbedder
+    /// The resolved sentence-embedder backend ("coreml" | "stub"). The embedder
+    /// protocol carries no kind of its own, so we capture it here for the health
+    /// watchdog: a stub embedder silently degrades both the dialectic scoring
+    /// AND the spectral estimator's honesty gate.
+    public let sentenceEmbedderKind: String
     /// Milestone B state source — real MLX-backed if `Models/EEGEncoder/`
     /// resolves and its anchor space is trusted, stub otherwise. Resolved
     /// *after* `sentenceEmbedder` in `makeDefault()`: the estimator needs
@@ -97,6 +102,7 @@ public struct AppContainer: Sendable {
         windowingConfig: EEGWindowingConfig,
         smootherConfig: IntentSmoother.Config = .init(),
         sentenceEmbedder: any SentenceEmbedder = DeterministicSentenceEmbedder(),
+        sentenceEmbedderKind: String = "stub",
         spectralEstimatorResolved: SpectralStateEstimatorFactory.Resolved = .init(
             estimator: StubSpectralStateEstimator(), kind: .stub, warning: nil
         ),
@@ -116,6 +122,7 @@ public struct AppContainer: Sendable {
         self.windowingConfig = windowingConfig
         self.smootherConfig = smootherConfig
         self.sentenceEmbedder = sentenceEmbedder
+        self.sentenceEmbedderKind = sentenceEmbedderKind
         self.spectralEstimatorResolved = spectralEstimatorResolved
         self.interactionLogger = interactionLogger
         self.jepaTransitionCapture = jepaTransitionCapture
@@ -133,7 +140,30 @@ public struct AppContainer: Sendable {
         let classifier = ClassifierFactory.live()
         let predictor = await PredictorFactory.live()
         BCILog.predictor.notice("predictor backend: \(predictor.kind.rawValue, privacy: .public)")
-        let voiceOutput = VoiceOutputFactory.live()
+        // Persisted voice preferences (~/Documents/NeuralCompose/voice-profile.json,
+        // written by Scripts/voice-profile.py) OVERRIDE the env vars, so the chosen
+        // Personal Voice persists across launches without any flags.
+        let voiceProfile = VoiceProfile.loadDefault()
+        let usePersonalVoice = voiceProfile?.usePersonalVoice
+            ?? (ProcessInfo.processInfo.environment["NEURALCOMPOSE_PERSONAL_VOICE"] == "1")
+        // Personal Voice is opt-in. Personal voices appear in speechVoices() only
+        // AFTER authorization is established in THIS process, so we AWAIT it BEFORE
+        // resolving the synthesizer's voice — otherwise selection runs first (at
+        // construction) and always misses the personal voice. After the one-time
+        // system grant this returns immediately (no prompt); only the first grant
+        // blocks on the user, and only for the bundled app (a no-bundle `swift run`
+        // can't present the prompt). The grant is cdhash-pinned — sign with
+        // Scripts/sign-app-local.sh to persist it across rebuilds.
+        if usePersonalVoice {
+            let granted = await AVSpeechSynthesizerService.requestPersonalVoiceAuthorization()
+            BCILog.voice.notice("personal voice authorization: \(granted ? "granted" : "not granted", privacy: .public)")
+        }
+        // Voice auto-selects the best voice (Personal → Premium/Enhanced → compact);
+        // the profile's voiceIdentifier, else NEURALCOMPOSE_VOICE_ID, pins one.
+        let voiceIdentifier = voiceProfile?.voiceIdentifier
+            ?? ProcessInfo.processInfo.environment["NEURALCOMPOSE_VOICE_ID"]
+        let voiceOutput = VoiceOutputFactory.live(voiceIdentifier: voiceIdentifier)
+        BCILog.voice.notice("voice output resolved: \(voiceOutput.synthesizer.voiceIdentifier, privacy: .public)")
         let voiceInput = VoiceInputFactory.live()
         // The voice command recognizer is constructed with a
         // parser closure that wraps `FuzzyCommandRecognizer`
@@ -165,6 +195,12 @@ public struct AppContainer: Sendable {
         } catch {
             sentenceEmbedder = DeterministicSentenceEmbedder()
             sentenceEmbedderBackend = "stub"
+            // Surface *why* we stubbed. Without this the only signal is
+            // `embedder-stub` in health.json with no cause — which is exactly how
+            // a missing model dir (Models/* is gitignored) or a load-time
+            // .mlpackage compile failure stays a mystery. The banner still just
+            // says "stub"; this line is for the log.
+            BCILog.embedding.notice("CoreML sentence embedder unavailable, using stub: \(error.localizedDescription, privacy: .public)")
         }
         BCILog.embedding.notice("sentenceEmbedder backend: \(sentenceEmbedderBackend, privacy: .public)")
 
@@ -196,6 +232,7 @@ public struct AppContainer: Sendable {
             metrics: metrics,
             windowingConfig: windowingConfig,
             sentenceEmbedder: sentenceEmbedder,
+            sentenceEmbedderKind: sentenceEmbedderBackend,
             spectralEstimatorResolved: spectralEstimator,
             interactionLogger: interactionLogger,
             jepaTransitionCapture: jepaTransitionCapture,

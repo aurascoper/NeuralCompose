@@ -18,6 +18,11 @@ struct NeuralComposeAppEntry: App {
                 }
             }
             .frame(minWidth: 640, minHeight: 420)
+            // Siri Shortcuts / automation entry point: `open neuralcompose://…`
+            // (see URLCommand). Fires here whether the app was already running or
+            // cold-launched by the URL; AppLoader queues it if the pipeline is
+            // still loading.
+            .onOpenURL { loader.handle($0) }
         }
         .windowResizability(.contentSize)
         .commands {
@@ -101,6 +106,10 @@ final class AppLoader: ObservableObject {
     /// control surface.
     @Published var dispatcher: AppCommandDispatcher?
 
+    /// A `neuralcompose://` command that arrived before the pipeline finished
+    /// loading (cold-start launch by URL). Replayed once `load()` completes.
+    private var pendingURLCommand: URLCommand?
+
     func load() async {
         let container = await AppContainer.makeDefault()
         let vm = AppViewModel(container: container)
@@ -114,6 +123,35 @@ final class AppLoader: ObservableObject {
         vm.commandDispatcher = disp
         self.viewModel = vm
         self.dispatcher = disp
+        if let pending = pendingURLCommand {
+            pendingURLCommand = nil
+            await run(pending)
+        }
+    }
+
+    /// Route an incoming `neuralcompose://` URL into the app. Runs immediately if
+    /// the pipeline is up; otherwise queues it for when `load()` finishes, so a
+    /// cold-start `open neuralcompose://…` still speaks. Unrecognized URLs are ignored.
+    func handle(_ url: URL) {
+        guard let command = URLCommand.parse(url) else {
+            // A mistyped/unknown neuralcompose:// URL (e.g. a Shortcut typo) would
+            // otherwise vanish with no audio and no trace — leave a log breadcrumb.
+            BCILog.voice.notice("ignored unrecognized URL: \(url.absoluteString, privacy: .public)")
+            return
+        }
+        if viewModel != nil, dispatcher != nil {
+            Task { await run(command) }
+        } else {
+            pendingURLCommand = command
+        }
+    }
+
+    private func run(_ command: URLCommand) async {
+        switch command {
+        case .speakComposed:     await dispatcher?.perform(.speak)
+        case .speak(let text):   await viewModel?.speak(text: text)
+        case .dispatch(let cmd): await dispatcher?.perform(cmd)
+        }
     }
 }
 

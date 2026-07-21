@@ -15,13 +15,14 @@ import BCICore
 /// Files rotate daily (`interactions-<yyyy-MM-dd>.jsonl`), mirroring the
 /// dated-session convention `Recordings/night-<date>/` already uses, so no
 /// single file grows unbounded across a long-running install.
-public actor TelemetryLogger: InteractionLogging {
+public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging {
     private let directory: URL
     private let encoder: JSONEncoder
     private let dayFormatter: DateFormatter
 
-    private var openDay: String?
-    private var fileHandle: FileHandle?
+    /// One open handle per stream prefix (`interactions`, `dialectic-turns`),
+    /// each rotating daily. Keyed so the two streams never share a file.
+    private var streams: [String: (day: String, handle: FileHandle)] = [:]
 
     public init(directory: URL) {
         self.directory = directory
@@ -43,9 +44,22 @@ public actor TelemetryLogger: InteractionLogging {
     }
 
     public func log(_ event: TelemetryEvent) async {
-        let day = dayFormatter.string(from: event.timestamp)
+        write(event, prefix: "interactions",
+              day: dayFormatter.string(from: event.timestamp), id: event.eventId.uuidString)
+    }
+
+    /// Dialectic-turn records go to their own `dialectic-turns-<day>.jsonl`
+    /// stream, keeping the schema parallel to (never mixed with) word-commit
+    /// telemetry. `DialecticalTurnEvent` carries no timestamp, so the day is
+    /// stamped at write time.
+    public func log(_ event: DialecticalTurnEvent) async {
+        write(event, prefix: "dialectic-turns",
+              day: dayFormatter.string(from: Date()), id: "turn-\(event.index)")
+    }
+
+    private func write<E: Encodable>(_ event: E, prefix: String, day: String, id: String) {
         do {
-            let handle = try fileHandle(for: day)
+            let handle = try fileHandle(prefix: prefix, day: day)
             var data = try encoder.encode(event)
             data.append(0x0A) // newline
             // `write(contentsOf:)`, not `write(_:)` — the latter raises an
@@ -54,26 +68,25 @@ public actor TelemetryLogger: InteractionLogging {
             // catch block could not actually intercept.
             try handle.write(contentsOf: data)
         } catch {
-            BCILog.telemetry.error("TelemetryLogger: failed to write event \(event.eventId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            BCILog.telemetry.error("TelemetryLogger: failed to write \(prefix, privacy: .public) event \(id, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
 
-    /// Returns the currently-open handle if `day` matches, otherwise closes
-    /// any prior handle and opens (creating if needed) `day`'s file.
-    private func fileHandle(for day: String) throws -> FileHandle {
-        if let fileHandle, openDay == day {
-            return fileHandle
+    /// Returns the open handle for `prefix` if its day matches, otherwise closes
+    /// any prior handle for that stream and opens (creating if needed) the file.
+    private func fileHandle(prefix: String, day: String) throws -> FileHandle {
+        if let existing = streams[prefix], existing.day == day {
+            return existing.handle
         }
-        fileHandle?.closeFile()
+        streams[prefix]?.handle.closeFile()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let fileURL = directory.appendingPathComponent("interactions-\(day).jsonl")
+        let fileURL = directory.appendingPathComponent("\(prefix)-\(day).jsonl")
         if !FileManager.default.fileExists(atPath: fileURL.path) {
             FileManager.default.createFile(atPath: fileURL.path, contents: nil)
         }
         let handle = try FileHandle(forWritingTo: fileURL)
         handle.seekToEndOfFile()
-        self.fileHandle = handle
-        self.openDay = day
+        streams[prefix] = (day, handle)
         return handle
     }
 }

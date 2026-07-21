@@ -1,0 +1,53 @@
+{
+  "seed_id": "001",
+  "part": "runtime",
+  "content_version": 2,
+  "interaction_style": "dialectical",
+  "context_profile": "focused",
+  "outstanding_todos": [
+    "Run the live Focused+Dialectical session on the Muse S, then `Scripts/session-seed.py refresh 001` to fold in the telemetry.",
+    "Characterize the waking baseline dynamics (silence rate, synthesis rate, drift, Reflective-vs-Focused) before promoting any sleep-mode rung.",
+    "Consider waking variants for the silence-cue text and config.prosody (both currently hypnagogic).",
+    "Decide the DialecticalField.target() default calibration."
+  ],
+  "current_failures": [],
+  "known_risks": [
+    "Live EEG bias only reaches the gloss with a --with-brainflow build + the real MLX estimator + seated TP9/AF7/AF8/TP10; otherwise glossScalar is a constant 0.5 (text-only, no EEG influence).",
+    "Two Sonnet-5 cloud calls per turn while active (transcript text egress only); the privacy banner must show it.",
+    "ClaudeCLIGenerator inherits the working directory's context (picks up CLAUDE.md when launched from the repo dir)."
+  ],
+  "benchmarks": {
+    "sonnet5_runtime_smoke": "PASS \u2014 dialectic-smoke returned lucid, oppositional waking candidates for both roles",
+    "test_suite": "164 tests, 0 failures (BCICore + BCICloudBridge + BCIVoice)",
+    "brainflow_build": "PASS \u2014 .build/debug/NeuralCompose links libBoardController; brainflow-linked marker present"
+  },
+  "next_experiment": "Focused+Dialectical live on the Muse S: confirm glossScalar variance > 0 (live-EEG-influence) and inspect the spoke/silent/synthesized distribution; then compare Reflective vs Focused on the same input.",
+  "generated_from": {
+    "git": {
+      "branch": "feature/spoken-generation-loop",
+      "head": "0d618a1",
+      "head_subject": "docs(dialectic): specify Field v2 order parameter",
+      "recent": [
+        "0d618a1 docs(dialectic): specify Field v2 order parameter",
+        "51ad953 docs(dialectic): document InteractionStyle \u00d7 ContextProfile",
+        "1f2d1f7 refactor(dialectic): split HypnagogicMode into InteractionStyle \u00d7 ContextProfile",
+        "b926ef7 feat(dialectic): ContextProfile behavioral presets",
+        "e66f640 docs(dialectic): architecture + mathematics for the dialectic mode",
+        "8d1eee2 feat(dialectic): opt-in turn telemetry + Hypnagogic mode UI",
+        "fa1cbee feat(dialectic): SpectralState wind on a separate slow clock",
+        "abd37ea feat(dialectic): couple prosody to the competition"
+      ],
+      "dirty_tracked": true
+    },
+    "telemetry": {
+      "source_file": null,
+      "turns": 0,
+      "outcomes": {},
+      "mean_tension": null,
+      "gloss_mean": null,
+      "gloss_variance": null,
+      "gloss_distinct_values": 0,
+      "live_eeg_influence": false
+    }
+  }
+}

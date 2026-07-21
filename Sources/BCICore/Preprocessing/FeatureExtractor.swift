@@ -41,8 +41,15 @@ public struct EEGFeatures: Sendable, Hashable {
 public enum FeatureExtractor {
 
     public static func features(for window: EEGWindow) -> EEGFeatures {
-        let rms  = window.samples.map(rmsOf)
-        let zcs  = window.samples.map(zeroCrossingsOf)
+        // Real EEG carries a large per-channel DC baseline (Muse ~800µV) that
+        // synthetic data never had. Remove it per channel so RMS reflects signal
+        // amplitude and zero-crossings actually cross zero (an always-positive
+        // DC-offset signal never crosses, giving a bogus count of 0). Band
+        // energies use lag-differencing, which already cancels a constant offset,
+        // so they read the raw window unchanged.
+        let centered = window.samples.map(demeaned)
+        let rms  = centered.map(rmsOf)
+        let zcs  = centered.map(zeroCrossingsOf)
         let bands = bandEnergies(window: window)
         return EEGFeatures(
             rmsByChannel: rms,
@@ -53,6 +60,17 @@ public enum FeatureExtractor {
             betaEnergy: bands.beta,
             emgEnergy: bands.emg
         )
+    }
+
+    /// Subtract the per-channel mean (DC baseline). Real EEG sources carry a
+    /// large constant offset (Muse ~800µV) that swamps amplitude-based features;
+    /// synthetic data is already ~0-mean, so this is a no-op there.
+    private static func demeaned(_ x: [Float]) -> [Float] {
+        guard !x.isEmpty else { return x }
+        var sum: Double = 0
+        for v in x { sum += Double(v) }
+        let mean = Float(sum / Double(x.count))
+        return x.map { $0 - mean }
     }
 
     private static func rmsOf(_ x: [Float]) -> Float {

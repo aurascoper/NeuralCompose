@@ -1,0 +1,60 @@
+{
+  "seed_id": "001",
+  "part": "research",
+  "content_version": 1,
+  "open_hypotheses": [
+    {
+      "id": "waking-dynamics-baseline",
+      "status": "OPEN — this session's target",
+      "claim": "Before any sleep-mode rung, the waking dialectic's own dynamics must be characterized: does silence emerge naturally (not never / not always)? does synthesis fire at a sane rate? does semantic drift stabilize rather than run away? does Reflective actually feel different from Focused?",
+      "measured_from": "dialectic-turns-<day>.jsonl outcome distribution, mean tension, glossScalar variance"
+    },
+    {
+      "id": "field-energy",
+      "status": "spec-only (FIELD_V2.md)",
+      "claim": "A latent order parameter — the dialogue's capacity to keep transforming itself — can modulate tau / silence+synthesis thresholds / field weights WITHOUT overloading the candidate scoring equation.",
+      "gate": "implement Stage A only after v1 accumulates real interaction experience; Stage A must keep Reflective == current defaults"
+    },
+    {
+      "id": "phase",
+      "status": "named, unspecified (Stage B)",
+      "claim": "A second order parameter for divergence<->convergence; deliberately left unspecified to avoid optimizing for something never observed."
+    },
+    {
+      "id": "profiles-as-initial-conditions",
+      "status": "partial (v1 presets exist; continuous FieldPreset is v2)",
+      "claim": "Focused / Reflective / Contemplative are coordinates in one dynamical system, not different algorithms."
+    }
+  ],
+  "accepted_decisions": [
+    "Sonnet 5 (claude-cli, no API key) is the app runtime generator — chosen for auth/ops (decision_registry entry 7). VALIDATED this session via the dialectic-smoke runtime check.",
+    "Structured non-determinism: a tension-sharpened softmax sampled with an injected RNG (bifurcation), not unconstrained randomness — the probabilities evolve, not the seed.",
+    "Synthesis = reconciliation (min-sim to both poles), not the geometrically impossible 'far from both yet explains both'.",
+    "Tension is symmetric, so it modulates tau / prosody / synthesis-gate / prompts — never a scoring term.",
+    "Two clocks combine only inside DialecticalField.target(); SpectralGloss is wind, not a steering wheel.",
+    "fieldEnergy: commit the priors (FIELD_V2.md), defer implementation.",
+    "Co-dev loop: Opus = architect/spec, Sonnet 5 = runtime + implementation agent, iterating over versioned session seeds instead of raw transcripts.",
+    "Waking mode is a distinct register: waking role prompts + waking system prompt + waking prosody, selected for the three waking profiles."
+  ],
+  "rejected_decisions": [
+    "HDE Layer-1 'EEG as a field' — not honest on the 4-ch Muse montage (no coverage over Broca's / T7); see project_track_b_imagined_speech_risk.",
+    "'Dreamer++' framing for Contemplative — it is LESS (non-elaboration, a la zazen), not more.",
+    "Mixing imagined-word labels into CalibrationLabel / IntentClass (would corrupt the Track A production model)."
+  ],
+  "pending_questions": [
+    "fieldEnergy coupling coefficients (kappa_*, delta_*, lambda_decay, rho) — empirical, tuned against observed behavior.",
+    "Do the sleepy silence-cue text and config.prosody need waking variants too? (deferred follow-up; low frequency in Focused).",
+    "ClaudeCLIGenerator inherits its working directory's context — launched from the repo it picks up CLAUDE.md. Pin/scope the cwd for the .app?",
+    "DialecticalField.target() default calibration — awaiting the user's replacement policy.",
+    "Should the mirror style get a waking prompt too, or stay the hypnagogic passive mirror?"
+  ],
+  "experiments": [
+    {
+      "id": "waking-focused-live",
+      "rung": "Focused+Dialectical",
+      "measures": ["outcome distribution (spoke/silent/synthesized)", "mean tension", "glossScalar variance (live-EEG-influence proof)"],
+      "artifact": "dialectic-turns-<day>.jsonl",
+      "run_with": "Scripts/run-dialectical-waking.sh focused"
+    }
+  ]
+}

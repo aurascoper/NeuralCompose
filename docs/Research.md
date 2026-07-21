@@ -1,8 +1,12 @@
 # Research
 
 This document describes the planned research program for the platform. It is
-the pre-registration companion to `SLEEP_CYCLE_DESIGN.md` §14. The platform
-is the engineering contribution; this is the empirical one.
+the pre-registration companion to `SLEEP_CYCLE_DESIGN.md` §14 — i.e. the plan
+for **D8**, the eighth and final module of the D1–D8 sleep-cycle design: the
+pilot human evaluation study (§14). ("D" is a design-deliverable index; "D8"
+here is **not** the BCI senses of the term — not an 8-direction pathing
+algorithm, an 8-channel electrode array, or a downsample-by-8 layer.) The
+platform is the engineering contribution; this is the empirical one.
 
 ## Research Question
 
@@ -115,7 +119,8 @@ Inter-rater reliability: Fleiss' κ.
 
 ### Exploratory
 
-- EEG spectral correlates of dream report content (e.g., does theta power during REM correlate with problem-relevance?).
+- **Aperiodic-exponent (1/f slope) correlates.** Per [`Math.md` §11.2](Math.md), the aperiodic exponent $\chi$ during N2/SWS is a literature-backed, **pre-registerable** secondary hypothesis ($\chi$ ↔ insight quality — the aperiodic slope indexes E/I balance and varies across sleep stages), not a post-hoc theta correlation. Alpha dropout is computed aperiodic-adjusted ($r_\alpha^{\mathrm{corr}}$) so a broadband 1/f shift does not masquerade as an alpha change.
+- **Automated novelty ($N_{\mathrm{PR}}$).** Per [`Math.md` §11.3](Math.md), report the participation-ratio novelty $N_{\mathrm{PR}}$ over the LLM-extracted analogy set as an automated companion to the blind human Likert (H1), and pre-register the Spearman $\rho$ between $N_{\mathrm{PR}}$-novelty and mean blind human novelty (reported beside H4's LLM–human agreement). $N_{\mathrm{PR}}$ catches paraphrastic near-loops that an exact-repeat count misses.
 - Correlation between sleep stage duration and insight quality.
 - LLM analysis accuracy vs. human rater agreement.
 
@@ -153,6 +158,7 @@ Inter-rater reliability: Fleiss' κ.
 - The sham condition still involves wearing a headband, which may affect sleep quality differently from the no-hardware control.
 - Dream reports are inherently subjective and may be influenced by demand characteristics.
 - The LLM in the loop is a moving target; the system used at study start is not the system used at study end. Document the model version per session.
+- **Cross-representation (EEG ↔ language) alignment is not analyzed at pilot N.** Per [`Math.md` §11.4](Math.md), with N ≈ 20–30 matched pairs and embedding dimension in the hundreds we are in the $n \not\gg d$ regime where CKA/SVCCA are unreliable; the EEG-latent ↔ solution-embedding coupling analysis is deferred to the definitive trial, or run only after reducing each space to $k \ll n$ dimensions (SVCCA $\tau$-truncation). Both Procrustes variants (scaled, orthogonal) are reported when it is run — they are not interchangeable.
 
 ## Open Research Questions Beyond D8
 

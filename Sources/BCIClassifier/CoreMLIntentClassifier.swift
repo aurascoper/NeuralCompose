@@ -150,14 +150,22 @@ public final class CoreMLIntentClassifier: IntentClassifying, @unchecked Sendabl
         var distribution: [IntentClass: Float] = [:]
         var maxIntent: IntentClass = .rest
         var maxValue: Float = -.infinity
-        // Softmax. If the model already emits probabilities, this is a no-op
-        // up to numeric noise.
+        // Softmax with max-subtraction for numerical stability. The model is a
+        // bare `nn.Linear` (train-intent-classifier.py) emitting RAW logits under
+        // CrossEntropyLoss, and the Python server softmaxes as
+        // exp(logits - max(logits)). Without the max-subtraction, a strong gesture
+        // can produce a logit ≳ 88 that overflows expf to +inf → sum = inf →
+        // argmax = inf/inf = NaN → the *clearest* intents silently return the
+        // wrong class at confidence 0. Subtract the max first, matching the ref.
+        var logits: [Float] = []
+        logits.reserveCapacity(classes.count)
+        for i in 0..<classes.count { logits.append(output[i].floatValue) }
+        let maxLogit = logits.max() ?? 0
         var exps: [Float] = []
         exps.reserveCapacity(classes.count)
         var sum: Float = 0
-        for i in 0..<classes.count {
-            let v = output[i].floatValue
-            let e = expf(v)
+        for v in logits {
+            let e = expf(v - maxLogit)
             exps.append(e)
             sum += e
         }

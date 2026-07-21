@@ -190,6 +190,35 @@ public final class NeuralWorkspaceView: NSView {
     /// electrode placement with unrelated embedding data.
     private var embeddingNode: SCNNode!
 
+    // MARK: - Concept-node pool (Stage 1c)
+    //
+    // A bounded "resource budget" of concept nodes — one per voiced dialectic
+    // utterance (`SpokenNodeEvent.nodeID`). Each is placed by projecting its
+    // embedding onto a shell (the same `embeddingProjector` as `embeddingNode`,
+    // just a larger radius so the cloud surrounds the marker) and carries a
+    // brightness scalar that decays every frame in `recompute()` and
+    // re-brightens on its word's spoken event — so the dialectic's speech is
+    // grounded in a spatial-semantic referent, not prosody alone. Additive and
+    // diagnostic: the view renders fine with no dialectic bound, and nothing
+    // here can affect composition or the FSM/carousel path. Purely on-device.
+
+    private struct ConceptNode {
+        let node: SCNNode
+        let embedding: Embedding
+        var brightness: Float   // 0…1 emissive/scale driver; decays per frame
+        var turnIndex: Int
+    }
+    private var conceptNodes: [String: ConceptNode] = [:]
+    private var spokenNodeTask: Task<Void, Never>?
+    /// Max concurrent concept nodes; the dimmest is evicted past this (the
+    /// "resource budget" reclaims the most-faded). Roughly `SemanticGraph`'s
+    /// capacity, but decay keeps only a handful bright at once, so the cap is a
+    /// rarely-hit safety bound rather than the working set.
+    public var conceptNodeCapacity: Int = 96
+    /// Per-frame multiplicative brightness decay (≈1.5 s half-life at 30 Hz):
+    /// `0.985^45 ≈ 0.5`. A word event resets the node toward 1.
+    private let conceptDecayPerFrame: Float = 0.985
+
     public enum FSMState: String {
         case idle = "Idle"
         case wake = "Wake"
@@ -226,6 +255,7 @@ public final class NeuralWorkspaceView: NSView {
         streamTask?.cancel()
         classifierStreamTask?.cancel()
         embeddingTask?.cancel()
+        spokenNodeTask?.cancel()
         // CVDisplayLink cleanup happens implicitly.
     }
 
@@ -487,6 +517,82 @@ public final class NeuralWorkspaceView: NSView {
         embeddingTask = nil
     }
 
+    /// Subscribe to a dialectic loop's spoken-node events
+    /// (`HypnagogicDialecticLoop.spokenNodeStream()`, Stage 1d wires this).
+    /// Each voiced utterance places a concept node (projected from its
+    /// embedding) and re-brightens it as its words are spoken — grounding the
+    /// voice in a spatial-semantic referent. Additive/diagnostic: nothing here
+    /// can affect composition or the FSM path. Replaces any prior subscription.
+    public func subscribeSpokenNodes(_ stream: AsyncStream<SpokenNodeEvent>) {
+        spokenNodeTask?.cancel()
+        spokenNodeTask = Task { [weak self] in
+            for await event in stream {
+                guard let self else { return }
+                self.ingestSpokenNode(event)
+            }
+        }
+    }
+
+    public func cancelSpokenNodeSubscription() {
+        spokenNodeTask?.cancel()
+        spokenNodeTask = nil
+    }
+
+    /// Place a new concept node for a spoken-node event, or re-brighten an
+    /// existing one. `word == nil` is the initial placement (create +
+    /// full-brighten); a non-nil word re-brightens the node as it is voiced.
+    /// Main-actor only (`NeuralWorkspaceView` is `@MainActor`).
+    func ingestSpokenNode(_ event: SpokenNodeEvent) {
+        if var existing = conceptNodes[event.nodeID] {
+            existing.brightness = 1.0
+            existing.turnIndex = event.turnIndex
+            conceptNodes[event.nodeID] = existing
+            return
+        }
+        guard !event.embedding.values.isEmpty else { return }
+        let geo = SCNSphere(radius: 0.006)
+        let mat = SCNMaterial()
+        mat.diffuse.contents = NSColor(white: 0.9, alpha: 1.0)
+        mat.emission.contents = Self.conceptColor(for: event.turnIndex)
+        mat.emission.intensity = 1.0
+        mat.lightingModel = .constant
+        geo.firstMaterial = mat
+        let node = SCNNode(geometry: geo)
+        node.name = "concept-\(event.nodeID)"
+        node.position = conceptShellPosition(for: event.embedding)
+        scene.rootNode.addChildNode(node)
+        conceptNodes[event.nodeID] = ConceptNode(
+            node: node, embedding: event.embedding,
+            brightness: 1.0, turnIndex: event.turnIndex)
+        evictDimmestIfNeeded()
+    }
+
+    /// Project an embedding onto a fixed-radius shell — the same JL projection
+    /// `embeddingNode` uses, at a larger radius so the concept cloud surrounds
+    /// the marker. Raw vectors are unbounded, so only the direction is used.
+    private func conceptShellPosition(for embedding: Embedding) -> SCNVector3 {
+        let projected = embeddingProjector.project(embedding.values)
+        let norm = simd_length(projected)
+        guard norm > 1e-6 else { return SCNVector3(0, 0.03, 0) }
+        let unit = projected / norm
+        let r: Float = 0.085
+        return SCNVector3(
+            CGFloat(unit.x * r),
+            CGFloat(0.03 + unit.y * r * 0.6),
+            CGFloat(unit.z * r)
+        )
+    }
+
+    /// Evict the dimmest node once the pool exceeds `conceptNodeCapacity` — the
+    /// budget reclaims the most-faded concept.
+    private func evictDimmestIfNeeded() {
+        guard conceptNodes.count > conceptNodeCapacity else { return }
+        if let dimmest = conceptNodes.min(by: { $0.value.brightness < $1.value.brightness }) {
+            dimmest.value.node.removeFromParentNode()
+            conceptNodes[dimmest.key] = nil
+        }
+    }
+
     /// Ingest a single sample. Thread-safe only on the main actor.
     public func ingest(_ sample: EEGSample) {
         // Map EEGSample.channels to the 4 electrodes in our known order:
@@ -534,6 +640,11 @@ public final class NeuralWorkspaceView: NSView {
     func testableTriggerRecompute() {
         recompute()
     }
+
+    // Concept-node pool (Stage 1c) accessors.
+    func testableConceptNodeCount() -> Int { conceptNodes.count }
+    func testableConceptBrightness(for nodeID: String) -> Float? { conceptNodes[nodeID]?.brightness }
+    func testableIngestSpokenNode(_ event: SpokenNodeEvent) { ingestSpokenNode(event) }
 
     // MARK: - Display link
 
@@ -650,6 +761,27 @@ public final class NeuralWorkspaceView: NSView {
                 )
             }
         }
+
+        // Concept-node "resource budget" (Stage 1c): decay every node's
+        // brightness each frame; a spoken-word event re-brightens it (see
+        // `subscribeSpokenNodes`). A node faded below the floor is removed — the
+        // budget reclaims it. Skipped entirely when no dialectic is bound.
+        if !conceptNodes.isEmpty {
+            for id in Array(conceptNodes.keys) {
+                guard var cn = conceptNodes[id] else { continue }
+                cn.brightness *= conceptDecayPerFrame
+                if cn.brightness < 0.02 {
+                    cn.node.removeFromParentNode()
+                    conceptNodes[id] = nil
+                    continue
+                }
+                cn.node.geometry?.firstMaterial?.emission.intensity = CGFloat(cn.brightness)
+                // Freshly-spoken nodes visibly swell; faded ones shrink to a dot.
+                let s = CGFloat(0.5 + 0.9 * cn.brightness)
+                cn.node.scale = SCNVector3(s, s, s)
+                conceptNodes[id] = cn
+            }
+        }
     }
 
     private func edgePulseForFSM() -> Float {
@@ -687,6 +819,14 @@ public final class NeuralWorkspaceView: NSView {
         case .doubleBlink: return NSColor(red: 0.3, green: 0.9, blue: 0.8, alpha: 1.0)
         case .select:      return NSColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 1.0)
         }
+    }
+
+    /// Distinct hue per utterance so concept nodes are visually separable; the
+    /// turn index rotates the hue by a large step (47 is coprime with 360, so
+    /// consecutive utterances land far apart on the wheel).
+    private static func conceptColor(for turnIndex: Int) -> NSColor {
+        let hue = CGFloat(((turnIndex * 47) % 360 + 360) % 360) / 360.0
+        return NSColor(hue: hue, saturation: 0.55, brightness: 1.0, alpha: 1.0)
     }
 
     private func bandRMS(_ x: [Double]) -> Double {

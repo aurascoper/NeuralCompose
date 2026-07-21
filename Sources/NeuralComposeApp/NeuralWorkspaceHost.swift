@@ -38,7 +38,8 @@ struct NeuralWorkspaceHost: View {
                 makeStream: { viewModel?.liveSampleStream() },
                 makeClassifierStream: { viewModel?.liveClassifierStream() },
                 embeddingProvider: { viewModel?.container.sentenceEmbedder },
-                embeddingContextProvider: { viewModel?.composedText ?? "" }
+                embeddingContextProvider: { viewModel?.composedText ?? "" },
+                makeSpokenNodeStream: { viewModel?.spokenNodeStream() }
             )
                 .background(Color(white: 0.05))
             Divider()
@@ -110,6 +111,7 @@ struct NeuralWorkspaceRepresentable: NSViewRepresentable {
     let makeClassifierStream: () -> AsyncStream<IntentPrediction>?
     let embeddingProvider: () -> (any SentenceEmbedder)?
     let embeddingContextProvider: () -> String
+    let makeSpokenNodeStream: () -> AsyncStream<SpokenNodeEvent>?
 
     /// Tracks whether the workspace has already been subscribed, matching
     /// `EEGScalpPlotterRepresentable`'s pattern in `SleepValidationView`:
@@ -147,6 +149,9 @@ struct NeuralWorkspaceRepresentable: NSViewRepresentable {
         }
         if let provider = embeddingProvider() {
             v.subscribeEmbeddings(provider: provider, contextProvider: embeddingContextProvider)
+        }
+        if let spokenNodes = makeSpokenNodeStream() {
+            v.subscribeSpokenNodes(spokenNodes)
         }
     }
 

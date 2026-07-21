@@ -39,6 +39,36 @@ public enum SignalQuality: Sendable, Equatable {
 /// unexpectedly and we are not already running synthetic, the streamTask
 /// swaps in `EEGStreamFactory.makeSynthetic()` and continues, updating
 /// `pipelineMode` so the privacy banner reflects the degraded state.
+/// The single hypnagogic interaction mode — one axis, replacing the old
+/// `InteractionStyle × ContextProfile` split. `mirror` is the plain reply
+/// (`HypnagogicDialogueLoop`, ONE cloud call/turn); `focused` / `reflective` /
+/// `contemplative` run the dialectic competition (`HypnagogicDialecticLoop`,
+/// persistent tension, non-deterministic resolution, TWO cloud calls/turn) at
+/// the matching `ContextProfile` tuning. "Dialectical" is no longer a separate
+/// toggle: choosing `reflective` — the canonical dialectical behaviour — *is*
+/// choosing dialectical.
+public enum HypnagogicMode: String, CaseIterable, Sendable, Identifiable {
+    case mirror, focused, reflective, contemplative
+    public var id: String { rawValue }
+
+    /// The dialectic tuning profile for this mode, or nil for `mirror` (the
+    /// non-competing reply loop). The non-mirror rawValues line up with
+    /// `ContextProfile`, so this is a direct lift.
+    public var profile: ContextProfile? { ContextProfile(rawValue: rawValue) }
+
+    /// Whether this mode runs the dialectic loop (two cloud calls/turn).
+    public var isDialectical: Bool { profile != nil }
+
+    public var label: String {
+        switch self {
+        case .mirror:        return "Mirror"
+        case .focused:       return "Focused"
+        case .reflective:    return "Reflective"
+        case .contemplative: return "Contemplative"
+        }
+    }
+}
+
 @MainActor
 public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
@@ -104,6 +134,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// `applyAdaptiveGeneration()` falls back to `signalQuality` in that case.
     @Published public private(set) var detectedSpectralState: SpectralState?
 
+    /// The latest app-watchdog health snapshot (nil until the pipeline starts).
+    /// Drives the degraded banner; the same snapshot is written each tick to
+    /// `~/Documents/NeuralCompose/health.json`.
+    @Published public private(set) var healthSnapshot: HealthSnapshot?
+
     /// Off by default, mirroring `adaptiveComplexityEnabled`'s opt-in shape:
     /// no interaction is logged locally until the user explicitly turns
     /// this on (see `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`).
@@ -160,6 +195,18 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public var hypnagogicLoopEnabled: Bool = false {
         didSet {
             guard oldValue != hypnagogicLoopEnabled else { return }
+            reconcileHypnagogicLoop()
+        }
+    }
+
+    /// The hypnagogic interaction mode when the loop is enabled: `mirror` (plain
+    /// reply, one cloud call/turn) or `focused` / `reflective` / `contemplative`
+    /// (the dialectic loop at that tuning, two cloud calls/turn). Changing it
+    /// while active rebuilds the loop. Defaults to the plain mirror — the
+    /// lower-egress option.
+    @Published public var hypnagogicMode: HypnagogicMode = .mirror {
+        didSet {
+            guard oldValue != hypnagogicMode, hypnagogicLoopEnabled else { return }
             reconcileHypnagogicLoop()
         }
     }
@@ -249,8 +296,17 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// generator are built lazily in `ensureHypnagogicLoopRunning` and kept OUT
     /// of the default AppContainer graph, so the network-egress path is
     /// instantiated only while the loop is enabled.
-    private var hypnagogicLoop: HypnagogicDialogueLoop?
+    private var hypnagogicLoop: (any HypnagogicRunnable)?
+    /// The mode of the currently-built loop, so a change rebuilds it.
+    private var hypnagogicLoopBuilt: HypnagogicMode?
     private var hypnagogicLoopReconcile: Task<Void, Never>?
+    /// Stable relay of the dialectic loop's spoken-node events (Stage 1d). The
+    /// 3D workspace subscribes here once at bind time, decoupled from loop
+    /// lifetime: each dialectic loop's `spokenNodeStream()` is forwarded into
+    /// this channel, so the subscription survives mode changes and rebuilds.
+    /// On-device only — nothing here leaves the machine.
+    private let spokenNodeRelay = AsyncMulticastChannel<SpokenNodeEvent>(capacity: 32)
+    private var spokenNodeForwardTask: Task<Void, Never>?
 
     // ── Per-start resources (recreated each call to start()) ─────────────
     private var composition: TextCompositionController?
@@ -279,6 +335,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private var snapshotTask: Task<Void, Never>?
     private var carouselTask: Task<Void, Never>?
     private var metricsTask: Task<Void, Never>?
+    private var healthTask: Task<Void, Never>?
+    /// Always-on watchdog file writer (health.json + health-<day>.jsonl). Not
+    /// gated by any opt-in — it records diagnostic metadata only, no transcripts.
+    private let healthLogger = HealthLogger()
 
     public init(container: AppContainer) {
         self.container = container
@@ -316,10 +376,15 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // equivalent failure path.
             self.startupWarning = w
         }
-        if let w = container.voiceOutputResolved.warning {
-            self.voiceWarning = w
-        } else if let w = container.voiceInputResolved.warning {
-            self.voiceWarning = w
+        // Route the voice-output/input launch warnings to the RENDERED
+        // startupWarning (PrivacyIndicatorView) — the same precedent this change
+        // set for the spectral estimator above. Otherwise the actionable "record a
+        // Personal Voice / install a neural voice" hint lands in `voiceWarning`,
+        // which no view binds, and never reaches the user. Don't clobber an
+        // already-set startupWarning (a classifier/predictor/spectral warning wins).
+        if self.startupWarning == nil {
+            self.startupWarning = container.voiceOutputResolved.warning
+                ?? container.voiceInputResolved.warning
         }
         if let w = container.voiceCommandResolved.warning {
             self.commandWarning = w
@@ -352,6 +417,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         self.composition = composition
         await composition.start()
         applyAdaptiveGeneration()
+        // Opt-in, default no-op: honour NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART so a
+        // scripted live run can start the loop without the UI toggle (all auth +
+        // egress-disclosure gates preserved). Fires once — start() is guarded.
+        applyHypnagogicAutostartFromEnvironment()
 
         // ── snapshots → UI (MainActor) ────────────────────────────────────
         snapshotTask = Task {
@@ -379,6 +448,34 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 if Task.isCancelled { break }
                 let snap = metricsRef.snapshot()
                 await MainActor.run { self?.metricsSnapshot = snap }
+            }
+        }
+
+        // ── health watchdog — 0.5 Hz (off-main): assemble a HealthSnapshot from
+        //    the resolved backend kinds + pipeline state + EEG throughput, write
+        //    it to health.json, and publish it for the degraded banner. Always
+        //    on; observes only, never changes runtime behaviour.
+        let healthLoggerRef = healthLogger
+        let healthStartedAt = Date()
+        let wantedProfile = (ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] ?? "synthetic").lowercased()
+        let expectedLive = wantedProfile.contains("muse") || wantedProfile.contains("athena")
+        var lastWindowCount = metricsRef.snapshot().windowing.count
+        var lastWindowAt = healthStartedAt
+        healthTask = Task.detached(priority: .utility) { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                if Task.isCancelled { break }
+                let nowWindows = metricsRef.snapshot().windowing.count
+                let now = Date()
+                let dt = max(0.001, now.timeIntervalSince(lastWindowAt))
+                let wps = Double(nowWindows &- lastWindowCount) / dt
+                lastWindowCount = nowWindows
+                lastWindowAt = now
+                guard let snap = await self?.assembleHealthSnapshot(
+                    now: now, uptime: now.timeIntervalSince(healthStartedAt),
+                    windowsPerSecond: wps, expectedLive: expectedLive) else { continue }
+                await healthLoggerRef.write(snap)
+                await MainActor.run { self?.healthSnapshot = snap }
             }
         }
 
@@ -510,7 +607,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                             }
                         } catch let bci as BCIError {
                             metrics.recordError(bci)
-                            await MainActor.run { self?.lastError = bci.description }
+                            await self?.setLastError(bci.description)
                         }
                     }
                     // Clean completion: for live, the Muse likely auto-powered
@@ -518,11 +615,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     // a clean exit means we're done.
                 } catch let bci as BCIError {
                     metrics.recordError(bci)
-                    await MainActor.run { self?.lastError = bci.description }
+                    await self?.setLastError(bci.description)
                 } catch {
                     let bci = BCIError.streamFailed(reason: error.localizedDescription)
                     metrics.recordError(bci)
-                    await MainActor.run { self?.lastError = bci.description }
+                    await self?.setLastError(bci.description)
                 }
                 await current.stream.stop()
                 if Task.isCancelled { break }
@@ -591,12 +688,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     )
                 } catch let bci as BCIError {
                     metrics.recordError(bci)
-                    await MainActor.run { self?.lastError = bci.description }
+                    await self?.setLastError(bci.description)
                     continue
                 } catch {
                     let bci = BCIError.classifierInferenceFailed(reason: error.localizedDescription)
                     metrics.recordError(bci)
-                    await MainActor.run { self?.lastError = bci.description }
+                    await self?.setLastError(bci.description)
                     continue
                 }
                 // Broadcast the raw (pre-smoothing) prediction to diagnostic
@@ -607,6 +704,15 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             }
         }
     }
+
+    /// Sets `lastError` on the main actor. Invoked from the detached pipeline
+    /// tasks via `await self?.setLastError(...)` rather than
+    /// `MainActor.run { self?.lastError = ... }` — a direct isolated-method call
+    /// hops to the main actor without tripping Swift 6 region isolation's
+    /// "sending 'self' risks causing data races" on the closure capture (the
+    /// closure would capture `self`, which the detached task also uses across
+    /// later loop iterations).
+    private func setLastError(_ description: String) { lastError = description }
 
     /// Drives `spokenLoop` toward the current toggle value, serialized through a
     /// single chained task so overlapping enable/disable events apply in order
@@ -651,6 +757,38 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         spokenLoop = nil
     }
 
+    /// Opt-in autostart override (default: no-op) for a scriptable, reproducible
+    /// hypnagogic run — the co-development loop's launch hook. Set
+    /// `NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART=<style>[:<profile>]`, e.g.
+    /// `dialectical:focused`, to enable the loop at launch WITHOUT the UI toggle.
+    /// Every existing gate still holds: enabling flows through the same
+    /// `reconcileHypnagogicLoop()` path, so the mic/speech auth prompt fires and
+    /// the red cloud-egress banner shows while active. Unset ⇒ nothing happens.
+    /// `NEURALCOMPOSE_INTERACTION_LOG=1` additionally enables local turn logging
+    /// (ADR-005) so a scripted run captures `dialectic-turns-<day>.jsonl`.
+    private func applyHypnagogicAutostartFromEnvironment() {
+        let env = ProcessInfo.processInfo.environment
+        if let log = env["NEURALCOMPOSE_INTERACTION_LOG"]?.lowercased(),
+           log == "1" || log == "true" {
+            interactionLoggingEnabled = true
+        }
+        guard let raw = env["NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART"]?
+            .trimmingCharacters(in: .whitespaces).lowercased(), !raw.isEmpty else { return }
+        // Single token: mirror | focused | reflective | contemplative. Tolerate
+        // the legacy "<style>:<profile>" form by taking the last segment
+        // (`dialectical:reflective` → `reflective`, `mirror` → `mirror`).
+        let token = String(raw.split(separator: ":").last ?? Substring(raw))
+        guard let mode = HypnagogicMode(rawValue: token) else {
+            BCILog.pipeline.notice(
+                "hypnagogic autostart: unknown mode '\(raw, privacy: .public)' (want mirror|focused|reflective|contemplative), ignoring")
+            return
+        }
+        hypnagogicMode = mode
+        BCILog.pipeline.notice(
+            "hypnagogic autostart: enabling \(mode.rawValue, privacy: .public) — cloud-egress banner shows while active")
+        hypnagogicLoopEnabled = true   // → reconcileHypnagogicLoop() (auth prompt + banner)
+    }
+
     /// Serializes hypnagogic-loop start/stop through a single chained task, same
     /// as `reconcileSpokenGenerationLoop`, so a fast toggle can't orphan a loop.
     private func reconcileHypnagogicLoop() {
@@ -672,7 +810,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// network-egress path is instantiated only when the user opts in. Requests
     /// mic + speech authorization first; if denied, flips the toggle back off.
     private func ensureHypnagogicLoopRunning() async {
-        guard hypnagogicLoop == nil else { return }
+        // Already running the requested mode? Nothing to do. A change tears the
+        // old loop down first.
+        if hypnagogicLoop != nil, hypnagogicLoopBuilt == hypnagogicMode { return }
+        await ensureHypnagogicLoopStopped()
+
         let listener = HypnagogicListener()
         let granted = await listener.requestAuthorization()
         guard granted else {
@@ -682,18 +824,116 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         // Re-check the toggle: authorization awaited, so the user may have
         // turned it back off in the meantime.
         guard hypnagogicLoopEnabled else { return }
-        let loop = HypnagogicDialogueLoop(
-            listener: listener,
-            generator: ClaudeCLIGenerator(),
-            speaker: voiceOutput
-        )
+
+        let loop: any HypnagogicRunnable
+        if let profile = hypnagogicMode.profile {
+            // Dialectical (focused/reflective/contemplative). Two cloud calls per
+            // turn (one per role). The gloss reads the current spectral state as a
+            // heuristic BIAS (never a decoder); turn logging is gated on the
+            // interaction-log opt-in, resolved at build time (toggling it mid-loop
+            // takes effect on the next rebuild).
+            //
+            // All three profiles are WAKING, so the loop runs the waking role set
+            // + a lucid waking system prompt — a coherent exchange, not sleep
+            // onset. The sleep-mirror roles/prompt stay reserved for the future
+            // wind-down / hypnagogic / dream rungs on the mode ladder.
+            let turnLogger: any DialecticalTurnLogging =
+                (interactionLoggingEnabled ? (interactionLogger as? any DialecticalTurnLogging) : nil)
+                ?? NullDialecticalTurnLogger()
+            loop = HypnagogicDialecticLoop(
+                listener: listener,
+                generator: ClaudeCLIGenerator(
+                    systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
+                ),
+                speaker: voiceOutput,
+                embedder: container.sentenceEmbedder,
+                roles: DialecticalRole.wakingRoles,
+                tuning: profile.tuning,
+                glossProvider: { [weak self] in await self?.currentSpectralGlossState() ?? nil },
+                turnLogger: turnLogger,
+                config: profile.loopConfig()
+            )
+        } else {
+            // Mirror — the plain, non-competing reply loop (one cloud call/turn).
+            loop = HypnagogicDialogueLoop(
+                listener: listener,
+                generator: ClaudeCLIGenerator(),
+                speaker: voiceOutput
+            )
+        }
         hypnagogicLoop = loop
+        hypnagogicLoopBuilt = hypnagogicMode
+        // Forward this loop's spoken-node events into the stable relay the 3D
+        // workspace subscribes to (Stage 1d). Only the dialectic loop emits
+        // them; the mirror loop leaves the relay quiet.
+        spokenNodeForwardTask?.cancel()
+        if let dialectic = loop as? HypnagogicDialecticLoop {
+            let relay = spokenNodeRelay
+            let events = dialectic.spokenNodeStream()
+            spokenNodeForwardTask = Task { for await event in events { relay.send(event) } }
+        }
         await loop.start()
     }
 
     private func ensureHypnagogicLoopStopped() async {
+        spokenNodeForwardTask?.cancel()
+        spokenNodeForwardTask = nil
         await hypnagogicLoop?.stop()
         hypnagogicLoop = nil
+        hypnagogicLoopBuilt = nil
+    }
+
+    /// The latest spectral-state gloss for the dialectic loop's fast biological
+    /// clock, read on the main actor. A heuristic bias signal, never a cognitive
+    /// read (see `SpectralState.honestyCaveat`).
+    private func currentSpectralGlossState() -> SpectralState? { detectedSpectralState }
+
+    /// Assembles a `HealthSnapshot` from the resolved backend kinds, the pipeline
+    /// mode, EEG throughput, and the dialectic loop's turn liveness. Read-only —
+    /// the watchdog observes runtime state, never changes it.
+    private func assembleHealthSnapshot(now: Date, uptime: Double,
+                                        windowsPerSecond wps: Double,
+                                        expectedLive: Bool) async -> HealthSnapshot {
+        let mode = pipelineMode
+        let estimatorKind = container.spectralEstimatorResolved.kind.rawValue
+        let embedderKind = container.sentenceEmbedderKind
+        let predictorKind = container.predictorResolved.kind.rawValue
+        let classifierKind = container.classifierResolved.kind.rawValue
+
+        var turnCount: Int?
+        var lastTurnAt: Date?
+        if let dialectic = hypnagogicLoop as? HypnagogicDialecticLoop {
+            turnCount = await dialectic.turnIndex
+            lastTurnAt = await dialectic.lastTurnAt
+        }
+        let loopRunning = hypnagogicLoop != nil
+        let secondsSinceLastTurn = lastTurnAt.map { now.timeIntervalSince($0) }
+
+        // Gloss stuck: a live MLX estimator that still produces no state while
+        // windows are flowing (past warmup) — the exact failure that hid behind
+        // glossScalar == 0.5 all night.
+        let state = detectedSpectralState
+        let glossStuck = estimatorKind == "mlx" && state == nil && wps > 0 && uptime > 8
+
+        let degraded = HealthSnapshot.degradedReasons(
+            acquisition: mode.acquisition.rawValue, expectedLive: expectedLive,
+            estimatorKind: estimatorKind, embedderKind: embedderKind,
+            predictorKind: predictorKind, classifierKind: classifierKind,
+            windowsPerSecond: wps, uptimeSeconds: uptime,
+            glossStuck: glossStuck, loopRunning: loopRunning,
+            secondsSinceLastTurn: secondsSinceLastTurn)
+
+        return HealthSnapshot(
+            timestamp: now, uptimeSeconds: uptime,
+            acquisition: mode.acquisition.rawValue, transport: mode.transport.rawValue,
+            signalQuality: signalQuality.map { String(describing: $0) }, windowsPerSecond: wps,
+            estimatorKind: estimatorKind, embedderKind: embedderKind,
+            predictorKind: predictorKind, classifierKind: classifierKind,
+            fullyLive: mode.isFullyLive, substitutionSummary: mode.substitutionSummary,
+            spectralState: state?.badgeLabel, glossStuck: glossStuck,
+            loopMode: hypnagogicLoopBuilt?.rawValue, loopRunning: loopRunning,
+            turnCount: turnCount, secondsSinceLastTurn: secondsSinceLastTurn,
+            degraded: degraded)
     }
 
     public func stop() async {
@@ -710,6 +950,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         classifyTask?.cancel(); classifyTask = nil
         carouselTask?.cancel(); carouselTask = nil
         metricsTask?.cancel();  metricsTask = nil
+        healthTask?.cancel();   healthTask = nil
         snapshotTask?.cancel(); snapshotTask = nil
 
         // Finish channels so any straggling iterators terminate cleanly.
@@ -758,6 +999,15 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// does not read from this.
     public func liveClassifierStream() -> AsyncStream<IntentPrediction> {
         classifierChannel?.subscribe() ?? AsyncStream<IntentPrediction> { $0.finish() }
+    }
+
+    /// Spoken-node events from the active dialectic loop (Stage 1d) — the
+    /// grounding signal the 3D workspace consumes to place + light concept
+    /// nodes per voiced word. A stable relay: subscribing once survives loop
+    /// mode changes and rebuilds, and stays quiet (but live) when no dialectic
+    /// is running. Diagnostic/visualization only; on-device.
+    public func spokenNodeStream() -> AsyncStream<SpokenNodeEvent> {
+        spokenNodeRelay.subscribe()
     }
 
     public func resetComposition(seed: String = "") async {
@@ -1044,11 +1294,25 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// Reads the current composed sentence aloud. Explicit-trigger only —
     /// never invoked automatically on word commit.
     public func speak() async {
-        guard !isSpeaking, !composedText.isEmpty else { return }
+        await speak(text: composedText)
+    }
+
+    /// Speaks arbitrary `text` in the resolved voice (the Personal Voice when
+    /// active) with the Stage-2 confidence-wobble. Backs the composed-sentence
+    /// path above and external triggers — the `neuralcompose://speak?text=` URL
+    /// scheme (→ a Siri Shortcut). No-ops on empty text or while already speaking.
+    public func speak(text: String) async {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isSpeaking, !text.isEmpty else { return }
         isSpeaking = true
         defer { isSpeaking = false }
         do {
-            try await voiceOutput.speak(composedText)
+            // Phrase-by-phrase confidence-*wobbled* prosody (Stage 2): hedged
+            // clauses softer/slower/rising, committed ones firmer/falling, so the
+            // voice doesn't land every clause identically (the robotic tell).
+            for (phrase, prosody) in ProsodyWobble.plan(text) {
+                try await voiceOutput.speak(phrase, prosody: prosody, onWord: nil)
+            }
         } catch {
             voiceWarning = "Speech failed: \(error.localizedDescription)"
         }
@@ -1139,8 +1403,16 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         for ch in window.samples {
             let n = Float(ch.count)
             if n == 0 { continue }
+            // Real EEG (e.g. Muse over OSC / Mind Monitor) carries a large
+            // per-channel DC baseline (~800µV) that synthetic data never had.
+            // Subtract it so RMS measures the AC signal amplitude, not the
+            // offset — otherwise every channel sits far above the 200µV ceiling
+            // and a perfectly good stream is misreported as `.lost`.
+            var mean: Float = 0
+            for v in ch { mean += v }
+            mean /= n
             var sumSq: Float = 0
-            for v in ch { sumSq += v * v }
+            for v in ch { let d = v - mean; sumSq += d * d }
             let rms = (sumSq / n).squareRoot()
             if rms >= 5 && rms <= 200 { inRange += 1 }
         }

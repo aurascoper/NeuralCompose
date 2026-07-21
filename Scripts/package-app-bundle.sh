@@ -64,6 +64,42 @@ for dylib in "$REPO_ROOT/.build/$CONFIG"/*.dylib; do
 done
 shopt -u nullglob
 
+# ── MLX GPU resources for the on-device spectral estimator ────────────────
+# SpectralStateEstimatorFactory runs a SpectralProbe subprocess
+# (SubprocessProbe.locateSiblingBinary → next to the app executable) and then
+# loads an MLX model in-process. Both need MLX's compiled Metal kernels
+# (mlx-swift_Cmlx.bundle/Contents/Resources/default.metallib). Plain `swift
+# build` compiles the .metal sources but cannot run `metallib` to package them
+# (see build-xcode-mlx.sh / MODEL_SETUP.md §"Metal kernels"), so neither the
+# probe binary nor the metallib lands in .build/<config> on its own. Without
+# both, the factory falls back to the stub estimator and every EEG→SpectralState
+# gloss is dead (glossScalar pinned at the neutral 0.5). Copy them in when
+# available so a bundled *live* run gets the real MLX estimator.
+if [[ -x "$REPO_ROOT/.build/$CONFIG/SpectralProbe" ]]; then
+    cp "$REPO_ROOT/.build/$CONFIG/SpectralProbe" "$APP/Contents/MacOS/SpectralProbe"
+fi
+CMLX_SRC=""
+for cand in \
+    "$REPO_ROOT/.build/$CONFIG/mlx-swift_Cmlx.bundle" \
+    "$REPO_ROOT/.build/xcode/Build/Products/Debug/mlx-swift_Cmlx.bundle" \
+    "$REPO_ROOT/.build/xcode/Build/Products/Release/mlx-swift_Cmlx.bundle"; do
+    if [[ -f "$cand/Contents/Resources/default.metallib" ]]; then CMLX_SRC="$cand"; break; fi
+done
+if [[ -n "$CMLX_SRC" ]]; then
+    # A SwiftPM resource bundle belongs in Contents/Resources (not MacOS): that
+    # is where codesign --deep seals it correctly and where Bundle.module's
+    # accessor (Bundle.main.resourceURL) resolves it for both the app process
+    # and the colocated SpectralProbe subprocess. Putting it in MacOS/ breaks
+    # the signature ("code has no resources but signature indicates…").
+    mkdir -p "$APP/Contents/Resources"
+    rm -rf "$APP/Contents/Resources/mlx-swift_Cmlx.bundle"
+    cp -R "$CMLX_SRC" "$APP/Contents/Resources/mlx-swift_Cmlx.bundle"
+    echo "  + MLX metallib bundle → Contents/Resources from ${CMLX_SRC#"$REPO_ROOT"/}"
+else
+    echo "  ! no mlx-swift_Cmlx.bundle with a metallib found — spectral estimator will be STUB."
+    echo "    (run ./Scripts/build-xcode-mlx.sh once to build default.metallib.)"
+fi
+
 # Ad-hoc sign so Gatekeeper/TCC treat this as a coherent, launchable bundle
 # instead of a loose tree of files copied around after the real build.
 codesign --force --deep -s - "$APP" >/dev/null

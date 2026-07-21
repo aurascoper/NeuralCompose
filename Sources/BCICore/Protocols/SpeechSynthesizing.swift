@@ -16,6 +16,13 @@ public protocol SpeechSynthesizing: Sendable {
     /// (e.g. the stub) need no change.
     func speak(_ text: String, prosody: SpeechProsody) async throws
 
+    /// Speaks with prosody AND a per-word callback fired as the synthesizer
+    /// reaches each word (best-effort — conformers without word-level timing may
+    /// never call it). Used to *ground* speech: a caller can light the referent
+    /// node of each word as it is voiced. The default ignores `onWord` and falls
+    /// back to `speak(_:prosody:)`, so existing conformers need no change.
+    func speak(_ text: String, prosody: SpeechProsody, onWord: (@Sendable (SpokenWord) -> Void)?) async throws
+
     /// Interrupts whatever is currently being spoken. Safe to call when idle.
     func stopSpeaking() async
 }
@@ -24,6 +31,24 @@ public extension SpeechSynthesizing {
     func speak(_ text: String, prosody: SpeechProsody) async throws {
         try await speak(text)
     }
+
+    func speak(_ text: String, prosody: SpeechProsody, onWord: (@Sendable (SpokenWord) -> Void)?) async throws {
+        try await speak(text, prosody: prosody)
+    }
+}
+
+/// A single word as the synthesizer reaches it while speaking — surfaced from
+/// AVFoundation's `willSpeakRangeOfSpeechString` callback, but kept plain-Swift
+/// so the `SpeechSynthesizing` seam stays AVFoundation-free and spy-testable.
+public struct SpokenWord: Sendable, Equatable {
+    /// The word text (the substring of the utterance at the spoken range).
+    public let text: String
+    /// The word's character offset within the utterance (0 if unknown).
+    public let characterOffset: Int
+    public init(text: String, characterOffset: Int) {
+        self.text = text
+        self.characterOffset = characterOffset
+    }
 }
 
 /// Prosody shaping for a spoken utterance. Every field is optional; `nil` means
@@ -31,7 +56,7 @@ public extension SpeechSynthesizing {
 /// (`rate` 0…1, `pitchMultiplier` 0.5…2.0, `volume` 0…1, `preUtteranceDelay`
 /// seconds) but this type lives in BCICore so the `SpeechSynthesizing` seam
 /// stays AVFoundation-free and fully testable with spies.
-public struct SpeechProsody: Sendable, Equatable {
+public struct SpeechProsody: Sendable, Equatable, Codable {
     public var rate: Float?
     public var pitchMultiplier: Float?
     public var volume: Float?
@@ -58,4 +83,61 @@ public struct SpeechProsody: Sendable, Equatable {
         volume: 0.6,
         preUtteranceDelay: 0.4
     )
+
+    /// The coherence pole's voice in the dialectic loop — identical to
+    /// `hypnagogic` (calm, flat, slow).
+    public static let hypnagogicStabilizer = hypnagogic
+
+    /// The displacement pole's voice — a touch quicker and brighter so the
+    /// dreaming undercurrent is *audibly* different, while staying inside the
+    /// same arousal-safe envelope (still slow and soft, never harsh or sudden).
+    public static let hypnagogicDreamer = SpeechProsody(
+        rate: 0.42,
+        pitchMultiplier: 0.98,
+        volume: 0.6,
+        preUtteranceDelay: 0.3
+    )
+
+    /// The coherence pole's voice in a **waking** dialectic — present and
+    /// natural-paced (near the AVSpeechUtterance default rate), NOT the slow
+    /// arousal-safe hypnagogic envelope. Used by the waking role set for the
+    /// Focused / Reflective / Contemplative profiles.
+    public static let wakingCoherent = SpeechProsody(
+        rate: 0.5,
+        pitchMultiplier: 1.0,
+        volume: 0.9,
+        preUtteranceDelay: 0.1
+    )
+
+    /// The displacement pole's **waking** voice — a touch quicker and brighter
+    /// so the opposing voice is audibly distinct, without the sleepy slowness.
+    public static let wakingDivergent = SpeechProsody(
+        rate: 0.54,
+        pitchMultiplier: 1.06,
+        volume: 0.9,
+        preUtteranceDelay: 0.05
+    )
+
+    /// Weighted mean of several prosodies — the mechanism that makes tension
+    /// *audible*: a spoken turn is voiced by blending the role voices in
+    /// proportion to the competition's probabilities, so a close call carries
+    /// the losing pole's colour even though only the winner's words are said.
+    /// Each field is averaged only over the contributors that specify it (a
+    /// `nil` field abstains); non-positive weights are ignored. Returns an
+    /// all-`nil` prosody when nothing contributes.
+    public static func blend(_ weighted: [(prosody: SpeechProsody, weight: Float)]) -> SpeechProsody {
+        func mean<T: BinaryFloatingPoint>(_ get: (SpeechProsody) -> T?) -> T? {
+            var acc: T = 0, wsum: T = 0
+            for (p, w) in weighted where w > 0 {
+                if let v = get(p) { let wt = T(w); acc += v * wt; wsum += wt }
+            }
+            return wsum > 0 ? acc / wsum : nil
+        }
+        return SpeechProsody(
+            rate: mean { $0.rate },
+            pitchMultiplier: mean { $0.pitchMultiplier },
+            volume: mean { $0.volume },
+            preUtteranceDelay: mean { $0.preUtteranceDelay }
+        )
+    }
 }

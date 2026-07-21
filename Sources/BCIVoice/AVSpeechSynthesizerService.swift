@@ -14,9 +14,52 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
 
     public init(voiceIdentifier: String? = nil) {
         self.voiceIdentifier = voiceIdentifier
+            ?? Self.bestPersonalVoiceIdentifier()                                     // the user's own on-device voice (if authorized)
+            ?? Self.bestNeuralVoiceIdentifier()                                       // else best installed Premium/Enhanced
             ?? AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())?.identifier
             ?? "system-default"
         synthesizer.delegate = delegateProxy
+    }
+
+    /// Identifier of the best installed NEURAL (Enhanced/Premium) voice for
+    /// `language` (default: current locale), preferring Premium over Enhanced.
+    /// Returns nil when only the compact/default voice is installed — the robotic
+    /// case. macOS 14+'s downloadable Enhanced/Premium voices are neural and sound
+    /// dramatically better than the compact default, at no extra bundle cost and
+    /// still fully on-device (installed via System Settings, never fetched by the
+    /// app). Pure enumeration, no synthesis, no network.
+    public nonisolated static func bestNeuralVoiceIdentifier(language: String? = nil) -> String? {
+        let prefix = (language ?? AVSpeechSynthesisVoice.currentLanguageCode()).prefix(2).lowercased()
+        return AVSpeechSynthesisVoice.speechVoices()
+            .filter { $0.language.lowercased().hasPrefix(prefix)
+                      && $0.quality.rawValue > AVSpeechSynthesisVoiceQuality.default.rawValue }
+            .max { $0.quality.rawValue < $1.quality.rawValue }?   // highest quality wins (premium > enhanced)
+            .identifier
+    }
+
+    /// Identifier of an installed **Personal Voice** — the user's own voice,
+    /// recorded and compiled entirely on-device (System Settings → Accessibility →
+    /// Personal Voice). Personal voices report `.default` quality, so they are
+    /// invisible to `bestNeuralVoiceIdentifier`; this is a separate selector keyed
+    /// on the `.isPersonalVoice` trait. Returns nil until the app has been granted
+    /// personal-voice authorization (`requestPersonalVoiceAuthorization`) — before
+    /// that, personal voices do not appear in `speechVoices()`. Prefers a voice for
+    /// `language` (default: current locale), else any personal voice.
+    public nonisolated static func bestPersonalVoiceIdentifier(language: String? = nil) -> String? {
+        let prefix = (language ?? AVSpeechSynthesisVoice.currentLanguageCode()).prefix(2).lowercased()
+        let personal = AVSpeechSynthesisVoice.speechVoices().filter { $0.voiceTraits.contains(.isPersonalVoice) }
+        return (personal.first { $0.language.lowercased().hasPrefix(prefix) } ?? personal.first)?.identifier
+    }
+
+    /// Request authorization to use the user's Personal Voice (macOS 14+). Mirrors
+    /// the repo's `requestAuthorization()` convention — gate on `.authorized`,
+    /// return `Bool` — but the API is already async, so no continuation bridge.
+    /// Requires the user to have enabled System Settings → Accessibility → Personal
+    /// Voice → "Allow Apps to Request to Use". Fully on-device; presents a one-time
+    /// consent prompt (per app code identity). Do not await on a launch path that
+    /// must not block — an unanswered prompt does not return until the user responds.
+    public nonisolated static func requestPersonalVoiceAuthorization() async -> Bool {
+        await AVSpeechSynthesizer.requestPersonalVoiceAuthorization() == .authorized
     }
 
     public func speak(_ text: String) async throws {
@@ -24,6 +67,11 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
     }
 
     public func speak(_ text: String, prosody: SpeechProsody) async throws {
+        try await speak(text, prosody: prosody, onWord: nil)
+    }
+
+    public func speak(_ text: String, prosody: SpeechProsody,
+                      onWord: (@Sendable (SpokenWord) -> Void)?) async throws {
         await stopSpeaking()
         let utterance = AVSpeechUtterance(string: text)
         if let voice = AVSpeechSynthesisVoice(identifier: voiceIdentifier) {
@@ -46,6 +94,7 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
         }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
             pendingContinuation = continuation
+            delegateProxy.onWord = onWord
             delegateProxy.onFinish = { [weak self] in Task { await self?.resume(throwing: nil) } }
             delegateProxy.onCancel = { [weak self] in Task { await self?.resume(throwing: BCIError.cancelled) } }
             synthesizer.speak(utterance)
@@ -74,8 +123,24 @@ public actor AVSpeechSynthesizerService: SpeechSynthesizing {
 /// small proxy bridges delegate callbacks back into the actor via plain
 /// closures.
 private final class SpeechSynthesizerDelegateProxy: NSObject, AVSpeechSynthesizerDelegate, @unchecked Sendable {
-    var onFinish: (() -> Void)?
-    var onCancel: (() -> Void)?
+    // @Sendable: these are assigned self-capturing `Task { await … }` closures from
+    // the actor. Newer Swift 6 toolchains treat the setters as `sending` and reject a
+    // non-Sendable closure (CI fails to build even though older toolchains accept it).
+    var onFinish: (@Sendable () -> Void)?
+    var onCancel: (@Sendable () -> Void)?
+    var onWord: (@Sendable (SpokenWord) -> Void)?
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
+                           willSpeakRangeOfSpeechString characterRange: NSRange,
+                           utterance: AVSpeechUtterance) {
+        guard let onWord else { return }
+        let full = utterance.speechString as NSString
+        guard characterRange.location != NSNotFound,
+              characterRange.location >= 0,
+              characterRange.location + characterRange.length <= full.length else { return }
+        onWord(SpokenWord(text: full.substring(with: characterRange),
+                          characterOffset: characterRange.location))
+    }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         onFinish?()

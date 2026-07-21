@@ -2,6 +2,8 @@
 
 The full D1–D8 specification is at [`SLEEP_CYCLE_DESIGN.md`](../SLEEP_CYCLE_DESIGN.md) at the repo root. That document is the canonical type-level design — long, technical, and load-bearing for implementation. This document is the reader-friendly summary: it explains the design decisions, the open questions, and the implementation order, without reproducing the type signatures.
 
+**D1–D8 legend** (the eight design modules, `SLEEP_CYCLE_DESIGN.md` §7–§14): **D1** sleep-stage model · **D2** staging protocol + Core ML classifier · **D3** stage smoother · **D4** sleep-session FSM · **D5** dream-session controller · **D6** dream-analysis LLM · **D7** post-sleep analysis · **D8** experimental evaluation study — the pilot human trial (see [`Research.md`](Research.md)). "D" is a **design-deliverable** index — *not* a hardware channel count, a cursor-direction (8-way) algorithm, or a downsample-by-8 factor.
+
 ## What the System Does
 
 1. **Detects when the user is falling asleep** by watching for an alpha-dropout event (alpha-band power dropping below the per-user eyes-closed baseline).

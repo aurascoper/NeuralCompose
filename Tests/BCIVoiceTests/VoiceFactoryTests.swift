@@ -4,9 +4,31 @@ import XCTest
 
 final class VoiceFactoryTests: XCTestCase {
 
-    func testVoiceOutputFactoryAlwaysResolvesLiveWithNoGate() {
+    func testVoiceOutputFactoryAlwaysResolvesLive() {
+        // Never gates to stub — AVSpeech is always available on-device; the
+        // Premium-voice selection changes the voice, not the resolution.
         let resolved = VoiceOutputFactory.live()
         XCTAssertEqual(resolved.kind, .live)
+        XCTAssertTrue(resolved.synthesizer is AVSpeechSynthesizerService)
+    }
+
+    func testVoiceOutputWarningTracksVoiceAvailability() {
+        // The install hint appears IFF neither a Personal Voice (authorized) nor
+        // an Enhanced/Premium neural voice is available for the current language.
+        // Availability is environment-dependent, but the relationship is invariant.
+        let hasGoodVoice = AVSpeechSynthesizerService.bestPersonalVoiceIdentifier() != nil
+            || AVSpeechSynthesizerService.bestNeuralVoiceIdentifier() != nil
+        let resolved = VoiceOutputFactory.live()
+        XCTAssertEqual(resolved.warning == nil, hasGoodVoice)
+    }
+
+    func testVoiceOutputPinsProvidedVoiceIdentifier() {
+        // A pinned identifier (e.g. a Personal Voice id from NEURALCOMPOSE_VOICE_ID)
+        // flows through to the synthesizer and suppresses the install hint.
+        let pin = "com.apple.speech.personalvoice.TEST-INVARIANT"
+        let resolved = VoiceOutputFactory.live(voiceIdentifier: pin)
+        XCTAssertEqual(resolved.kind, .live)
+        XCTAssertEqual(resolved.synthesizer.voiceIdentifier, pin)
         XCTAssertNil(resolved.warning)
     }
 

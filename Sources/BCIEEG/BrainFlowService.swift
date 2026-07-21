@@ -105,15 +105,27 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                     samplesBuf.deallocate()
                     tsBuf.deallocate()
                 }
+                // The poll task OWNS the C++ session's lifetime: it grabs the
+                // handle once and is the ONLY code that destroys it — in the
+                // `defer` below, after the loop has fully exited. So a drain
+                // (get_board_data) and a destroy (delete handle) can never
+                // overlap (the C1 use-after-free). `stop()` merely cancels this
+                // task and awaits it; it never touches the session directly.
+                guard let self, let handle = (self.lock.withLock { self.handle }) else {
+                    continuation.finish(throwing: BCIError.streamFailed(reason: "handle invalidated"))
+                    return
+                }
+                defer {
+                    bci_bridge_stop_stream(handle)
+                    bci_bridge_destroy_session(handle)
+                    self.lock.withLock { if self.handle == handle { self.handle = nil } }
+                    continuation.finish()
+                }
+
                 var sampleCount = 0
                 var lastLogTime = Date()
                 var lastSampleAt = Date()
                 while !Task.isCancelled {
-                    guard let self = self,
-                          let handle = (self.lock.withLock { self.handle }) else {
-                        continuation.finish(throwing: BCIError.streamFailed(reason: "handle invalidated"))
-                        return
-                    }
                     var got: Int32 = 0
                     let st = bci_bridge_drain_samples(handle, samplesBuf, tsBuf, maxBatch, &got)
                     if st != BCI_OK {
@@ -155,10 +167,14 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                     }
                     try? await Task.sleep(nanoseconds: UInt64(poll * 1_000_000_000))
                 }
-                continuation.finish()
+                // Loop exited (cancelled) — the teardown `defer` above finishes
+                // the continuation and destroys the session.
             }
             self.lock.withLock { self.pollTask = task }
             continuation.onTermination = { @Sendable [weak self] _ in
+                // Cancel promptly; `stop()` awaits the poll task, whose `defer`
+                // owns the session teardown (never destroy here — it would race
+                // the drain).
                 task.cancel()
                 Task { await self?.stop() }
             }
@@ -166,17 +182,18 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
     }
 
     public func stop() async {
-        let h: bci_session_handle_t? = lock.withLock {
-            let h = self.handle
-            self.handle = nil
-            self.pollTask?.cancel()
+        // Structured teardown: cancel the poll task and AWAIT it. The poll task's
+        // own `defer` performs stop_stream + destroy_session after its loop has
+        // exited, so a destroy can never overlap an in-flight drain (C1). `stop()`
+        // never touches the C++ session directly. Idempotent — a second `stop()`
+        // (e.g. the redundant one from the supervisor) sees `pollTask == nil`.
+        let task: Task<Void, Never>? = lock.withLock {
+            let t = self.pollTask
             self.pollTask = nil
-            return h
+            return t
         }
-        if let h = h {
-            _ = bci_bridge_stop_stream(h)
-            bci_bridge_destroy_session(h)
-        }
+        task?.cancel()
+        await task?.value
     }
 
     // MARK: - Helpers

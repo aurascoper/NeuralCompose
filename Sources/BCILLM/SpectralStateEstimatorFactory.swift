@@ -20,6 +20,21 @@ public enum SpectralStateEstimatorFactory {
     /// convention as `PredictorFactory`'s `NEURALCOMPOSE_MLX_MODEL`.
     public static let defaultModelDirectory = "Models/EEGEncoder"
 
+    /// Hard cap on the IN-PROCESS estimator load (which runs only after the
+    /// subprocess probe has already succeeded). A real load is ~0.1s; if it
+    /// exceeds this it has hung, and we abandon it for the stub so app startup
+    /// can never wedge. Overridable via `NEURALCOMPOSE_SPECTRAL_LOAD_TIMEOUT`.
+    private static var inProcessLoadTimeoutSeconds: Double {
+        if let raw = ProcessInfo.processInfo.environment["NEURALCOMPOSE_SPECTRAL_LOAD_TIMEOUT"],
+           let v = Double(raw), v > 0 { return v }
+        return 12.0
+    }
+
+    private enum SpectralLoadResult: Sendable {
+        case loaded(any SpectralStateEstimating)
+        case failed(String)
+    }
+
     public struct Resolved: Sendable {
         public let estimator: any SpectralStateEstimating
         public let kind: Kind
@@ -39,6 +54,17 @@ public enum SpectralStateEstimatorFactory {
         let chosenDir = modelDirectory ?? resolveDefaultDirectory()
 
         guard FileManager.default.fileExists(atPath: chosenDir.path) else {
+            // Surface *why* we stubbed via a diagnostic log — without it the
+            // missing-model path was silent, which is exactly how a missing
+            // Models/EEGEncoder stayed a mystery. Mirrors the embedder's fallback
+            // log in AppContainer.
+            //
+            // But `warning` (the health.json *degradation* field) stays nil: a
+            // simply-absent model directory is the expected stub-by-default
+            // state, not a degradation — health already reports estimatorKind
+            // == "stub". Only a model that is *present but fails to load* (the
+            // cases below) is a genuine degradation worth a warning.
+            BCILog.spectral.notice("Spectral encoder model not found at \(chosenDir.path, privacy: .public); using stub estimator (expected default when no model is installed)")
             return stubResolved(warning: nil)
         }
 
@@ -53,15 +79,33 @@ public enum SpectralStateEstimatorFactory {
                 forwardPass=\(metrics.forwardPassLatency, privacy: .public)s \
                 outputL2Norm=\(metrics.outputL2Norm, privacy: .public)
                 """)
-            do {
-                let estimator = try await SpectralStateEstimator(
-                    modelDirectory: chosenDir, sentenceEmbedder: sentenceEmbedder
-                )
+            // The probe proved MLX loads in a FRESH process, but the IN-PROCESS
+            // load here has been observed to hang indefinitely in some runtime
+            // contexts (a Metal/MLX stall the disposable probe can't reproduce —
+            // it loaded fine at ~0.1s in the child). Race it against a timeout and
+            // ABANDON it on hang, so a wedged load can never wedge makeDefault() /
+            // app startup: we fall back to the stub, and the health watchdog then
+            // surfaces estimatorKind=stub.
+            let outcome: SpectralLoadResult? = await withAbandoningTimeout(
+                seconds: inProcessLoadTimeoutSeconds
+            ) {
+                do {
+                    let est = try await SpectralStateEstimator(
+                        modelDirectory: chosenDir, sentenceEmbedder: sentenceEmbedder)
+                    return .loaded(est)
+                } catch {
+                    return .failed((error as? BCIError)?.description ?? error.localizedDescription)
+                }
+            }
+            switch outcome {
+            case .loaded(let estimator):
                 return Resolved(estimator: estimator, kind: .mlx, warning: nil)
-            } catch {
-                let reason = (error as? BCIError)?.description ?? error.localizedDescription
+            case .failed(let reason):
                 BCILog.spectral.notice("Spectral estimator init failed after a successful probe (\(reason, privacy: .public)); using stub")
                 return stubResolved(warning: "Spectral encoder present but failed to load: \(reason)")
+            case .none:
+                BCILog.spectral.notice("Spectral estimator in-process load exceeded \(inProcessLoadTimeoutSeconds, privacy: .public)s after a successful probe — abandoned the hung load; using stub")
+                return stubResolved(warning: "Spectral encoder load hung in-process past the timeout; using stub estimator (see health.json).")
             }
         case .timeout:
             BCILog.spectral.notice("Spectral probe timed out for \(chosenDir.path, privacy: .public); using stub")

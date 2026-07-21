@@ -23,11 +23,12 @@ final class FanOutHealthValidationTests: XCTestCase {
     /// (one deliberately dead channel among three healthy ones).
     func testBothConsumersReceiveStreamAndHealthResolves() async {
         // [TP9, AF7, AF8, TP10] — AF8 held at 0 µV to simulate an electrode
-        // lift; the others sit at a healthy 25 µV. RMS is raw sqrt(mean(v^2)),
-        // so a constant level maps directly onto the health buckets.
+        // lift; the others carry a healthy 25 µV-RMS AC signal. RMS is measured
+        // on the demeaned window (real-EEG calibration), so the live channels
+        // must be AC — a constant DC level would demean to ~0 and read as dead.
         let channelCount = 4
         let sampleCount = 512
-        let healthyLevel: Float = 25
+        let healthyRMS: Float = 25
         let deadChannel = 2   // AF8
 
         let channel = AsyncMulticastChannel<EEGSample>(capacity: 1024, overflow: .dropOldest)
@@ -52,7 +53,7 @@ final class FanOutHealthValidationTests: XCTestCase {
 
         // Feed the shared channel.
         for i in 0..<sampleCount {
-            var channels = [Float](repeating: healthyLevel, count: channelCount)
+            var channels = [Float](repeating: acEEGValue(rms: healthyRMS, index: i), count: channelCount)
             channels[deadChannel] = 0
             channel.send(EEGSample(timestamp: TimeInterval(i) / 256.0, channels: channels))
         }

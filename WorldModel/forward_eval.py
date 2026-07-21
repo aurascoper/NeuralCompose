@@ -1,0 +1,498 @@
+#!/usr/bin/env python3
+"""Forward metric panel for the WorldModel JEPA on synthetic-1/f data (Phase B).
+
+Trains a small JEPA (`eeg_jepa.EEGJEPAModule`) on `synthetic_1f` transitions, then
+reports a PANEL of forward-quality metrics. No single number is trusted — the panel
+is the point (see RESEARCH_spectral_geometry.md §"No label-free metric is a trusted
+oracle"). This iteration establishes the panel infrastructure; the A/B over
+transform arms is a later iteration that reuses `evaluate()`.
+
+Metrics:
+  - pred_error_1step  : MSE between the predictor's next-latent and the EMA target
+                        encoder's next-latent (the JEPA's own forward objective,
+                        measured on held-out data). The forward-prediction anchor.
+  - rollout_error     : closed-loop multi-step latent rollout error — roll the
+                        predictor feeding its own output back in, MSE per horizon vs
+                        the EMA-target encoding of the true state.
+  - mpc_success       : goal-conditioned CEM planning success — plan an action
+                        sequence in latent space (predictor as forward model),
+                        execute it in the TRUE env, score whether it reaches the goal
+                        pos. success_rate + mean_final_distance + a random-action
+                        baseline. rollout_error and mpc_success are the two forward
+                        numbers the transform-A/B decision rule anchors on (alongside
+                        factor recovery).
+  - factor_recovery   : held-out linear-probe R² for each KNOWN latent factor
+                        {pos, vel, chi, peak_amp, offset} — INCLUDING the aperiodic
+                        exponent `chi`, the information-destruction detector.
+  - rankme            : Garrido et al. 2023 — entropy-based effective rank of the
+                        latent singular-value spectrum (collapse detector).
+  - alpha_req         : Agrawal et al. 2022 — power-law decay exponent of the latent
+                        covariance eigenspectrum.
+  - vicreg_var / _cov : VICReg variance (higher = less collapse) & covariance
+                        (lower = more decorrelated) terms.
+  - alignment / uniformity : Wang & Isola 2020, on L2-normalized latents.
+
+DEFERRED (ledgered):
+  - LiDAR (Thilak et al. 2024)        (needs the clean/augmented surrogate-class setup)
+
+Synthetic only. No real EEG, no hardware, no app wiring, no network. Seeded → reproducible.
+
+Usage:
+  venv/bin/python WorldModel/forward_eval.py --n 512 --epochs 30 --seed 0 --mode signal
+  venv/bin/python WorldModel/forward_eval.py --smoke-test
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from eeg_jepa import (  # noqa: E402
+    EEGJEPAConfig,
+    JEPATransitionDataset,
+    resolve_device,
+    train_jepa,
+)
+import random  # noqa: E402
+from synthetic_1f import (  # noqa: E402
+    generate,
+    write_jsonl,
+    _sample_latent,
+    _step,
+    _render_state,
+    SEQUENCE_LENGTH,
+)
+
+FACTOR_NAMES = ["pos", "vel", "chi", "peak_amp", "offset"]
+
+
+def _seed_everything(seed: int) -> None:
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
+
+def _read_factors(records: list[dict[str, Any]]) -> np.ndarray:
+    """Ground-truth latent factors per record, in FACTOR_NAMES order. (N, 5)."""
+    return np.array(
+        [[float(r["_latent"][name]) for name in FACTOR_NAMES] for r in records],
+        dtype=np.float64,
+    )
+
+
+@torch.no_grad()
+def _encode_all(model, dataset, device) -> tuple[torch.Tensor, torch.Tensor]:
+    """Online-encoder latent of every pre-window and target-encoder latent of every
+    post-window: (Z_pre, Z_post), each (N, latent_dim)."""
+    model.encoder.eval()
+    model.target_encoder.eval()
+    pres, posts = [], []
+    for i in range(len(dataset)):
+        pre, _, post = dataset[i]
+        pres.append(model.encoder(pre.unsqueeze(0).to(device)).squeeze(0).cpu())
+        posts.append(model.target_encoder(post.unsqueeze(0).to(device)).squeeze(0).cpu())
+    return torch.stack(pres), torch.stack(posts)
+
+
+@torch.no_grad()
+def _pred_error_1step(model, dataset, device) -> float:
+    """MSE(predictor(z_pre, a), target_encoder(z_post)) — the forward objective."""
+    model.encoder.eval()
+    model.predictor.eval()
+    errs = []
+    for i in range(len(dataset)):
+        pre, action, post = dataset[i]
+        pred = model.forward_online(pre.unsqueeze(0).to(device), action.unsqueeze(0).to(device))
+        tgt = model.forward_target(post.unsqueeze(0).to(device))
+        errs.append(F.mse_loss(pred, tgt).item())
+    return float(np.mean(errs))
+
+
+def _factor_recovery(Z: torch.Tensor, factors: np.ndarray, seed: int) -> dict[str, float]:
+    """Held-out linear-probe R² per factor (80/20 split). Bias column included."""
+    X = Z.double().numpy()
+    rng = np.random.default_rng(seed)
+    idx = rng.permutation(len(X))
+    cut = max(1, int(0.8 * len(X)))
+    tr, te = idx[:cut], idx[cut:]
+    if len(te) == 0:  # tiny-N fallback: evaluate in-sample
+        te = tr
+    Xtr = np.concatenate([X[tr], np.ones((len(tr), 1))], axis=1)
+    Xte = np.concatenate([X[te], np.ones((len(te), 1))], axis=1)
+    out: dict[str, float] = {}
+    for k, name in enumerate(FACTOR_NAMES):
+        w, *_ = np.linalg.lstsq(Xtr, factors[tr, k], rcond=None)
+        pred = Xte @ w
+        ss_res = float(((factors[te, k] - pred) ** 2).sum())
+        ss_tot = float(((factors[te, k] - factors[te, k].mean()) ** 2).sum())
+        out[name] = 1.0 - ss_res / ss_tot if ss_tot > 1e-12 else 0.0
+    return out
+
+
+def _rankme(Z: torch.Tensor, eps: float = 1e-7) -> float:
+    """Garrido 2023 effective rank: exp(entropy of normalized singular values)."""
+    s = torch.linalg.svdvals(Z - Z.mean(0, keepdim=True))
+    p = s / (s.sum() + eps)
+    entropy = -(p * torch.log(p + eps)).sum()
+    return float(torch.exp(entropy))
+
+
+def _alpha_req(Z: torch.Tensor, eps: float = 1e-12) -> float:
+    """Agrawal 2022: power-law slope of the covariance eigenspectrum (log-log fit)."""
+    Zc = (Z - Z.mean(0, keepdim=True)).double()
+    cov = (Zc.T @ Zc) / max(1, len(Z) - 1)
+    eig = torch.linalg.eigvalsh(cov).flip(0).clamp_min(eps)  # descending
+    ranks = torch.arange(1, len(eig) + 1, dtype=torch.float64)
+    A = torch.stack([torch.log(ranks), torch.ones_like(ranks)], dim=1)
+    sol = torch.linalg.lstsq(A, torch.log(eig).unsqueeze(1)).solution
+    return float(-sol[0, 0])
+
+
+def _vicreg_terms(Z: torch.Tensor, eps: float = 1e-4) -> tuple[float, float]:
+    """VICReg variance term (mean per-dim std; higher=less collapse) and covariance
+    term (mean squared off-diagonal covariance per dim; lower=more decorrelated)."""
+    Zc = Z - Z.mean(0, keepdim=True)
+    var_term = float(torch.sqrt(Zc.var(0) + eps).mean())
+    n, d = Z.shape
+    cov = (Zc.T @ Zc) / max(1, n - 1)
+    off = cov - torch.diag(torch.diagonal(cov))
+    cov_term = float((off ** 2).sum() / d)
+    return var_term, cov_term
+
+
+def _alignment_uniformity(Z_pre: torch.Tensor, Z_post: torch.Tensor, t: float = 2.0) -> tuple[float, float]:
+    """Wang & Isola 2020 on L2-normalized latents. Positive pairs = (pre, post) of
+    the same transition. Uniformity is measured on the pre-latents' spread."""
+    a = F.normalize(Z_pre, dim=1)
+    b = F.normalize(Z_post, dim=1)
+    alignment = float(((a - b) ** 2).sum(1).mean())
+    sq = torch.pdist(a) ** 2
+    uniformity = float(torch.log(torch.exp(-t * sq).mean() + 1e-12)) if sq.numel() else 0.0
+    return alignment, uniformity
+
+
+def _generate_trajectories(n_traj: int, length: int, mode: str, seed: int) -> list[dict[str, Any]]:
+    """`n_traj` independent trajectories, each `length` CHAINED single-step
+    transitions (post_i == pre_{i+1}), flattened in trajectory-major order into the
+    JEPATransition record schema. Reuses the synthetic_1f dynamics so multi-step
+    rollout is measured on the same generator the JEPA trained on. Trajectory t
+    occupies records [t*length : (t+1)*length]."""
+    rng = random.Random(seed)
+    records: list[dict[str, Any]] = []
+    for traj in range(n_traj):
+        z = _sample_latent(rng)
+        for step in range(length):
+            action = [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0), float(step % 2)]
+            z_next = _step(z, action, mode)
+            records.append({
+                "id": f"00000000-0000-0000-{traj % 10000:04d}-{step:012d}",
+                "timestamp": 1_700_000_000.0 + traj * length + step,
+                "preActionWindow": [_render_state(z, t) for t in range(SEQUENCE_LENGTH)],
+                "actionVector": action,
+                "postActionWindow": [_render_state(z_next, t) for t in range(SEQUENCE_LENGTH)],
+                "_latent": {k: z[k] for k in ("pos", "vel", "chi", "peak_amp", "offset")},
+            })
+            z = z_next
+    return records
+
+
+@torch.no_grad()
+def _multi_step_rollout(model, train_mean, train_std, device, *,
+                        n_traj: int = 32, length: int = 8, mode: str = "signal",
+                        seed: int = 1, log_features: bool = False,
+                        log_epsilon: float = 1e-6) -> dict[str, Any]:
+    """Closed-loop latent rollout error. Encode the first window of each trajectory,
+    roll the predictor `length` steps feeding its OWN output back in (with the true
+    actions), and MSE each predicted latent against the EMA-target encoding of the
+    true state at that horizon. Trajectory windows are z-scored on the TRAIN stats
+    so they live in the JEPA's input space. Returns per-horizon mean error, 1..length
+    (error typically grows with the horizon as prediction error compounds)."""
+    model.encoder.eval()
+    model.predictor.eval()
+    model.target_encoder.eval()
+    records = _generate_trajectories(n_traj, length, mode, seed)
+    with tempfile.TemporaryDirectory(prefix="neuralcompose-rollout-") as directory:
+        path = write_jsonl(records, Path(directory) / "traj.jsonl")
+        traj = JEPATransitionDataset(path, mean=train_mean, std=train_std,
+                                     log_features=log_features, log_epsilon=log_epsilon)
+        horizon_err: list[list[float]] = [[] for _ in range(length)]
+        for t in range(n_traj):
+            base = t * length
+            pre0, _, _ = traj[base]
+            z_pred = model.encoder(pre0.unsqueeze(0).to(device))
+            for h in range(length):
+                _, action, post = traj[base + h]
+                z_pred = model.predictor(z_pred, action.unsqueeze(0).to(device))
+                target = model.target_encoder(post.unsqueeze(0).to(device))
+                horizon_err[h].append(F.mse_loss(z_pred, target).item())
+    per_horizon = [float(np.mean(errors)) for errors in horizon_err]
+    return {
+        "per_horizon": per_horizon,
+        "step1": per_horizon[0],
+        "final_step": per_horizon[-1],
+        "mean": float(np.mean(per_horizon)),
+    }
+
+
+@torch.no_grad()
+def _encode_states(model, states, train_mean, train_std, device, use_target: bool = False,
+                   *, log_features: bool = False, log_epsilon: float = 1e-6) -> torch.Tensor:
+    """Encode a list of latent states into JEPA latents, normalized on the TRAIN
+    stats (routed through JEPATransitionDataset so normalization matches training
+    exactly). Goal states use the target encoder (the predictor's output space);
+    start states use the online encoder."""
+    records = [{
+        "id": f"00000000-0000-0000-0000-{i:012d}",
+        "timestamp": 1_700_000_000.0 + i,
+        "preActionWindow": [_render_state(z, t) for t in range(SEQUENCE_LENGTH)],
+        "actionVector": [0.0, 0.0, 0.0],
+        "postActionWindow": [_render_state(z, t) for t in range(SEQUENCE_LENGTH)],
+        "_latent": {k: z[k] for k in ("pos", "vel", "chi", "peak_amp", "offset")},
+    } for i, z in enumerate(states)]
+    encoder = model.target_encoder if use_target else model.encoder
+    encoder.eval()
+    with tempfile.TemporaryDirectory(prefix="neuralcompose-encstate-") as directory:
+        path = write_jsonl(records, Path(directory) / "s.jsonl")
+        ds = JEPATransitionDataset(path, mean=train_mean, std=train_std,
+                                   log_features=log_features, log_epsilon=log_epsilon)
+        return torch.stack([
+            encoder(ds[i][0].unsqueeze(0).to(device)).squeeze(0) for i in range(len(ds))
+        ])
+
+
+@torch.no_grad()
+def _cem_plan(model, z0_lat, zg_lat, device, *, horizon, cem_iters, n_samples, elite_frac, gen) -> torch.Tensor:
+    """CEM over `horizon`-step action sequences (2 continuous dims + a fixed mode
+    bit = step%2), using the predictor as the latent forward model; minimize the
+    rolled-out final latent's distance to the goal latent. Sampling is on CPU (a
+    seeded Generator → deterministic); the predictor rollout runs on `device`.
+    Returns the best (horizon, 3) action sequence."""
+    mean = torch.zeros(horizon, 2)
+    std = torch.ones(horizon, 2)
+    n_elite = max(1, int(elite_frac * n_samples))
+    mode_bits = torch.tensor([[float(h % 2)] for h in range(horizon)])  # (horizon, 1)
+    best = torch.zeros(horizon, 2)
+    for _ in range(cem_iters):
+        noise = torch.randn(n_samples, horizon, 2, generator=gen)
+        samples = (mean.unsqueeze(0) + std.unsqueeze(0) * noise).clamp(-1.0, 1.0)  # CPU
+        z = z0_lat.unsqueeze(0).expand(n_samples, -1).contiguous().to(device)
+        for h in range(horizon):
+            act = torch.cat([samples[:, h, :].to(device),
+                             mode_bits[h].expand(n_samples, 1).to(device)], dim=1)
+            z = model.predictor(z, act)
+        costs = ((z - zg_lat.unsqueeze(0).to(device)) ** 2).sum(dim=1).cpu()
+        elite = samples[torch.topk(-costs, n_elite).indices]
+        mean = elite.mean(dim=0)
+        std = elite.std(dim=0).clamp_min(1e-3)
+        best = samples[int(torch.argmin(costs))]
+    return torch.cat([best, mode_bits], dim=1)  # (horizon, 3)
+
+
+@torch.no_grad()
+def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon=6,
+                 cem_iters=3, n_samples=64, elite_frac=0.2, mode="signal", seed=2,
+                 goal_offset=0.4, goal_tol=0.15, log_features: bool = False,
+                 log_epsilon: float = 1e-6) -> dict[str, Any]:
+    """Goal-conditioned latent MPC/CEM planning success. Per episode: sample a start
+    state + a goal `pos`, plan with CEM (the JEPA predictor as forward model), then
+    EXECUTE the plan in the TRUE synthetic_1f env (`_step`) and score whether the
+    true final pos reached the goal. A random-action policy is the baseline — the
+    JEPA-planned success rate beating it is the signal that the latent dynamics are
+    useful for control. Returns success_rate, mean_final_distance, random_baseline."""
+    rng = random.Random(seed)
+    gen = torch.Generator()
+    gen.manual_seed(seed + 7)
+    starts = [_sample_latent(rng) for _ in range(n_episodes)]
+    goal_pos = [starts[i]["pos"] + rng.uniform(-goal_offset, goal_offset) for i in range(n_episodes)]
+    goals = [{**starts[i], "pos": goal_pos[i]} for i in range(n_episodes)]
+    z0 = _encode_states(model, starts, train_mean, train_std, device, use_target=False,
+                        log_features=log_features, log_epsilon=log_epsilon)
+    zg = _encode_states(model, goals, train_mean, train_std, device, use_target=True,
+                        log_features=log_features, log_epsilon=log_epsilon)
+
+    successes, rand_successes, dists = 0, 0, []
+    for i in range(n_episodes):
+        plan = _cem_plan(model, z0[i], zg[i], device, horizon=horizon, cem_iters=cem_iters,
+                         n_samples=n_samples, elite_frac=elite_frac, gen=gen)
+        z = dict(starts[i])
+        for h in range(horizon):
+            z = _step(z, plan[h].tolist(), mode)
+        d = abs(z["pos"] - goal_pos[i])
+        dists.append(d)
+        if d < goal_tol:
+            successes += 1
+        z = dict(starts[i])
+        for h in range(horizon):
+            z = _step(z, [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0), float(h % 2)], mode)
+        if abs(z["pos"] - goal_pos[i]) < goal_tol:
+            rand_successes += 1
+    return {
+        "success_rate": successes / n_episodes,
+        "mean_final_distance": float(np.mean(dists)),
+        "random_baseline_success": rand_successes / n_episodes,
+    }
+
+
+def evaluate(
+    n: int = 512,
+    mode: str = "signal",
+    seed: int = 0,
+    epochs: int = 30,
+    latent_dim: int = 32,
+    batch_size: int = 64,
+    rollout_traj: int = 32,
+    rollout_len: int = 8,
+    mpc_episodes: int = 20,
+    mpc_horizon: int = 6,
+    log_features: bool = False,
+    log_epsilon: float = 1e-6,
+    device: torch.device | None = None,
+    verbose: bool = True,
+) -> dict[str, Any]:
+    """Train a JEPA on freshly-generated synthetic_1f data and return the panel.
+
+    `log_features` selects the input space fed to the encoder: raw z-scored
+    band/channel power (default) or log-compressed-then-z-scored (the 1/f
+    log-transform, applied at the JEPATransitionDataset seam). It is threaded
+    identically into the train, rollout, and MPC-encode datasets so all three
+    encode in ONE space — otherwise the model trains on log windows while
+    rollout/MPC feed raw windows. This is the node-33 transform arm: measured
+    forward, kept only if it improves rollout+MPC without degrading chi-recovery.
+    """
+    _seed_everything(seed)
+    device = device or resolve_device()
+
+    records = generate(n, mode, seed)
+    with tempfile.TemporaryDirectory(prefix="neuralcompose-fwdeval-") as directory:
+        path = write_jsonl(records, Path(directory) / "data.jsonl")
+        dataset = JEPATransitionDataset(path, log_features=log_features, log_epsilon=log_epsilon)
+        loader = DataLoader(dataset, batch_size=min(batch_size, len(dataset)), shuffle=True)
+        pre0, action0, _ = dataset[0]
+        state_dim, action_dim = pre0.shape[-1], action0.shape[-1]
+
+        config = EEGJEPAConfig(latent_dim=latent_dim)
+        model, history = train_jepa(
+            loader, state_dim, action_dim, config=config, epochs=epochs, device=device
+        )
+
+        factors = _read_factors(records)
+        Z_pre, Z_post = _encode_all(model, dataset, device)
+        var_term, cov_term = _vicreg_terms(Z_pre)
+        alignment, uniformity = _alignment_uniformity(Z_pre, Z_post)
+        rollout = _multi_step_rollout(
+            model, dataset.mean, dataset.std, device,
+            n_traj=rollout_traj, length=rollout_len, mode=mode, seed=seed + 1,
+            log_features=log_features, log_epsilon=log_epsilon,
+        )
+        mpc = _mpc_success(
+            model, dataset.mean, dataset.std, device,
+            n_episodes=mpc_episodes, horizon=mpc_horizon, mode=mode, seed=seed + 2,
+            log_features=log_features, log_epsilon=log_epsilon,
+        )
+
+        panel = {
+            "config": {"n": n, "mode": mode, "seed": seed, "epochs": epochs,
+                       "latent_dim": latent_dim, "log_features": log_features,
+                       "final_train_loss": history[-1]},
+            "pred_error_1step": _pred_error_1step(model, dataset, device),
+            "rollout_error": rollout,
+            "mpc_success": mpc,
+            "factor_recovery": _factor_recovery(Z_pre, factors, seed),
+            "rankme": _rankme(Z_pre),
+            "alpha_req": _alpha_req(Z_pre),
+            "vicreg_var": var_term,
+            "vicreg_cov": cov_term,
+            "alignment": alignment,
+            "uniformity": uniformity,
+        }
+
+    if verbose:
+        print(json.dumps(panel, indent=2))
+    return panel
+
+
+def smoke_test() -> None:
+    """Tiny, fast, deterministic run; assert every metric is sane."""
+    a = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
+                 rollout_len=4, mpc_episodes=6, mpc_horizon=4, device=torch.device("cpu"), verbose=False)
+    b = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
+                 rollout_len=4, mpc_episodes=6, mpc_horizon=4, device=torch.device("cpu"), verbose=False)
+
+    # Determinism: same seed → identical panel.
+    assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True), "non-deterministic"
+
+    # Finiteness across the whole panel.
+    for key in ("pred_error_1step", "rankme", "alpha_req", "vicreg_var",
+                "vicreg_cov", "alignment", "uniformity"):
+        assert np.isfinite(a[key]), f"{key} not finite: {a[key]}"
+    for name, r2 in a["factor_recovery"].items():
+        assert np.isfinite(r2), f"factor_recovery[{name}] not finite"
+
+    # Multi-step rollout: per-horizon list of the right length, all finite + non-negative.
+    roll = a["rollout_error"]
+    assert len(roll["per_horizon"]) == 4, f"rollout horizons: {roll['per_horizon']}"
+    assert all(np.isfinite(v) and v >= 0.0 for v in roll["per_horizon"]), roll["per_horizon"]
+    assert np.isfinite(roll["step1"]) and np.isfinite(roll["final_step"])
+
+    # MPC/CEM planning success: rates in [0, 1], distance finite + non-negative.
+    mpc = a["mpc_success"]
+    assert 0.0 <= mpc["success_rate"] <= 1.0, mpc
+    assert 0.0 <= mpc["random_baseline_success"] <= 1.0, mpc
+    assert np.isfinite(mpc["mean_final_distance"]) and mpc["mean_final_distance"] >= 0.0
+
+    # RankMe is an effective rank in (0, latent_dim].
+    assert 0.0 < a["rankme"] <= 16.0 + 1e-6, f"rankme out of range: {a['rankme']}"
+    # VICReg variance term is non-negative.
+    assert a["vicreg_var"] >= 0.0
+    # The chi probe exists and is reported (the information-destruction detector).
+    assert "chi" in a["factor_recovery"]
+
+    # The log-features (node-33) arm must stay finite end-to-end — a log(0) or a
+    # train/rollout input-space mismatch would surface here as NaN/inf.
+    c = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
+                 rollout_len=4, mpc_episodes=6, mpc_horizon=4, log_features=True,
+                 device=torch.device("cpu"), verbose=False)
+    assert c["config"]["log_features"] is True
+    assert np.isfinite(c["pred_error_1step"]), c["pred_error_1step"]
+    assert np.isfinite(c["factor_recovery"]["chi"]), c["factor_recovery"]["chi"]
+    assert all(np.isfinite(v) and v >= 0.0 for v in c["rollout_error"]["per_horizon"]), \
+        c["rollout_error"]["per_horizon"]
+
+    print(f"smoke test passed "
+          f"(pred_err={a['pred_error_1step']:.4f}, "
+          f"rollout[1→{len(roll['per_horizon'])}]={roll['step1']:.3f}→{roll['final_step']:.3f}, "
+          f"mpc={mpc['success_rate']:.2f} vs rand {mpc['random_baseline_success']:.2f}, "
+          f"chi_R2={a['factor_recovery']['chi']:.3f})")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="WorldModel JEPA forward metric panel")
+    parser.add_argument("--smoke-test", action="store_true")
+    parser.add_argument("--n", type=int, default=512)
+    parser.add_argument("--mode", type=str, default="signal", choices=["signal", "nuisance"])
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--latent-dim", type=int, default=32)
+    parser.add_argument("--log-features", action="store_true",
+                        help="feed the encoder log-compressed (1/f) spectral state — the node-33 arm")
+    parser.add_argument("--log-epsilon", type=float, default=1e-6)
+    args = parser.parse_args()
+
+    if args.smoke_test:
+        smoke_test()
+        return
+    evaluate(n=args.n, mode=args.mode, seed=args.seed, epochs=args.epochs,
+             latent_dim=args.latent_dim, log_features=args.log_features,
+             log_epsilon=args.log_epsilon)
+
+
+if __name__ == "__main__":
+    main()
