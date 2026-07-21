@@ -175,3 +175,12 @@ Entry template:
   symlog, specparam periodic+aperiodic, 1/f-flatten} — do any improve BOTH forward metrics AND chi? {specparam,
   1/f-flatten} still need the specparam front-end (Math §11.2). Provisional: raw z-scored power may already be the
   right encoder input for forward dynamics.
+
+## 7 — Transform A/B, arm 2 audit: "standardize" is the baseline, not a treatment (2026-07-21, commit <pending>)
+- Category: Document
+- Hypothesis: the "standardize" arm listed in node 33's remaining set is a distinct input-space transform to A/B like `log_features`.
+- Prediction: n/a — a code audit, not an experiment; the outcome is either a distinct transform to build or a redundancy to retire.
+- Implementation: audited the normalization seam `JEPATransitionDataset` (`WorldModel/eeg_jepa.py`). `__init__` (:57) defaults `normalize=True`; with no `mean`/`std` supplied it computes per-feature train stats (`mean = all_states.mean(0)`, `std = all_states.std(0).clamp_min(1e-6)`, :114-115); `__getitem__` z-scores and clamps to `clip_sigma=8.0` (:226). There is no un-standardized path. So the `log_features=OFF` baseline that node 33 calls "raw z-scored" IS standardization.
+- Evidence: the default dataset already subtracts the per-feature train mean and divides by the per-feature train std (a `state_dim` vector), which is exactly a z-score standardization; a separate "standardize" arm adds nothing over the control.
+- Decision: DROP "standardize" as an A/B arm — it is the control, not a treatment. Node 33's provisional ("raw z-scored power may already be the right encoder input for forward dynamics") therefore stands as the standing result: standardization is already in force and is the baseline every arm is measured against. No code change; documentation only, so no smoke-test needed.
+- Next question: the next genuinely-distinct, buildable arm is `symlog` — `sign(x) * log1p(|x|)` — a signed log that, unlike `log_features`, handles the negative z-scored values without an epsilon floor and compresses large-magnitude outliers symmetrically. Integrate it at the `JEPATransitionDataset` seam (mirror the `log_features` threading through `evaluate()`'s three dataset constructions) and A/B {symlog off/on} x {signal, nuisance} x seeds. Remaining after: specparam + 1/f-flatten (still blocked on the specparam front-end, Math §11.2).
