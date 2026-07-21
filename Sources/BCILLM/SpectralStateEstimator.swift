@@ -87,7 +87,25 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
               window.samples.first?.count == config.windowSamples else {
             return nil
         }
-        guard SpectralArtifactGate.isClean(window) else {
+
+        // Subtract each channel's DC baseline before BOTH the artifact gate and
+        // the model. Real EEG over OSC / Mind Monitor carries a large per-channel
+        // offset (~800uV) that DC-free synthetic/processed training data never
+        // had: left in, every raw sample exceeds SpectralArtifactGate's 150uV
+        // peak threshold, so isClean rejects every window and the gloss is pinned
+        // nil regardless of electrode contact; and the ~0-mean-trained encoder
+        // (eeg_spectral.py band powers use scipy detrend="constant") would see
+        // out-of-distribution input. This is the model-path site the 17cd373
+        // amplitude-metric demean (signalQuality / FeatureExtractor / channel
+        // health) did not cover.
+        let centered = EEGWindow(
+            samples: window.samples.map(Self.demeaned),
+            sampleRate: window.sampleRate,
+            endTimestamp: window.endTimestamp,
+            sequence: window.sequence
+        )
+
+        guard SpectralArtifactGate.isClean(centered) else {
             return nil
         }
 
@@ -96,7 +114,7 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
         flat.reserveCapacity(config.windowSamples * config.inChannels)
         for sampleIndex in 0..<config.windowSamples {
             for channelIndex in 0..<config.inChannels {
-                flat.append(window.samples[channelIndex][sampleIndex])
+                flat.append(centered.samples[channelIndex][sampleIndex])
             }
         }
         let input = MLXArray(flat, [1, config.windowSamples, config.inChannels])
@@ -116,5 +134,17 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
             }
         }
         return bestState
+    }
+
+    /// Subtract the per-channel mean (DC baseline) so the artifact gate measures
+    /// AC swing and the encoder sees ~0-mean input. Mirrors FeatureExtractor's
+    /// demean (Double accumulation for precision); a no-op on already-0-mean
+    /// synthetic data.
+    private static func demeaned(_ x: [Float]) -> [Float] {
+        guard !x.isEmpty else { return x }
+        var sum: Double = 0
+        for v in x { sum += Double(v) }
+        let mean = Float(sum / Double(x.count))
+        return x.map { $0 - mean }
     }
 }
