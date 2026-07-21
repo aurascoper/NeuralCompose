@@ -208,7 +208,23 @@ public actor HypnagogicDialecticLoop {
             let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             if !text.isEmpty { candidateTexts.append((role.id, text)) }
         }
-        guard !candidateTexts.isEmpty else { return }  // both generators empty — skip, no state change
+        // RVS-001 fix: when both voices return empty text (e.g. a
+        // cloud-routed model that uses all `num_predict` tokens on
+        // its `thinking` and produces no `response`), the previous
+        // behavior was to return early without advancing
+        // `turnIndex`, which deadlocked the loop's progress check
+        // (`while await loop.turnIndex < heardLines.count`) until
+        // the 90s watchdog killed the harness. The harness then
+        // reported "0/N turns run" with no telemetry explaining
+        // why. The new behavior: log a `.silent` turn with no
+        // candidates, let `turnIndex` advance, and let the silence
+        // counter drive the cue cadence. A persistently-silent run
+        // is now visible in the rollup as N `silent` outcomes, not
+        // as a hang.
+        guard !candidateTexts.isEmpty else {
+            await logSilentTurn(heard: heard)
+            return
+        }
 
         // 2. Embed heard + every candidate in one batch.
         try Task.checkCancellation()
@@ -346,6 +362,40 @@ public actor HypnagogicDialecticLoop {
                 consecutiveSilence = 0
                 try await speakChunks(nextSilenceCue(), prosody: config.prosody)
             }
+        }
+        lastTurnAt = Date()
+        turnIndex += 1
+    }
+
+    /// RVS-001: log a `.silent` turn when both voice generators
+    /// returned empty text. This is the only state change for a
+    /// silent turn: the rollup records `outcome: "silent"` and
+    /// `turnIndex` advances so the loop's progress check sees the
+    /// turn as completed. The 90s watchdog no longer fires for
+    /// these runs.
+    private func logSilentTurn(heard: String) async {
+        let competition = DialecticalCompetition(
+            index: turnIndex,
+            heard: heard,
+            scored: [],
+            tension: 0,
+            margin: 0,
+            selectionTemperature: 0,
+            outcome: .silent,
+            glossScalar: 0.5,
+            spectralState: nil,
+            witnessFinding: nil,
+            witnessDistance: nil,
+            selfSimilarity: nil,
+            witnessAttempted: config.witnessEnabled && witness != nil,
+            generatorFingerprint: nil
+        )
+        let event = DialecticalTurnEvent(competition)
+        await turnLogger.log(event)
+        consecutiveSilence += 1
+        if consecutiveSilence >= config.maxConsecutiveSilence {
+            consecutiveSilence = 0
+            try? await speakChunks(nextSilenceCue(), prosody: config.prosody)
         }
         lastTurnAt = Date()
         turnIndex += 1

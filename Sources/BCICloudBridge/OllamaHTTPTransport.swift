@@ -52,10 +52,26 @@ public struct OllamaHTTPTransport: GenerationTransport {
 
     public init(
         baseURL: URL = URL(string: "http://localhost:11434")!,
-        session: URLSession = URLSession(configuration: .default)
+        session: URLSession? = nil
     ) {
         self.baseURL = baseURL
-        self.session = session
+        // Each OllamaHTTPTransport gets its OWN URLSession — using
+        // `URLSession.shared` is a known concurrency hazard for
+        // serial calls under load (calls serialize on a shared
+        // completion queue, and with cloud-routed models the
+        // HTTP-keep-alive behavior can cause spurious 60s+ hangs
+        // on the second-and-onward call in a rapid sequence).
+        // Use `.ephemeral` to disable keep-alive: every request
+        // opens a fresh TCP connection. This is a 1-2ms cost
+        // per call and eliminates the bug class entirely.
+        // Configured session also has a 30s request timeout.
+        if let session { self.session = session }
+        else {
+            let cfg = URLSessionConfiguration.ephemeral
+            cfg.timeoutIntervalForRequest = 30
+            cfg.timeoutIntervalForResource = 120
+            self.session = URLSession(configuration: cfg)
+        }
     }
 
     public func send(_ request: GenerationTransportRequest) async throws -> GenerationTransportResponse {
@@ -64,6 +80,7 @@ public struct OllamaHTTPTransport: GenerationTransport {
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = try Self.encodeRequest(request)
+        urlRequest.timeoutInterval = 30
 
         let (data, response) = try await session.data(for: urlRequest)
         guard let http = response as? HTTPURLResponse else {
