@@ -30,6 +30,18 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         return data
     }
 
+    /// A non-EEG message the decoder maps to `nil` (ignored, not a sample) —
+    /// used to keep the packet link "alive" while `/muse/eeg` has stopped.
+    private func makeAccPacket() -> Data {
+        var data = oscString("/muse/acc")
+        data.append(oscString(",fff"))
+        for v: Float in [0.1, 0.2, 0.3] {
+            var bits = v.bitPattern.bigEndian
+            withUnsafeBytes(of: &bits) { data.append(contentsOf: $0) }
+        }
+        return data
+    }
+
     /// Sends `data` to `127.0.0.1:testPort` over UDP and waits briefly for
     /// the send to actually complete before returning — `NWConnection`'s
     /// send is itself async/callback-based.
@@ -230,6 +242,98 @@ final class MindMonitorOSCStreamTests: XCTestCase {
             return XCTFail("expected BCIError.streamFailed, got \(thrown)")
         }
         XCTAssertTrue(reason.contains("no OSC packets"), "unexpected failure reason: \(reason)")
+    }
+
+    /// C1 regression: the watchdog must key off EEG-SAMPLE throughput, not raw
+    /// packet arrival. Sends one EEG sample, then only non-EEG (`/muse/acc`)
+    /// traffic continuously — the packet link stays "alive" but `/muse/eeg` has
+    /// stopped, so the stream must still throw. Before C1 the packet heartbeat
+    /// kept the watchdog green forever and this failure was invisible.
+    func testStreamThrowsWhenEEGStopsButOtherTrafficContinues() async throws {
+        let port = testPort + 5
+        let stream = MindMonitorOSCStream(port: port, staleTimeoutSec: 1.0)
+        let eegStream = try await stream.start()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Prime with a real EEG sample so lastSampleWallClock is set from an
+        // actual sample — the "was streaming EEG, then it stopped" scenario.
+        await sendUDP(makeEEGPacket([1, 2, 3, 4]), port: port)
+
+        let collectTask = Task { () -> Error? in
+            do {
+                for try await _ in eegStream {}
+                return nil
+            } catch { return error }
+        }
+
+        // Keep the PACKET link alive with non-EEG traffic while EEG stays silent.
+        // Captures only Sendable values (Data, UInt16) — no `self` — so the pump
+        // is strict-concurrency clean. Fire-and-forget sends (cancel in callback).
+        let acc = makeAccPacket()
+        let pump = Task { [acc] in
+            while !Task.isCancelled {
+                let conn = NWConnection(
+                    host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .udp)
+                conn.start(queue: .global())
+                conn.send(content: acc, completion: .contentProcessed { _ in conn.cancel() })
+                try? await Task.sleep(nanoseconds: 200_000_000)
+            }
+        }
+
+        // staleTimeoutSec is 1.0s; the sample watchdog should fire ~2s in
+        // despite the ongoing /muse/acc traffic. Allow up to 5s.
+        let outcome = await withTimeout(seconds: 5) { await collectTask.value }
+        pump.cancel()
+        await stream.stop()
+
+        let thrown = try XCTUnwrap(
+            outcome.flatMap { $0 },
+            "watchdog did not fire despite EEG stopping — sample-throughput watchdog regressed"
+        )
+        guard case BCIError.streamFailed(let reason) = thrown else {
+            return XCTFail("expected BCIError.streamFailed, got \(thrown)")
+        }
+        XCTAssertTrue(reason.contains("EEG substream stalled"),
+                      "expected an EEG-substream-stall reason, got: \(reason)")
+    }
+
+    /// C1 follow-up (PR #18 review): the supervisor reuses ONE stream instance
+    /// across live retries via stop()/start(). The per-session watchdog reference
+    /// must reset on each start(), or a retry inherits the prior attempt's stale
+    /// sample time and the reconnect grace collapses to a single ~1s tick. Checked
+    /// via the observable proxy — after a restart with no new traffic, lastHeartbeat
+    /// (reset alongside lastSampleWallClock) reads nil, not the prior session's value.
+    func testRestartResetsPerSessionWatchdogReference() async throws {
+        let port = testPort + 6
+        // Default 5s timeout so the watchdog can't fire during this quick check.
+        let stream = MindMonitorOSCStream(port: port)
+        let s1 = try await stream.start()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Consume one sample so the packet is DEFINITELY processed (heartbeat is
+        // set inside handlePacket on receipt) before we read diagnostics — the
+        // first packet also pays the connection-setup latency, so a fixed sleep
+        // would be racy.
+        let collect1 = Task { () -> EEGSample? in
+            for try await sample in s1 { return sample }
+            return nil
+        }
+        await sendUDP(makeEEGPacket([1, 2, 3, 4]), port: port)
+        let got = try await collect1.value
+        XCTAssertNotNil(got, "session 1 should receive its EEG sample")
+        XCTAssertNotNil(stream.currentDiagnostics().lastHeartbeat,
+                        "session 1 received a packet, so its heartbeat is set")
+        await stream.stop()
+        // Let the old listener release the port before the same instance rebinds.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+
+        // Restart the SAME instance, exactly as the supervisor does across retries.
+        // recordStarted() resets lastHeartbeat synchronously, before any packet,
+        // so this assertion holds regardless of rebind timing.
+        _ = try await stream.start()
+        XCTAssertNil(stream.currentDiagnostics().lastHeartbeat,
+                     "restart must reset the per-session watchdog reference — inheriting "
+                     + "session 1's stale value would collapse the retry's grace to one tick")
+        await stream.stop()
     }
 
     /// Races `operation` against a timeout, returning `nil` on timeout
