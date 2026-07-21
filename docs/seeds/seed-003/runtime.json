@@ -1,0 +1,66 @@
+{
+  "seed_id": "003",
+  "part": "runtime",
+  "content_version": 5,
+  "interaction_style": "dialectical",
+  "context_profile": "reflective",
+  "outstanding_todos": [
+    "THE OPEN DECISION: the Contemplative rung \u2014 run `.build/debug/dialectic-session contemplative <out.jsonl> <heard...>` on the SAME input as Focused/Reflective and compare rollups; does its reluctant-synthesis / high-silence tuning behave differently? The tool exists now (PR #16).",
+    "GLOSS ATTRIBUTION (was 'get variance > 0', now refined): today's rollup already shows gloss variance (0.1\u20130.5, 11 distinct values, spectralState on 44/182 turns \u2014 a real estimator ran). But DialecticalTurnEvent has NO liveness/source field, so live-Muse vs synthetic-EEG can't be attributed post-hoc, and the rollup's `live_eeg_influence` flag is just `variance>0` (source-agnostic). Pending: add a per-turn source marker, then log a source-labeled live Muse-S session.",
+    "Consider waking variants for the silence-cue text and config.prosody (both currently hypnagogic).",
+    "Decide the DialecticalField.target() default calibration.",
+    "Triage ONE new-thread hypothesis into a spec if desired (self-reshaping-learning-device / arc-per-instance-abstraction / mpc-demos-as-wind-tunnel / adversarial-recognition-set \u2014 see research.json; all named-unspecified, do not build blind)."
+  ],
+  "current_failures": [],
+  "known_risks": [
+    "Gloss carries EEG bias only when a real estimator runs (an Xcode/MLX build fed by --with-brainflow or the OSC live path + seated TP9/AF7/AF8/TP10); otherwise glossScalar stubs to a constant 0.5. It ran today (variance observed), but the log can't say whether the source was live or synthetic — no per-turn liveness marker yet.",
+    "Two Sonnet-5 cloud calls per turn while active \u2014 THREE for Reflective (the non-voiced Witness); transcript text egress only; the privacy banner discloses the count per profile (fixed in PR #15 review).",
+    "ClaudeCLIGenerator inherits the working directory's context (picks up CLAUDE.md when launched from the repo dir)."
+  ],
+  "benchmarks": {
+    "sonnet5_runtime_smoke": "PASS \u2014 dialectic-smoke returned lucid, oppositional waking candidates for both roles",
+    "test_suite": "443 tests, 0 failures / 5 skipped (BCICore + BCICloudBridge + BCIVoice + app)",
+    "brainflow_build": "PASS \u2014 .build/debug/NeuralCompose links libBoardController; brainflow-linked marker present",
+    "witness_validation": "PASS (live, dialectic-session harness, 3-turn scripted input, real Sonnet): Focused reflective_active=False / witness_attempts=0; Reflective reflective_active=True / witness_attempts=3 / witness_turns=3 / mean_witness_distance=0.345 / no witness_silent_warn; selfSimilarity logged for both (0.71 / 0.74). Witness findings named a shared blind spot (both poles framed it as a solo problem). seed-002 reflective-vs-reflexive hypothesis CONFIRMED."
+  },
+  "next_experiment": "reflective-vs-reflexive is validated live (see witness_validation). Next: the Contemplative rung (does its reluctant-synthesis / high-silence tuning behave on the same harness?). On gloss: today's telemetry already shows real variance (0.1–0.5, spectralState on 44/182 turns), so the open item is no longer 'variance > 0' — it's attribution. The log has no source field, so add a per-turn liveness marker to DialecticalTurnEvent, then capture a source-labeled live Muse-S session (the rollup's `live_eeg_influence` = variance>0 cannot tell live from synthetic).",
+  "generated_from": {
+    "git": {
+      "branch": "docs/seed-003",
+      "head": "b80f3d6",
+      "head_subject": "Merge pull request #16 from aurascoper/feature/dialectic-session",
+      "recent": [
+        "b80f3d6 Merge pull request #16 from aurascoper/feature/dialectic-session",
+        "31bba27 fix(dialectic): harden dialectic-session sink \u2014 gate exit on lines written (PR #16 review)",
+        "a0508d7 test(dialectic): headless dialectic-session harness + validate the Witness live",
+        "78efe7f Merge pull request #15 from aurascoper/feature/reflective-witness",
+        "4ebc807 fix(dialectic): address PR #15 review \u2014 banner egress + witness observability",
+        "fc56ad5 feat(dialectic): the Reflective Witness \u2014 introspection (reflective vs reflexive)",
+        "7205b2c Merge pull request #14 from aurascoper/feature/spoken-generation-loop",
+        "1c9ce1f test(health): deflake the stale-timeout test \u2014 generous CI timing margins"
+      ],
+      "dirty_tracked": true
+    },
+    "telemetry": {
+      "source_file": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-07-20.jsonl",
+      "turns": 181,
+      "outcomes": {
+        "spoke": 148,
+        "silent": 0,
+        "synthesized": 33
+      },
+      "mean_tension": 0.2301,
+      "gloss_mean": 0.4064,
+      "gloss_variance": 0.027724,
+      "gloss_distinct_values": 11,
+      "live_eeg_influence": true,
+      "witness_attempts": 13,
+      "witness_turns": 13,
+      "mean_witness_distance": 0.3236,
+      "mean_self_similarity": 0.7547,
+      "reflective_active": true,
+      "witness_silent_warn": false,
+      "reflexive_collapse_warn": false
+    }
+  }
+}

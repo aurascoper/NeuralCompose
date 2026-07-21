@@ -1,0 +1,70 @@
+{
+  "seed_id": "003",
+  "part": "research",
+  "content_version": 3,
+  "open_hypotheses": [
+    {
+      "id": "waking-dynamics-baseline",
+      "status": "OPEN — silence/synthesis/drift still to characterize live",
+      "claim": "Before any sleep-mode rung, the waking dialectic's own dynamics must be characterized: does silence emerge naturally (not never / not always)? does synthesis fire at a sane rate? does semantic drift stabilize rather than run away? (The 'does Reflective differ from Focused?' clause moved to reflective-vs-reflexive — it is now a MECHANISM under test, not just an open question: the Witness gives Reflective a behavior Focused structurally lacks.)",
+      "measured_from": "dialectic-turns-<day>.jsonl outcome distribution, mean tension, glossScalar variance"
+    },
+    {
+      "id": "reflective-vs-reflexive",
+      "status": "VALIDATED live (PR #16, dialectic-session harness): Focused reflective_active=False / witness_attempts=0 vs Reflective True / =3, mean_witness_distance=0.345, no witness_silent_warn; selfSimilarity logged for both (0.71 / 0.74); Witness findings named a shared blind spot both poles missed. The mechanism differentiates Reflective from Focused, as designed. NOTE: telemetry is from the SCRIPTED harness with a deterministic embedder — live Muse-S gloss still 0.5 (see runtime).",
+      "claim": "Reflective (watching from outside) and reflexive (the watching collapsing into the watched) are TWO independent failure modes, not two settings on one dial. Reflective is instrumented by a non-voiced Witness that names what both poles avoided (witnessDistance); reflexive by replies collapsing onto their own reply centroid (selfSimilarity, on-device). The engine exposes both and trades neither. This is what makes Reflective a real rung vs Focused (Focused runs 0 witness turns). Deliberately NO single 'reflectiveness' knob.",
+      "measured_from": "dialectic-turns-<day>.jsonl witnessFinding/witnessDistance/selfSimilarity; session-seed.py rollup fields witness_turns / reflective_active / mean_self_similarity / reflexive_collapse_warn; a Focused-vs-Reflective session pair"
+    },
+    {
+      "id": "field-energy",
+      "status": "spec-only (FIELD_V2.md)",
+      "claim": "A latent order parameter — the dialogue's capacity to keep transforming itself — can modulate tau / silence+synthesis thresholds / field weights WITHOUT overloading the candidate scoring equation.",
+      "gate": "implement Stage A only after v1 accumulates real interaction experience; Stage A must keep Reflective == current defaults"
+    },
+    {
+      "id": "phase",
+      "status": "named, unspecified (Stage B)",
+      "claim": "A second order parameter for divergence<->convergence; deliberately left unspecified to avoid optimizing for something never observed."
+    },
+    {
+      "id": "profiles-as-initial-conditions",
+      "status": "partial (v1 presets exist; continuous FieldPreset is v2)",
+      "claim": "Focused / Reflective / Contemplative are coordinates in one dynamical system, not different algorithms."
+    },
+    {"id": "self-reshaping-learning-device", "status": "named, unspecified (dialectic 2026-07-20; do NOT build yet)", "claim": "The dialectic/adaptation core loop generalizes to any skill-with-feedback-and-repetition; language/pedagogy is the FIRST TEST CASE, not the destination. A learning device should be a mirror that watches how THIS teacher/student fails and reshapes around that failure, not a vocabulary vending machine."},
+    {"id": "arc-per-instance-abstraction", "status": "named, unspecified (dialectic 2026-07-20; cross-links ~/Developer/arc_agi)", "claim": "ARC rewards forming a NEW abstraction per-instance over retrieving a cached one. The axis worth flipping onto our own work: build for on-the-fly rule induction wherever we currently rely on lookup — not the leaderboard."},
+    {"id": "mpc-demos-as-wind-tunnel", "status": "named, unspecified (dialectic 2026-07-20)", "claim": "The synthetic-task MPC demos are a break-finding wind tunnel (fracture the protocol on purpose to find the seams) AND a trust interface for skeptics who never read a spec — design for what a non-technical observer walks away believing about capability boundaries."},
+    {"id": "adversarial-recognition-set", "status": "named, unspecified (dialectic 2026-07-20)", "claim": "For recognition, a small adversarial set targeting known failure modes (homophones, code-switching, disfluencies) beats 150 random sentences — random sampling proves what the system already handles; failures cluster around structure."}
+  ],
+  "accepted_decisions": [
+    "Sonnet 5 (claude-cli, no API key) is the app runtime generator — chosen for auth/ops (decision_registry entry 7). VALIDATED this session via the dialectic-smoke runtime check.",
+    "Structured non-determinism: a tension-sharpened softmax sampled with an injected RNG (bifurcation), not unconstrained randomness — the probabilities evolve, not the seed.",
+    "Synthesis = reconciliation (min-sim to both poles), not the geometrically impossible 'far from both yet explains both'.",
+    "Tension is symmetric, so it modulates tau / prosody / synthesis-gate / prompts — never a scoring term.",
+    "Two clocks combine only inside DialecticalField.target(); SpectralGloss is wind, not a steering wheel.",
+    "fieldEnergy: commit the priors (FIELD_V2.md), defer implementation.",
+    "Co-dev loop: Opus = architect/spec, Sonnet 5 = runtime + implementation agent, iterating over versioned session seeds instead of raw transcripts.",
+    "Waking mode is a distinct register: waking role prompts + waking system prompt + waking prosody, selected for the three waking profiles."
+  ],
+  "rejected_decisions": [
+    "HDE Layer-1 'EEG as a field' — not honest on the 4-ch Muse montage (no coverage over Broca's / T7); see project_track_b_imagined_speech_risk.",
+    "'Dreamer++' framing for Contemplative — it is LESS (non-elaboration, a la zazen), not more.",
+    "Mixing imagined-word labels into CalibrationLabel / IntentClass (would corrupt the Track A production model)."
+  ],
+  "pending_questions": [
+    "fieldEnergy coupling coefficients (kappa_*, delta_*, lambda_decay, rho) — empirical, tuned against observed behavior.",
+    "Do the sleepy silence-cue text and config.prosody need waking variants too? (deferred follow-up; low frequency in Focused).",
+    "ClaudeCLIGenerator inherits its working directory's context — launched from the repo it picks up CLAUDE.md. Pin/scope the cwd for the .app?",
+    "DialecticalField.target() default calibration — awaiting the user's replacement policy.",
+    "Should the mirror style get a waking prompt too, or stay the hypnagogic passive mirror?"
+  ],
+  "experiments": [
+    {
+      "id": "waking-focused-live",
+      "rung": "Focused+Dialectical",
+      "measures": ["outcome distribution (spoke/silent/synthesized)", "mean tension", "glossScalar variance (live-EEG-influence proof)"],
+      "artifact": "dialectic-turns-<day>.jsonl",
+      "run_with": "Scripts/run-dialectical-waking.sh focused"
+    }
+  ]
+}
