@@ -880,11 +880,34 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             let turnLogger: any DialecticalTurnLogging =
                 (interactionLoggingEnabled ? (interactionLogger as? any DialecticalTurnLogging) : nil)
                 ?? NullDialecticalTurnLogger()
+            // RVS-001+1: the dialectic and witness generators are
+            // resolved through `LiveRuntimeFactory` so the live app
+            // honors `NEURALCOMPOSE_RUNTIME` / `NEURALCOMPOSE_MODEL`
+            // (matching the headless harness's `--runtime` /
+            // `--model` flags). Default is Claude (legacy
+            // `ClaudeCLIGenerator`) so production behavior is
+            // unchanged when the env vars are absent. The witness
+            // gets a separate resolver call so its system prompt
+            // is the Witness prompt, not the dialectic prompt.
+            let dialecticResolved = (try? LiveRuntimeFactory.make(
+                systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
+            )) ?? (ClaudeCLIGenerator(systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt),
+                   LiveRuntimeFactory.Resolved(
+                       name: "claude-cli-fallback",
+                       model: "claude-sonnet-5",
+                       systemPromptSource: "fallback"))
+            let witnessResolved = (try? LiveRuntimeFactory.make(
+                systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt
+            )) ?? (ClaudeCLIGenerator(systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt),
+                   LiveRuntimeFactory.Resolved(
+                       name: "claude-cli-fallback",
+                       model: "claude-sonnet-5",
+                       systemPromptSource: "fallback"))
+            BCILog.pipeline.notice(
+                "dialectic runtime: \(dialecticResolved.resolved); witness runtime: \(witnessResolved.resolved)")
             loop = HypnagogicDialecticLoop(
                 listener: listener,
-                generator: ClaudeCLIGenerator(
-                    systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
-                ),
+                generator: dialecticResolved.generator,
                 speaker: voiceOutput,
                 embedder: container.sentenceEmbedder,
                 roles: DialecticalRole.wakingRoles,
@@ -896,15 +919,23 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 // (WITNESS.md). This is the third cloud call; Focused/Contemplative
                 // leave it nil.
                 witness: profile.witnessEnabled
-                    ? ClaudeCLIGenerator(systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt)
+                    ? witnessResolved.generator
                     : nil,
                 config: profile.loopConfig()
             )
         } else {
             // Mirror — the plain, non-competing reply loop (one cloud call/turn).
+            // RVS-001+1: same `LiveRuntimeFactory` resolution as the
+            // dialectic path, so the mirror uses the selected runtime
+            // (default: Claude).
+            let mirrorResolved = (try? LiveRuntimeFactory.make()) ??
+                (ClaudeCLIGenerator(), LiveRuntimeFactory.Resolved(
+                    name: "claude-cli-fallback",
+                    model: "claude-sonnet-5",
+                    systemPromptSource: "fallback"))
             loop = HypnagogicDialogueLoop(
                 listener: listener,
-                generator: ClaudeCLIGenerator(),
+                generator: mirrorResolved.generator,
                 speaker: voiceOutput
             )
         }
