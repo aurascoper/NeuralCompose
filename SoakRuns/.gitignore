@@ -7,6 +7,14 @@ SoakRuns/*/runs/
 SoakRuns/*/baselines/
 SoakRuns/*/meta.txt
 
+# 1-cell smoke-test runs from iterating on the matrix runner. Empty
+# matrix.json / leakage.json. Kept on disk for dev history, not for
+# longitudinal comparison.
+SoakRuns/soak-002-20260721-220642/
+SoakRuns/soak-002-20260721-220712/
+SoakRuns/soak-002-20260721-220755/
+SoakRuns/soak-002-20260721-220821/
+
 # But keep the aggregate matrix.json and leakage.json for diffing across runs
 !SoakRuns/**/matrix.json
 !SoakRuns/**/leakage.json
