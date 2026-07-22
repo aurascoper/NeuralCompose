@@ -10,15 +10,9 @@
       "metrics": {
         "ngram_diversity": 0.9671457905544147,
         "opening_diversity": 0.9655172413793104,
-        "self_similarity": 0.6124650162068965,
-        "witness_count": null,
         "synthesis_rate": 0.0,
-        "coherence_rate": 0.5,
-        "displacement_rate": 0.4666666666666667,
         "silent_rate": 0.03333333333333333,
         "fp_rate": 1.0,
-        "entropy_first": 6.536279058478684,
-        "entropy_second": 6.7142715109269995,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.03448275862068961,
@@ -27,25 +21,51 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 1,
-          "positions": [
-            12
-          ]
         },
-        "in a live dialogue": {
-          "count": 2,
-          "positions": [
-            1,
-            27
-          ]
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 545,
+          "relational": {
+            "first": 0.012263879910938734,
+            "second": 0.016020916020916022,
+            "drift": 0.0037570361099772877,
+            "top_words": {
+              "context": 2,
+              "within": 2,
+              "through": 2,
+              "absence": 1,
+              "value": 1,
+              "toward": 1
+            }
+          },
+          "object": {
+            "first": 0.0,
+            "second": 0.002150537634408602,
+            "drift": 0.002150537634408602,
+            "top_words": {
+              "system": 1
+            }
+          },
+          "process": {
+            "first": 0.01977225672877847,
+            "second": 0.014456122789456124,
+            "drift": -0.005316133939322346,
+            "top_words": {
+              "explore": 3,
+              "consider": 2,
+              "shift": 1,
+              "listen": 1,
+              "examine": 1,
+              "observes": 1
+            }
+          },
+          "other": {
+            "first": 0.9679638633602828,
+            "second": 0.9673724235552192,
+            "drift": -0.0005914398050635983,
+            "top_words": {}
+          },
+          "note": "P(relational) flat (no clear drift)"
         }
       }
     },
@@ -57,15 +77,9 @@
       "metrics": {
         "ngram_diversity": 0.0,
         "opening_diversity": 0.0,
-        "self_similarity": null,
-        "witness_count": null,
         "synthesis_rate": 0.0,
-        "coherence_rate": 0.0,
-        "displacement_rate": 0.0,
         "silent_rate": 1.0,
         "fp_rate": 1.0,
-        "entropy_first": 0.0,
-        "entropy_second": 0.0,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.0,
@@ -74,20 +88,35 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 0,
-          "positions": []
         },
-        "in a live dialogue": {
-          "count": 0,
-          "positions": []
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 0,
+          "relational": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "object": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "process": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "other": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "note": "P(relational) flat (no clear drift)"
         }
       }
     },
@@ -99,15 +128,9 @@
       "metrics": {
         "ngram_diversity": 0.0,
         "opening_diversity": 0.0,
-        "self_similarity": null,
-        "witness_count": null,
         "synthesis_rate": 0.0,
-        "coherence_rate": 0.0,
-        "displacement_rate": 0.0,
         "silent_rate": 1.0,
         "fp_rate": 1.0,
-        "entropy_first": 0.0,
-        "entropy_second": 0.0,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.0,
@@ -116,20 +139,35 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 0,
-          "positions": []
         },
-        "in a live dialogue": {
-          "count": 0,
-          "positions": []
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 0,
+          "relational": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "object": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "process": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "other": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "note": "P(relational) flat (no clear drift)"
         }
       }
     },
@@ -143,15 +181,9 @@
       "metrics": {
         "ngram_diversity": 0.7017892644135189,
         "opening_diversity": 0.7931034482758621,
-        "self_similarity": 0.5946595689655172,
-        "witness_count": null,
         "synthesis_rate": 0.2,
-        "coherence_rate": 0.6,
-        "displacement_rate": 0.2,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
-        "entropy_first": 6.670216231524482,
-        "entropy_second": 6.867896734148453,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.2068965517241379,
@@ -160,25 +192,49 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 1,
-          "positions": [
-            12
-          ]
         },
-        "in a live dialogue": {
-          "count": 2,
-          "positions": [
-            1,
-            18
-          ]
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 563,
+          "relational": {
+            "first": 0.0037698412698412695,
+            "second": 0.02025252525252525,
+            "drift": 0.01648268398268398,
+            "top_words": {
+              "frame": 2,
+              "value": 2,
+              "within": 1,
+              "space": 1,
+              "through": 1,
+              "together": 1
+            }
+          },
+          "object": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "process": {
+            "first": 0.014603174603174602,
+            "second": 0.019570707070707072,
+            "drift": 0.0049675324675324695,
+            "top_words": {
+              "listen": 2,
+              "examine": 1,
+              "consider": 1,
+              "observes": 1,
+              "explore": 1,
+              "reflect": 1
+            }
+          },
+          "other": {
+            "first": 0.9816269841269841,
+            "second": 0.9601767676767676,
+            "drift": -0.021450216450216497,
+            "top_words": {}
+          },
+          "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
         }
       }
     },
@@ -192,15 +248,9 @@
       "metrics": {
         "ngram_diversity": 0.786036036036036,
         "opening_diversity": 0.8,
-        "self_similarity": 0.6520869279310344,
-        "witness_count": null,
         "synthesis_rate": 0.2,
-        "coherence_rate": 0.36666666666666664,
-        "displacement_rate": 0.43333333333333335,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
-        "entropy_first": 7.3034751896069,
-        "entropy_second": 7.291872333893443,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.19999999999999996,
@@ -209,23 +259,50 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 0,
-          "positions": []
         },
-        "in a live dialogue": {
-          "count": 2,
-          "positions": [
-            1,
-            19
-          ]
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 948,
+          "relational": {
+            "first": 0.01662256087727786,
+            "second": 0.02945799419328831,
+            "drift": 0.01283543331601045,
+            "top_words": {
+              "through": 7,
+              "us": 5,
+              "value": 3,
+              "absence": 2,
+              "between": 2,
+              "field": 1,
+              "space": 1,
+              "relationship": 1
+            }
+          },
+          "object": {
+            "first": 0.0011904761904761904,
+            "second": 0.0011904761904761904,
+            "drift": 0.0,
+            "top_words": {
+              "prompt": 2
+            }
+          },
+          "process": {
+            "first": 0.010182900361928494,
+            "second": 0.003418803418803419,
+            "drift": -0.006764096943125075,
+            "top_words": {
+              "consider": 3,
+              "explore": 2,
+              "listen": 2
+            }
+          },
+          "other": {
+            "first": 0.9720040625703175,
+            "second": 0.9659327261974321,
+            "drift": -0.006071336372885372,
+            "top_words": {}
+          },
+          "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
         }
       }
     },
@@ -239,15 +316,9 @@
       "metrics": {
         "ngram_diversity": 0.657243816254417,
         "opening_diversity": 0.6666666666666666,
-        "self_similarity": 0.6667862465517241,
-        "witness_count": null,
         "synthesis_rate": 0.3,
-        "coherence_rate": 0.4666666666666667,
-        "displacement_rate": 0.23333333333333334,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
-        "entropy_first": 7.330350966023926,
-        "entropy_second": 7.248182985032298,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.33333333333333337,
@@ -256,23 +327,50 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 0,
-          "positions": []
         },
-        "in a live dialogue": {
-          "count": 2,
-          "positions": [
-            1,
-            18
-          ]
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 909,
+          "relational": {
+            "first": 0.014286845772791875,
+            "second": 0.01619160767755378,
+            "drift": 0.0019047619047619056,
+            "top_words": {
+              "us": 4,
+              "context": 2,
+              "between": 2,
+              "through": 2,
+              "beyond": 2,
+              "value": 1
+            }
+          },
+          "object": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "process": {
+            "first": 0.025614926394523712,
+            "second": 0.018259385818558464,
+            "drift": -0.007355540575965248,
+            "top_words": {
+              "consider": 6,
+              "explore": 5,
+              "integrates": 2,
+              "shift": 2,
+              "listening": 1,
+              "reflects": 1,
+              "integrate": 1
+            }
+          },
+          "other": {
+            "first": 0.9600982278326844,
+            "second": 0.9655490065038878,
+            "drift": 0.00545077867120336,
+            "top_words": {}
+          },
+          "note": "P(relational) flat (no clear drift)"
         }
       }
     },
@@ -285,15 +383,9 @@
       "metrics": {
         "ngram_diversity": 1.0,
         "opening_diversity": 0.0,
-        "self_similarity": null,
-        "witness_count": null,
         "synthesis_rate": 0.0,
-        "coherence_rate": 0.0,
-        "displacement_rate": 0.03333333333333333,
         "silent_rate": 0.9666666666666667,
         "fp_rate": 1.0,
-        "entropy_first": 1.1094737505048093,
-        "entropy_second": 0.0,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.0,
@@ -302,20 +394,35 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 0,
-          "positions": []
         },
-        "in a live dialogue": {
-          "count": 0,
-          "positions": []
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 3,
+          "relational": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "object": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "process": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "other": {
+            "first": 1.0,
+            "second": 0.0,
+            "drift": -1.0,
+            "top_words": {}
+          },
+          "note": "P(relational) flat (no clear drift)"
         }
       }
     },
@@ -327,15 +434,9 @@
       "metrics": {
         "ngram_diversity": 0.0,
         "opening_diversity": 0.0,
-        "self_similarity": null,
-        "witness_count": null,
         "synthesis_rate": 0.0,
-        "coherence_rate": 0.0,
-        "displacement_rate": 0.0,
         "silent_rate": 1.0,
         "fp_rate": 1.0,
-        "entropy_first": 0.0,
-        "entropy_second": 0.0,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.0,
@@ -344,20 +445,35 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 0,
-          "positions": []
         },
-        "in a live dialogue": {
-          "count": 0,
-          "positions": []
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 0,
+          "relational": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "object": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "process": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "other": {
+            "first": 0.0,
+            "second": 0.0,
+            "drift": 0.0,
+            "top_words": {}
+          },
+          "note": "P(relational) flat (no clear drift)"
         }
       }
     },
@@ -371,15 +487,9 @@
       "metrics": {
         "ngram_diversity": 0.7357630979498861,
         "opening_diversity": 0.8275862068965517,
-        "self_similarity": 0.6071079251724139,
-        "witness_count": null,
         "synthesis_rate": 0.16666666666666666,
-        "coherence_rate": 0.5333333333333333,
-        "displacement_rate": 0.3,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
-        "entropy_first": 6.427061656835136,
-        "entropy_second": 6.696238128945516,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.1724137931034483,
@@ -388,28 +498,49 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 1,
-          "positions": [
-            12
-          ]
         },
-        "in a live dialogue": {
-          "count": 5,
-          "positions": [
-            1,
-            3,
-            14,
-            18,
-            20
-          ]
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 499,
+          "relational": {
+            "first": 0.0013605442176870747,
+            "second": 0.019273002130144986,
+            "drift": 0.01791245791245791,
+            "top_words": {
+              "context": 2,
+              "through": 2,
+              "value": 1
+            }
+          },
+          "object": {
+            "first": 0.004081632653061224,
+            "second": 0.008526077097505668,
+            "drift": 0.0044444444444444444,
+            "top_words": {
+              "system": 3,
+              "model": 2,
+              "systems": 2
+            }
+          },
+          "process": {
+            "first": 0.016871500147362217,
+            "second": 0.017165242165242164,
+            "drift": 0.00029374201787994714,
+            "top_words": {
+              "explore": 3,
+              "listening": 2,
+              "consider": 1,
+              "reflects": 1,
+              "examines": 1
+            }
+          },
+          "other": {
+            "first": 0.9776863229818894,
+            "second": 0.9550356786071071,
+            "drift": -0.02265064437478226,
+            "top_words": {}
+          },
+          "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
         }
       }
     },
@@ -423,15 +554,9 @@
       "metrics": {
         "ngram_diversity": 0.7835325365205843,
         "opening_diversity": 0.8333333333333334,
-        "self_similarity": 0.6225053037931034,
-        "witness_count": null,
         "synthesis_rate": 0.16666666666666666,
-        "coherence_rate": 0.43333333333333335,
-        "displacement_rate": 0.4,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
-        "entropy_first": 7.209098567382871,
-        "entropy_second": 7.171977260496011,
         "inertia": {
           "semantic_inertia": 0.034266704702009494,
           "linguistic_inertia": 0.16666666666666663,
@@ -440,20 +565,51 @@
           "heard_length_variance": 280.89,
           "heard_length_autocorrelation_lag1": 0.09015555236373055,
           "note": ""
-        }
-      },
-      "named_phrases": {
-        "we should consider whether there might be another variable": {
-          "count": 0,
-          "positions": []
         },
-        "in a live dialogue": {
-          "count": 0,
-          "positions": []
-        },
-        "as a human i": {
-          "count": 0,
-          "positions": []
+        "symbolic_drift": {
+          "total_turns": 30,
+          "total_words": 813,
+          "relational": {
+            "first": 0.012668411164787978,
+            "second": 0.019821134984178465,
+            "drift": 0.0071527238193904875,
+            "top_words": {
+              "within": 4,
+              "beyond": 3,
+              "through": 3,
+              "together": 1,
+              "value": 1,
+              "contexts": 1
+            }
+          },
+          "object": {
+            "first": 0.0,
+            "second": 0.006060606060606061,
+            "drift": 0.006060606060606061,
+            "top_words": {
+              "system": 1
+            }
+          },
+          "process": {
+            "first": 0.01612331736969418,
+            "second": 0.011634460547504026,
+            "drift": -0.004488856822190154,
+            "top_words": {
+              "drift": 2,
+              "explore": 2,
+              "consider": 2,
+              "listening": 1,
+              "reflects": 1,
+              "observes": 1
+            }
+          },
+          "other": {
+            "first": 0.9712082714655178,
+            "second": 0.9624837984077115,
+            "drift": -0.008724473057806326,
+            "top_words": {}
+          },
+          "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
         }
       }
     }

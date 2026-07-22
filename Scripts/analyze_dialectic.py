@@ -69,6 +69,53 @@ NGRAM_SIZE = 4                # opening 4-grams (matches prior session)
 TOP_K_NGRAMS = 10             # how many most-repeated n-grams to surface
 MIN_NGRAM_FREQ = 3            # minimum count to surface in the report
 
+# ── Symbolic drift vocabulary classes (H₂ hypothesis) ─────────────
+#
+# The user named a measurable question: "Does lexical content shift
+# from object-centered vocabulary toward relational vocabulary while
+# semantic inertia remains low?" The three classes:
+#
+#   relational: words describing *relations between* things
+#               (us, value, sign, between, through, toward, ...)
+#   object:     words describing *things* the system manipulates
+#               (file, code, prompt, runtime, graph, model, ...)
+#   process:    words describing *activities* the system performs
+#               (explore, compare, evaluate, reflect, synthesize, ...)
+#
+# The metric is per-turn: count occurrences of each class / total
+# word count. Aggregated as first-half mean vs second-half mean.
+# Drift = second - first, in percentage points.
+#
+# These lists are *hypothesis inputs*, not ground truth. They
+# should be iterated as the architecture review's "measure before
+# interpreting" discipline demands. Edit here, re-run, compare.
+RELATIONAL_TERMS: set[str] = {
+    "us", "value", "sign", "relation", "relations", "relationship",
+    "relationships", "between", "together", "through", "among",
+    "within", "beyond", "toward", "towards", "signs", "values",
+    "field", "fields", "space", "spaces", "gap", "gaps", "openness",
+    "presence", "absence", "context", "contexts", "frame", "frames",
+}
+OBJECT_TERMS: set[str] = {
+    "file", "code", "prompt", "prompts", "runtime", "graph",
+    "graphs", "model", "models", "system", "systems", "network",
+    "networks", "function", "functions", "library", "libraries",
+    "package", "packages", "module", "modules", "type", "types",
+    "class", "classes", "protocol", "protocols", "kernel", "kernels",
+    "tensor", "tensors", "vector", "vectors", "matrix", "matrices",
+    "hypothesis", "hypotheses", "benchmark", "benchmarks",
+}
+PROCESS_TERMS: set[str] = {
+    "explore", "explores", "comparing", "compare", "compares",
+    "stabilize", "stabilizes", "evaluate", "evaluates",
+    "reflect", "reflects", "listening", "listen", "listens",
+    "attend", "attends", "observe", "observes", "examine",
+    "examines", "consider", "considers", "integrate", "integrates",
+    "synthesize", "synthesizes", "interrogate", "interrogates",
+    "iterate", "iterates", "transform", "transforms", "iterate",
+    "drift", "drifts", "shift", "shifts", "settle", "settles",
+}
+
 
 # ── Data shape ───────────────────────────────────────────────────────
 
@@ -401,6 +448,152 @@ def compute_inertia(turns: list[Turn]) -> InertiaReport:
         exploration_pressure=exploration_pressure,
         heard_length_variance=variance,
         heard_length_autocorrelation_lag1=autocorr,
+        note="; ".join(notes),
+    )
+
+
+# ── Metric: symbolic drift (H₂ hypothesis) ────────────────────────
+#
+# The user named a falsifiable question: "Does lexical content
+# shift from object-centered vocabulary toward relational
+# vocabulary while semantic inertia remains low?"
+#
+# This metric measures per-turn proportions of three vocabulary
+# classes — relational, object, process — and reports the
+# first-half mean vs second-half mean. A positive drift in
+# P(relational) with low semantic_inertia is consistent with H₂.
+#
+# The vocabulary lists (RELATIONAL_TERMS, OBJECT_TERMS,
+# PROCESS_TERMS) are defined at the top of the file. They are
+# hypothesis inputs, not ground truth — iterate as needed.
+
+
+@dataclass
+class SymbolicDriftReport:
+    """P(relational) / P(object) / P(process) over time.
+
+    Each metric is reported as:
+      - first-half mean (per-turn proportion)
+      - second-half mean (per-turn proportion)
+      - drift = second - first, in proportion
+      - per-class top-10 words with counts
+    """
+    total_turns: int
+    total_words: int
+    relational: dict[str, object]      # first, second, drift, top_words
+    object: dict[str, object]
+    process: dict[str, object]
+    other: dict[str, object]
+    note: str = ""
+
+
+def _classify_words(text: str) -> tuple[int, int, int, int]:
+    """Return (relational, object, process, total) for a text."""
+    r = o = p = total = 0
+    for w in tokenize(text):
+        total += 1
+        if w in RELATIONAL_TERMS:
+            r += 1
+        elif w in OBJECT_TERMS:
+            o += 1
+        elif w in PROCESS_TERMS:
+            p += 1
+    return r, o, p, total
+
+
+def compute_symbolic_drift(turns: list[Turn]) -> SymbolicDriftReport:
+    """Compute per-turn proportions + first/second-half means + drift."""
+    if not turns:
+        return SymbolicDriftReport(
+            total_turns=0, total_words=0,
+            relational={"first": 0.0, "second": 0.0, "drift": 0.0, "top_words": {}},
+            object={"first": 0.0, "second": 0.0, "drift": 0.0, "top_words": {}},
+            process={"first": 0.0, "second": 0.0, "drift": 0.0, "top_words": {}},
+            other={"first": 0.0, "second": 0.0, "drift": 0.0, "top_words": {}},
+        )
+
+    mid = len(turns) // 2
+    first_turns = turns[:mid]
+    second_turns = turns[mid:]
+
+    # Per-turn proportions
+    def proportions_for(turn_subset: list[Turn]) -> dict[str, float]:
+        rs: list[float] = []
+        os: list[float] = []
+        ps: list[float] = []
+        oth: list[float] = []
+        for t in turn_subset:
+            r, o, p, total = _classify_words(t.spoken)
+            if total == 0:
+                continue
+            rs.append(r / total)
+            os.append(o / total)
+            ps.append(p / total)
+            oth.append((total - r - o - p) / total)
+        return {
+            "relational": statistics.fmean(rs) if rs else 0.0,
+            "object": statistics.fmean(os) if os else 0.0,
+            "process": statistics.fmean(ps) if ps else 0.0,
+            "other": statistics.fmean(oth) if oth else 0.0,
+        }
+
+    first_p = proportions_for(first_turns)
+    second_p = proportions_for(second_turns)
+
+    # Top-10 most-frequent words per class (across all turns)
+    counts = {
+        "relational": collections.Counter(),
+        "object": collections.Counter(),
+        "process": collections.Counter(),
+    }
+    total_words = 0
+    for t in turns:
+        for w in tokenize(t.spoken):
+            total_words += 1
+            if w in RELATIONAL_TERMS:
+                counts["relational"][w] += 1
+            elif w in OBJECT_TERMS:
+                counts["object"][w] += 1
+            elif w in PROCESS_TERMS:
+                counts["process"][w] += 1
+
+    def block(label: str, key: str) -> dict:
+        first_v = first_p[key]
+        second_v = second_p[key]
+        top = dict(counts[label].most_common(10))
+        return {
+            "first": first_v,
+            "second": second_v,
+            "drift": second_v - first_v,   # in proportion; *100 = pp
+            "top_words": top,
+        }
+
+    # Diagnostic note
+    notes: list[str] = []
+    rel_drift = second_p["relational"] - first_p["relational"]
+    obj_drift = second_p["object"] - first_p["object"]
+    proc_drift = second_p["process"] - first_p["process"]
+    if rel_drift > 0.005 and obj_drift < 0:
+        notes.append("P(relational) ↑ while P(object) ↓ — consistent with H₂")
+    elif rel_drift > 0.005 and obj_drift >= 0:
+        notes.append("P(relational) ↑ without P(object) ↓ — broader drift")
+    elif rel_drift < -0.005:
+        notes.append("P(relational) ↓ — opposite of H₂")
+    else:
+        notes.append("P(relational) flat (no clear drift)")
+
+    return SymbolicDriftReport(
+        total_turns=len(turns),
+        total_words=total_words,
+        relational=block("relational", "relational"),
+        object=block("object", "object"),
+        process=block("process", "process"),
+        other={
+            "first": first_p["other"],
+            "second": second_p["other"],
+            "drift": second_p["other"] - first_p["other"],
+            "top_words": {},
+        },
         note="; ".join(notes),
     )
 
@@ -784,6 +977,28 @@ def render_report(rep: dict[str, Any]) -> str:
         out.append(f"  critical-slowing-down hints:     {i['note']}")
     out.append("")
 
+    # 12. Symbolic drift (H₂ hypothesis)
+    out.append("── 12. Symbolic Drift (H₂ hypothesis test) ──")
+    sd = rep.get("symbolic_drift", {})
+    if sd:
+        out.append(f"  total turns / words:       {sd['total_turns']} / {sd['total_words']}")
+        out.append("")
+        for label, key in [("relational", "relational"), ("object", "object"), ("process", "process")]:
+            blk = sd[key]
+            first = blk.get("first", 0.0) * 100
+            second = blk.get("second", 0.0) * 100
+            drift_pp = blk.get("drift", 0.0) * 100
+            arrow = "↑" if drift_pp > 0.05 else "↓" if drift_pp < -0.05 else "="
+            out.append(f"  P({label:<10s})  first={first:>5.2f}%  second={second:>5.2f}%  drift={drift_pp:+5.2f}pp {arrow}")
+            top = blk.get("top_words", {}) or {}
+            if top:
+                top_str = ", ".join(f"{w}:{c}" for w, c in list(top.items())[:5])
+                out.append(f"                 top: {top_str}")
+        out.append("")
+        if sd.get("note"):
+            out.append(f"  H₂ verdict:                {sd['note']}")
+    out.append("")
+
     # 10. Provenance
     out.append("── 10. Generator Provenance ──")
     p = rep["provenance"]
@@ -891,6 +1106,7 @@ def main() -> int:
         "latency": asdict(compute_latency_proxy(turns)),
         "provenance": asdict(compute_provenance(turns)),
         "inertia": asdict(compute_inertia(turns)),
+        "symbolic_drift": asdict(compute_symbolic_drift(turns)),
         "named_phrases": compute_named_phrases(turns),
     }
     print(render_report(rep))
