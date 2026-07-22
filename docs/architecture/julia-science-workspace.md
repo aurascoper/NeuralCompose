@@ -241,6 +241,27 @@ The repo-side prototype for this bridge is
 `docs/science/state-reconstruction-goal-0.md`. It prepares JSON/CSV
 trajectory artifacts for Julia without adding Julia to the runtime.
 
+## Goal 1
+
+Analyze a reconstructed trajectory before choosing a dynamical model.
+
+The first candidate question is:
+
+```text
+Does continuation pressure create stable attractors?
+```
+
+The repo-side prototype for this falsification gate is
+`Scripts/analyze_state_trajectory.py`; see
+`docs/science/trajectory-analysis-goal-1.md`. It consumes a Goal 0
+trajectory artifact and reports whether the local-attractor proxy and
+continuation-pressure stabilization claim are supported, rejected, or
+not testable.
+
+A supported Goal 1 result promotes the question to Julia dynamical
+modeling. It does not promote code into Swift and does not justify a
+Rust kernel.
+
 ## First Model Experiment
 
 Only after Goal 0 succeeds, posit a simple first-order nonlinear

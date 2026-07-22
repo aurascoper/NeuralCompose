@@ -114,6 +114,9 @@ Related architecture notes:
   scopes bounded implementation backends.
 - [Julia Science Workspace](docs/architecture/julia-science-workspace.md)
   keeps Julia as an offline scientific laboratory, not an app runtime.
+- [State Reconstruction Goal 0](docs/science/state-reconstruction-goal-0.md)
+  and [Trajectory Analysis Goal 1](docs/science/trajectory-analysis-goal-1.md)
+  turn soak telemetry into falsifiable science artifacts.
 - [Semantic-to-Prosody Boundary](docs/architecture/semantic-to-prosody-boundary.md)
   separates what text is generated from how it is spoken.
 

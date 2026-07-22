@@ -96,6 +96,9 @@ telemetry
   -> dynamical model
 ```
 
+The repo-side Goal 1 tool is `Scripts/analyze_state_trajectory.py`;
+see `docs/science/trajectory-analysis-goal-1.md`.
+
 Rust remains out of scope until later models predict held-out
 telemetry with enough evidence to justify a deterministic production
 kernel.
