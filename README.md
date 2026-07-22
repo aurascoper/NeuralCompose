@@ -106,6 +106,15 @@ channel-health pipeline and checks the output against a committed reference.
 The app talks to `BCILLM` through `NextWordPredicting`, so there's exactly
 **one** MLX runtime copy in the linked binary.
 
+Related architecture notes:
+
+- [Three Orthogonal Concerns](docs/architecture/three-orthogonal-concerns.md)
+  separates Science, Engineering, and Computation.
+- [Engineering Runtime](docs/architecture/engineering-runtime.md)
+  scopes bounded implementation backends.
+- [Julia Science Workspace](docs/architecture/julia-science-workspace.md)
+  keeps Julia as an offline scientific laboratory, not an app runtime.
+
 ### Four-layer model
 
 The codebase is organized into four layers, named for *role* (not

@@ -246,6 +246,9 @@ Python for general scripting and analysis glue.
 These services are not in the runtime path. They are
 in the *research path* that surrounds the runtime.
 
+See `julia-science-workspace.md` for the repository boundary and
+promotion path for Julia models.
+
 ## Status
 
 - Three orthogonal concerns named and documented
