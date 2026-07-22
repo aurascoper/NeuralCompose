@@ -946,6 +946,14 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         // them; the mirror loop leaves the relay quiet.
         spokenNodeForwardTask?.cancel()
         if let dialectic = loop as? HypnagogicDialecticLoop {
+            // RVS-001+1: wire the metadata capture from the
+            // adapter (or no-op for legacy `TextGenerating`).
+            // The dialectic loop's `runTurn` will then populate
+            // `DialecticalTurnEvent.generatorFingerprint` on
+            // every turn. This is the live-app side of the
+            // two-layer metadata path; the core runtime path
+            // was committed in `b9c09fd`.
+            await dialectic.attachMetadataCaptureFromAdapter()
             let relay = spokenNodeRelay
             let events = dialectic.spokenNodeStream()
             spokenNodeForwardTask = Task { for await event in events { relay.send(event) } }
