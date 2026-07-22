@@ -186,6 +186,85 @@ MOTIF_CLASSES: dict[str, set[str]] = {
     "investigation": INVESTIGATION_TERMS,
 }
 
+# ── Level-of-Abstraction (LoA) classes (H₄ hypothesis) ──────────
+#
+# The architecture review's framing: "Reflective dialogue
+# may exhibit upward abstraction drift over time, moving
+# from concrete problem-solving toward increasingly general
+# relational, societal, or existential framing."
+#
+# Five abstraction levels (concrete → existential):
+#
+#   concrete      — runtime, json, ollama, benchmark, telemetry,
+#                   file, code, function, system, model
+#   interactional — dialogue, conversation, witness, response,
+#                   reply, turn, exchange, voice, speaker
+#   relational    — between, together, relation, value, sign,
+#                   us, through, among, within, toward
+#   societal      — community, culture, social, society, media,
+#                   institutions, public, people, group, history
+#   existential   — human, humanity, condition, mortality, meaning,
+#                   transcendence, existence, being, soul, purpose
+#
+# Each word is assigned to at most one level. A turn is
+# represented as a 5-vector of class proportions.
+#
+# H₄ prediction: long-running reflective dialogue climbs the
+# abstraction ladder. The data can test this by:
+#   1. Per-outcome LoA distribution
+#   2. First-half vs second-half LoA drift
+#   3. Cross-cell / cross-model LoA distributions
+CONCRETE_TERMS: set[str] = {
+    "runtime", "json", "ollama", "benchmark", "telemetry", "file",
+    "code", "function", "module", "class", "package", "library",
+    "type", "protocol", "system", "network", "graph", "tensor",
+    "vector", "matrix", "model", "kernel", "compiler", "binary",
+    "config", "spec", "test", "build", "compile", "execute",
+    "swift", "python", "rust", "language", "script", "binary",
+    "field", "fields",  # `field` is concrete in CS (struct field)
+    "input", "output", "data", "value",  # `value` is also concrete
+    "schema", "query", "index", "log", "metric", "stats",
+}
+INTERACTIONAL_TERMS: set[str] = {
+    "dialogue", "conversation", "witness", "response", "request",
+    "reply", "turn", "exchange", "interaction", "communicate",
+    "communication", "message", "utterance", "speak", "saying",
+    "voice", "audience", "listener", "speaker", "talk",
+    "phrase", "discourse", "register", "dialect", "rhetoric",
+}
+RELATIONAL_TERMS_LOA: set[str] = {  # distinct from RELATIONAL_TERMS for vocab
+    "between", "together", "relation", "relations", "relationship",
+    "relationships", "values", "signs", "us", "through", "among",
+    "within", "toward", "towards", "beyond", "context", "contexts",
+    "frame", "frames", "space", "spaces", "gap", "gaps", "openness",
+    "presence", "absence",
+}
+SOCIETAL_TERMS: set[str] = {
+    "community", "communities", "culture", "cultures", "social",
+    "society", "societies", "media", "institution", "institutions",
+    "public", "people", "group", "groups", "collective",
+    "shared", "common", "tradition", "traditions", "history",
+    "generation", "generations", "crowd", "civilization",
+    "humanities", "world", "era",
+}
+EXISTENTIAL_TERMS: set[str] = {
+    "human", "humanity", "condition", "conditions", "mortality",
+    "meaning", "meanings", "transcendence", "existence",
+    "being", "soul", "spirit", "life", "death", "alive",
+    "consciousness", "conscious", "awareness", "aware",
+    "purpose", "identities", "dying", "born", "mind",
+    "finitude", "infinite", "eternal", "ultimate",
+}
+
+LOA_CLASSES: dict[str, set[str]] = {
+    "concrete": CONCRETE_TERMS,
+    "interactional": INTERACTIONAL_TERMS,
+    "relational": RELATIONAL_TERMS_LOA,
+    "societal": SOCIETAL_TERMS,
+    "existential": EXISTENTIAL_TERMS,
+}
+LOA_ORDER: tuple[str, ...] = ("concrete", "interactional", "relational", "societal", "existential")
+
 
 # ── Data shape ───────────────────────────────────────────────────────
 
@@ -905,6 +984,156 @@ def compute_witness_frequency(turns: list[Turn]) -> WitnessFrequencyReport:
     )
 
 
+# ── Metric: Level of Abstraction (LoA) — H₄ hypothesis ────────────
+#
+# The architecture review's framing: reflective dialogue may
+# exhibit *upward abstraction drift* over time, moving from
+# concrete problem-solving toward increasingly general
+# relational, societal, or existential framing.
+#
+# Each turn is represented as a 5-vector of class proportions:
+#
+#   [concrete, interactional, relational, societal, existential]
+#
+# H₄ predictions to test:
+#   1. First-half vs second-half drift: the centroid should
+#      shift toward higher abstraction levels over time
+#   2. Cross-cell / cross-model comparison: trajectories
+#      should be model-dependent (consistent with the
+#      RRB / epistemic-orientation findings)
+#   3. Per-outcome: synthesis outcomes are expected to be
+#      more abstract than coherence or displacement
+#
+# The metric is *distribution-level*, not scalar — H₄ doesn't
+# predict "more abstract" as a single number, but a
+# redistribution across the 5 levels.
+
+
+@dataclass
+class LevelOfAbstractionReport:
+    """5-vector LoA distribution + first/second-half drift."""
+    total_turns: int
+    total_words: int
+    distribution: dict[str, float]                       # overall mean
+    per_outcome: dict[str, dict[str, float]]             # outcome -> 5-vector
+    first_half: dict[str, float]
+    second_half: dict[str, float]
+    drift: dict[str, float]                              # second - first per level
+    centroid_first: list[float]                          # [concrete, ..., existential] for first half
+    centroid_second: list[float]
+    abstraction_shift: float                              # weighted shift toward higher levels
+    note: str = ""
+
+
+def _loa_vector(text: str) -> list[float] | None:
+    """Compute a 5-vector of LoA class proportions for a text.
+
+    Each word is assigned to at most one class. Returns None
+    if no LoA-classifiable words are found.
+    """
+    if not text:
+        return None
+    counts = [0, 0, 0, 0, 0]  # concrete, interactional, relational, societal, existential
+    for w in tokenize(text):
+        for i, lvl in enumerate(LOA_ORDER):
+            if w in LOA_CLASSES[lvl]:
+                counts[i] += 1
+                break
+    total = sum(counts)
+    if total == 0:
+        return None
+    return [c / total for c in counts]
+
+
+def compute_level_of_abstraction(turns: list[Turn]) -> LevelOfAbstractionReport:
+    if not turns:
+        return LevelOfAbstractionReport(
+            total_turns=0, total_words=0,
+            distribution={}, per_outcome={},
+            first_half={}, second_half={}, drift={},
+            centroid_first=[0, 0, 0, 0, 0],
+            centroid_second=[0, 0, 0, 0, 0],
+            abstraction_shift=0.0,
+        )
+
+    # Per-turn vectors
+    vectors: list[list[float]] = []
+    for t in turns:
+        v = _loa_vector(t.spoken)
+        if v is not None:
+            vectors.append(v)
+
+    # Overall distribution
+    n = len(vectors)
+    overall = [
+        statistics.fmean(v[i] for v in vectors) if vectors else 0.0
+        for i in range(5)
+    ]
+    distribution = {lvl: overall[i] for i, lvl in enumerate(LOA_ORDER)}
+
+    # Per-outcome
+    per_outcome: dict[str, list[float]] = {}
+    for outcome in OUTCOMES:
+        outcome_turns = [t for t in turns if t.outcome == outcome]
+        outcome_vectors: list[list[float]] = []
+        for t in outcome_turns:
+            v = _loa_vector(t.spoken)
+            if v is not None:
+                outcome_vectors.append(v)
+        if outcome_vectors:
+            per_outcome[outcome] = [
+                statistics.fmean(v[i] for v in outcome_vectors) if outcome_vectors else 0.0
+                for i in range(5)
+            ]
+
+    # First-half / second-half
+    mid = len(vectors) // 2
+    first_vectors = vectors[:mid]
+    second_vectors = vectors[mid:]
+
+    first_avg = (
+        [statistics.fmean(v[i] for v in first_vectors) for i in range(5)]
+        if first_vectors else [0, 0, 0, 0, 0]
+    )
+    second_avg = (
+        [statistics.fmean(v[i] for v in second_vectors) for i in range(5)]
+        if second_vectors else [0, 0, 0, 0, 0]
+    )
+
+    first_half = {lvl: first_avg[i] for i, lvl in enumerate(LOA_ORDER)}
+    second_half = {lvl: second_avg[i] for i, lvl in enumerate(LOA_ORDER)}
+    drift = {lvl: second_avg[i] - first_avg[i] for i, lvl in enumerate(LOA_ORDER)}
+
+    # Abstraction shift: weighted change toward higher levels
+    # Weight each level by its index (0..4). Positive shift = more abstract.
+    abstraction_shift = sum(
+        (i / 4) * drift[lvl] for i, lvl in enumerate(LOA_ORDER)
+    )
+
+    # Notes
+    notes: list[str] = []
+    if abstraction_shift > 0.05:
+        notes.append("upward abstraction drift detected (H₄ supported)")
+    elif abstraction_shift < -0.05:
+        notes.append("downward shift toward concrete (H₄ refuted)")
+    else:
+        notes.append("no significant abstraction drift")
+
+    return LevelOfAbstractionReport(
+        total_turns=len(turns),
+        total_words=sum(len(t.spoken.split()) for t in turns),
+        distribution=distribution,
+        per_outcome={o: {lvl: v[i] for i, lvl in enumerate(LOA_ORDER)} for o, v in per_outcome.items()},
+        first_half=first_half,
+        second_half=second_half,
+        drift=drift,
+        centroid_first=list(first_avg),
+        centroid_second=list(second_avg),
+        abstraction_shift=abstraction_shift,
+        note="; ".join(notes),
+    )
+
+
 # ── Metric 5: response entropy over time (sliding-window Shannon) ───
 
 def shannon_entropy(tokens: list[str]) -> float:
@@ -1316,6 +1545,28 @@ def render_report(rep: dict[str, Any]) -> str:
                     out.append(f"      {cls:<14s}  {r:>6.2f}")
         out.append("")
 
+    # 15. Level of Abstraction (LoA) — H₄ hypothesis
+    loa = rep.get("level_of_abstraction", {})
+    if loa:
+        out.append("── 15. Level of Abstraction (H₄ hypothesis test) ──")
+        out.append(f"  5-vector (concrete → existential):")
+        for lvl in ["concrete", "interactional", "relational", "societal", "existential"]:
+            d = loa.get("distribution", {}).get(lvl, 0.0)
+            out.append(f"    {lvl:<14s}  {100*d:>6.2f}%")
+        out.append("")
+        out.append(f"  first-half vs second-half drift:")
+        for lvl in ["concrete", "interactional", "relational", "societal", "existential"]:
+            f_v = loa.get("first_half", {}).get(lvl, 0.0)
+            s_v = loa.get("second_half", {}).get(lvl, 0.0)
+            drift = s_v - f_v
+            arrow = "↑" if drift > 0.01 else "↓" if drift < -0.01 else "="
+            out.append(f"    {lvl:<14s}  first={100*f_v:>5.2f}%  second={100*s_v:>5.2f}%  Δ={100*drift:+5.2f}pp {arrow}")
+        out.append("")
+        out.append(f"  abstraction_shift:        {loa.get('abstraction_shift', 0):+.3f}  (positive = upward drift)")
+        if loa.get("note"):
+            out.append(f"  H₄ verdict:              {loa['note']}")
+        out.append("")
+
     # 10. Provenance
     out.append("── 10. Generator Provenance ──")
     p = rep["provenance"]
@@ -1426,6 +1677,7 @@ def main() -> int:
         "symbolic_drift": asdict(compute_symbolic_drift(turns)),
         "rrb": asdict(compute_rrb(turns)),
         "rhetorical_motifs": asdict(compute_rhetorical_motifs(turns)),
+        "level_of_abstraction": asdict(compute_level_of_abstraction(turns)),
         "named_phrases": compute_named_phrases(turns),
     }
     print(render_report(rep))
