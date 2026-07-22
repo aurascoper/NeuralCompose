@@ -66,6 +66,13 @@
             "top_words": {}
           },
           "note": "P(relational) flat (no clear drift)"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.013733601968896086,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.6240122059653757,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     },
@@ -117,6 +124,13 @@
             "top_words": {}
           },
           "note": "P(relational) flat (no clear drift)"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.0,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.0,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     },
@@ -168,6 +182,13 @@
             "top_words": {}
           },
           "note": "P(relational) flat (no clear drift)"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.0,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.0,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     },
@@ -235,6 +256,13 @@
             "top_words": {}
           },
           "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.01201118326118326,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.5457508510906569,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     },
@@ -303,6 +331,13 @@
             "top_words": {}
           },
           "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.023040277535283083,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 1.0468786297584936,
+          "amplification_class": "neutral",
+          "note": ""
         }
       }
     },
@@ -371,6 +406,13 @@
             "top_words": {}
           },
           "note": "P(relational) flat (no clear drift)"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.015239226725172828,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.692423117221445,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     },
@@ -423,6 +465,13 @@
             "top_words": {}
           },
           "note": "P(relational) flat (no clear drift)"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.0,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.0,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     },
@@ -474,6 +523,13 @@
             "top_words": {}
           },
           "note": "P(relational) flat (no clear drift)"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.0,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.0,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     },
@@ -541,6 +597,13 @@
             "top_words": {}
           },
           "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.01031677317391603,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.4687621209119129,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     },
@@ -610,6 +673,13 @@
             "top_words": {}
           },
           "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
+        },
+        "rrb": {
+          "p_relational_spoken": 0.01624477307448322,
+          "p_relational_heard": 0.022008547008547007,
+          "rrb": 0.7381120193066162,
+          "amplification_class": "suppression",
+          "note": ""
         }
       }
     }

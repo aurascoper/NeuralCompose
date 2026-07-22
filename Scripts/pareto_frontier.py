@@ -78,6 +78,12 @@ from collections import Counter
 from pathlib import Path
 
 # Default objectives and their directions
+#
+# Per the architecture review's RRB framing, the metric is
+# *interesting* when it's near 1.0 (no bias), not when it's
+# extreme. Both amplification (RRB > 1.10) and suppression
+# (RRB < 0.90) are deviations from a neutral interaction.
+# We minimize |RRB - 1| via the rrb_deviation objective.
 DEFAULT_OBJECTIVES: list[tuple[str, str]] = [
     # Good — we want more of these
     ("synthesis_rate", "maximize"),
@@ -90,6 +96,11 @@ DEFAULT_OBJECTIVES: list[tuple[str, str]] = [
     ("policy_inertia", "minimize"),
     ("scaffold_leakage", "minimize"),
     ("witness_coupling_magnitude", "minimize"),
+    # RRB: minimize |RRB - 1| via the deviation-from-neutral metric.
+    # A "neutral" model is unbiased toward relational or object
+    # vocabulary. The user's framing: scientific selection prefers
+    # a hypothesis that doesn't bias the model in either direction.
+    ("rrb_deviation", "minimize"),
 ]
 
 
@@ -101,6 +112,7 @@ def extract_point(baseline: dict, label: str) -> dict:
     outcomes = baseline.get("outcome_counts", {})
     turn_count = baseline.get("turn_count", 0) or 1
     named = baseline.get("named_phrases", {})
+    rrb_dict = baseline.get("rrb", {}) or {}
 
     # Witness coupling: magnitude of the max |shift| across outcomes.
     # A high magnitude = the witness is steering the dialogue a lot.
@@ -128,6 +140,9 @@ def extract_point(baseline: dict, label: str) -> dict:
         "policy_inertia": inertia.get("policy_inertia", 0.0) or 0.0,
         "scaffold_leakage": scaffold_leakage,
         "witness_coupling_magnitude": witness_coupling_magnitude,
+        "rrb": rrb_dict.get("rrb", 0.0) or 0.0,
+        "rrb_class": rrb_dict.get("amplification_class", "neutral"),
+        "rrb_deviation": abs((rrb_dict.get("rrb", 0.0) or 0.0) - 1.0),
     }
 
 

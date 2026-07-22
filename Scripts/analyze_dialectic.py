@@ -598,6 +598,87 @@ def compute_symbolic_drift(turns: list[Turn]) -> SymbolicDriftReport:
     )
 
 
+# ── Metric: Relational Representation Bias (RRB) ──────────────────
+#
+# The architecture review's RRB metric:
+#
+#   RRB = P(relational | spoken) / P(relational | heard)
+#
+# An RRB of:
+#   1.0 = no amplification (the model uses relational words at
+#         the same rate as the user)
+#   >1  = amplification (the model introduces relational framing)
+#   <1  = suppression (the model uses relational words less than
+#         the user)
+#
+# The metric is comparable across runtimes/models without naming
+# any specific vocabulary. It captures the user's headline
+# finding: "the model preferentially reformulates interactions
+# in relational terms."
+#
+# Causal direction:
+#   hypothesis → behavior (parameters) → measured RRB
+# NOT
+#   desired vocabulary → prompt engineering
+#
+# So a future ResearchHypothesis YAML would tune parameters
+# (exploration_pressure, synthesis_pressure, silence_threshold,
+# witness_grounding, coherence_weighting) and ask: does RRB
+# change?
+
+
+@dataclass
+class RRBReport:
+    p_relational_spoken: float
+    p_relational_heard: float
+    rrb: float                           # ratio
+    amplification_class: str             # "amplification" / "neutral" / "suppression"
+    note: str = ""
+
+
+def compute_rrb(turns: list[Turn]) -> RRBReport:
+    """Compute the Relational Representation Bias across all turns."""
+    if not turns:
+        return RRBReport(0.0, 0.0, 0.0, "neutral", "no turns")
+
+    p_s_list: list[float] = []
+    p_h_list: list[float] = []
+    for t in turns:
+        p_s_list.append(_p_relational(t.spoken))
+        p_h_list.append(_p_relational(t.heard))
+
+    p_spoken = statistics.fmean(p_s_list) if p_s_list else 0.0
+    p_heard = statistics.fmean(p_h_list) if p_h_list else 0.0
+    rrb = p_spoken / p_heard if p_heard > 0 else 0.0
+
+    if rrb > 1.10:
+        cls = "amplification"
+    elif rrb < 0.90:
+        cls = "suppression"
+    else:
+        cls = "neutral"
+
+    return RRBReport(
+        p_relational_spoken=p_spoken,
+        p_relational_heard=p_heard,
+        rrb=rrb,
+        amplification_class=cls,
+    )
+
+
+def _p_relational(text: str) -> float:
+    """Per-text P(relational word) using RELATIONAL_TERMS."""
+    if not text:
+        return 0.0
+    total = 0
+    rel = 0
+    for w in tokenize(text):
+        total += 1
+        if w in RELATIONAL_TERMS:
+            rel += 1
+    return rel / total if total else 0.0
+
+
 # ── Metric 4: witness intervention frequency ─────────────────────────
 
 @dataclass
@@ -999,6 +1080,18 @@ def render_report(rep: dict[str, Any]) -> str:
             out.append(f"  H₂ verdict:                {sd['note']}")
     out.append("")
 
+    # 13. Relational Representation Bias (RRB)
+    rrb = rep.get("rrb", {})
+    if rrb:
+        out.append("── 13. Relational Representation Bias (RRB) ──")
+        out.append(f"  P(relational | spoken):  {100*rrb.get('p_relational_spoken', 0):.2f}%")
+        out.append(f"  P(relational | heard):   {100*rrb.get('p_relational_heard', 0):.2f}%")
+        out.append(f"  RRB:                     {rrb.get('rrb', 0):.2f}   (1.0 = no amplification)")
+        out.append(f"  class:                   {rrb.get('amplification_class', '?')}")
+        if rrb.get('note'):
+            out.append(f"  note:                    {rrb['note']}")
+    out.append("")
+
     # 10. Provenance
     out.append("── 10. Generator Provenance ──")
     p = rep["provenance"]
@@ -1107,6 +1200,7 @@ def main() -> int:
         "provenance": asdict(compute_provenance(turns)),
         "inertia": asdict(compute_inertia(turns)),
         "symbolic_drift": asdict(compute_symbolic_drift(turns)),
+        "rrb": asdict(compute_rrb(turns)),
         "named_phrases": compute_named_phrases(turns),
     }
     print(render_report(rep))

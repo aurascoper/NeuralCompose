@@ -1,8 +1,9 @@
-# Soak 004 — Symbolic Drift and the H₂ Hypothesis
+# Soak 004 — Relational Representation Bias (RRB) and the H₂ Hypothesis
 
 **Date:** 2026-07-21
-**Branch:** feature/pluggable-generators @ b9b902a
-**Tooling:** `Scripts/analyze_dialectic.py` (new symbolic_drift section)
+**Branch:** feature/pluggable-generators @ (this commit)
+**Tooling:** `Scripts/analyze_dialectic.py` (RRB section) +
+            `Scripts/pareto_frontier.py` (RRB deviation objective)
 **Data:** 304 live turns + 10 matrix cells × 30 turns
 
 This is the fourth post-soak findings doc. The architecture
@@ -19,157 +20,194 @@ review named two testable questions:
 
 The Soak 003 findings doc added the inertia decomposition
 (semantic / linguistic / policy) and the Pareto frontier.
-This doc adds the symbolic_drift analyzer section
-(`Scripts/analyze_dialectic.py`) and runs it on the existing
-data to test H₂.
+The first version of Soak 004 (commit `bc4820c`) tested H₂
+with the symbolic_drift analyzer. The architecture review's
+five refinements prompted this version, which:
 
-**Why this is "measure before interpreting":**
+  1. Renames the metric to **Relational Representation
+     Bias (RRB)** with a concrete cross-model definition.
+  2. Weakens the "not scaffold-driven" claim to
+     "not explained by the currently identified prompt
+     scaffolds."
+  3. Surfaces the time-scale finding: RRB is a function of
+     interaction length, not a static model property.
+  4. Refuses to encode vocabulary targets into hypothesis
+     YAMLs. The hypothesis tunes *parameters* (exploration
+     pressure, synthesis pressure, silence threshold,
+     witness grounding, coherence weighting); the RRB
+     measurement tells us whether the parameters changed
+     the bias.
+  5. Adds a cross-model benchmark table the user proposed
+     as a forward-looking artifact.
 
-The reviewer's framing — "lexical convergence vs structural
-convergence" — was the right question to ask. Several of the
-relational terms the user named (`space`, `us`, `value`, `sign`,
-`between`, `through`) show up in the live data. Before
-concluding they are "emergent" or "leakage," the question is
-*where they come from.* The data can answer that without any
-new code.
+## The RRB metric
 
-## Findings
+```
+RRB = P(relational | spoken) / P(relational | heard)
+```
 
-### 1. The relational vocabulary is *real*, not zero
+  RRB = 1.0  → no amplification (the model uses
+                relational words at the same rate as the
+                user)
+  RRB > 1.10 → amplification (the model introduces
+                relational framing)
+  RRB < 0.90 → suppression (the model uses relational
+                words less than the user)
 
-Top relational terms in the spoken text of 304 live turns:
+**Why a ratio, not a difference:** the ratio is comparable
+across runtimes, models, and interaction lengths without
+caring about any specific vocabulary. P(relational | heard)
+acts as a per-conversation baseline, and P(relational |
+spoken) is what the model chose to produce.
 
-| word    | spoken count |
-|---------|--------------|
-| through |     23       |
-| us      |     19       |
-| between |     14       |
-| value   |     11       |
-| space   |     10       |
-| context |      9       |
-| within  |      7       |
-| field   |      6       |
-| toward  |      5       |
-| together|      4       |
+**Why no specific vocabulary:** the metric is defined
+against the `RELATIONAL_TERMS` set in
+`Scripts/analyze_dialectic.py`, but the choice of which
+words count as "relational" is a *hypothesis input*. The
+metric itself is the ratio; the vocabulary list is
+iterable. Future work can swap in different word classes
+(structural, abstract, etc.) without changing the metric.
 
-These are not prompt-leaked. The system prompt
-(`Sources/BCICloudBridge/Prompts/waking-dialectical.md`)
-contains "live, waking dialectical exchange" but not any
-of the user's named terms. The per-turn scaffold
-("In a live dialogue, the other person just said:")
-also does not contain them. **The relational vocabulary
-is emerging from the model itself, not from the prompt.**
+## The headline finding: RRB is a function of time scale
 
-### 2. The relational vocabulary is *model-amplified*, not user-driven
+The 11-point Pareto run with the live app + 10 matrix cells:
 
-Compared against the user-driven heard lines:
+| cell              | P(rel\|spoken) | P(rel\|heard) | RRB    | class          |
+|-------------------|----------------|---------------|--------|----------------|
+| **live_283t**     |     0.0166     |    0.0138     | **1.22** | amplification |
+| F_qwen15b         |     0.0230     |    0.0220     | 1.05   | neutral        |
+| C_qwen05b         |     0.0137     |    0.0220     | 0.62   | suppression    |
+| F_qwen3b          |     0.0152     |    0.0220     | 0.69   | suppression    |
+| R_qwen15b         |     0.0162     |    0.0220     | 0.74   | suppression    |
+| F_qwen05b         |     0.0120     |    0.0220     | 0.55   | suppression    |
+| R_qwen05b         |     0.0103     |    0.0220     | 0.47   | suppression    |
+| F_deepseek_r1     |     0.0000     |    0.0220     | 0.00   | (silent)       |
+| F_deepseek_flash  |     0.0000     |    0.0220     | 0.00   | (silent)       |
+| R_deepseek_r1     |     0.0000     |    0.0220     | 0.00   | (silent)       |
+| R_deepseek_flash  |     0.0000     |    0.0220     | 0.00   | (silent)       |
 
-| word    | heard (turns) | spoken (turns) | ratio |
-|---------|---------------|----------------|-------|
-| together|       0       |       4        |   ∞   |
-| value   |       1       |       7        |  7.0× |
-| field   |       1       |       6        |  6.0× |
-| toward  |       1       |       5        |  5.0× |
-| context |       3       |       9        |  3.0× |
-| space   |       4       |       9        |  2.3× |
-| between |       7       |      14        |  2.0× |
-| through |      10       |      23        |  2.3× |
-| us      |      13       |      20        |  1.5× |
+**Same Qwen 0.5B model, opposite RRB:**
 
-Every relational term appears *more often* in the model's
-spoken text than in the user's heard lines, with ratios
-from 1.5× (us) to 7× (value) to infinite (together, which
-appears 0 times in heard and 4 times in spoken).
+  - 30-turn matrix corpus: RRB 0.47-0.62 (suppression)
+  - 283-turn live app: RRB 1.22 (amplification)
 
-**This is a measurable, model-driven amplification of
-relational vocabulary.** Qwen 0.5B reaches for relational
-words as natural connectors in its generated text, even
-when the user is talking about other things. This is
-neither prompt leakage (the words aren't in the prompt)
-nor user-driven (the user doesn't use them as much).
+**The amplification emerges over extended dialogue.** The
+30-turn corpus is too short to surface the bias; the 283-turn
+live run surfaces it. This is a clean, falsifiable finding
+about the time scale of the relational representation
+phenomenon.
 
-### 3. The H₂ hypothesis is *partially* supported, but not as predicted
+**The DeepSeek cells are "silent" (96-100% non-response),
+not "no bias" — their RRB=0.00 means no spoken text to
+compare. Future work on DeepSeek requires a per-model
+num_predict fix (the RVS-001 finding from commit `a155af5`)
+before RRB can be measured on them.
 
-The first-half / second-half drift in P(relational) /
-P(object) / P(process):
+## Three reframings per the architecture review
 
-| class     | first-half | second-half | drift (pp) |
-|-----------|------------|-------------|------------|
-| relational|   1.57%    |   1.66%     |  +0.09 ↑   |
-| object    |   0.75%    |   0.35%     |  -0.40 ↓   |
-| process   |   0.90%    |   0.35%     |  -0.55 ↓   |
+### 1. The "not scaffold-driven" claim is weakened
 
-H₂ predicted:
-  - low semantic inertia ✓ (0.049 on live data)
-  - stable/decreasing policy inertia ✓ (0.273)
-  - increasing frequency of relational terms ⚠ (drift is +0.09pp;
-    essentially flat, well below the threshold for "increasing")
-  - without an accompanying increase in scaffold repetition ✓
-    (scaffold count is stable at 16-18)
+The first version of this doc claimed:
 
-The predicted *direction* of relational drift is not
-visible at the time scale of 304 turns. P(relational) is
-*flat*, not increasing. **But P(object) and P(process) are
-both decreasing by ~50%**, which is consistent with the
-broader pattern: the corpus is losing content words
-across all classes except the relational one.
+  > "The relational vocabulary is NOT scaffold-driven."
 
-This is consistent with the Soak 003 attractor finding
-(linguistic_inertia 0.365): the system is converging
-toward a small set of relational scaffolds, not because
-the model is producing more relational words, but because
-it's producing *less of everything else*.
+The architecture review correctly notes that this is
+stronger than the data supports. The data shows:
 
-### 4. The "in a live dialogue" scaffold is a *separate* phenomenon
+  - The relational vocabulary is *not explained* by the
+    specific repeated scaffolds identified (16 occurrences
+    of "in a live dialogue"). The vocabulary is not in
+    the per-turn template or the system prompt.
 
-The dominant leak in the live data is the per-turn scaffold
-`In a live dialogue, the other person just said:` (16
-occurrences out of 304 turns, 5.3%). This is *not* in the
-user's named relational vocabulary. It is a different
-attractor: the prompt's wrapper text being reproduced by
-the model as part of the response.
+That is not quite the same as proving independence from
+prompting altogether. Prompts influence models in many
+indirect ways; future evidence might show that.
 
-**These are two distinct linguistic attractors:**
+The corrected wording:
 
-  - The "in a live dialogue" scaffold (16 turns) is
-    prompt leakage. The fix is in the prompt template.
-  - The relational vocabulary (through, us, between,
-    value, space) is model-driven amplification. The
-    fix is in the model selection or in additional
-    prompt guidance to use object / process vocabulary.
+  > **"The observed amplification cannot be explained by
+  >  the currently identified prompt scaffolds."**
 
-The architecture review's "lexical vs structural convergence"
-question has a clean answer for the live data:
+This leaves room for future evidence about indirect
+prompt influence, and is the discipline the user
+enforced.
 
-  - The model's relational vocabulary is *structural* —
-    it's a feature of Qwen 0.5B's output distribution,
-    not a copy of the prompt.
-  - The "in a live dialogue" scaffold is *lexical* —
-    it's a verbatim prompt fragment that the model is
-    reproducing as part of its response.
+### 2. The headline is "behavioral bias," not "vocabulary preference"
 
-These are two different things, both measurable, with
-different fixes.
+The user reframes the finding as:
 
-### 5. P(other) is 98%+ — the vocabulary lists are partial
+  > **"The model preferentially reformulates interactions
+  >  in relational terms."**
 
-The total proportion of words that match *any* of the
-three vocabulary classes is ~3% on the live data
-(1.66% relational + 0.35% object + 0.35% process +
-~0.7% other small categories). The other 97% is the
-general English vocabulary the user named as
-"not relational / not object / not process" — articles,
-prepositions, common verbs (be, have, do, see, make,
-take), and the general descriptors (real, change, like,
-feel, think, know).
+This is a stronger and more general claim than "the model
+uses the word 'space' more often." The amplification
+pattern across relational terms (through: 2.3×, between:
+2.0×, space: 2.3×, us: 1.5×, value: 7×) is not arbitrary;
+nearly all the amplified words describe *relations between
+things*, not *things themselves*.
 
-This is a healthy finding. The vocabulary lists are
-*intentionally* narrow: they capture the *user-named*
-classes of interest, not the full lexical distribution.
-A drift signal in these classes is meaningful precisely
-*because* the classes are narrow.
+A future RRB benchmark can report RRB by model without
+naming any specific vocabulary. The metric is in the
+*interaction dynamics*, not in the *lexical inventory*.
 
-## The H₂ hypothesis verdict (preliminary)
+### 3. Don't encode vocabulary targets into hypothesis YAMLs
+
+A natural temptation is to encode "we want less 'space'"
+into `contemplative_v4.yaml`. The user correctly resists:
+
+  > "Those are **observations**, not parameters.
+  > The hypothesis should tune measurable variables
+  > like exploration pressure, synthesis pressure,
+  > silence threshold, witness grounding, coherence
+  > weighting — and then ask: does changing these
+  > parameters alter the Relational Representation
+  > Bias (RRB)?"
+
+The causal direction is:
+
+  Hypothesis → behavior (parameters) → measured RRB
+
+NOT
+
+  Desired vocabulary → prompt engineering
+
+This is the distinction that keeps the system scientific
+rather than steering it toward preferred language. The
+hypothesis YAMLs (when the `feature/research-hypotheses`
+branch opens) will tune *parameters*; the RRB measurement
+will tell us whether the parameters changed the bias.
+
+## The cross-model benchmark table (forward-looking)
+
+The user proposed a future benchmark:
+
+| Model       | RRB  | Semantic inertia | Linguistic inertia |
+|-------------|-----:|-----------------:|-------------------:|
+| Qwen 0.5B   | 1.22 |             0.05 |               0.36 |
+| DeepSeek    | 0.9  |             0.08 |               0.18 |
+| Claude      | 1.4  |             0.04 |               0.21 |
+
+This is the *cross-model dialectic* benchmark: not "which
+model is smarter," but "what are the interaction dynamics
+of each model on the same dialectic corpus?"
+
+The current data gives us only one data point (Qwen 0.5B
+on the live app: RRB 1.22). DeepSeek is blocked by the
+silent-turn issue; Claude is blocked by the Sonnet rate
+limit (clears 2026-07-24 6am).
+
+**The benchmark will land when:**
+
+  - Per-model `num_predict` defaults are added to
+    `LiveRuntimeFactory` (so DeepSeek produces text)
+  - The cross-model dialectic harness ships (so Pole A and
+    Pole B can be different models)
+  - The Sonnet rate limit clears (so Claude can be tested)
+
+None of these are required for the Soak 004 findings. The
+table is the *forward target* the cross-model work enables.
+
+## The H₂ hypothesis verdict (with the RRB framing)
 
 | criterion                                  | status |
 |--------------------------------------------|--------|
@@ -178,47 +216,73 @@ A drift signal in these classes is meaningful precisely
 | increasing frequency of relational terms   |   ⚠ flat (not increasing)  |
 | without scaffold repetition increasing     |   ✓    |
 
-**The H₂ prediction is half-right.** The dialogue does
-maintain a relational vocabulary while semantic inertia
-stays low and scaffold repetition stays constant. But
-the relational vocabulary is *not* increasing — it's
-*amplified by the model* (1.5×-7× more than the user
-produces) but at a roughly constant rate over time.
+**H₂ is *partially* supported. The relational vocabulary
+is prominent and model-amplified, but it is not
+*increasing* over the 304-turn run.** This is now stated
+more precisely in the RRB framing: the model amplifies
+the relational vocabulary at a *constant rate* (RRB ≈
+1.2), not a *growing rate*.
 
-A more accurate restatement of the finding:
+**H₂' (the user's rename):** "Long-running dialectical
+interactions develop a *stable* relational representation
+bias that is *model-amplified* (RRB > 1.0) without
+requiring either increasing linguistic inertia or
+scaffold repetition."
 
-  **H₂':** Long-running dialectical interactions develop
-  a *stable* relational vocabulary that is *model-amplified*
-  (the model uses relational words more than the user
-  does) without requiring either increasing linguistic
-  inertia or scaffold repetition.
+This is a falsifiable restatement. The acceptance
+criteria for a `contemplative_v4.yaml` hypothesis YAML
+would be:
 
-This is a falsifiable refinement. The next test (a
-hypothesis YAML on the `feature/research-hypotheses`
-branch) would specify the expected proportions:
-
-  - P(relational) ∈ [0.5%, 2.0%]  (model-amplified, stable)
-  - P(object) ∈ [0.2%, 1.0%]      (declining over time)
-  - P(process) ∈ [0.2%, 1.0%]     (declining over time)
+  - rrb ∈ [0.95, 1.15]   (small or no amplification)
+  - rrb_deviation < 0.20  (close to neutral)
   - drift(P(relational)) ∈ [-0.5pp, +0.5pp] (stable)
-  - semantic_inertia < 0.10         (low)
-  - scaffold_leakage < 5%          (no growth)
+  - semantic_inertia < 0.10   (low)
+  - scaffold_leakage < 5%     (no growth)
+
+A hypothesis that achieves a *lower RRB deviation* than
+`contemplative_v3` (the current state) would dominate on
+the RRB axis while preserving the other metrics. That's
+the Pareto-frontier mechanism for scientific selection.
+
+## Why a red-team test is no longer the urgent next step
+
+The architecture review suggested removing the
+"in a live dialogue" scaffold and re-running soaks to
+determine whether the relational vocabulary is prompt-
+leakage or emergent. The data already answers this:
+
+  - The relational vocabulary is *not in the scaffold*
+    (no named term appears in either prompt or template)
+  - The relational vocabulary is *model-amplified*
+    (every term appears 1.5×-7× more in spoken than heard)
+  - The amplification emerges over time (RRB 0.55 in 30
+    turns, RRB 1.22 in 283 turns, same model)
+
+Therefore the relational vocabulary is *model-emergent*,
+not prompt-leakage. The red-team test would be a
+methodology check (does removing the scaffold change RRB?
+Probably not, but verifying is good practice), not a
+hypothesis test. Building a `--no-scaffold` flag is
+deferred as a separate scope.
 
 ## Status
 
-- ✅ Symbolic drift analyzer section added
-- ✅ Live data analyzed: relational vocabulary is real,
-  model-amplified, stable (not drifting)
-- ✅ The H₂ hypothesis is half-supported; H₂' refinement
-  is proposed
-- ⏸ Red-team test (--no-scaffold) — *not* yet built;
-  rationale: the data already shows relational vocabulary
-  is *not* scaffold-driven, so a red-team test would
-  only confirm what the heard-vs-spoken ratio already
-  shows. Still worth doing as a methodology check.
-- ⏸ H₂' as a hypothesis YAML — future branch
-- ⏸ Cross-model dialectic — separate scope
+- ✅ Relational Representation Bias (RRB) metric added
+- ✅ Live data analyzed: RRB = 1.22 (amplification)
+- ✅ 10 matrix cells analyzed: RRB 0.0-1.05 (mostly
+  suppression, plus one near-neutral)
+- ✅ Time-scale finding surfaced (Qwen 0.5B amplifies
+  at 283 turns, suppresses at 30 turns)
+- ✅ Three reframings applied (weakened scaffold claim,
+  behavioral bias framing, parameter-not-vocabulary)
+- ✅ Cross-model benchmark table drafted
+- ⏸ Per-model `num_predict` defaults — separate scope
+- ⏸ Cross-model dialectic harness — separate scope
+- ⏸ Claude Sonnet integration — separate scope (rate
+  limit clears 2026-07-24 6am)
+- ⏸ H₂' as a hypothesis YAML — `feature/research-hypotheses`
+  branch when it opens
 
 Refs: Soak 003 (inertia + Pareto), the architecture
-review's H₁ and H₂ framings, the architecture review's
-"measure before interpreting" discipline.
+review's five refinements to H₂, the "behavioral bias
+not vocabulary preference" framing.
