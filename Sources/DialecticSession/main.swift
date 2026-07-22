@@ -140,6 +140,12 @@ let loop = HypnagogicDialecticLoop(
     config: profile.loopConfig(base: HypnagogicDialecticLoop.Config(
         listenTimeout: 2, interTurnDelayNanos: 100_000_000)))
 
+// Wire the metadata capture if the generator publishes it. The
+// adapter is the only conformer today; legacy `TextGenerating`
+// conformers are no-ops. The `await` is required because
+// `attachMetadataCaptureFromAdapter` is actor-isolated.
+await loop.attachMetadataCaptureFromAdapter()
+
 await loop.start()
 let deadline = Date().addingTimeInterval(Double(heardLines.count) * 40 + 30)
 var lastIdx = 0

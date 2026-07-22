@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Experimental, opt-in **dialectic** sibling of `HypnagogicDialogueLoop`.
 /// Where that loop collapses each turn into one mirror reply, this one runs a
@@ -76,6 +77,27 @@ public actor HypnagogicDialecticLoop {
     /// `TextGenerating` with a relaxed system prompt (`witnessSystemPrompt`). nil ⇒
     /// no witness pass. Its output is never voiced and never fed to the poles.
     private let witness: (any TextGenerating)?
+
+    /// Latest `GenerationMetadata` from the generator, if it came from a
+    /// `MetadataPublishingTextGenerating` (today:
+    /// `GenerationRuntimeTextGeneratingAdapter` in `BCICloudBridge`; in
+    /// the future: any conformer of the refinement protocol). Captured
+    /// via the adapter's `onMetadata` callback; read by `runTurn` to
+    /// populate the recorded `generatorFingerprint`. `nil` when the
+    /// generator is the legacy `TextGenerating` conformers (no metadata)
+    /// or the adapter's callback hasn't fired yet (very first turn
+    /// before any generator call).
+    ///
+    /// **Race avoidance:** the box is a `Sendable` class with a lock,
+    /// not an actor-isolated property, because the adapter's callback
+    /// is called synchronously on the same task that invoked
+    /// `generator.generate(...)` — which is on this loop's actor.
+    /// An actor-isolated `var` would require `await` from the callback
+    /// to write (via `Task { await self.recordGeneratorMetadata(...) }`),
+    /// and the `Task` would be scheduled *after* `runTurn` reads the
+    /// property, losing the metadata for that turn. The class box
+    /// keeps the read/write synchronous.
+    private let latestMetadata = MetadataBox()
     private let speaker: any SpeechSynthesizing
     private let embedder: any SentenceEmbedder
     private let roles: [DialecticalRole]
@@ -144,6 +166,41 @@ public actor HypnagogicDialecticLoop {
         )
         self.field = DialecticalField(base: tuning.weights,
                                       inertia: tuning.fieldInertia, wind: tuning.glossWind)
+    }
+
+    /// Records the latest `GenerationMetadata` from the adapter-wrapped
+    /// generator. The adapter calls this from its `onMetadata` callback.
+    /// The call is synchronous so the metadata is visible to the
+    /// subsequent `runTurn` read of `latestMetadata` — the callback
+    /// runs on the same task that called `generator.generate(...)`,
+    /// which is on the loop's actor, so there is no inter-task gap.
+    /// Idempotent — repeat calls just overwrite.
+    ///
+    /// `nonisolated` because the body only mutates the
+    /// `latestMetadata` box (which has its own lock); no actor
+    /// state is touched. This lets the `@Sendable` callback call
+    /// us directly without a `Task` hop.
+    public nonisolated func recordGeneratorMetadata(_ metadata: GenerationMetadata) {
+        latestMetadata.set(metadata)
+    }
+
+    /// Convenience: if the passed-in `generator` is a
+    /// `MetadataPublishingTextGenerating` (today: any runtime wrapped
+    /// by `GenerationRuntimeTextGeneratingAdapter` in `BCICloudBridge`;
+    /// in the future: any conformer of the refinement protocol),
+    /// wires its `onMetadata` callback to this loop's
+    /// `recordGeneratorMetadata`. No-op for legacy `TextGenerating`
+    /// conformers (e.g. the pre-runtime-abstraction `ClaudeCLIGenerator`).
+    /// Callers that already know they have a publishing generator
+    /// can call this directly; others can rely on the fact that
+    /// the call is a no-op for legacy generators.
+    public func attachMetadataCaptureFromAdapter() {
+        guard var publisher = generator as? MetadataPublishingTextGenerating else {
+            return
+        }
+        publisher.onMetadata = { [weak self] metadata in
+            self?.recordGeneratorMetadata(metadata)
+        }
     }
 
     /// Starts the loop if not already running. Idempotent.
@@ -330,7 +387,8 @@ public actor HypnagogicDialecticLoop {
             margin: result.margin, selectionTemperature: result.selectionTemperature,
             outcome: result.outcome, glossScalar: gloss.value, spectralState: state,
             witnessFinding: witnessFinding, witnessDistance: witnessDistance,
-            selfSimilarity: selfSimilarity, witnessAttempted: witnessAttempted
+            selfSimilarity: selfSimilarity, witnessAttempted: witnessAttempted,
+            generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init)
         )
         await turnLogger.log(DialecticalTurnEvent(record))
 
@@ -388,7 +446,7 @@ public actor HypnagogicDialecticLoop {
             witnessDistance: nil,
             selfSimilarity: nil,
             witnessAttempted: config.witnessEnabled && witness != nil,
-            generatorFingerprint: nil
+            generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init)
         )
         let event = DialecticalTurnEvent(competition)
         await turnLogger.log(event)
@@ -506,5 +564,27 @@ public struct SpokenNodeEvent: Sendable, Equatable {
         self.embedding = embedding
         self.word = word
         self.turnIndex = turnIndex
+    }
+}
+
+// MARK: - Metadata capture box
+
+/// Sendable, lock-protected box for the latest `GenerationMetadata`
+/// from the generator's adapter. Used by the dialectic loop to
+/// capture provenance without crossing actor boundaries (the
+/// adapter's `onMetadata` callback is synchronous, the loop reads
+/// the box synchronously on the same task, so the metadata is
+/// visible to the same turn that produced it). `@unchecked Sendable`
+/// because the lock makes the read/write pair safe; the compiler
+/// can't prove this from the `var` alone.
+private final class MetadataBox: @unchecked Sendable {
+    private let lock = OSAllocatedUnfairLock<GenerationMetadata?>(initialState: Optional<GenerationMetadata>.none)
+
+    func set(_ metadata: GenerationMetadata) {
+        lock.withLock { $0 = metadata }
+    }
+
+    func get() -> GenerationMetadata? {
+        lock.withLock { $0 }
     }
 }

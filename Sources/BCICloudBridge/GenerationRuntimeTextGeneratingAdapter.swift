@@ -20,7 +20,7 @@ import Foundation
 /// (which is `Sendable`) and the `systemPrompt` (a `String`) are
 /// safe to pass across actor boundaries; the actor isolation on
 /// the loop side is unchanged.
-public struct GenerationRuntimeTextGeneratingAdapter: TextGenerating {
+public struct GenerationRuntimeTextGeneratingAdapter: MetadataPublishingTextGenerating {
     public nonisolated let isLive: Bool
     public nonisolated let modelIdentifier: String
     public nonisolated let systemPrompt: String
@@ -28,6 +28,18 @@ public struct GenerationRuntimeTextGeneratingAdapter: TextGenerating {
     private let runtime: any GenerationRuntime
     private let maxTokens: Int
     private let defaultTemperature: Double
+
+    /// Optional callback fired after every `runtime.generate(...)` call
+    /// with the runtime-published `GenerationMetadata`. The legacy
+    /// `TextGenerating` seam stays `String`-typed so existing
+    /// conformers are unaffected; consumers that need provenance
+    /// (the dialectic loop's `log(...)` path, specifically) set
+    /// this once at construction and the adapter fires it on every
+    /// call. The closure captures the sink by reference; consumers
+    /// that hold a strong reference back to the adapter should
+    /// dispatch the metadata to a non-retaining object to avoid
+    /// a retain cycle.
+    public var onMetadata: (@Sendable (GenerationMetadata) -> Void)?
 
     public init(
         runtime: any GenerationRuntime,
@@ -59,6 +71,14 @@ public struct GenerationRuntimeTextGeneratingAdapter: TextGenerating {
             )
         )
         let result = try await runtime.generate(prompt: prompt, context: context)
+        // Fire the metadata callback so consumers (the dialectic
+        // loop) can record `generatorFingerprint` on the persisted
+        // `DialecticalTurnEvent`. The callback runs synchronously
+        // here; if a consumer needs to do expensive work, it should
+        // dispatch off-thread itself. The `metadataSink` weak ref
+        // is the standard pattern for breaking the retain cycle
+        // when the sink is the same object that owns the adapter.
+        onMetadata?(result.metadata)
         return result.text
     }
 }
