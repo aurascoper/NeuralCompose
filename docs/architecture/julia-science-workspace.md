@@ -236,6 +236,11 @@ The output is a reproducible trajectory artifact and a visualization
 that shows whether the selected dimensions form a coherent path
 through state space.
 
+The repo-side prototype for this bridge is
+`Scripts/reconstruct_state_trajectory.py`; see
+`docs/science/state-reconstruction-goal-0.md`. It prepares JSON/CSV
+trajectory artifacts for Julia without adding Julia to the runtime.
+
 ## First Model Experiment
 
 Only after Goal 0 succeeds, posit a simple first-order nonlinear

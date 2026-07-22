@@ -163,6 +163,11 @@ The contracts that bridge the concerns are:
   scientific services). The runtime can call into any
   computation layer that satisfies the interface.
 
+The speech stack has the same boundary discipline: semantic
+generation produces text, while a separate prosody layer maps text,
+embeddings, and dialogue state into speech controls. See
+`semantic-to-prosody-boundary.md`.
+
 ## What this changes
 
 ### Before the three-concern frame

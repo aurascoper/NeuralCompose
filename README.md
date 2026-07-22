@@ -114,6 +114,8 @@ Related architecture notes:
   scopes bounded implementation backends.
 - [Julia Science Workspace](docs/architecture/julia-science-workspace.md)
   keeps Julia as an offline scientific laboratory, not an app runtime.
+- [Semantic-to-Prosody Boundary](docs/architecture/semantic-to-prosody-boundary.md)
+  separates what text is generated from how it is spoken.
 
 ### Four-layer model
 
