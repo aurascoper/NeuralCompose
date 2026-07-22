@@ -88,6 +88,7 @@ class Turn:
     witness_distance: float | None
     candidates: list[dict]
     has_fingerprint: bool
+    fingerprint_model: str | None   # model name from generatorFingerprint, if any
 
     def __post_init__(self) -> None:
         # If outcome is somehow None or empty, fall back to a sentinel
@@ -98,12 +99,20 @@ class Turn:
 
 def load_turns(path: Path) -> list[Turn]:
     rows: list[Turn] = []
+    skipped = 0
     with path.open() as f:
         for line in f:
             line = line.strip()
             if not line:
                 continue
-            d = json.loads(line)
+            try:
+                d = json.loads(line)
+            except json.JSONDecodeError:
+                # JSONL is sometimes written with partial/truncated lines
+                # during app shutdown or file-rotation events. The data
+                # we have is still useful; just skip the malformed row.
+                skipped += 1
+                continue
             raw_outcome = d.get("outcome", "")
             outcome = OUTCOME_LABEL.get(raw_outcome, raw_outcome)
             rows.append(Turn(
@@ -120,6 +129,11 @@ def load_turns(path: Path) -> list[Turn]:
                 witness_distance=d.get("witnessDistance"),
                 candidates=d.get("candidates", []) or [],
                 has_fingerprint=d.get("generatorFingerprint") is not None,
+                fingerprint_model=(
+                    d.get("generatorFingerprint", {}).get("model")
+                    if d.get("generatorFingerprint") is not None
+                    else None
+                ),
             ))
     rows.sort(key=lambda t: t.index)
     return rows
@@ -250,6 +264,144 @@ def compute_self_distance(turns: list[Turn]) -> SelfDistanceReport:
         n_pairs=len(jaccards),
         mean_jaccard=statistics.fmean(jaccards) if jaccards else 0.0,
         mean_existing_self_similarity=statistics.fmean(sim_values) if sim_values else None,
+    )
+
+
+# ── Metric: inertia (semantic, linguistic, policy) ───────────────────
+#
+# Inertia decomposes the convergence phenomenon the architecture
+# review surfaced: the system can become more coherent (high
+# synthesis rate) and more stereotyped (low ngram/opening
+# diversity) simultaneously, by settling onto stable
+# conversational attractors. The user's framing:
+#
+#   "harmony isn't necessarily resolution — it can be equilibrium"
+#
+# Three measurable components:
+#
+#   semantic_inertia   — resistance to changing topics
+#                        (Jaccard SIMILARITY of consecutive `heard`
+#                         word sets; 1 = identical topics)
+#   linguistic_inertia — same sentence-openings habit
+#                        (1 - opening_4gram_diversity; 1 = always
+#                         the same opener)
+#   policy_inertia     — same style of resolution choice
+#                        (1 - normalized_entropy(transition_matrix);
+#                         1 = always pick the same next outcome)
+#
+# Plus a critical-slowing-down diagnostic: variance and lag-1
+# autocorrelation of the heard-line word-count series. Lower
+# variance + higher autocorrelation near stable attractors
+# is the dynamical-systems signature of approaching a fixed
+# point.
+
+
+def jaccard_similarity(a: set[str], b: set[str]) -> float:
+    """1 - jaccard_distance, range [0, 1]; 1 = identical, 0 = disjoint."""
+    if not a and not b:
+        return 0.0
+    inter = len(a & b)
+    union = len(a | b)
+    return inter / union if union else 0.0
+
+
+@dataclass
+class InertiaReport:
+    """Three-component inertia + critical-slowing-down diagnostic."""
+    semantic_inertia: float           # mean Jaccard similarity of consecutive heard
+    linguistic_inertia: float         # 1 - opening 4-gram diversity
+    policy_inertia: float             # 1 - normalized transition entropy
+    exploration_pressure: float       # = 1 - policy_inertia; the countervailing force
+    # Critical slowing down
+    heard_length_variance: float
+    heard_length_autocorrelation_lag1: float
+    note: str = ""
+
+
+def compute_inertia(turns: list[Turn]) -> InertiaReport:
+    # Semantic: Jaccard SIMILARITY of consecutive heard word sets
+    heard_sims: list[float] = []
+    for prev, curr in zip(turns, turns[1:]):
+        a = set(tokenize(prev.heard))
+        b = set(tokenize(curr.heard))
+        heard_sims.append(jaccard_similarity(a, b))
+    semantic_inertia = statistics.fmean(heard_sims) if heard_sims else 0.0
+
+    # Linguistic: 1 - opening 4-gram diversity
+    openings: list[str] = []
+    for t in turns:
+        toks = tokenize(t.spoken)
+        if len(toks) >= 4:
+            openings.append(" ".join(toks[:4]))
+    if openings:
+        ling_div = len(set(openings)) / len(openings)
+    else:
+        ling_div = 1.0
+    linguistic_inertia = 1.0 - ling_div
+
+    # Policy: 1 - normalized transition entropy
+    #
+    # For each non-empty row, compute its Shannon entropy. Average
+    # across rows, then normalize by the maximum possible entropy
+    # for a single row over `len(OUTCOMES)` outcomes. This gives
+    # `policy_inertia ∈ [0, 1]` correctly.
+    trans_matrix: dict[str, dict[str, int]] = {o: {o2: 0 for o2 in OUTCOMES} for o in OUTCOMES}
+    for prev, curr in zip(turns, turns[1:]):
+        if prev.outcome in trans_matrix and curr.outcome in trans_matrix[prev.outcome]:
+            trans_matrix[prev.outcome][curr.outcome] += 1
+    per_row_entropies: list[float] = []
+    for o in OUTCOMES:
+        total = sum(trans_matrix[o].values())
+        if total == 0:
+            continue
+        row_dist = [trans_matrix[o][o2] / total for o2 in OUTCOMES]
+        h_row = 0.0
+        for p in row_dist:
+            if p > 0:
+                h_row -= p * math.log2(p)
+        per_row_entropies.append(h_row)
+    if per_row_entropies and len(OUTCOMES) > 1:
+        max_h = math.log2(len(OUTCOMES))
+        mean_h = statistics.fmean(per_row_entropies)
+        policy_inertia = 1.0 - (mean_h / max_h) if max_h > 0 else 0.0
+    else:
+        policy_inertia = 0.0
+    exploration_pressure = 1.0 - policy_inertia
+
+    # Critical slowing down: variance + lag-1 autocorrelation of heard length
+    heard_lengths = [float(len(t.heard)) for t in turns if t.heard]
+    if len(heard_lengths) >= 2:
+        mean_len = statistics.fmean(heard_lengths)
+        variance = statistics.pvariance(heard_lengths)
+        # Lag-1 autocorrelation
+        if variance > 0:
+            num = sum(
+                (heard_lengths[i] - mean_len) * (heard_lengths[i+1] - mean_len)
+                for i in range(len(heard_lengths) - 1)
+            )
+            den = variance * (len(heard_lengths) - 1)
+            autocorr = num / den if den > 0 else 0.0
+        else:
+            autocorr = 0.0
+    else:
+        variance = 0.0
+        autocorr = 0.0
+
+    # Note when critical slowing down is suggested
+    notes: list[str] = []
+    if variance < 5.0 and len(heard_lengths) >= 30:
+        notes.append("low heard-length variance")
+    if autocorr > 0.5 and len(heard_lengths) >= 30:
+        notes.append("high lag-1 autocorrelation (sticky dynamics)")
+
+    return InertiaReport(
+        semantic_inertia=semantic_inertia,
+        linguistic_inertia=linguistic_inertia,
+        policy_inertia=policy_inertia,
+        exploration_pressure=exploration_pressure,
+        heard_length_variance=variance,
+        heard_length_autocorrelation_lag1=autocorr,
+        note="; ".join(notes),
     )
 
 
@@ -473,15 +625,21 @@ class ProvenanceReport:
     total_turns: int
     turns_with_fingerprint: int
     fingerprint_rate: float
+    fingerprint_models: dict[str, int]   # model name -> count
     note: str
 
 
 def compute_provenance(turns: list[Turn]) -> ProvenanceReport:
     fp = sum(1 for t in turns if t.has_fingerprint)
+    models: collections.Counter = collections.Counter()
+    for t in turns:
+        if t.has_fingerprint and t.fingerprint_model:
+            models[t.fingerprint_model] += 1
     return ProvenanceReport(
         total_turns=len(turns),
         turns_with_fingerprint=fp,
         fingerprint_rate=(fp / len(turns)) if turns else 0.0,
+        fingerprint_models=dict(models),
         note=("0/140 is the expected baseline pre-b9c09fd-live-app. "
               "The core runtime records fingerprints (commit b9c09fd); "
               "the live app will start recording them once the "
@@ -608,16 +766,35 @@ def render_report(rep: dict[str, Any]) -> str:
     out.append(f"  intervals:                  {l['n_intervals']}")
     out.append(f"  mean turn-index gap:        {l['mean_turn_index_gap']:.2f}")
     out.append(f"  median turn-index gap:      {l['median_turn_index_gap']:.1f}")
-    out.append(f"  note: {l['note']}")
+    if l.get('note'):
+        out.append(f"  note:                       {l['note']}")
+    out.append("")
+
+    # 11. Inertia (semantic, linguistic, policy) + critical slowing down
+    out.append("── 11. Inertia (the three-component attractor picture) ──")
+    i = rep["inertia"]
+    out.append(f"  semantic_inertia    {i['semantic_inertia']:.3f}   (heard-line Jaccard similarity; 1=sticky topics)")
+    out.append(f"  linguistic_inertia  {i['linguistic_inertia']:.3f}   (1 - opening_4gram_diversity; 1=stereotyped openings)")
+    out.append(f"  policy_inertia      {i['policy_inertia']:.3f}   (1 - normalized transition entropy; 1=deterministic next-outcome)")
+    out.append(f"  exploration_pressure {i['exploration_pressure']:.3f}   (1 - policy_inertia; the countervailing force)")
+    out.append("")
+    out.append(f"  heard-length variance:           {i['heard_length_variance']:.2f}  (low → near fixed point)")
+    out.append(f"  heard-length autocorr (lag=1):   {i['heard_length_autocorrelation_lag1']:.3f}  (high → sticky dynamics)")
+    if i.get("note"):
+        out.append(f"  critical-slowing-down hints:     {i['note']}")
     out.append("")
 
     # 10. Provenance
     out.append("── 10. Generator Provenance ──")
     p = rep["provenance"]
-    out.append(f"  turns with fingerprint:     {p['turns_with_fingerprint']} / {p['total_turns']}  ({100*p['fingerprint_rate']:.1f}%)")
-    out.append(f"  note: {p['note']}")
+    out.append(f"  turns with fingerprint:     {p['turns_with_fingerprint']} / {p['total_turns']}  ({100*p['turns_with_fingerprint']/p['total_turns']:.1f}%)")
+    if p['fingerprint_models']:
+        out.append(f"  fingerprint models:")
+        for m, c in sorted(p['fingerprint_models'].items(), key=lambda x: -x[1]):
+            out.append(f"    {m}: {c}")
+    if p.get('note'):
+        out.append(f"  note:                       {p['note']}")
     out.append("")
-
     # 11. Named-phrase detector (the patterns the user flagged
     # qualitatively; surfaced here as a count).
     out.append("── 11. Named-Phrase Detector ──")
@@ -713,6 +890,7 @@ def main() -> int:
         "witness_influence": asdict(compute_witness_influence(turns)),
         "latency": asdict(compute_latency_proxy(turns)),
         "provenance": asdict(compute_provenance(turns)),
+        "inertia": asdict(compute_inertia(turns)),
         "named_phrases": compute_named_phrases(turns),
     }
     print(render_report(rep))
