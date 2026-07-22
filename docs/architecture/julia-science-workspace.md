@@ -14,6 +14,42 @@ deterministic computational kernels. Julia is where mathematical
 hypotheses are prototyped, simulated, fit to telemetry, and
 visualized before any production implementation is considered.
 
+Mission statement:
+
+```text
+NeuralComposeScience exists to transform runtime telemetry into
+mathematical understanding.
+```
+
+Its practical goal is:
+
+```text
+/goal
+Develop, falsify, and validate mathematical models that explain
+NeuralCompose telemetry, producing reproducible computational
+hypotheses that can be promoted to deterministic Rust kernels when
+empirically justified.
+```
+
+For Julia specifically:
+
+```text
+/goal
+Discover mathematical structure that predicts the evolution of
+NeuralCompose's measured state.
+```
+
+The optimization target is scientific throughput:
+
+```text
+maximize validated insight / week
+```
+
+not runtime throughput. Julia is valuable here because it helps
+develop candidate models, reject models that fail observations,
+quantify goodness of fit, estimate parameters, and analyze
+stability.
+
 The boundary is artifact-based:
 
 ```text
@@ -33,6 +69,10 @@ Swift interaction
 ```
 
 Julia consumes artifacts. It does not drive the application.
+
+It is explicitly not responsible for UI, LLM orchestration,
+prompting, speech, agents, application state, or live interaction
+behavior.
 
 ## Repository Boundary
 
@@ -54,12 +94,48 @@ That workspace should have no AVFoundation, SwiftUI, SceneKit, app
 state, or production speech loop. It is mathematics, simulation,
 estimation, and visualization over exported evidence.
 
-## First Modeling Target
+## First Responsibility
 
-The first Julia work should ask what mathematical object is being
-modeled. For the current architecture, the strongest starting point
-is dialogue as a dynamical system rather than dialogue as only a
-sequence of discrete turns.
+The first responsibility of `NeuralComposeScience` is not to solve
+differential equations. It is to discover an appropriate state-space
+representation from telemetry.
+
+The prerequisite question is:
+
+```text
+Can one soak run be reconstructed as a coherent trajectory through
+a measured state space?
+```
+
+If telemetry cannot be represented as a coherent trajectory, ODEs,
+stability analysis, bifurcations, and parameter estimation are
+premature. The research workflow must stay coupled to measured
+evidence rather than assumed dynamics.
+
+## Research Progression
+
+The progression is:
+
+```text
+telemetry
+  -> state reconstruction
+  -> trajectory analysis
+  -> dynamical model
+  -> parameter estimation
+  -> prediction
+  -> validation
+  -> Rust implementation
+  -> Swift runtime
+```
+
+Rust only appears after empirical validation. Swift only sees the
+validated kernel after the production boundary is justified.
+
+## Modeling Target
+
+Once the state representation is grounded, the first mathematical
+modeling target is dialogue as a dynamical system rather than
+dialogue as only a sequence of discrete turns.
 
 ```text
 x(t) -> dx/dt -> trajectory -> attractor
@@ -76,7 +152,8 @@ initial conditions.
 Treat the latent dialogue field as a continuous state trajectory.
 Julia packages such as `ModelingToolkit.jl`,
 `DifferentialEquations.jl`, and `DynamicalSystems.jl` are useful
-only after the state variables and hypotheses are named.
+only after the state variables, reconstruction method, and
+hypotheses are named.
 
 ### Field Energy
 
@@ -124,22 +201,27 @@ soak runs.
 
 ## Learning Sequence
 
-The recommended learning order mirrors the architecture:
+The recommended learning order mirrors the research workflow:
 
-1. `ModelingToolkit.jl` for symbolic model construction.
-2. `DifferentialEquations.jl` for solving ODE systems.
-3. `DynamicalSystems.jl` for attractors, sensitivity, and
+1. Telemetry ingestion and state reconstruction from JSONL and
+   metric artifacts.
+2. Trajectory analysis over reconstructed state spaces.
+3. `ModelingToolkit.jl` for symbolic model construction.
+4. `DifferentialEquations.jl` for solving ODE systems.
+5. `DynamicalSystems.jl` for attractors, sensitivity, and
    stability analysis.
-4. `Optimization.jl` for fitting model parameters.
-5. `Makie.jl` for trajectories, phase portraits, and bifurcation
+6. `Optimization.jl` for fitting model parameters.
+7. `Makie.jl` for trajectories, phase portraits, and bifurcation
    diagrams.
 
 The purpose is not to read package manuals end to end. The purpose
 is to build small, inspectable models around named hypotheses.
 
-## First Experiment
+## Goal 0
 
-Start with one state vector:
+Reconstruct one soak as a trajectory through a state space.
+
+Start by deriving one state vector per turn or time window:
 
 ```text
 x = [
@@ -150,11 +232,46 @@ x = [
 ]
 ```
 
-Posit a simple first-order nonlinear system, simulate trajectories,
-and compare them qualitatively against one long soak run. The first
-question is not whether the equations are correct. The first question
-is whether any continuous dynamical model can reproduce the observed
-shape of the behavior.
+The output is a reproducible trajectory artifact and a visualization
+that shows whether the selected dimensions form a coherent path
+through state space.
+
+## First Model Experiment
+
+Only after Goal 0 succeeds, posit a simple first-order nonlinear
+system, simulate trajectories, and compare them qualitatively against
+one long soak run. The first modeling question is not whether the
+equations are correct. The first question is whether any continuous
+dynamical model can reproduce the observed shape of the behavior.
+
+Every Julia project should answer exactly one question:
+
+```text
+experiment
+  -> hypothesis
+  -> Julia model
+  -> telemetry comparison
+  -> reject or promote
+```
+
+Example:
+
+```text
+Experiment:
+Can dialogue trajectories be modeled as a continuous dynamical system?
+
+Hypothesis:
+Continuation pressure creates stable attractors.
+
+Julia model:
+ODE simulation.
+
+Telemetry:
+Compare simulated and reconstructed trajectories.
+
+Decision:
+Reject, revise, or promote.
+```
 
 ## Promotion Path
 

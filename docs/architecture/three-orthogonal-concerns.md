@@ -69,6 +69,46 @@ one layer without disturbing the others. Concretely:
   changing what hypotheses ask or what metrics measure,
   as long as the runtime contract is preserved.
 
+## Concern goals
+
+Each concern has its own goal. The goals are intentionally
+different because the layers optimize for different kinds of
+progress.
+
+### Science
+
+```text
+/goal
+Produce falsifiable hypotheses that explain observed dialogue
+dynamics.
+```
+
+Science is about asking better questions. Its artifacts are
+experiments, hypotheses, papers, and mathematical models.
+
+### Engineering
+
+```text
+/goal
+Execute experiments reproducibly while preserving measurement
+integrity.
+```
+
+Engineering is about trustworthy execution. Its artifacts are
+runtime paths, telemetry, metrics, and benchmarks.
+
+### Computation
+
+```text
+/goal
+Provide deterministic computational implementations behind stable
+interfaces.
+```
+
+Computation is about reliable implementation boundaries. Its
+artifacts are Swift application code, Rust production kernels,
+Julia reference implementations, and Python tooling.
+
 ## The closed loop, recast
 
 The closed empirical loop in the three-concern frame:
@@ -238,10 +278,11 @@ hypothesis, a refined metric, a new experiment).
 
 The closed loop has a Science-tier role for these
 services: they help generate the *next* question, not
-the *current* answer. Julia for stability analysis,
-bifurcation diagrams, and manifold learning. R for
-statistical inference. Stan for Bayesian uncertainty.
-Python for general scripting and analysis glue.
+the *current* answer. Julia for state-space
+reconstruction, stability analysis, bifurcation diagrams,
+and manifold learning. R for statistical inference. Stan
+for Bayesian uncertainty. Python for general scripting and
+analysis glue.
 
 These services are not in the runtime path. They are
 in the *research path* that surrounds the runtime.
@@ -261,6 +302,8 @@ promotion path for Julia models.
 - Rust's clarified role: deterministic kernels beneath
   a mature framework, not optimization
 - Scientific services clarified: offline, not runtime
+- Concern goals added for Science, Engineering, and
+  Computation
 
 ## Next steps (per the architecture review)
 
