@@ -1,0 +1,155 @@
+{
+  "base_dir": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848",
+  "patterns": {
+    "live_dialogue_scaffold": "in a live dialogue",
+    "we_should_consider": "we should consider whether there might be another variable",
+    "as_an_ai": "\\bas an ai\\b",
+    "i_should": "\\bi should\\b",
+    "i_dont": "\\bi don'?t have (feelings|personal)\\b",
+    "system_prompt_leak": "(neuralcompose|dialectic|hypnagogic|witness system|coherence role|displacement role)",
+    "scene_kit_leak": "(scenekit|scnvector|scnmatrix)",
+    "internal_state_leak": "(turn_index|generatorFingerprint|onMetadata|attachMetadata|loop_attached)"
+  },
+  "cells": [
+    {
+      "label": "C_qwen05b",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 2,
+        "we_should_consider": 1,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "F_deepseek_flash",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 0,
+        "we_should_consider": 0,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "F_deepseek_r1",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 0,
+        "we_should_consider": 0,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "F_qwen05b",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 2,
+        "we_should_consider": 1,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "F_qwen15b",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 2,
+        "we_should_consider": 0,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "F_qwen3b",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 2,
+        "we_should_consider": 0,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "R_deepseek_flash",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 0,
+        "we_should_consider": 0,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "R_deepseek_r1",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 0,
+        "we_should_consider": 0,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "R_qwen05b",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 5,
+        "we_should_consider": 1,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 2,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    },
+    {
+      "label": "R_qwen15b",
+      "total_turns": 30,
+      "matches": {
+        "live_dialogue_scaffold": 0,
+        "we_should_consider": 0,
+        "as_an_ai": 0,
+        "i_should": 0,
+        "i_dont": 0,
+        "system_prompt_leak": 0,
+        "scene_kit_leak": 0,
+        "internal_state_leak": 0
+      }
+    }
+  ]
+}
