@@ -56,6 +56,11 @@ The codebase already has a useful partial boundary:
   delay without importing AVFoundation into `BCICore`.
 - `SpeechSynthesizing.speak(_:prosody:)` lets the speech backend
   realize text with prosody controls.
+- `ProsodyPredicting` names the future cadence-model seam:
+  semantic text plus optional embedding and dialogue state in,
+  `SpeechProsody` parameters out.
+- `ProsodyTraceEvent` records requested, predicted, and measured
+  prosody feature vectors without raw audio or embedding values.
 - `ProsodyWobble` is a provisional heuristic planner, not the final
   cadence model.
 - `DialecticalRole.voiceProsody` and `SpeechProsody.blend` already
@@ -65,10 +70,10 @@ The codebase already has a useful partial boundary:
 These seams mean cadence prediction can be researched without
 rewriting generation or speech synthesis.
 
-## Future Prosody Vector
+## Prosody Vector
 
-A future telemetry schema can record measured or requested prosody
-features such as:
+The first telemetry schema records requested prosody controls and
+leaves room for future predicted and measured prosody features:
 
 ```text
 speech_rate
@@ -84,9 +89,33 @@ hesitation
 cadence_class
 ```
 
+`ProsodyFeatureVector` uses those names in JSON so science artifacts
+can treat requested controls, model predictions, and measured acoustic
+features as the same target shape. Requested vectors can be produced
+from the existing `SpeechProsody`; measured vectors can later be
+filled from recordings.
+
 The first research target should be cadence prediction, not voice
 cloning. Voice identity belongs to the speech backend; cadence is the
 learnable mapping from semantic/dialogue state to vocal realization.
+
+## First Milestone
+
+The first milestone is not custom voice synthesis. It is an opt-in
+trace that proves the boundary:
+
+```text
+generated text
+  -> sentence embedding provenance
+  -> dialogue-state scalars
+  -> requested prosody vector
+  -> ProsodyTraceEvent
+```
+
+That trace is enough to begin asking whether semantic state predicts
+cadence. It also keeps the research data source fixed: text, scalar
+state, requested controls, and eventually measured speech features.
+No raw audio is required for the initial requested-control baseline.
 
 ## Research Flow
 
