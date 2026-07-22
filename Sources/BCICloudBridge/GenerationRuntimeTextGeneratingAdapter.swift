@@ -29,6 +29,19 @@ public struct GenerationRuntimeTextGeneratingAdapter: MetadataPublishingTextGene
     private let maxTokens: Int
     private let defaultTemperature: Double
 
+    /// Reference-typed storage for the metadata callback. Required
+    /// because `GenerationRuntimeTextGeneratingAdapter` is a `struct`
+    /// and `any TextGenerating` is an existential — opening the box
+    /// via `as?` and assigning to the cast local mutates a *copy*,
+    /// not the value held by the loop's `let generator` property.
+    /// Storing the callback in a class-typed box means the same
+    /// box is shared across all copies, so the loop's
+    /// `attachMetadataCaptureFromAdapter()` writes the callback
+    /// to a box that the loop's stored copy will read on the
+    /// next `generate(...)` call. The box is created once at
+    /// adapter init and never replaced; consumers never see it.
+    private let metadataBox = MetadataCallbackBox()
+
     /// Optional callback fired after every `runtime.generate(...)` call
     /// with the runtime-published `GenerationMetadata`. The legacy
     /// `TextGenerating` seam stays `String`-typed so existing
@@ -39,7 +52,10 @@ public struct GenerationRuntimeTextGeneratingAdapter: MetadataPublishingTextGene
     /// that hold a strong reference back to the adapter should
     /// dispatch the metadata to a non-retaining object to avoid
     /// a retain cycle.
-    public var onMetadata: (@Sendable (GenerationMetadata) -> Void)?
+    public var onMetadata: (@Sendable (GenerationMetadata) -> Void)? {
+        get { metadataBox.callback }
+        set { metadataBox.callback = newValue }
+    }
 
     public init(
         runtime: any GenerationRuntime,
@@ -81,4 +97,24 @@ public struct GenerationRuntimeTextGeneratingAdapter: MetadataPublishingTextGene
         onMetadata?(result.metadata)
         return result.text
     }
+}
+
+/// Reference-typed storage for the metadata callback. Required
+/// because `GenerationRuntimeTextGeneratingAdapter` is a `struct`
+/// and `any TextGenerating` opens via `as?` into a *mutable copy*,
+/// so a callback set on the local cast is invisible to the
+/// original `let`-stored adapter. The class box is shared across
+/// all copies; the adapter's `onMetadata` property reads and
+/// writes through it, so any holder of any copy sees the same
+/// callback. The box is private; consumers only see
+/// `onMetadata` (the protocol requirement).
+///
+/// `@unchecked Sendable` because the `var` is protected by the
+/// implicit serialization: writes happen on the loop's actor
+/// (via `attachMetadataCaptureFromAdapter`), reads happen on the
+/// same task that called `generate(...)` (which is also on the
+/// loop's actor). The compiler can't prove this so we mark
+/// unchecked; in practice there is no data race.
+private final class MetadataCallbackBox: @unchecked Sendable {
+    var callback: (@Sendable (GenerationMetadata) -> Void)?
 }

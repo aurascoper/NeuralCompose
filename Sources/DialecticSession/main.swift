@@ -111,6 +111,15 @@ do {
     exit(1)
 }
 
+// Construct the pole generator (and the witness, if the profile
+// enables it). The `onMetadata` callback is wired by
+// `loop.attachMetadataCaptureFromAdapter()` after the loop is
+// constructed; that call mutates the adapter's
+// `MetadataCallbackBox`, which is shared between the harness's
+// reference and the loop's stored existential, so the loop sees
+// the wiring on the next `generate(...)` call. (See the long
+// comment in `attachMetadataCaptureFromAdapter` for the
+// existential-box pattern.)
 let poleGenerator = GenerationRuntimeTextGeneratingAdapter(
     runtime: resolved.runtime,
     systemPrompt: resolved.systemPrompt

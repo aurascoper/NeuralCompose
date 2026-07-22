@@ -194,6 +194,17 @@ public actor HypnagogicDialecticLoop {
     /// Callers that already know they have a publishing generator
     /// can call this directly; others can rely on the fact that
     /// the call is a no-op for legacy generators.
+    ///
+    /// **Why this works despite the existential-box problem:**
+    /// `GenerationRuntimeTextGeneratingAdapter` stores its
+    /// `onMetadata` callback in a class-typed `MetadataCallbackBox`.
+    /// The box is shared across all copies of the struct, so
+    /// mutating `publisher.onMetadata` (even on a local `var`
+    /// cast from the existential) writes to the same box that
+    /// the loop's stored copy will read on the next
+    /// `generate(...)` call. The cast is local-only; the box
+    /// is global. This pattern is the standard fix for "set a
+    /// callback on a struct-typed existential."
     public func attachMetadataCaptureFromAdapter() {
         guard var publisher = generator as? MetadataPublishingTextGenerating else {
             return

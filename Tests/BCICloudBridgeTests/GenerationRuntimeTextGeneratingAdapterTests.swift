@@ -170,6 +170,52 @@ final class GenerationRuntimeTextGeneratingAdapterTests: XCTestCase {
         )
         XCTAssertEqual(text, "stub-response-text")
     }
+
+    /// The bug this test catches: when a struct-typed
+    /// `MetadataPublishingTextGenerating` is held in an
+    /// existential box (`any TextGenerating`) and the consumer
+    /// mutates `onMetadata` through a local `var` cast from
+    /// `as?`, the mutation must propagate to the original
+    /// stored copy. The `MetadataCallbackBox` pattern (a
+    /// class-typed storage shared across all struct copies) is
+    /// what makes this work. If the box is reverted to a
+    /// struct-typed property, this test will fail because the
+    /// `var publisher = existential as? Protocol` cast opens
+    /// the box into a local copy whose mutation doesn't reach
+    /// the original.
+    func testOnMetadataPropagatesAcrossExistentialCopy() async throws {
+        let runtime = StubRuntime(result: Self.stubResult)
+        let adapter = GenerationRuntimeTextGeneratingAdapter(
+            runtime: runtime,
+            systemPrompt: "system"
+        )
+
+        // The dialectic loop stores the generator as
+        // `let generator: any TextGenerating`. Simulate that
+        // here: wrap the adapter in an existential, then cast
+        // back to a `var` to mutate the callback. The runtime
+        // call that follows must see the new callback.
+        let existential: any TextGenerating = adapter
+        var publisher = existential as? MetadataPublishingTextGenerating
+        XCTAssertNotNil(publisher, "adapter must conform to the refinement")
+
+        let fireBox = CapturedIntBox()
+        publisher?.onMetadata = { (_: GenerationMetadata) in
+            fireBox.value += 1
+        }
+
+        _ = try await existential.generate(
+            prompt: "user",
+            maxTokens: 256,
+            temperature: 0.7,
+            cancellationID: UUID()
+        )
+
+        XCTAssertEqual(
+            fireBox.value, 1,
+            "callback set on the local cast must propagate to the original existential copy"
+        )
+    }
 }
 
 // MARK: - Test helpers (sendable boxes so the @Sendable closure can mutate them)
