@@ -116,6 +116,76 @@ PROCESS_TERMS: set[str] = {
     "drift", "drifts", "shift", "shifts", "settle", "settles",
 }
 
+# ── Rhetorical motif classes ─────────────────────────────────────
+#
+# The architecture review named a question: "Are reflective
+# models independently converging on a shared rhetorical
+# structure, or merely on a shared vocabulary?" The five
+# motif classes decompose the discourse structure:
+#
+#   adversity       — challenge, struggle, difficulty (problem
+#                     framing)
+#   inwardness      — within, inner, yourself (self-direction)
+#   transcendence   — transcend, beyond, transform (resolution
+#                     via uplift)
+#   observation     — notice, observe, witness (epistemic stance)
+#   investigation   — examine, compare, analyze (analytical
+#                     stance)
+#
+# The "teleological vs epistemic" axis is a derived metric:
+#
+#   teleological = (transcendence + inwardness) / total_words
+#   epistemic    = (observation + investigation) / total_words
+#   ratio        = teleological / epistemic
+#
+#   ratio > 1   → teleological discourse (presupposes inner
+#                 resource + goal of transcendence)
+#   ratio < 1   → epistemic discourse (examines assumptions
+#                 without presupposing outcome)
+#
+# The architecture review's observation: "The Witness layer
+# is about observation and grounding, not about steering the
+# user toward a predetermined narrative of growth." So an
+# epistemic orientation is more consistent with NeuralCompose's
+# design philosophy than a teleological one.
+ADVERSITY_TERMS: set[str] = {
+    "challenge", "challenges", "struggle", "struggles", "difficulty",
+    "difficulties", "adversity", "hardship", "hardships",
+    "obstacle", "obstacles", "problem", "problems", "tough", "pain",
+    "pains", "suffering", "suffer", "affliction", "trial", "trials",
+}
+INWARDNESS_TERMS: set[str] = {
+    "within", "inner", "yourself", "self", "soul", "heart",
+    "depth", "depths", "core", "internally", "inward",
+}
+TRANSCENDENCE_TERMS: set[str] = {
+    "transcend", "transcends", "beyond", "rise", "rises",
+    "transform", "transforms", "transformation", "grow", "growth",
+    "evolve", "evolution", "transcend", "transcendence",
+    "uplift", "elevate", "elevates",
+}
+OBSERVATION_TERMS: set[str] = {
+    "notice", "notices", "observe", "observes", "witness",
+    "witnesses", "witnessed", "see", "sees", "look", "looks",
+    "watch", "watches", "attend", "attends", "saw", "seen",
+}
+INVESTIGATION_TERMS: set[str] = {
+    "examine", "examines", "examined", "compare", "compares",
+    "compared", "analyze", "analyzes", "analyzed", "investigate",
+    "investigates", "investigated", "explore", "explores",
+    "explored", "ask", "asks", "asked", "question", "questions",
+    "questioned", "consider", "considers", "considered", "probe",
+    "probes", "probed", "test", "tests", "tested",
+}
+
+MOTIF_CLASSES: dict[str, set[str]] = {
+    "adversity": ADVERSITY_TERMS,
+    "inwardness": INWARDNESS_TERMS,
+    "transcendence": TRANSCENDENCE_TERMS,
+    "observation": OBSERVATION_TERMS,
+    "investigation": INVESTIGATION_TERMS,
+}
+
 
 # ── Data shape ───────────────────────────────────────────────────────
 
@@ -679,6 +749,129 @@ def _p_relational(text: str) -> float:
     return rel / total if total else 0.0
 
 
+# ── Metric: rhetorical motifs + epistemic orientation ──────────
+#
+# Per the architecture review, the question is whether two
+# reflective outputs that share a *rhetorical structure*
+# (adversity → recognition → inner resource → transcendence)
+# are doing so because:
+#   1. The training distribution biases reflective LLMs
+#      toward counseling / coaching / mindfulness language
+#   2. The reflective prompt constrains the discourse
+#   3. Reflective has its own interaction-policy attractor
+#
+# The metric decomposes the discourse into five motif
+# classes and reports:
+#
+#   motif_rates  — per-motif rate per 1000 words, per
+#                  outcome (coherence, displacement,
+#                  synthesis, silent)
+#   total_words  — for normalization
+#
+# Plus a derived metric:
+#
+#   teleological_ratio =
+#     (transcendence + inwardness) / (observation + investigation)
+#
+#   ratio > 1  → teleological (presupposes inner resource +
+#                goal of transcendence)
+#   ratio < 1  → epistemic (examines assumptions without
+#                presupposing outcome)
+#
+# The architecture review's framing: an epistemic orientation
+# is more consistent with NeuralCompose's design philosophy
+# (Witness = observation, not steering). So if Reflective
+# is drifting toward teleological, that's a measurable
+# signal that the profile has drifted away from the
+# intended stance.
+
+
+@dataclass
+class RhetoricalMotifsReport:
+    """Per-motif frequencies + teleological/epistemic orientation."""
+    total_turns: int
+    total_words: int
+    motif_counts: dict[str, int]                  # class -> total occurrences
+    motif_rates_per_1000: dict[str, float]        # class -> rate per 1000 words
+    per_outcome_rates_per_1000: dict[str, dict[str, float]]   # outcome -> {class -> rate}
+    teleological_rate: float                      # P(transcendence + inwardness)
+    epistemic_rate: float                         # P(observation + investigation)
+    teleological_ratio: float                     # tele / epis; 1.0 = balanced
+    orientation: str                              # "teleological" / "balanced" / "epistemic"
+    note: str = ""
+
+
+def compute_rhetorical_motifs(turns: list[Turn]) -> RhetoricalMotifsReport:
+    if not turns:
+        return RhetoricalMotifsReport(
+            total_turns=0, total_words=0,
+            motif_counts={}, motif_rates_per_1000={},
+            per_outcome_rates_per_1000={},
+            teleological_rate=0.0, epistemic_rate=0.0,
+            teleological_ratio=0.0, orientation="balanced",
+        )
+
+    # Aggregate counts
+    counts = {cls: 0 for cls in MOTIF_CLASSES}
+    total_words = 0
+    for t in turns:
+        for w in tokenize(t.spoken):
+            total_words += 1
+            for cls, term_set in MOTIF_CLASSES.items():
+                if w in term_set:
+                    counts[cls] += 1
+
+    motif_rates = (
+        {cls: 1000 * counts[cls] / total_words for cls in counts}
+        if total_words else {cls: 0.0 for cls in counts}
+    )
+
+    # Per-outcome rates
+    per_outcome: dict[str, dict[str, float]] = {}
+    for outcome in OUTCOMES:
+        outcome_turns = [t for t in turns if t.outcome == outcome]
+        if not outcome_turns:
+            continue
+        oc_counts = {cls: 0 for cls in MOTIF_CLASSES}
+        oc_words = 0
+        for t in outcome_turns:
+            for w in tokenize(t.spoken):
+                oc_words += 1
+                for cls, term_set in MOTIF_CLASSES.items():
+                    if w in term_set:
+                        oc_counts[cls] += 1
+        per_outcome[outcome] = (
+            {cls: 1000 * oc_counts[cls] / oc_words for cls in oc_counts}
+            if oc_words else {cls: 0.0 for cls in oc_counts}
+        )
+
+    # Teleological vs epistemic
+    tele_count = counts["transcendence"] + counts["inwardness"]
+    epis_count = counts["observation"] + counts["investigation"]
+    tele_rate = tele_count / total_words if total_words else 0.0
+    epis_rate = epis_count / total_words if total_words else 0.0
+    ratio = tele_rate / epis_rate if epis_rate > 0 else 0.0
+
+    if ratio > 1.10:
+        orientation = "teleological"
+    elif ratio < 0.90:
+        orientation = "epistemic"
+    else:
+        orientation = "balanced"
+
+    return RhetoricalMotifsReport(
+        total_turns=len(turns),
+        total_words=total_words,
+        motif_counts=dict(counts),
+        motif_rates_per_1000=motif_rates,
+        per_outcome_rates_per_1000=per_outcome,
+        teleological_rate=tele_rate,
+        epistemic_rate=epis_rate,
+        teleological_ratio=ratio,
+        orientation=orientation,
+    )
+
+
 # ── Metric 4: witness intervention frequency ─────────────────────────
 
 @dataclass
@@ -1092,6 +1285,37 @@ def render_report(rep: dict[str, Any]) -> str:
             out.append(f"  note:                    {rrb['note']}")
     out.append("")
 
+    # 14. Rhetorical motifs + epistemic orientation
+    rm = rep.get("rhetorical_motifs", {})
+    if rm:
+        out.append("── 14. Rhetorical Motifs + Epistemic Orientation ──")
+        out.append(f"  total words:        {rm.get('total_words', 0)}")
+        out.append("")
+        rates = rm.get("motif_rates_per_1000", {}) or {}
+        out.append(f"  motif rates (per 1000 words):")
+        for cls in ["adversity", "inwardness", "transcendence", "observation", "investigation"]:
+            r = rates.get(cls, 0.0)
+            out.append(f"    {cls:<14s}  {r:>6.2f}")
+        out.append("")
+        out.append(f"  teleological rate:    {100*rm.get('teleological_rate', 0):.2f}%   (transcendence + inwardness)")
+        out.append(f"  epistemic rate:       {100*rm.get('epistemic_rate', 0):.2f}%   (observation + investigation)")
+        ratio = rm.get("teleological_ratio", 0.0)
+        out.append(f"  teleological ratio:   {ratio:.2f}  (1.0 = balanced; >1 = teleological; <1 = epistemic)")
+        out.append(f"  orientation:          {rm.get('orientation', '?')}")
+        out.append("")
+        per_out = rm.get("per_outcome_rates_per_1000", {}) or {}
+        if per_out:
+            out.append("  per-outcome motif rates (per 1000 words):")
+            outcomes_order = ["coherence-seeking", "displacement-seeking", "synthesis", "silent"]
+            for o in outcomes_order:
+                if o not in per_out:
+                    continue
+                out.append(f"    {o}:")
+                for cls in ["adversity", "inwardness", "transcendence", "observation", "investigation"]:
+                    r = per_out[o].get(cls, 0.0)
+                    out.append(f"      {cls:<14s}  {r:>6.2f}")
+        out.append("")
+
     # 10. Provenance
     out.append("── 10. Generator Provenance ──")
     p = rep["provenance"]
@@ -1201,6 +1425,7 @@ def main() -> int:
         "inertia": asdict(compute_inertia(turns)),
         "symbolic_drift": asdict(compute_symbolic_drift(turns)),
         "rrb": asdict(compute_rrb(turns)),
+        "rhetorical_motifs": asdict(compute_rhetorical_motifs(turns)),
         "named_phrases": compute_named_phrases(turns),
     }
     print(render_report(rep))

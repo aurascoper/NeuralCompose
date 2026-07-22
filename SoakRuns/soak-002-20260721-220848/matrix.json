@@ -73,6 +73,52 @@
           "rrb": 0.6240122059653757,
           "amplification_class": "suppression",
           "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 545,
+          "motif_counts": {
+            "adversity": 3,
+            "inwardness": 2,
+            "transcendence": 2,
+            "observation": 4,
+            "investigation": 6
+          },
+          "motif_rates_per_1000": {
+            "adversity": 5.504587155963303,
+            "inwardness": 3.669724770642202,
+            "transcendence": 3.669724770642202,
+            "observation": 7.339449541284404,
+            "investigation": 11.009174311926605
+          },
+          "per_outcome_rates_per_1000": {
+            "coherence-seeking": {
+              "adversity": 0.0,
+              "inwardness": 0.0,
+              "transcendence": 5.2356020942408374,
+              "observation": 10.471204188481675,
+              "investigation": 5.2356020942408374
+            },
+            "displacement-seeking": {
+              "adversity": 8.474576271186441,
+              "inwardness": 5.649717514124294,
+              "transcendence": 2.824858757062147,
+              "observation": 5.649717514124294,
+              "investigation": 14.124293785310735
+            },
+            "silent": {
+              "adversity": 0.0,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 0.0,
+              "investigation": 0.0
+            }
+          },
+          "teleological_rate": 0.007339449541284404,
+          "epistemic_rate": 0.01834862385321101,
+          "teleological_ratio": 0.4,
+          "orientation": "epistemic",
+          "note": ""
         }
       }
     },
@@ -131,6 +177,38 @@
           "rrb": 0.0,
           "amplification_class": "suppression",
           "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 0,
+          "motif_counts": {
+            "adversity": 0,
+            "inwardness": 0,
+            "transcendence": 0,
+            "observation": 0,
+            "investigation": 0
+          },
+          "motif_rates_per_1000": {
+            "adversity": 0.0,
+            "inwardness": 0.0,
+            "transcendence": 0.0,
+            "observation": 0.0,
+            "investigation": 0.0
+          },
+          "per_outcome_rates_per_1000": {
+            "silent": {
+              "adversity": 0.0,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 0.0,
+              "investigation": 0.0
+            }
+          },
+          "teleological_rate": 0.0,
+          "epistemic_rate": 0.0,
+          "teleological_ratio": 0.0,
+          "orientation": "epistemic",
+          "note": ""
         }
       }
     },
@@ -188,6 +266,38 @@
           "p_relational_heard": 0.022008547008547007,
           "rrb": 0.0,
           "amplification_class": "suppression",
+          "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 0,
+          "motif_counts": {
+            "adversity": 0,
+            "inwardness": 0,
+            "transcendence": 0,
+            "observation": 0,
+            "investigation": 0
+          },
+          "motif_rates_per_1000": {
+            "adversity": 0.0,
+            "inwardness": 0.0,
+            "transcendence": 0.0,
+            "observation": 0.0,
+            "investigation": 0.0
+          },
+          "per_outcome_rates_per_1000": {
+            "silent": {
+              "adversity": 0.0,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 0.0,
+              "investigation": 0.0
+            }
+          },
+          "teleological_rate": 0.0,
+          "epistemic_rate": 0.0,
+          "teleological_ratio": 0.0,
+          "orientation": "epistemic",
           "note": ""
         }
       }
@@ -262,6 +372,52 @@
           "p_relational_heard": 0.022008547008547007,
           "rrb": 0.5457508510906569,
           "amplification_class": "suppression",
+          "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 563,
+          "motif_counts": {
+            "adversity": 5,
+            "inwardness": 1,
+            "transcendence": 1,
+            "observation": 8,
+            "investigation": 3
+          },
+          "motif_rates_per_1000": {
+            "adversity": 8.880994671403197,
+            "inwardness": 1.7761989342806395,
+            "transcendence": 1.7761989342806395,
+            "observation": 14.209591474245116,
+            "investigation": 5.328596802841918
+          },
+          "per_outcome_rates_per_1000": {
+            "coherence-seeking": {
+              "adversity": 4.739336492890995,
+              "inwardness": 0.0,
+              "transcendence": 4.739336492890995,
+              "observation": 14.218009478672986,
+              "investigation": 4.739336492890995
+            },
+            "displacement-seeking": {
+              "adversity": 10.256410256410257,
+              "inwardness": 5.128205128205129,
+              "transcendence": 0.0,
+              "observation": 15.384615384615385,
+              "investigation": 10.256410256410257
+            },
+            "synthesis": {
+              "adversity": 12.738853503184714,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 12.738853503184714,
+              "investigation": 0.0
+            }
+          },
+          "teleological_rate": 0.003552397868561279,
+          "epistemic_rate": 0.019538188277087035,
+          "teleological_ratio": 0.18181818181818182,
+          "orientation": "epistemic",
           "note": ""
         }
       }
@@ -338,6 +494,52 @@
           "rrb": 1.0468786297584936,
           "amplification_class": "neutral",
           "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 948,
+          "motif_counts": {
+            "adversity": 3,
+            "inwardness": 3,
+            "transcendence": 3,
+            "observation": 5,
+            "investigation": 6
+          },
+          "motif_rates_per_1000": {
+            "adversity": 3.1645569620253164,
+            "inwardness": 3.1645569620253164,
+            "transcendence": 3.1645569620253164,
+            "observation": 5.274261603375527,
+            "investigation": 6.329113924050633
+          },
+          "per_outcome_rates_per_1000": {
+            "coherence-seeking": {
+              "adversity": 6.666666666666667,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 0.0,
+              "investigation": 6.666666666666667
+            },
+            "displacement-seeking": {
+              "adversity": 0.0,
+              "inwardness": 4.357298474945534,
+              "transcendence": 4.357298474945534,
+              "observation": 10.893246187363834,
+              "investigation": 6.5359477124183005
+            },
+            "synthesis": {
+              "adversity": 5.291005291005291,
+              "inwardness": 5.291005291005291,
+              "transcendence": 5.291005291005291,
+              "observation": 0.0,
+              "investigation": 5.291005291005291
+            }
+          },
+          "teleological_rate": 0.006329113924050633,
+          "epistemic_rate": 0.011603375527426161,
+          "teleological_ratio": 0.5454545454545454,
+          "orientation": "epistemic",
+          "note": ""
         }
       }
     },
@@ -413,6 +615,52 @@
           "rrb": 0.692423117221445,
           "amplification_class": "suppression",
           "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 909,
+          "motif_counts": {
+            "adversity": 2,
+            "inwardness": 6,
+            "transcendence": 10,
+            "observation": 1,
+            "investigation": 13
+          },
+          "motif_rates_per_1000": {
+            "adversity": 2.2002200220022003,
+            "inwardness": 6.600660066006601,
+            "transcendence": 11.001100110011,
+            "observation": 1.1001100110011002,
+            "investigation": 14.3014301430143
+          },
+          "per_outcome_rates_per_1000": {
+            "coherence-seeking": {
+              "adversity": 0.0,
+              "inwardness": 8.403361344537815,
+              "transcendence": 8.403361344537815,
+              "observation": 0.0,
+              "investigation": 11.204481792717086
+            },
+            "displacement-seeking": {
+              "adversity": 4.048582995951417,
+              "inwardness": 4.048582995951417,
+              "transcendence": 12.145748987854251,
+              "observation": 4.048582995951417,
+              "investigation": 16.194331983805668
+            },
+            "synthesis": {
+              "adversity": 3.278688524590164,
+              "inwardness": 6.557377049180328,
+              "transcendence": 13.114754098360656,
+              "observation": 0.0,
+              "investigation": 16.39344262295082
+            }
+          },
+          "teleological_rate": 0.0176017601760176,
+          "epistemic_rate": 0.015401540154015401,
+          "teleological_ratio": 1.1428571428571428,
+          "orientation": "teleological",
+          "note": ""
         }
       }
     },
@@ -472,6 +720,45 @@
           "rrb": 0.0,
           "amplification_class": "suppression",
           "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 3,
+          "motif_counts": {
+            "adversity": 0,
+            "inwardness": 0,
+            "transcendence": 0,
+            "observation": 0,
+            "investigation": 0
+          },
+          "motif_rates_per_1000": {
+            "adversity": 0.0,
+            "inwardness": 0.0,
+            "transcendence": 0.0,
+            "observation": 0.0,
+            "investigation": 0.0
+          },
+          "per_outcome_rates_per_1000": {
+            "displacement-seeking": {
+              "adversity": 0.0,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 0.0,
+              "investigation": 0.0
+            },
+            "silent": {
+              "adversity": 0.0,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 0.0,
+              "investigation": 0.0
+            }
+          },
+          "teleological_rate": 0.0,
+          "epistemic_rate": 0.0,
+          "teleological_ratio": 0.0,
+          "orientation": "epistemic",
+          "note": ""
         }
       }
     },
@@ -529,6 +816,38 @@
           "p_relational_heard": 0.022008547008547007,
           "rrb": 0.0,
           "amplification_class": "suppression",
+          "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 0,
+          "motif_counts": {
+            "adversity": 0,
+            "inwardness": 0,
+            "transcendence": 0,
+            "observation": 0,
+            "investigation": 0
+          },
+          "motif_rates_per_1000": {
+            "adversity": 0.0,
+            "inwardness": 0.0,
+            "transcendence": 0.0,
+            "observation": 0.0,
+            "investigation": 0.0
+          },
+          "per_outcome_rates_per_1000": {
+            "silent": {
+              "adversity": 0.0,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 0.0,
+              "investigation": 0.0
+            }
+          },
+          "teleological_rate": 0.0,
+          "epistemic_rate": 0.0,
+          "teleological_ratio": 0.0,
+          "orientation": "epistemic",
           "note": ""
         }
       }
@@ -603,6 +922,52 @@
           "p_relational_heard": 0.022008547008547007,
           "rrb": 0.4687621209119129,
           "amplification_class": "suppression",
+          "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 499,
+          "motif_counts": {
+            "adversity": 4,
+            "inwardness": 0,
+            "transcendence": 1,
+            "observation": 3,
+            "investigation": 5
+          },
+          "motif_rates_per_1000": {
+            "adversity": 8.016032064128256,
+            "inwardness": 0.0,
+            "transcendence": 2.004008016032064,
+            "observation": 6.012024048096192,
+            "investigation": 10.02004008016032
+          },
+          "per_outcome_rates_per_1000": {
+            "coherence-seeking": {
+              "adversity": 0.0,
+              "inwardness": 0.0,
+              "transcendence": 4.926108374384237,
+              "observation": 0.0,
+              "investigation": 4.926108374384237
+            },
+            "displacement-seeking": {
+              "adversity": 10.582010582010582,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 15.873015873015873,
+              "investigation": 15.873015873015873
+            },
+            "synthesis": {
+              "adversity": 18.69158878504673,
+              "inwardness": 0.0,
+              "transcendence": 0.0,
+              "observation": 0.0,
+              "investigation": 9.345794392523365
+            }
+          },
+          "teleological_rate": 0.002004008016032064,
+          "epistemic_rate": 0.01603206412825651,
+          "teleological_ratio": 0.125,
+          "orientation": "epistemic",
           "note": ""
         }
       }
@@ -679,6 +1044,52 @@
           "p_relational_heard": 0.022008547008547007,
           "rrb": 0.7381120193066162,
           "amplification_class": "suppression",
+          "note": ""
+        },
+        "rhetorical_motifs": {
+          "total_turns": 30,
+          "total_words": 813,
+          "motif_counts": {
+            "adversity": 4,
+            "inwardness": 8,
+            "transcendence": 7,
+            "observation": 5,
+            "investigation": 6
+          },
+          "motif_rates_per_1000": {
+            "adversity": 4.920049200492005,
+            "inwardness": 9.84009840098401,
+            "transcendence": 8.61008610086101,
+            "observation": 6.150061500615006,
+            "investigation": 7.380073800738008
+          },
+          "per_outcome_rates_per_1000": {
+            "coherence-seeking": {
+              "adversity": 8.130081300813009,
+              "inwardness": 4.065040650406504,
+              "transcendence": 0.0,
+              "observation": 8.130081300813009,
+              "investigation": 12.195121951219512
+            },
+            "displacement-seeking": {
+              "adversity": 2.506265664160401,
+              "inwardness": 10.025062656641603,
+              "transcendence": 10.025062656641603,
+              "observation": 5.012531328320802,
+              "investigation": 7.518796992481203
+            },
+            "synthesis": {
+              "adversity": 5.9523809523809526,
+              "inwardness": 17.857142857142858,
+              "transcendence": 17.857142857142858,
+              "observation": 5.9523809523809526,
+              "investigation": 0.0
+            }
+          },
+          "teleological_rate": 0.01845018450184502,
+          "epistemic_rate": 0.013530135301353014,
+          "teleological_ratio": 1.3636363636363635,
+          "orientation": "teleological",
           "note": ""
         }
       }
