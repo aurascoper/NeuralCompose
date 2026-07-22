@@ -1,7 +1,8 @@
 # SoakRuns/ contains the raw per-cell output of Scripts/soak-matrix.sh.
 # The aggregate matrix.json and leakage.json for each run are committed
-# for longitudinal comparison; the per-cell JSONL files are
-# reproducible from the same matrix runner and are not committed.
+# for longitudinal comparison; the per-cell JSONL files and the
+# per-cell baseline.json files are reproducible from the same matrix
+# runner + analyze_dialectic.py and are not committed.
 SoakRuns/*/runs/
 SoakRuns/*/baselines/
 SoakRuns/*/meta.txt

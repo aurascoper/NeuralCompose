@@ -1,9 +1,7 @@
 {
-  "base_dir": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848",
   "cells": [
     {
       "label": "C_qwen05b",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/C_qwen05b.json",
       "outcomes": {
         "coherence-seeking": 15,
         "displacement-seeking": 14,
@@ -15,10 +13,21 @@
         "self_similarity": 0.6124650162068965,
         "witness_count": null,
         "synthesis_rate": 0.0,
+        "coherence_rate": 0.5,
+        "displacement_rate": 0.4666666666666667,
         "silent_rate": 0.03333333333333333,
         "fp_rate": 1.0,
         "entropy_first": 6.536279058478684,
-        "entropy_second": 6.7142715109269995
+        "entropy_second": 6.7142715109269995,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.03448275862068961,
+          "policy_inertia": 0.6179117612467253,
+          "exploration_pressure": 0.3820882387532747,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -42,7 +51,6 @@
     },
     {
       "label": "F_deepseek_flash",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/F_deepseek_flash.json",
       "outcomes": {
         "silent": 30
       },
@@ -52,10 +60,21 @@
         "self_similarity": null,
         "witness_count": null,
         "synthesis_rate": 0.0,
+        "coherence_rate": 0.0,
+        "displacement_rate": 0.0,
         "silent_rate": 1.0,
         "fp_rate": 1.0,
         "entropy_first": 0.0,
-        "entropy_second": 0.0
+        "entropy_second": 0.0,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.0,
+          "policy_inertia": 1.0,
+          "exploration_pressure": 0.0,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -74,7 +93,6 @@
     },
     {
       "label": "F_deepseek_r1",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/F_deepseek_r1.json",
       "outcomes": {
         "silent": 30
       },
@@ -84,10 +102,21 @@
         "self_similarity": null,
         "witness_count": null,
         "synthesis_rate": 0.0,
+        "coherence_rate": 0.0,
+        "displacement_rate": 0.0,
         "silent_rate": 1.0,
         "fp_rate": 1.0,
         "entropy_first": 0.0,
-        "entropy_second": 0.0
+        "entropy_second": 0.0,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.0,
+          "policy_inertia": 1.0,
+          "exploration_pressure": 0.0,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -106,7 +135,6 @@
     },
     {
       "label": "F_qwen05b",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/F_qwen05b.json",
       "outcomes": {
         "coherence-seeking": 18,
         "displacement-seeking": 6,
@@ -117,11 +145,22 @@
         "opening_diversity": 0.7931034482758621,
         "self_similarity": 0.5946595689655172,
         "witness_count": null,
-        "synthesis_rate": 0.0,
+        "synthesis_rate": 0.2,
+        "coherence_rate": 0.6,
+        "displacement_rate": 0.2,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
         "entropy_first": 6.670216231524482,
-        "entropy_second": 6.867896734148453
+        "entropy_second": 6.867896734148453,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.2068965517241379,
+          "policy_inertia": 0.35883763212525377,
+          "exploration_pressure": 0.6411623678747462,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -145,7 +184,6 @@
     },
     {
       "label": "F_qwen15b",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/F_qwen15b.json",
       "outcomes": {
         "coherence-seeking": 11,
         "displacement-seeking": 13,
@@ -156,11 +194,22 @@
         "opening_diversity": 0.8,
         "self_similarity": 0.6520869279310344,
         "witness_count": null,
-        "synthesis_rate": 0.0,
+        "synthesis_rate": 0.2,
+        "coherence_rate": 0.36666666666666664,
+        "displacement_rate": 0.43333333333333335,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
         "entropy_first": 7.3034751896069,
-        "entropy_second": 7.291872333893443
+        "entropy_second": 7.291872333893443,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.19999999999999996,
+          "policy_inertia": 0.3974455906702573,
+          "exploration_pressure": 0.6025544093297427,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -182,7 +231,6 @@
     },
     {
       "label": "F_qwen3b",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/F_qwen3b.json",
       "outcomes": {
         "displacement-seeking": 7,
         "coherence-seeking": 14,
@@ -193,11 +241,22 @@
         "opening_diversity": 0.6666666666666666,
         "self_similarity": 0.6667862465517241,
         "witness_count": null,
-        "synthesis_rate": 0.0,
+        "synthesis_rate": 0.3,
+        "coherence_rate": 0.4666666666666667,
+        "displacement_rate": 0.23333333333333334,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
         "entropy_first": 7.330350966023926,
-        "entropy_second": 7.248182985032298
+        "entropy_second": 7.248182985032298,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.33333333333333337,
+          "policy_inertia": 0.4794144892733937,
+          "exploration_pressure": 0.5205855107266063,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -219,7 +278,6 @@
     },
     {
       "label": "R_deepseek_flash",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/R_deepseek_flash.json",
       "outcomes": {
         "silent": 29,
         "displacement-seeking": 1
@@ -230,10 +288,21 @@
         "self_similarity": null,
         "witness_count": null,
         "synthesis_rate": 0.0,
+        "coherence_rate": 0.0,
+        "displacement_rate": 0.03333333333333333,
         "silent_rate": 0.9666666666666667,
         "fp_rate": 1.0,
         "entropy_first": 1.1094737505048093,
-        "entropy_second": 0.0
+        "entropy_second": 0.0,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.0,
+          "policy_inertia": 0.944428792328578,
+          "exploration_pressure": 0.055571207671421985,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -252,7 +321,6 @@
     },
     {
       "label": "R_deepseek_r1",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/R_deepseek_r1.json",
       "outcomes": {
         "silent": 30
       },
@@ -262,10 +330,21 @@
         "self_similarity": null,
         "witness_count": null,
         "synthesis_rate": 0.0,
+        "coherence_rate": 0.0,
+        "displacement_rate": 0.0,
         "silent_rate": 1.0,
         "fp_rate": 1.0,
         "entropy_first": 0.0,
-        "entropy_second": 0.0
+        "entropy_second": 0.0,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.0,
+          "policy_inertia": 1.0,
+          "exploration_pressure": 0.0,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -284,7 +363,6 @@
     },
     {
       "label": "R_qwen05b",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/R_qwen05b.json",
       "outcomes": {
         "coherence-seeking": 16,
         "displacement-seeking": 9,
@@ -295,11 +373,22 @@
         "opening_diversity": 0.8275862068965517,
         "self_similarity": 0.6071079251724139,
         "witness_count": null,
-        "synthesis_rate": 0.0,
+        "synthesis_rate": 0.16666666666666666,
+        "coherence_rate": 0.5333333333333333,
+        "displacement_rate": 0.3,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
         "entropy_first": 6.427061656835136,
-        "entropy_second": 6.696238128945516
+        "entropy_second": 6.696238128945516,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.1724137931034483,
+          "policy_inertia": 0.2890284786735341,
+          "exploration_pressure": 0.7109715213264659,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
@@ -326,7 +415,6 @@
     },
     {
       "label": "R_qwen15b",
-      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220848/baselines/R_qwen15b.json",
       "outcomes": {
         "displacement-seeking": 12,
         "coherence-seeking": 13,
@@ -337,11 +425,22 @@
         "opening_diversity": 0.8333333333333334,
         "self_similarity": 0.6225053037931034,
         "witness_count": null,
-        "synthesis_rate": 0.0,
+        "synthesis_rate": 0.16666666666666666,
+        "coherence_rate": 0.43333333333333335,
+        "displacement_rate": 0.4,
         "silent_rate": 0.0,
         "fp_rate": 1.0,
         "entropy_first": 7.209098567382871,
-        "entropy_second": 7.171977260496011
+        "entropy_second": 7.171977260496011,
+        "inertia": {
+          "semantic_inertia": 0.034266704702009494,
+          "linguistic_inertia": 0.16666666666666663,
+          "policy_inertia": 0.3997459208251102,
+          "exploration_pressure": 0.6002540791748898,
+          "heard_length_variance": 280.89,
+          "heard_length_autocorrelation_lag1": 0.09015555236373055,
+          "note": ""
+        }
       },
       "named_phrases": {
         "we should consider whether there might be another variable": {
