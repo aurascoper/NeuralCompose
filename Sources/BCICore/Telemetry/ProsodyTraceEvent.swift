@@ -158,3 +158,14 @@ public struct ProsodyTraceEvent: Codable, Sendable, Equatable {
         case synthesizerIdentifier = "synthesizer_identifier"
     }
 }
+
+/// Sink for `ProsodyTraceEvent`s. The default drops everything so prosody
+/// tracing stays opt-in, like the other science/diagnostic traces.
+public protocol ProsodyTraceLogging: Sendable {
+    func log(_ event: ProsodyTraceEvent) async
+}
+
+public struct NullProsodyTraceLogger: ProsodyTraceLogging {
+    public init() {}
+    public func log(_ event: ProsodyTraceEvent) async {}
+}

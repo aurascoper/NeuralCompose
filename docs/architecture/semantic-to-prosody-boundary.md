@@ -95,6 +95,16 @@ features as the same target shape. Requested vectors can be produced
 from the existing `SpeechProsody`; measured vectors can later be
 filled from recordings.
 
+`SpokenGenerationLoop` now emits requested-control
+`ProsodyTraceEvent`s when a `ProsodyTraceLogging` sink is injected:
+one event per spoken phrase, with the requested cadence vector,
+phrase-level commitment, voice identifier, and synthesizer class. The
+default sink is `NullProsodyTraceLogger`, so no runtime telemetry is
+written unless a caller opts in.
+
+The measurement contract for these fields is defined in
+`prosody-feature-contract.md`.
+
 The first research target should be cadence prediction, not voice
 cloning. Voice identity belongs to the speech backend; cadence is the
 learnable mapping from semantic/dialogue state to vocal realization.
@@ -112,10 +122,13 @@ generated text
   -> ProsodyTraceEvent
 ```
 
-That trace is enough to begin asking whether semantic state predicts
-cadence. It also keeps the research data source fixed: text, scalar
-state, requested controls, and eventually measured speech features.
-No raw audio is required for the initial requested-control baseline.
+The current implementation establishes the requested-control side of
+that trace for spoken-generation phrases. That is enough to begin
+checking whether the existing heuristic cadence varies with semantic
+commitment. The next scientific step is to add embeddings and
+measured acoustic features from recordings, then ask whether semantic
+state predicts cadence better than the heuristic baseline. No raw
+audio is required for the initial requested-control baseline.
 
 ## Research Flow
 

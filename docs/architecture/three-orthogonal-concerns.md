@@ -166,7 +166,9 @@ The contracts that bridge the concerns are:
 The speech stack has the same boundary discipline: semantic
 generation produces text, while a separate prosody layer maps text,
 embeddings, and dialogue state into speech controls. See
-`semantic-to-prosody-boundary.md`.
+`semantic-to-prosody-boundary.md`. The measurable cadence fields live
+under `prosody-feature-contract.md`, below metrics and above raw
+audio or requested controls.
 
 ## What this changes
 

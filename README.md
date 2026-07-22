@@ -119,6 +119,8 @@ Related architecture notes:
   turn soak telemetry into falsifiable science artifacts.
 - [Semantic-to-Prosody Boundary](docs/architecture/semantic-to-prosody-boundary.md)
   separates what text is generated from how it is spoken.
+- [Prosody Feature Contract](docs/architecture/prosody-feature-contract.md)
+  defines the cadence fields that Engineering can measure and Science can model.
 
 ### Four-layer model
 
