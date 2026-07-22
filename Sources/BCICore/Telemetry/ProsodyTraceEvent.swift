@@ -5,7 +5,8 @@ import Foundation
 /// The same shape can represent requested controls, predicted controls, or
 /// measured acoustic features. Requested vectors may only populate the fields
 /// exposed by `SpeechProsody`; measured vectors can later add real duration,
-/// pitch variance, energy, and syllable cadence from recordings.
+/// pitch variance, pause density, RMS, spectral centroid, energy entropy, and
+/// syllable cadence from recordings or deterministic measurement kernels.
 public struct ProsodyFeatureVector: Codable, Sendable, Equatable {
     public let speechRate: Double?
     public let pauseBefore: TimeInterval?
@@ -14,7 +15,16 @@ public struct ProsodyFeatureVector: Codable, Sendable, Equatable {
     public let pitchVariance: Double?
     public let energy: Double?
     public let duration: TimeInterval?
+    public let voicedDuration: TimeInterval?
     public let syllablesPerSecond: Double?
+    public let articulationRate: Double?
+    public let pauseDensity: Double?
+    public let rms: Double?
+    public let zeroCrossingRate: Double?
+    public let spectralCentroid: Double?
+    public let pitchConfidence: Double?
+    public let voicingProbability: Double?
+    public let energyEntropy: Double?
     public let emphasis: Double?
     public let hesitation: Double?
     public let cadenceClass: String?
@@ -27,7 +37,16 @@ public struct ProsodyFeatureVector: Codable, Sendable, Equatable {
         pitchVariance: Double? = nil,
         energy: Double? = nil,
         duration: TimeInterval? = nil,
+        voicedDuration: TimeInterval? = nil,
         syllablesPerSecond: Double? = nil,
+        articulationRate: Double? = nil,
+        pauseDensity: Double? = nil,
+        rms: Double? = nil,
+        zeroCrossingRate: Double? = nil,
+        spectralCentroid: Double? = nil,
+        pitchConfidence: Double? = nil,
+        voicingProbability: Double? = nil,
+        energyEntropy: Double? = nil,
         emphasis: Double? = nil,
         hesitation: Double? = nil,
         cadenceClass: String? = nil
@@ -39,7 +58,16 @@ public struct ProsodyFeatureVector: Codable, Sendable, Equatable {
         self.pitchVariance = pitchVariance
         self.energy = energy
         self.duration = duration
+        self.voicedDuration = voicedDuration
         self.syllablesPerSecond = syllablesPerSecond
+        self.articulationRate = articulationRate
+        self.pauseDensity = pauseDensity
+        self.rms = rms
+        self.zeroCrossingRate = zeroCrossingRate
+        self.spectralCentroid = spectralCentroid
+        self.pitchConfidence = pitchConfidence
+        self.voicingProbability = voicingProbability
+        self.energyEntropy = energyEntropy
         self.emphasis = emphasis
         self.hesitation = hesitation
         self.cadenceClass = cadenceClass
@@ -71,7 +99,16 @@ public struct ProsodyFeatureVector: Codable, Sendable, Equatable {
             pitchVariance: nil,
             energy: prosody.volume.map(Double.init),
             duration: duration,
+            voicedDuration: nil,
             syllablesPerSecond: syllablesPerSecond,
+            articulationRate: nil,
+            pauseDensity: nil,
+            rms: nil,
+            zeroCrossingRate: nil,
+            spectralCentroid: nil,
+            pitchConfidence: nil,
+            voicingProbability: nil,
+            energyEntropy: nil,
             emphasis: emphasis,
             hesitation: hesitation,
             cadenceClass: cadenceClass
@@ -86,7 +123,16 @@ public struct ProsodyFeatureVector: Codable, Sendable, Equatable {
         case pitchVariance = "pitch_variance"
         case energy
         case duration
+        case voicedDuration = "voiced_duration"
         case syllablesPerSecond = "syllables_per_second"
+        case articulationRate = "articulation_rate"
+        case pauseDensity = "pause_density"
+        case rms
+        case zeroCrossingRate = "zero_crossing_rate"
+        case spectralCentroid = "spectral_centroid"
+        case pitchConfidence = "pitch_confidence"
+        case voicingProbability = "voicing_probability"
+        case energyEntropy = "energy_entropy"
         case emphasis
         case hesitation
         case cadenceClass = "cadence_class"

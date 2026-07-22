@@ -1,0 +1,12 @@
+[package]
+name = "neuralcompose-prosody-features"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Deterministic Phase 0 prosody feature extraction kernels for NeuralCompose telemetry."
+
+[lib]
+name = "neuralcompose_prosody_features"
+path = "src/lib.rs"
+
+[dependencies]

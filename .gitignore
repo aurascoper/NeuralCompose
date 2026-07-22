@@ -53,6 +53,10 @@ venv.*.parked/
 __pycache__/
 *.pyc
 
+## Rust utility crates
+target/
+**/target/
+
 ## Synthetic data outputs (regeneratable from Scripts/generate_synthetic_sleep.py)
 Data/*
 !Data/.gitkeep

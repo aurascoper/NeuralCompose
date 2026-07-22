@@ -44,6 +44,12 @@ energy envelopes, pause detection, pitch confidence, and other
 deterministic features. Rust should not infer that a cadence means
 "contemplation" or "continuity"; those are Science-layer hypotheses.
 
+Rust is a computational layer, not a hardware layer. The Phase 0
+prosody crate is a CPU/deterministic kernel. It does not own MLX,
+Metal, Core ML, the GPU, or the ANE. Swift remains the owner of Apple
+framework orchestration; Rust returns reproducible numeric features
+through stable interfaces.
+
 ## Contract Shape
 
 The runtime representation is `ProsodyFeatureVector`, encoded in
@@ -57,7 +63,16 @@ mean_pitch
 pitch_variance
 energy
 duration
+voiced_duration
 syllables_per_second
+articulation_rate
+pause_density
+rms
+zero_crossing_rate
+spectral_centroid
+pitch_confidence
+voicing_probability
+energy_entropy
 emphasis
 hesitation
 cadence_class
@@ -77,26 +92,28 @@ measurement of real audio.
 
 ## Phase 0 Rust Boundary
 
-A future Rust Phase 0 crate may expose deterministic measurement
-kernels such as:
+The repo-side Phase 0 crate is `Rust/prosody_features`. It exposes a
+deterministic measurement kernel shaped like:
 
 ```rust
-ProsodyFeatures analyze(audio_frame)
+ProsodyFeatures analyze_mono(audio_frame, sample_rate_hz, config)
 ```
 
-Candidate outputs:
+Current outputs include:
 
 ```text
-speech_rate
-pause_duration
-pause_density
-utterance_duration
-energy_envelope
+duration
 rms
 zero_crossing_rate
 spectral_centroid
 pitch_confidence
 voicing_probability
+pause_density
+pause_duration
+voiced_duration
+energy_entropy
+speech_rate / syllables_per_second
+articulation_rate
 ```
 
 Those kernel outputs must be normalized into the feature contract
@@ -120,6 +137,10 @@ make a measurement reproducible:
 Two runs over the same input artifact and algorithm version should
 emit byte-equivalent feature JSON modulo explicit floating-point
 tolerance documented by the kernel.
+
+The Phase 0 crate currently verifies determinism in unit tests by
+running the same input through the same configuration twice and
+requiring exact feature equality.
 
 ## Science Questions Enabled
 

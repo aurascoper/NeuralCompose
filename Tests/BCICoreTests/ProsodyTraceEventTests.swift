@@ -69,6 +69,53 @@ final class ProsodyTraceEventTests: XCTestCase {
         XCTAssertFalse(json.contains("\"values\""))
     }
 
+    func testMeasuredFeatureEncodingMatchesRustPhase0Contract() throws {
+        let event = ProsodyTraceEvent(
+            index: 2,
+            sourceKind: "rust-prosody-features",
+            utteranceText: "measured phrase",
+            measured: ProsodyFeatureVector(
+                speechRate: 4.0,
+                pauseBefore: 0.1,
+                pauseAfter: 0.2,
+                meanPitch: 180.0,
+                pitchVariance: 12.0,
+                energy: 0.7,
+                duration: 1.5,
+                voicedDuration: 1.1,
+                syllablesPerSecond: 4.0,
+                articulationRate: 5.45,
+                pauseDensity: 0.25,
+                rms: 0.33,
+                zeroCrossingRate: 220.0,
+                spectralCentroid: 910.0,
+                pitchConfidence: 0.82,
+                voicingProbability: 0.75,
+                energyEntropy: 0.61
+            )
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(event)
+        let json = String(decoding: data, as: UTF8.self)
+
+        for field in [
+            "articulation_rate",
+            "energy_entropy",
+            "pause_density",
+            "pitch_confidence",
+            "spectral_centroid",
+            "voiced_duration",
+            "voicing_probability",
+            "zero_crossing_rate",
+        ] {
+            XCTAssertTrue(json.contains("\"\(field)\""), "missing \(field) in \(json)")
+        }
+        XCTAssertFalse(json.contains("articulationRate"))
+        XCTAssertFalse(json.contains("energyEntropy"))
+    }
+
     func testProsodyPredictingDoesNotRequireSpeechBackend() async throws {
         struct TensionProsodyModel: ProsodyPredicting {
             let modelID = "test-tension-prosody"

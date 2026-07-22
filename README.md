@@ -117,10 +117,25 @@ Related architecture notes:
 - [State Reconstruction Goal 0](docs/science/state-reconstruction-goal-0.md)
   and [Trajectory Analysis Goal 1](docs/science/trajectory-analysis-goal-1.md)
   turn soak telemetry into falsifiable science artifacts.
+- [Sobolev and ZPD Hypotheses](docs/science/sobolev-zpd-hypotheses.md)
+  places smooth dynamics and proximal intervention as falsifiable research claims.
+- [Symbolic Systems as Hypothesis Sources](docs/science/symbolic-systems-hypothesis-sources.md)
+  keeps traditions like geomancy as testable abstractions, not runtime modes.
 - [Semantic-to-Prosody Boundary](docs/architecture/semantic-to-prosody-boundary.md)
   separates what text is generated from how it is spoken.
 - [Prosody Feature Contract](docs/architecture/prosody-feature-contract.md)
   defines the cadence fields that Engineering can measure and Science can model.
+
+### Rust Phase 0
+
+`Rust/prosody_features` is the first deterministic measurement crate.
+It is not wired into the Swift runtime. It measures mono audio into
+prosody features that can later feed telemetry contracts:
+
+```bash
+cd Rust/prosody_features
+cargo test
+```
 
 ### Four-layer model
 

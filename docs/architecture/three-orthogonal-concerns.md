@@ -170,6 +170,16 @@ embeddings, and dialogue state into speech controls. See
 under `prosody-feature-contract.md`, below metrics and above raw
 audio or requested controls.
 
+Sobolev learning and ZPD follow the same rule: they are Science-layer
+hypothesis generators until Engineering can measure their claims and
+Computation can provide validated implementations. See
+`../science/sobolev-zpd-hypotheses.md`.
+
+Historical symbolic systems such as geomancy are even further from the
+runtime path: they may inform literature review and hypothesis
+generation, but they must not become modes or decision mechanisms. See
+`../science/symbolic-systems-hypothesis-sources.md`.
+
 ## What this changes
 
 ### Before the three-concern frame
@@ -252,6 +262,29 @@ runtime unification lands.
 Rust is *not* arriving to "make NeuralCompose faster."
 It's arriving to stabilize **deterministic computational
 kernels** beneath a mature experimental framework.
+
+Rust is not a hardware layer. It belongs in the Computation concern,
+beside Swift, MLX/Core ML, and scientific services. Hardware sits
+below that concern:
+
+```text
+COMPUTATION
+  Swift      -> Apple APIs, orchestration, MLX/Core ML integration
+  Rust       -> deterministic numeric kernels, DSP, graphs, simulation
+  MLX/Core ML -> learned inference through Apple's optimized stack
+  Julia      -> scientific reference models
+
+HARDWARE
+  CPU
+  GPU
+  ANE
+```
+
+For Phase 0-2, Swift continues to own MLX, Metal, Core ML, and
+Apple-framework orchestration. Rust may later use GPU-capable
+libraries only after measurement proves a bottleneck and the stable
+interface remains intact. Rust does not program the ANE directly; the
+practical Apple-platform path to ANE remains Core ML.
 
 The four-gate evaluation order (Correctness → Numerical
 stability → Determinism → Performance) is *the* discipline

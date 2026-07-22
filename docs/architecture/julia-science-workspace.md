@@ -299,6 +299,10 @@ Decision:
 Reject, revise, or promote.
 ```
 
+Sobolev-style trajectory fitting and ZPD-style intervention policies
+can generate future Julia experiments, but they remain hypotheses,
+not runtime doctrine. See `docs/science/sobolev-zpd-hypotheses.md`.
+
 ## Promotion Path
 
 Julia prototypes should remain reference models until validated:
