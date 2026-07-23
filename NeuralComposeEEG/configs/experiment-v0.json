@@ -1,0 +1,44 @@
+{
+  "schema_version": "nc-eeg-experiment-config-v0",
+  "experiment_id": "EXP-NC-EEG-ENC-001",
+  "split": {
+    "unit": "complete_recording_session",
+    "pilot_method": "leave_one_session_out"
+  },
+  "m0": {
+    "regularization_c": 1.0,
+    "classifier": "logistic_regression",
+    "standardization": "fit_training_partition_only"
+  },
+  "m1": {
+    "architecture": "eegnet-four-channel-mask-head-v0",
+    "epochs": 20,
+    "batch_size": 32,
+    "learning_rate": 0.001,
+    "seed": 42
+  },
+  "m2_m3": {
+    "architecture": "eegpt-frozen-backbone-fold-adapter-v0",
+    "epochs": 10,
+    "batch_size": 16,
+    "learning_rate": 0.001,
+    "seed": 42,
+    "backbone": "frozen",
+    "trainable_modules": ["four_channel_adapter", "linear_head"]
+  },
+  "m4": {
+    "architecture": "bendr-frozen-conv-encoder-fold-adapter-v0",
+    "epochs": 10,
+    "batch_size": 16,
+    "learning_rate": 0.001,
+    "seed": 42,
+    "backbone": "frozen",
+    "trainable_modules": ["four_channel_adapter", "linear_head"]
+  },
+  "fixed_controls": {
+    "batch_size": 16,
+    "seed": 42
+  },
+  "status": "pipeline_pilot_only",
+  "promotion_status": "not_eligible"
+}
