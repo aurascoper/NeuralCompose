@@ -114,6 +114,10 @@ Related architecture notes:
   scopes bounded implementation backends.
 - [Julia Science Workspace](docs/architecture/julia-science-workspace.md)
   keeps Julia as an offline scientific laboratory, not an app runtime.
+- [EEG Mathematics, Physics, and Methods Scope](docs/scoping/eeg-mathematics-physics-methods-scope.md)
+  keeps the current encoder work grounded in the necessary linear-algebra,
+  signal-processing, and evaluation foundations while deferring forward models
+  and policy/control theory to later falsifiable experiments.
 - [State Reconstruction Goal 0](docs/science/state-reconstruction-goal-0.md)
   and [Trajectory Analysis Goal 1](docs/science/trajectory-analysis-goal-1.md)
   turn soak telemetry into falsifiable science artifacts.
