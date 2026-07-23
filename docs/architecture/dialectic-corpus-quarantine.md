@@ -71,3 +71,44 @@ structured-state schema, temporal alignment rules, whole-session splits,
 privacy rules, and unseen confirmation sessions. See
 [the EEG methods scope](../scoping/eeg-mathematics-physics-methods-scope.md)
 and [ADR-005](decision-log/ADR-005-local-interaction-logging.md).
+
+## Local Semantic Engineering Review
+
+An already quarantined source may be inspected by a local Qwen 0.5B-class
+model for bounded engineering review. This is not a scientific analysis and
+does not change the disposition above. The reviewer accepts only a loopback
+Ollama endpoint and a local `qwen2.5:*` model; remote or cloud-backed model
+identities are rejected.
+
+Before a run, the operator must verify that the local runtime will not retain
+prompt text outside this quarantine directory, then attest to that state on
+the command line:
+
+```sh
+python3 Scripts/review_quarantined_dialectics.py review \
+  --input "$HOME/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-07-22.jsonl" \
+  --parse-report "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-parse-report-2026-07-22.json" \
+  --findings-output "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-local-review-2026-07-22.jsonl" \
+  --run-manifest-output "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-local-review-run-2026-07-22.json" \
+  --prompt-logging-status verified_disabled
+```
+
+The review is stateless: fixed 16-valid-record chunks, two-record overlap,
+temperature `0.0`, seed `42`, no embeddings, and no weight updates. The tool
+itself persists neither raw prompts nor raw responses; the external runtime is
+used only after the operator verifies its retention behavior. It accepts only
+bounded JSON findings that cite source lines in their own chunk, use an allowed
+engineering category, and do not contain verbatim private content.
+
+Aggregate the metadata-only review stream without reopening the raw corpus:
+
+```sh
+python3 Scripts/review_quarantined_dialectics.py aggregate \
+  --findings-input "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-local-review-2026-07-22.jsonl" \
+  --output "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-local-review-aggregate-2026-07-22.json"
+```
+
+The aggregate reports issue categories, counts, affected source lines,
+conflicting findings, confidence buckets, and cross-chunk recurrence. Any
+future policy or prompt affected by this review is development-only and must
+be evaluated on fresh, protocol-defined sessions that have not been inspected.
