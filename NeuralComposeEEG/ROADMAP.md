@@ -22,6 +22,15 @@ The supporting [mathematics, physics, and methods
 scope](../docs/scoping/eeg-mathematics-physics-methods-scope.md) separates the
 linear-algebra, signal-processing, and evaluation foundations needed now from
 later electroquasistatic, sensor-fusion, optimization, and shadow-policy work.
+The [SVD decision memo](../docs/research/svd-four-channel-eeg-decision-memo_v1.md)
+and [proposed SVD experiment roadmap](../docs/scoping/svd-eeg-experiment-roadmap.md)
+classify singular-spectrum diagnostics and train-only feature reduction as
+separate, non-runtime studies. At D0 they are foundational only: they do not
+modify the fixed encoder conditions or authorize a physical-data claim.
+Their contracts are [SVD diagnostics](experiments/EXP-NC-SVD-DIAG-001.md),
+[M0 feature reduction](experiments/EXP-NC-SVD-M0-001.md),
+[representation analysis](experiments/EXP-NC-SVD-REP-001.md), and the deferred
+[synthetic inverse study](experiments/EXP-NC-SVD-INV-001.md).
 
 Gate to encoder confirmation: protocol-complete sessions on multiple days,
 then M0, M1, M2, M3, and eventually M4 on the same session-grouped folds.
