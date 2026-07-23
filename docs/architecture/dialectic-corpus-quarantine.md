@@ -100,6 +100,17 @@ used only after the operator verifies its retention behavior. It accepts only
 bounded JSON findings that cite source lines in their own chunk, use an allowed
 engineering category, and do not contain verbatim private content.
 
+For legacy logs, a reviewer may confuse the non-unique `index` field with a
+physical source line. The tool normalizes that citation only when each cited
+legacy index maps to exactly one source line inside the active chunk; ambiguous
+or inconsistent citations are rejected rather than guessed.
+
+An invalid model response creates a metadata-only rejection receipt and stops
+the run before later chunks are exposed. It stores the safe contract failure,
+never the raw response. A rejected run has no validated engineering findings
+and is evidence that the selected local model is unsuitable for this review
+configuration, not evidence about the dialogue itself.
+
 Aggregate the metadata-only review stream without reopening the raw corpus:
 
 ```sh

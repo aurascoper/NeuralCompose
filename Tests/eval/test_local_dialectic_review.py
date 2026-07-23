@@ -62,6 +62,8 @@ class LocalDialecticReviewTests(unittest.TestCase):
             self.assertEqual([record["source_line"] for record in chunks[1][:2]], [15, 16])
             context = REVIEW.build_chunk_context("chunk-001", chunks[0])
             self.assertIn("private phrase number 0", context)
+            self.assertIn("canonical_source_lines_allowed", context)
+            self.assertIn('"1":0', context)
             self.assertNotIn("research", REVIEW.SYSTEM_PROMPT.casefold())
 
     def test_review_response_is_chunk_bound_and_non_verbatim(self) -> None:
@@ -81,6 +83,10 @@ class LocalDialecticReviewTests(unittest.TestCase):
             findings = REVIEW.validate_findings(safe_response, records[:2])
             self.assertEqual(findings[0]["finding_type"], "selection_inertia")
             self.assertFalse(findings[0]["contains_verbatim_private_text"])
+            self.assertFalse(findings[0]["citation_normalized_from_legacy_index"])
+
+            prefixed_findings = REVIEW.validate_findings("Review result:\n" + safe_response, records[:2])
+            self.assertEqual(prefixed_findings, findings)
 
             leaking_response = safe_response.replace(
                 "Adjacent outputs show limited structural variation.",
@@ -88,6 +94,11 @@ class LocalDialecticReviewTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(REVIEW.ReviewContractError, "private dialogue"):
                 REVIEW.validate_findings(leaking_response, records[:2])
+
+            legacy_citation_response = safe_response.replace('"source_lines": [1, 2]', '"source_lines": [0, 1]')
+            normalized = REVIEW.validate_findings(legacy_citation_response, records[:2])
+            self.assertEqual(normalized[0]["source_lines"], [1, 2])
+            self.assertTrue(normalized[0]["citation_normalized_from_legacy_index"])
 
     def test_aggregation_never_reopens_raw_dialogue(self) -> None:
         chunks = [
@@ -113,6 +124,18 @@ class LocalDialecticReviewTests(unittest.TestCase):
         self.assertEqual(duplicate["affected_source_lines"], [3, 17])
         self.assertEqual(result["conflicting_findings"], [{"source_line": 3, "finding_types": ["duplicate_index", "state_discontinuity"]}])
         self.assertEqual(result["disposition"], REVIEW.REVIEW_DISPOSITION)
+
+    def test_aggregation_accepts_a_safe_rejection_receipt(self) -> None:
+        result = REVIEW.aggregate_review_chunks([{
+            "schema_version": REVIEW.REVIEW_SCHEMA,
+            "chunk_id": "chunk-001",
+            "review_status": "rejected_response",
+            "rejection_reason": "finding 0 cites source lines outside its chunk",
+            "findings": [],
+            "disposition": REVIEW.REVIEW_DISPOSITION,
+        }])
+        self.assertEqual(result["finding_count"], 0)
+        self.assertEqual(result["categories"], [])
 
     def test_remote_endpoint_and_cloud_model_are_rejected(self) -> None:
         with self.assertRaisesRegex(REVIEW.ReviewContractError, "only http://127.0.0.1"):

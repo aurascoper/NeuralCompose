@@ -60,6 +60,33 @@ REVIEW_DISPOSITION = {
     "eligible_for_training": False,
     "cloud_exposure_allowed": False,
 }
+FINDINGS_JSON_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "source_lines",
+            "legacy_turn_indices",
+            "finding_type",
+            "severity",
+            "confidence",
+            "observation",
+            "engineering_implication",
+            "contains_verbatim_private_text",
+        ],
+        "properties": {
+            "source_lines": {"type": "array", "items": {"type": "integer"}},
+            "legacy_turn_indices": {"type": "array", "items": {"type": "integer"}},
+            "finding_type": {"type": "string", "enum": sorted(FINDING_TYPES)},
+            "severity": {"type": "string", "enum": sorted(SEVERITIES)},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "observation": {"type": "string", "maxLength": MAX_OBSERVATION_LENGTH},
+            "engineering_implication": {"type": "string", "maxLength": MAX_IMPLICATION_LENGTH},
+            "contains_verbatim_private_text": {"type": "boolean", "const": False},
+        },
+    },
+}
 REQUIRED_QUARANTINE_DISPOSITION = {
     "corpus_role": "engineering_replay_only",
     "development_only_permanent": True,
@@ -150,10 +177,19 @@ def _sanitize_identity(event: dict[str, Any]) -> dict[str, str] | None:
 
 def build_chunk_context(chunk_id: str, records: list[dict[str, Any]]) -> str:
     """Build the only raw-content prompt payload used by one stateless request."""
+    source_line_to_legacy_index = {
+        str(record["source_line"]): record["legacy_turn_index"]
+        for record in records
+    }
     return json.dumps(
         {
             "disposition": REVIEW_DISPOSITION,
             "chunk_id": chunk_id,
+            "citation_contract": {
+                "canonical_source_lines_allowed": [record["source_line"] for record in records],
+                "legacy_turn_index_by_source_line": source_line_to_legacy_index,
+                "rule": "Cite only listed source lines and their exact mapped legacy index. Do not invent contiguous ordinals.",
+            },
             "records": [
                 {
                     "source_line": record["source_line"],
@@ -230,8 +266,21 @@ def _json_array_from_model_content(content: str) -> list[Any]:
             stripped = match.group(1)
     try:
         value = json.loads(stripped)
-    except json.JSONDecodeError as error:
-        raise ReviewContractError("local review response was not a JSON array") from error
+    except json.JSONDecodeError as first_error:
+        decoder = json.JSONDecoder()
+        value = None
+        for position, character in enumerate(stripped):
+            if character != "[":
+                continue
+            try:
+                candidate, _ = decoder.raw_decode(stripped[position:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(candidate, list):
+                value = candidate
+                break
+        if value is None:
+            raise ReviewContractError("local review response was not a JSON array") from first_error
     if not isinstance(value, list):
         raise ReviewContractError("local review response must be a JSON array")
     return value
@@ -274,6 +323,9 @@ def validate_findings(response_content: str, records: list[dict[str, Any]]) -> l
     value = _json_array_from_model_content(response_content)
     allowed_lines = {record["source_line"] for record in records}
     line_to_index = {record["source_line"]: record["legacy_turn_index"] for record in records}
+    index_to_lines: dict[int, list[int]] = defaultdict(list)
+    for source_line, legacy_index in line_to_index.items():
+        index_to_lines[legacy_index].append(source_line)
     private_fragments = _private_text_fragments(records)
     findings: list[dict[str, Any]] = []
     for position, finding in enumerate(value):
@@ -282,22 +334,25 @@ def validate_findings(response_content: str, records: list[dict[str, Any]]) -> l
         source_lines = finding.get("source_lines")
         legacy_indexes = finding.get("legacy_turn_indices")
         if (
-            not isinstance(source_lines, list)
-            or not source_lines
-            or any(isinstance(line, bool) or not isinstance(line, int) or line not in allowed_lines for line in source_lines)
-        ):
-            raise ReviewContractError(f"finding {position} cites source lines outside its chunk")
-        if len(set(source_lines)) != len(source_lines):
-            raise ReviewContractError(f"finding {position} repeats a source line")
-        if (
             not isinstance(legacy_indexes, list)
             or not legacy_indexes
             or any(isinstance(index, bool) or not isinstance(index, int) for index in legacy_indexes)
         ):
             raise ReviewContractError(f"finding {position} has invalid legacy turn indexes")
+        if not isinstance(source_lines, list) or not source_lines or any(isinstance(line, bool) or not isinstance(line, int) for line in source_lines):
+            raise ReviewContractError(f"finding {position} has invalid source lines")
+        citation_normalized = False
+        if any(line not in allowed_lines for line in source_lines):
+            remapped_lines = [index_to_lines.get(index, []) for index in legacy_indexes]
+            if any(len(lines) != 1 for lines in remapped_lines):
+                raise ReviewContractError(f"finding {position} cites source lines outside its chunk")
+            source_lines = [lines[0] for lines in remapped_lines]
+            citation_normalized = True
+        if len(set(source_lines)) != len(source_lines):
+            raise ReviewContractError(f"finding {position} repeats a source line")
         expected_indexes = {line_to_index[line] for line in source_lines}
-        if not set(legacy_indexes).issubset(expected_indexes):
-            raise ReviewContractError(f"finding {position} cites a legacy index outside its source lines")
+        if set(legacy_indexes) != expected_indexes:
+            raise ReviewContractError(f"finding {position} cites inconsistent source lines and legacy indexes")
         finding_type = finding.get("finding_type")
         severity = finding.get("severity")
         confidence = finding.get("confidence")
@@ -325,6 +380,7 @@ def validate_findings(response_content: str, records: list[dict[str, Any]]) -> l
                 "observation": observation,
                 "engineering_implication": implication,
                 "contains_verbatim_private_text": False,
+                "citation_normalized_from_legacy_index": citation_normalized,
             }
         )
     return findings
@@ -337,6 +393,7 @@ def review_chunk(base_url: str, model: str, context_limit: int, chunk_id: str, r
         payload={
             "model": model,
             "stream": False,
+            "format": FINDINGS_JSON_SCHEMA,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": build_chunk_context(chunk_id, records)},
@@ -437,19 +494,32 @@ def run_review(
     chunks = chunk_records(records)
     model_identity = local_model_identity(base_url, model)
     review_chunks: list[dict[str, Any]] = []
+    review_status = "completed"
+    rejected_chunk_count = 0
     for ordinal, records_chunk in enumerate(chunks, start=1):
         chunk_id = f"chunk-{ordinal:03d}"
-        findings = review_chunk(base_url, model, context_limit, chunk_id, records_chunk)
-        review_chunks.append(
-            {
-                "schema_version": REVIEW_SCHEMA,
-                "chunk_id": chunk_id,
-                "source_lines": [record["source_line"] for record in records_chunk],
-                "legacy_turn_indices": [record["legacy_turn_index"] for record in records_chunk],
-                "findings": findings,
-                "disposition": REVIEW_DISPOSITION,
-            }
-        )
+        chunk_result = {
+            "schema_version": REVIEW_SCHEMA,
+            "chunk_id": chunk_id,
+            "source_lines": [record["source_line"] for record in records_chunk],
+            "legacy_turn_indices": [record["legacy_turn_index"] for record in records_chunk],
+            "disposition": REVIEW_DISPOSITION,
+        }
+        try:
+            chunk_result["findings"] = review_chunk(base_url, model, context_limit, chunk_id, records_chunk)
+            chunk_result["review_status"] = "accepted"
+        except ReviewContractError as error:
+            # Never persist a raw model response, even when it violates the
+            # requested schema or privacy boundary. The safe rejection receipt
+            # is enough to decide whether this model can perform the review.
+            chunk_result["findings"] = []
+            chunk_result["review_status"] = "rejected_response"
+            chunk_result["rejection_reason"] = str(error)
+            review_chunks.append(chunk_result)
+            review_status = "contract_rejected"
+            rejected_chunk_count = 1
+            break
+        review_chunks.append(chunk_result)
     run_manifest = {
         "schema_version": RUN_SCHEMA,
         "reviewer_version": REVIEWER_VERSION,
@@ -470,6 +540,9 @@ def run_review(
         "science_influence_allowed": False,
         "prompt_logging_status": "verified_disabled",
         "disposition": REVIEW_DISPOSITION,
+        "review_status": review_status,
+        "accepted_chunk_count": len(review_chunks) - rejected_chunk_count,
+        "rejected_chunk_count": rejected_chunk_count,
         "review_chunk_count": len(review_chunks),
         "review_findings_sha256": sha256_json(review_chunks),
     }
