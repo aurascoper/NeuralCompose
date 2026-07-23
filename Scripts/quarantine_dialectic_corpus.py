@@ -40,6 +40,7 @@ DISPOSITION = {
     "eligible_for_encoder_evaluation": False,
     "eligible_for_policy_training": False,
     "eligible_for_policy_evaluation": False,
+    "eligible_for_science": False,
     "contains_private_dialogue": True,
     "cloud_exposure_allowed": False,
 }
