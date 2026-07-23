@@ -108,6 +108,14 @@ python3 Scripts/run-session-protocol.py --preset encoder-pilot \
 
 cd NeuralComposeEEG
 # Complete a local capture index from configs/capture-index.example.json.
+# A single clean recording can pass integrity validation but cannot yet be a
+# benchmark cohort.
+PYTHONPATH=src .venv/bin/python -m neuralcompose_eeg.capture_manifest \
+  --capture-index local-manifests/capture-index.json \
+  --integrity-output local-manifests/capture-integrity-first.json
+
+# After a second clean capture on a distinct UTC recording date, compile the
+# source manifest used for dataset windows and grouped evaluation.
 PYTHONPATH=src .venv/bin/python -m neuralcompose_eeg.capture_manifest \
   --capture-index local-manifests/capture-index.json \
   --output local-manifests/muse-pilot.json
@@ -127,6 +135,13 @@ It also requires the recorder's explicit `eeg_timestamp_clock` metadata. New
 recordings contain either an epoch coordinate or a first-sample wall-clock
 anchor for a stream-relative coordinate; old recordings without that evidence
 are intentionally not protocol-aligned retrospectively.
+
+`--integrity-output` answers whether each non-excluded local capture is
+complete, aligned, and trustworthy. It may report one clean session as
+`integrity_valid: true` while keeping `experiment_eligible: false` with
+`insufficient_session_count`. `--output` is stricter: it requires at least two
+clean, stimulus-matched sessions from at least two distinct UTC recording
+dates before it emits an evaluation source manifest.
 
 The first session is capture-pipeline evidence only: run the compiler, window
 builder, integrity report, and deterministic replay check, but do not train an

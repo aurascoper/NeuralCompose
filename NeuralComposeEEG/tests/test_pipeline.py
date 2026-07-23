@@ -12,7 +12,12 @@ import numpy as np
 import torch
 
 from neuralcompose_eeg.contracts import ContractError
-from neuralcompose_eeg.capture_manifest import PROTOCOL_SPEC_PATH, compile_capture_manifest
+from neuralcompose_eeg.capture_manifest import (
+    CAPTURE_INTEGRITY_SCHEMA,
+    PROTOCOL_SPEC_PATH,
+    compile_capture_manifest,
+    validate_capture_integrity,
+)
 from neuralcompose_eeg.compare_encoder_conditions import assemble_encoder_comparison
 from neuralcompose_eeg.bendr_adapter import FrozenBENDRConvEncoder, LearnedMuseToBENDRAdapter, load_bendr_geometry
 from neuralcompose_eeg.dataset import build_canonical_dataset, load_dataset, save_dataset
@@ -107,10 +112,11 @@ def _write_protocol_capture(
     *,
     transport_degraded: bool = False,
     stream_relative: bool = False,
+    session_spacing_seconds: float = 86_400.0,
 ) -> tuple[Path, Path]:
     recording_dir = root / f"capture-{session_number}"
     recording_dir.mkdir()
-    base = 1_780_000_000.0 + session_number * 86_400.0
+    base = 1_780_000_000.0 + session_number * session_spacing_seconds
     sample_rate = 256
     specification = _observable_protocol_spec()
     starts: list[float] = []
@@ -181,13 +187,28 @@ def _write_protocol_capture(
     return recording_dir, protocol_path
 
 
-def _capture_index(root: Path, *, transport_degraded: bool = False, session_count: int = 2) -> Path:
+def _capture_index(
+    root: Path,
+    *,
+    transport_degraded: bool = False,
+    session_count: int = 2,
+    same_recording_date: bool = False,
+) -> Path:
     sessions = []
+    session_spacing_seconds = 3_600.0 if same_recording_date else 86_400.0
     for session_number in range(session_count):
-        recording_dir, protocol_path = _write_protocol_capture(root, session_number, transport_degraded=transport_degraded and session_number == 0)
+        recording_dir, protocol_path = _write_protocol_capture(
+            root,
+            session_number,
+            transport_degraded=transport_degraded and session_number == 0,
+            session_spacing_seconds=session_spacing_seconds,
+        )
         sessions.append({
             "session_id": f"capture-fixture-{session_number}",
-            "recording_date": datetime.fromtimestamp(1_780_000_000.0 + session_number * 86_400.0, timezone.utc).date().isoformat(),
+            "recording_date": datetime.fromtimestamp(
+                1_780_000_000.0 + session_number * session_spacing_seconds,
+                timezone.utc,
+            ).date().isoformat(),
             "recording_directory": recording_dir.name,
             "protocol_log": protocol_path.name,
             "participant_id": "fixture-participant",
@@ -256,6 +277,33 @@ class DatasetContractTests(unittest.TestCase):
 
 
 class CaptureManifestTests(unittest.TestCase):
+    def test_one_clean_capture_has_integrity_without_experiment_eligibility(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            index_path = _capture_index(root, session_count=1)
+            report = validate_capture_integrity(
+                index_path,
+                root / "capture-integrity.json",
+            )
+            self.assertEqual(report["schema_version"], CAPTURE_INTEGRITY_SCHEMA)
+            self.assertTrue(report["integrity_valid"])
+            self.assertEqual(report["integrity_session_count"], 1)
+            self.assertFalse(report["experiment_eligible"])
+            self.assertEqual(report["experiment_eligibility_reason"], "insufficient_session_count")
+            with self.assertRaisesRegex(ContractError, "at least two non-excluded eligible sessions"):
+                compile_capture_manifest(index_path, root / "source-manifest.json")
+
+    def test_benchmark_manifest_requires_two_distinct_recording_dates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            index_path = _capture_index(root, same_recording_date=True)
+            report = validate_capture_integrity(index_path, root / "capture-integrity.json")
+            self.assertTrue(report["integrity_valid"])
+            self.assertFalse(report["experiment_eligible"])
+            self.assertEqual(report["experiment_eligibility_reason"], "insufficient_recording_date_count")
+            with self.assertRaisesRegex(ContractError, "at least two recording dates"):
+                compile_capture_manifest(index_path, root / "source-manifest.json")
+
     def test_compiles_complete_protocol_into_canonical_source_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

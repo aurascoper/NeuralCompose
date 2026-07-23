@@ -255,10 +255,60 @@ def test_protocol_dry_run_writes_log():
     with tempfile.TemporaryDirectory() as tmp:
         out = proto.run_protocol([("focus", 600), ("drowsy", 600), ("sleep", 0)],
                                  tag_blinks=5, tag_window=8.0, out_dir=Path(tmp), dry_run=True)
-        log = out["log"]
-        assert [s["label"] for s in log["segments"]] == ["focus", "drowsy", "sleep"]
-        assert all("cue_unix" in s and "start_unix" in s for s in log["segments"])
         assert Path(out["path"]).exists()
+    log = out["log"]
+    assert [s["label"] for s in log["segments"]] == ["focus", "drowsy", "sleep"]
+    assert log["schema_version"] == "nc-eeg-observable-protocol-v1"
+    assert log["completed"] is True
+    assert all(
+        "cue_unix" in segment
+        and "start_unix" in segment
+        and "end_unix" in segment
+        and segment["completion"] == "completed"
+        for segment in log["segments"]
+    )
+
+
+def test_encoder_pilot_preset_uses_only_observable_eeg_labels():
+    assert proto.resolve_segments(None, "encoder-pilot") == [
+        ("eyes_open", 60),
+        ("eyes_closed", 45),
+        ("blink_artifact", 30),
+        ("jaw_artifact", 30),
+        ("head_motion_artifact", 30),
+        ("listening", 60),
+        ("speaking", 60),
+        ("recovery", 60),
+    ]
+    assert proto.resolve_segments(["eyes_open:30"], "encoder-pilot") == [("eyes_open", 30)]
+
+
+def test_encoder_pilot_log_binds_pinned_stimulus_provenance():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        audio = root / "neutral-audio-v1.wav"
+        audio.write_bytes(b"fixture audio")
+        context = proto.encoder_pilot_context(
+            listening_audio=audio,
+            listening_audio_id="nc-eeg-neutral-listening-v1",
+        )
+        out = proto.run_protocol(
+            proto.resolve_segments(None, "encoder-pilot"),
+            tag_blinks=5,
+            tag_window=8.0,
+            out_dir=root,
+            dry_run=True,
+            protocol_id="encoder-pilot-v1",
+            protocol_context=context,
+        )
+    log = out["log"]
+    assert log["protocol_preset"] == "encoder-pilot-v1"
+    assert log["protocol_cue_clock"] == "unix_epoch_wall_time"
+    assert log["listening_audio_id"] == "nc-eeg-neutral-listening-v1"
+    assert len(log["listening_audio_sha256"]) == 64
+    assert log["speaking_script_id"] == "nc-eeg-speaking-count-1-to-20-v1"
+    assert len(log["speaking_script_sha256"]) == 64
+    assert log["transition_gap_seconds"] == 8
 
 
 if __name__ == "__main__":
