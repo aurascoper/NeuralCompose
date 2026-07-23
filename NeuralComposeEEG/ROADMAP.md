@@ -32,6 +32,19 @@ Their contracts are [SVD diagnostics](experiments/EXP-NC-SVD-DIAG-001.md),
 [representation analysis](experiments/EXP-NC-SVD-REP-001.md), and the deferred
 [synthetic inverse study](experiments/EXP-NC-SVD-INV-001.md).
 
+The [JEPA decision
+memo](../docs/research/jepa-four-channel-eeg-decision-memo-v0.md) and proposed
+[`EXP-NC-EEG-JEPA-001`](experiments/EXP-NC-EEG-JEPA-001.md) define a separate
+Pass 1.5 encoder-objective comparison. At D0 this is documentation and
+deterministic diagnostic-contract work only. It does not alter M0-M4, authorize
+Laya download or training, or create a live JEPA path. D2 may permit only a
+separately preregistered tiny pipeline-evidence run; D3 is the first scientific
+comparison and still requires an approved pretraining-data gate. The registered
+[collapse diagnostics](../docs/scoping/jepa-collapse-diagnostics-v0.json)
+measure representation geometry directly, but cannot support an encoder
+without the existing grouped predictive, calibration, artifact, and robustness
+evidence.
+
 Gate to encoder confirmation: protocol-complete sessions on multiple days,
 then M0, M1, M2, M3, and eventually M4 on the same session-grouped folds.
 Any pretrained condition must beat its random initialization and mapping
@@ -41,6 +54,22 @@ it remains `insufficient_evidence` for every pilot run. It also rejects reports
 without the shared fixed-compute configuration hash and retains runtime evidence
 separately from predictive outcomes. Core ML conversion is deferred until a
 compact candidate is selected by this offline evidence.
+
+## EXP-NC-EEG-JEPA-001
+
+Proposed Pass 1.5 work only. It compares matched reconstruction, latent
+prediction, anti-collapse, and bounded hybrid objectives after the ordinary
+encoder program reaches the applicable gate. D2 can establish pipeline
+execution only under a separate preregistration. A scientific comparison waits
+until D3 and a separately reviewed corpus is adequate for self-supervised
+learning. Short pilot captures are not enough merely because their labels can
+be hidden. Every local pretraining fit remains inside its outer
+training-session partition.
+
+This is not the existing action-conditioned `WorldModel/` JEPA spike. An
+encoder representation does not become a transition model, MPC objective, or
+dialogue controller. Every JEPA result remains `insufficient_evidence`,
+`promotion_status: not_eligible`, and `runtime_change: none`.
 
 ## EXP-NC-ARC-XFER-001
 

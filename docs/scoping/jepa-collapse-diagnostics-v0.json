@@ -1,0 +1,182 @@
+{
+  "schema_version": "nc-eeg-jepa-collapse-diagnostics-v0",
+  "experiment_id": "EXP-NC-EEG-JEPA-001",
+  "status": "scope_complete",
+  "track": "Pass_1.5_non_runtime",
+  "data_gate": "D0",
+  "decision": "foundational_study_only",
+  "promotion_status": "not_eligible",
+  "live_control": false,
+  "runtime_dependency_authorized": false,
+  "live_inference_authorized": false,
+  "laya_download_or_training_authorized": false,
+  "execution_gates": {
+    "D0": "contracts_synthetic_fixtures_and_validator_tests_only",
+    "D1": "optional_read_only_pipeline_and_collapse_metric_smoke_tests_no_jepa_training",
+    "D2": "separately_preregistered_tiny_pipeline_evidence_only_no_confirmation_or_promotion",
+    "D3": "first_session_grouped_jepa_comparison_with_fold_local_pretraining_and_matched_controls",
+    "post_encoder": "separate_action_conditioned_transition_world_model_or_mpc_experiment"
+  },
+  "j6_gate": {
+    "status": "blocked",
+    "requires": [
+      "reproducible_pinned_implementation",
+      "pinned_checkpoint",
+      "compatible_channel_mapping",
+      "matched_compute_controls",
+      "license_review"
+    ]
+  },
+  "measurement_frequency": {
+    "trainable_conditions": "every_epoch_on_training_and_inner_validation_groups",
+    "outer_held_out_group": "once_after_complete_condition_freeze",
+    "frozen_external_condition": "once_after_fold_local_adapter_and_probe_freeze"
+  },
+  "threshold_policy": {
+    "d0": "record_raw_diagnostics_only",
+    "physical_execution": "thresholds_preregistered_from_training_partitions_only",
+    "held_out_threshold_fitting_allowed": false,
+    "outer_group_selects_epoch_or_condition": false
+  },
+  "regularization_application_rule": "Anti-collapse pressure must include a named encoder or projector representation; predictor-output-only regularization invalidates the condition.",
+  "representation_scopes": [
+    "encoder_embedding",
+    "projector_embedding",
+    "predictor_output",
+    "stopped_gradient_target_embedding"
+  ],
+  "diagnostics": [
+    {
+      "id": "per_dimension_variance",
+      "value": "vector",
+      "definition": "Population variance of each named representation dimension over the registered diagnostic batch.",
+      "collapse_signal": "many dimensions approach a preregistered training-only floor",
+      "required": true
+    },
+    {
+      "id": "covariance_off_diagonal_magnitude",
+      "value": "scalar_and_matrix_summary",
+      "definition": "Mean absolute off-diagonal covariance plus the complete covariance-diagonal summary for the named representation.",
+      "collapse_signal": "dimensions are redundant or covariance structure is unstable across grouped folds",
+      "required": true
+    },
+    {
+      "id": "singular_value_spectrum",
+      "value": "vector",
+      "definition": "Complete reduced singular-value spectrum of the centered registered embedding matrix, with matrix shape and dtype.",
+      "collapse_signal": "one or a few modes dominate under a preregistered sensitivity rule",
+      "required": true
+    },
+    {
+      "id": "entropy_effective_rank",
+      "value": "scalar",
+      "definition": "exp(-sum_i p_i log(p_i)), where p_i = sigma_i^2 / sum_j sigma_j^2 and zero-energy matrices are separately flagged.",
+      "collapse_signal": "effective rank approaches one or is unstable across grouped folds",
+      "required": true
+    },
+    {
+      "id": "energy_rank",
+      "value": "scalar_and_sensitivity",
+      "definition": "Smallest rank reaching the preregistered cumulative singular-energy threshold, with threshold sensitivity recorded.",
+      "collapse_signal": "rank is degenerate or conclusion depends on a post-hoc threshold",
+      "required": true
+    },
+    {
+      "id": "condition_number",
+      "value": "scalar_or_null",
+      "definition": "Largest divided by smallest retained singular value only when the smallest value exceeds the recorded numerical floor; otherwise null with rank-deficient flag.",
+      "collapse_signal": "extreme or nonfinite conditioning that is stable under dtype and floor sensitivity checks",
+      "required": true
+    },
+    {
+      "id": "mean_pairwise_distance",
+      "value": "scalar",
+      "definition": "Mean Euclidean distance over a fixed seeded subset of distinct embedding pairs.",
+      "collapse_signal": "distance approaches a preregistered training-only floor",
+      "required": true
+    },
+    {
+      "id": "nearest_neighbor_session_identity",
+      "value": "rate_and_confusion_matrix",
+      "definition": "Rate at which each embedding's nearest eligible neighbor shares its recording-session identity, excluding the same source window and overlap-defined neighbors.",
+      "collapse_signal": "not collapse by itself; a high rate indicates nuisance session identity and weak transfer evidence",
+      "required": true
+    },
+    {
+      "id": "constant_output_check",
+      "value": "boolean_and_max_deviation",
+      "definition": "Detects an exactly or numerically constant registered representation using the preregistered dtype-aware floor.",
+      "collapse_signal": "true",
+      "required": true
+    },
+    {
+      "id": "feature_utilization",
+      "value": "count_and_fraction",
+      "definition": "Count and fraction of dimensions whose training-partition variance exceeds the preregistered floor.",
+      "collapse_signal": "few dimensions are utilized or utilization is fold-unstable",
+      "required": true
+    },
+    {
+      "id": "predictor_loss",
+      "value": "scalar",
+      "definition": "Objective-specific latent prediction loss with reduction, mask denominator, and target scope recorded.",
+      "collapse_signal": "not a collapse test alone; low loss with failed geometry checks is explicitly insufficient",
+      "required": true
+    },
+    {
+      "id": "regularization_loss",
+      "value": "named_components",
+      "definition": "Every active SIGReg, VICReg-style, reconstruction, or query-specialization component reported separately and before weighting.",
+      "collapse_signal": "not a collapse test alone; missing or inactive expected pressure invalidates the condition",
+      "required": true
+    },
+    {
+      "id": "linear_probe_performance",
+      "value": "metric_bundle",
+      "definition": "Frozen-protocol linear-probe balanced accuracy, macro F1, Brier score, and expected calibration error on training or inner-validation groups at each epoch; the outer held-out group is evaluated once after complete condition freeze.",
+      "collapse_signal": "chance-like or fold-unstable performance despite favorable geometry prevents a non-collapse interpretation",
+      "required": true
+    }
+  ],
+  "required_negative_controls": [
+    "temporal_target_permutation",
+    "different_session_target",
+    "channel_coordinate_shuffle",
+    "channel_order_shuffle",
+    "mask_location_shuffle",
+    "no_regularization",
+    "constant_embedding",
+    "random_encoder",
+    "matched_reconstruction"
+  ],
+  "required_provenance": [
+    "dataset_sha256",
+    "source_manifest_sha256",
+    "preprocessing_sha256",
+    "split_manifest_sha256",
+    "training_window_digest",
+    "held_out_group_id",
+    "condition_id",
+    "architecture_revision",
+    "checkpoint_sha256",
+    "adapter_revision",
+    "mask_schedule",
+    "optimizer_and_budget",
+    "seed",
+    "epoch",
+    "representation_scope",
+    "matrix_shape",
+    "dtype",
+    "library_versions",
+    "numerical_floors"
+  ],
+  "interpretation_rules": {
+    "geometry_alone_supports_model": false,
+    "reconstruction_error_proves_noncollapse": false,
+    "training_loss_proves_noncollapse": false,
+    "three_dimensional_visualization_is_metric": false,
+    "held_out_projection_fitting_allowed": false,
+    "supported_result_means": "supported_for_further_encoder_science_only",
+    "runtime_change": "none"
+  }
+}
