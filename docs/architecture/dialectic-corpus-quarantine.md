@@ -17,10 +17,15 @@ Every derived artifact carries this exact disposition:
   "eligible_for_encoder_evaluation": false,
   "eligible_for_policy_training": false,
   "eligible_for_policy_evaluation": false,
+  "eligible_for_science": false,
   "contains_private_dialogue": true,
   "cloud_exposure_allowed": false
 }
 ```
+
+The cascade requires every field above. A report produced before
+`eligible_for_science: false` existed must be regenerated from the unchanged
+local source rather than patched by hand.
 
 Local engineering may inspect the raw file for parser recovery, chronological
 reconstruction, UI replay, turn reconciliation, dialogue-state debugging, or
@@ -74,6 +79,12 @@ and [ADR-005](decision-log/ADR-005-local-interaction-logging.md).
 
 ## Local Semantic Engineering Review
 
+New review work should use the
+[Local Open-Weight Review Cascade](local-open-weight-review-cascade.md), which
+keeps source-line identity canonical, never repairs citations, limits retries,
+and admits only metadata-only artifacts. It still produces development-only
+engineering observations, never scientific evidence.
+
 An already quarantined source may be inspected by a local Qwen 0.5B-class
 model for bounded engineering review. This is not a scientific analysis and
 does not change the disposition above. The reviewer accepts only a loopback
@@ -121,5 +132,6 @@ python3 Scripts/review_quarantined_dialectics.py aggregate \
 
 The aggregate reports issue categories, counts, affected source lines,
 conflicting findings, confidence buckets, and cross-chunk recurrence. Any
-future policy or prompt affected by this review is development-only and must
-be evaluated on fresh, protocol-defined sessions that have not been inspected.
+future policy or prompt affected by this review remains development-only and
+must be evaluated on fresh, protocol-defined sessions that have not been
+inspected.
