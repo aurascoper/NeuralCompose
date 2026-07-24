@@ -16,7 +16,7 @@ final class ClaudeCLITransportTests: XCTestCase {
 
     // MARK: - Transport: buildArgs
 
-    func testBuildArgsIncludesAllRequiredFlags() {
+    func testBuildArgsIncludesAllRequiredFlags() throws {
         let args = ClaudeCLITransport.buildArgs(
             model: "claude-sonnet-5",
             systemPrompt: "you are a mirror",
@@ -31,7 +31,7 @@ final class ClaudeCLITransportTests: XCTestCase {
         ])
     }
 
-    func testBuildArgsPreservesPromptBytes() {
+    func testBuildArgsPreservesPromptBytes() throws {
         // The transport MUST NOT modify the prompt text; the byte
         // sequence the runtime hands it is the byte sequence the
         // subprocess sees (ADR-009 invariant #2).
@@ -42,7 +42,7 @@ final class ClaudeCLITransportTests: XCTestCase {
         XCTAssertEqual(args.last, prompt)
     }
 
-    func testBuildArgsPreservesSystemPromptBytes() {
+    func testBuildArgsPreservesSystemPromptBytes() throws {
         let sys = "you are a voice in a live, waking dialectical exchange"
         let args = ClaudeCLITransport.buildArgs(
             model: "m", systemPrompt: sys, prompt: "p"
@@ -62,24 +62,24 @@ final class ClaudeCLITransportTests: XCTestCase {
         XCTAssertEqual(try ClaudeCLITransport.parseResult(json), "Drifting deeper.")
     }
 
-    func testParseResultErrorFlag() {
+    func testParseResultErrorFlag() throws {
         let json = #"{"is_error":true,"result":"boom"}"#.data(using: .utf8)!
         XCTAssertThrowsError(try ClaudeCLITransport.parseResult(json))
     }
 
-    func testParseResultMissingField() {
+    func testParseResultMissingField() throws {
         let json = #"{"is_error":false}"#.data(using: .utf8)!
         XCTAssertThrowsError(try ClaudeCLITransport.parseResult(json))
     }
 
-    func testParseResultNonJSON() {
+    func testParseResultNonJSON() throws {
         let data = "not json".data(using: .utf8)!
         XCTAssertThrowsError(try ClaudeCLITransport.parseResult(data))
     }
 
     // MARK: - Transport: shape
 
-    func testTransportNames() {
+    func testTransportNames() throws {
         let t = ClaudeCLITransport(model: "claude-sonnet-5")
         XCTAssertEqual(t.transportName, "claude-cli")
         XCTAssertEqual(t.providerName, "anthropic")
@@ -87,8 +87,8 @@ final class ClaudeCLITransportTests: XCTestCase {
 
     // MARK: - Runtime: composition
 
-    func testRuntimeComposesTransport() {
-        let r = ClaudeCLIGenerationRuntime(
+    func testRuntimeComposesTransport() throws {
+        let r = try ClaudeCLIGenerationRuntime(
             model: "claude-sonnet-5",
             promptProfile: .wakingDialectical,
             interactionStyle: "dialectical"
@@ -98,8 +98,8 @@ final class ClaudeCLITransportTests: XCTestCase {
         XCTAssertTrue(r.isLive)
     }
 
-    func testRuntimeMetadataFingerprint() {
-        let r = ClaudeCLIGenerationRuntime(
+    func testRuntimeMetadataFingerprint() throws {
+        let r = try ClaudeCLIGenerationRuntime(
             model: "claude-sonnet-5",
             promptProfile: .wakingDialectical,
             interactionStyle: "dialectical"
@@ -113,11 +113,11 @@ final class ClaudeCLITransportTests: XCTestCase {
         XCTAssertEqual(r.capabilities, RuntimeCapabilities.none)
     }
 
-    func testRuntimeSystemPromptOverridePath() {
+    func testRuntimeSystemPromptOverridePath() throws {
         // The TextGenerating legacy shim init takes a system-prompt
         // string directly. This is the path the legacy call sites
         // use. The runtime must not load from disk in this path.
-        let r = ClaudeCLIGenerationRuntime(
+        let r = try ClaudeCLIGenerationRuntime(
             model: "claude-sonnet-5",
             systemPrompt: "explicit system prompt"
         )
@@ -129,7 +129,7 @@ final class ClaudeCLITransportTests: XCTestCase {
         // sha256 hash must be the same as `PromptProfile.hash()`
         // (the keep-bar for prompt-portability: the runtime sees the
         // exact same bytes the Markdown file declares).
-        let r = ClaudeCLIGenerationRuntime(
+        let r = try ClaudeCLIGenerationRuntime(
             model: "claude-sonnet-5",
             promptProfile: .wakingDialectical
         )

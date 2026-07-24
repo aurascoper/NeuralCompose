@@ -124,12 +124,22 @@ let poleGenerator = GenerationRuntimeTextGeneratingAdapter(
     runtime: resolved.runtime,
     systemPrompt: resolved.systemPrompt
 )
-let witnessGenerator: GenerationRuntimeTextGeneratingAdapter? = profile.witnessEnabled
-    ? GenerationRuntimeTextGeneratingAdapter(
-        runtime: resolved.runtime,
-        systemPrompt: (try? PromptProfile.witness.load()) ?? ""
-    )
-    : nil
+// NOTE: `GenerationRuntimeTextGeneratingAdapter.systemPrompt` is currently a
+// stored-but-unread field — the bytes actually sent come from
+// `resolved.runtime`'s own prompt. Giving the Witness its own resolved runtime
+// is a separate fix (tracked as R3) and is deliberately not attempted here.
+// What changes now is only that a failed load stops the run instead of
+// silently passing "".
+let witnessPrompt: String?
+do {
+    witnessPrompt = profile.witnessEnabled ? try PromptProfile.witness.load() : nil
+} catch {
+    FileHandle.standardError.write(Data("● dialectic-session: \(error)\n".utf8))
+    exit(1)
+}
+let witnessGenerator: GenerationRuntimeTextGeneratingAdapter? = witnessPrompt.map {
+    GenerationRuntimeTextGeneratingAdapter(runtime: resolved.runtime, systemPrompt: $0)
+}
 
 print("● dialectic-session — profile=\(profile.rawValue) witness=\(profile.witnessEnabled) "
       + "runtime=\(opts.runtime) model=\(opts.model) turns=\(heardLines.count) → \(outPath)")

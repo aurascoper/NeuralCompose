@@ -79,28 +79,28 @@ final class PromptProfileTests: XCTestCase {
         XCTAssertNotEqual(h2, h3)
     }
 
-    func testClaudeCLIGeneratorLoadsPromptsFromBundle() {
+    func testClaudeCLIGeneratorLoadsPromptsFromBundle() throws {
         // The legacy `static var` accessors on `ClaudeCLIGenerator`
         // must produce the same content as `PromptProfile.load()`.
         // This is the keep-bar test: the public API of the generator
         // continues to expose these names, but the bytes are now
         // sourced from the Markdown files.
-        XCTAssertEqual(ClaudeCLIGenerator.hypnagogicSystemPrompt,
+        XCTAssertEqual(try ClaudeCLIGenerator.hypnagogicSystemPrompt(),
                        (try? PromptProfile.hypnagogic.load()) ?? "")
-        XCTAssertEqual(ClaudeCLIGenerator.wakingDialecticalSystemPrompt,
+        XCTAssertEqual(try ClaudeCLIGenerator.wakingDialecticalSystemPrompt(),
                        (try? PromptProfile.wakingDialectical.load()) ?? "")
-        XCTAssertEqual(ClaudeCLIGenerator.witnessSystemPrompt,
+        XCTAssertEqual(try ClaudeCLIGenerator.witnessSystemPrompt(),
                        (try? PromptProfile.witness.load()) ?? "")
     }
 
-    func testClaudeCLIGeneratorPromptsAreNotEmpty() {
+    func testClaudeCLIGeneratorPromptsAreNotEmpty() throws {
         // The bundled files exist; the legacy accessors must return
         // non-empty strings. (A regression where the resources are
         // missing would silently produce empty strings today; the
         // keep-bar requires the loaded text to match the historical
         // values, so emptiness is the first thing to fail.)
-        XCTAssertFalse(ClaudeCLIGenerator.hypnagogicSystemPrompt.isEmpty)
-        XCTAssertFalse(ClaudeCLIGenerator.wakingDialecticalSystemPrompt.isEmpty)
-        XCTAssertFalse(ClaudeCLIGenerator.witnessSystemPrompt.isEmpty)
+        XCTAssertFalse(try ClaudeCLIGenerator.hypnagogicSystemPrompt().isEmpty)
+        XCTAssertFalse(try ClaudeCLIGenerator.wakingDialecticalSystemPrompt().isEmpty)
+        XCTAssertFalse(try ClaudeCLIGenerator.witnessSystemPrompt().isEmpty)
     }
 }

@@ -127,19 +127,19 @@ final class OllamaHTTPTransportTests: XCTestCase {
         XCTAssertEqual(response.finishReason, .error)
     }
 
-    func testParseResponseMissingField() {
+    func testParseResponseMissingField() throws {
         let data = #"{"done":true}"#.data(using: .utf8)!
         XCTAssertThrowsError(try OllamaHTTPTransport.parseResponse(data))
     }
 
-    func testParseResponseNonJSON() {
+    func testParseResponseNonJSON() throws {
         let data = "not json".data(using: .utf8)!
         XCTAssertThrowsError(try OllamaHTTPTransport.parseResponse(data))
     }
 
     // MARK: - Transport: shape
 
-    func testTransportNames() {
+    func testTransportNames() throws {
         let t = OllamaHTTPTransport()
         XCTAssertEqual(t.transportName, "ollama-http")
         XCTAssertEqual(t.providerName, "ollama")
@@ -147,8 +147,8 @@ final class OllamaHTTPTransportTests: XCTestCase {
 
     // MARK: - Runtime: composition
 
-    func testRuntimeComposesTransport() {
-        let r = OllamaGenerationRuntime(
+    func testRuntimeComposesTransport() throws {
+        let r = try OllamaGenerationRuntime(
             model: "qwen2.5:0.5b",
             promptProfile: .wakingDialectical,
             interactionStyle: "dialectical"
@@ -158,19 +158,19 @@ final class OllamaHTTPTransportTests: XCTestCase {
         XCTAssertTrue(r.isLive)
     }
 
-    func testRuntimeAdvertisesTokenCounting() {
+    func testRuntimeAdvertisesTokenCounting() throws {
         // Ollama exposes eval_count; the runtime advertises
         // tokenCounting: true. The Claude runtime does not. This
         // is the capability-advertised keep-bar (ADR-009 #4) in
         // action.
-        let ollama = OllamaGenerationRuntime(model: "m", systemPrompt: "s")
+        let ollama = try OllamaGenerationRuntime(model: "m", systemPrompt: "s")
         XCTAssertTrue(ollama.capabilities.tokenCounting)
         XCTAssertFalse(ollama.capabilities.streaming)
         XCTAssertFalse(ollama.capabilities.logProbs)
     }
 
-    func testRuntimeSystemPromptOverridePath() {
-        let r = OllamaGenerationRuntime(
+    func testRuntimeSystemPromptOverridePath() throws {
+        let r = try OllamaGenerationRuntime(
             model: "m",
             systemPrompt: "explicit"
         )
@@ -198,7 +198,7 @@ final class OllamaHTTPTransportTests: XCTestCase {
         guard await isModelPulled("qwen2.5:0.5b") else {
             throw XCTSkip("qwen2.5:0.5b not pulled on this Ollama instance")
         }
-        let r = OllamaGenerationRuntime(
+        let r = try OllamaGenerationRuntime(
             model: "qwen2.5:0.5b",
             systemPrompt: "Reply with the single word: pong"
         )
@@ -211,8 +211,15 @@ final class OllamaHTTPTransportTests: XCTestCase {
         XCTAssertEqual(result.metadata.transport, "ollama-http")
         XCTAssertEqual(result.metadata.provider, "ollama")
         XCTAssertEqual(result.metadata.model, "qwen2.5:0.5b")
-        XCTAssertFalse(result.metadata.promptHash.isEmpty)
-        XCTAssertEqual(result.metadata.promptProfile, "wakingDialectical")
+        // The system-prompt-override path reports `custom` and hashes the
+        // bytes actually sent. It previously claimed `wakingDialectical` and
+        // hashed that profile no matter what was transmitted, so the
+        // fingerprint attested to bytes that never left the process.
+        XCTAssertEqual(result.metadata.promptProfile, "custom")
+        XCTAssertEqual(
+            result.metadata.promptHash,
+            PromptProfile.sha256Hex("Reply with the single word: pong"),
+            "promptHash must cover the transmitted system prompt")
         XCTAssertEqual(result.metadata.interactionStyle, "dialectical")
         // Token counting is advertised; the live response populates it.
         XCTAssertNotNil(result.metadata.tokenCount)

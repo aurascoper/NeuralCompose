@@ -14,42 +14,42 @@ final class ClaudeCLIGeneratorTests: XCTestCase {
         XCTAssertEqual(try ClaudeCLIGenerator.parseResult(json), "Drifting deeper.")
     }
 
-    func testThrowsWhenIsErrorTrue() {
+    func testThrowsWhenIsErrorTrue() throws {
         let json = #"{"is_error":true,"result":"boom"}"#.data(using: .utf8)!
         XCTAssertThrowsError(try ClaudeCLIGenerator.parseResult(json))
     }
 
-    func testThrowsWhenResultMissing() {
+    func testThrowsWhenResultMissing() throws {
         let json = #"{"is_error":false}"#.data(using: .utf8)!
         XCTAssertThrowsError(try ClaudeCLIGenerator.parseResult(json))
     }
 
-    func testThrowsOnNonJSON() {
+    func testThrowsOnNonJSON() throws {
         let data = "not json at all".data(using: .utf8)!
         XCTAssertThrowsError(try ClaudeCLIGenerator.parseResult(data))
     }
 
-    func testMetadata() {
-        let gen = ClaudeCLIGenerator(model: "claude-sonnet-5")
+    func testMetadata() throws {
+        let gen = try ClaudeCLIGenerator(model: "claude-sonnet-5")
         XCTAssertTrue(gen.isLive)
         XCTAssertEqual(gen.modelIdentifier, "claude-sonnet-5 (claude-cli)")
     }
 
-    func testDefaultSystemPromptIsConstrained() {
+    func testDefaultSystemPromptIsConstrained() throws {
         // Guardrail: the network path must never default to an unconstrained
         // prompt — it must forbid questions and cap length.
-        let p = ClaudeCLIGenerator.hypnagogicSystemPrompt
+        let p = try ClaudeCLIGenerator.hypnagogicSystemPrompt()
         XCTAssertTrue(p.contains("NEVER ask questions"))
         XCTAssertTrue(p.contains("TWO short"))
     }
 
-    func testWitnessSystemPromptIsSeparateAndWaking() {
+    func testWitnessSystemPromptIsSeparateAndWaking() throws {
         // The witness prompt must be a DISTINCT constant (never the poles' prompt),
         // must stay in the waking register (no sleep imagery — it ships pre-GATE),
         // and must forbid the witness from addressing the user.
-        XCTAssertNotEqual(ClaudeCLIGenerator.witnessSystemPrompt,
-                          ClaudeCLIGenerator.wakingDialecticalSystemPrompt)
-        let p = ClaudeCLIGenerator.witnessSystemPrompt.lowercased()
+        XCTAssertNotEqual(try ClaudeCLIGenerator.witnessSystemPrompt(),
+                          try ClaudeCLIGenerator.wakingDialecticalSystemPrompt())
+        let p = try ClaudeCLIGenerator.witnessSystemPrompt().lowercased()
         for word in ["drift", "dissolv", "sleep", "dream"] {
             XCTAssertFalse(p.contains(word), "witness prompt must stay waking (found '\(word)')")
         }

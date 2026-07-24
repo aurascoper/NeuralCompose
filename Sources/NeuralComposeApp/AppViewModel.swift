@@ -1002,12 +1002,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 let dialecticResolved = try LiveRuntimeFactory.make(
                     runtimeName: runtimeConfiguration.runtimeName,
                     model: runtimeConfiguration.model,
-                    systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
+                    systemPrompt: try ClaudeCLIGenerator.wakingDialecticalSystemPrompt()
                 )
                 let witnessResolved = try LiveRuntimeFactory.make(
                     runtimeName: runtimeConfiguration.runtimeName,
                     model: runtimeConfiguration.model,
-                    systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt
+                    systemPrompt: try ClaudeCLIGenerator.witnessSystemPrompt()
                 )
                 BCILog.pipeline.notice(
                     "dialectic runtime: \(dialecticResolved.resolved); witness runtime: \(witnessResolved.resolved)"

@@ -37,7 +37,7 @@ final class ClaudeCLIGeneratorEgressTests: XCTestCase {
         let stub = try makeStub(argsFile: argsFile)
         defer { try? FileManager.default.removeItem(at: stub); try? FileManager.default.removeItem(at: argsFile) }
 
-        let gen = ClaudeCLIGenerator(
+        let gen = try ClaudeCLIGenerator(
             model: "claude-sonnet-5", systemPrompt: "TEST-SYS-PROMPT", executablePath: stub.path)
         let reply = try await gen.generate(
             prompt: "user transcript text", maxTokens: 10, temperature: 0.5, cancellationID: UUID())
@@ -67,26 +67,26 @@ final class ClaudeCLIGeneratorEgressTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: stub); try? FileManager.default.removeItem(at: argsFile) }
 
         // Default init: the caller does NOT get to leave the system prompt open.
-        let gen = ClaudeCLIGenerator(executablePath: stub.path)
+        let gen = try ClaudeCLIGenerator(executablePath: stub.path)
         _ = try await gen.generate(prompt: "anything", maxTokens: 1, temperature: 0, cancellationID: UUID())
 
         let args = try capturedArgs(argsFile)
         guard let i = args.firstIndex(of: "--system-prompt"), i + 1 < args.count else {
             return XCTFail("no --system-prompt passed")
         }
-        XCTAssertEqual(args[i + 1], ClaudeCLIGenerator.hypnagogicSystemPrompt,
+        XCTAssertEqual(args[i + 1], try ClaudeCLIGenerator.hypnagogicSystemPrompt(),
                        "the default egress uses the constrained hypnagogic prompt, so the network path "
                        + "can't be accidentally pointed at an unconstrained prompt")
     }
 
-    func testCancellationDoesNotSendAnything() async {
+    func testCancellationDoesNotSendAnything() async throws {
         let argsFile = FileManager.default.temporaryDirectory
             .appendingPathComponent("args-\(UUID().uuidString).txt")
         defer { try? FileManager.default.removeItem(at: argsFile) }
         guard let stub = try? makeStub(argsFile: argsFile) else { return XCTFail("stub") }
         defer { try? FileManager.default.removeItem(at: stub) }
 
-        let gen = ClaudeCLIGenerator(executablePath: stub.path)
+        let gen = try ClaudeCLIGenerator(executablePath: stub.path)
         let id = UUID()
         let task = Task { try await gen.generate(prompt: "x", maxTokens: 1, temperature: 0, cancellationID: id) }
         task.cancel()

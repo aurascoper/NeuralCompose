@@ -47,16 +47,34 @@ public enum PromptProfile: String, CaseIterable, Sendable {
     /// The system prompt text. Loaded once from the bundle; cached.
     /// Throws if the resource is missing (a build / packaging bug).
     public func load() throws -> String {
-        let key = self.cacheKey
-        Self.cacheLock.lock()
-        if let cached = Self.cache[key] {
-            Self.cacheLock.unlock()
-            return cached
-        }
-        Self.cacheLock.unlock()
+        try load(using: .standard)
+    }
 
-        guard let url = Bundle.module.url(forResource: resourceName, withExtension: "md") else {
-            throw PromptProfileError.missingResource(filename)
+    /// Loading against an explicit locator. The injectable seam exists so the
+    /// missing-bundle and missing-file paths are testable without disturbing
+    /// the real app layout.
+    ///
+    /// This deliberately does NOT go through SwiftPM's generated
+    /// `Bundle.module`. That accessor is a `static let` whose initializer
+    /// calls `fatalError()` when the resource bundle is absent, so it traps
+    /// inside the lazy global's `dispatch_once` — before any Swift error
+    /// exists and out of reach of `try`/`catch`. A packaged .app missing the
+    /// bundle died with SIGTRAP here instead of throwing `missingResource`.
+    /// Absence must be a value, not an assertion.
+    public func load(using locator: PromptResourceLocator) throws -> String {
+        let key = self.cacheKey
+        let cacheable = locator.isStandard
+        if cacheable {
+            Self.cacheLock.lock()
+            if let cached = Self.cache[key] {
+                Self.cacheLock.unlock()
+                return cached
+            }
+            Self.cacheLock.unlock()
+        }
+
+        guard let url = locator.url(forResource: resourceName, withExtension: "md") else {
+            throw PromptProfileError.missingResource(filename, searched: locator.searchedPaths)
         }
         let data = try Data(contentsOf: url)
         guard let text = String(data: data, encoding: .utf8) else {
@@ -70,9 +88,18 @@ public enum PromptProfile: String, CaseIterable, Sendable {
         // here so the loaded text is byte-identical to the pre-extraction
         // static let values.
         let trimmed = Self.trim(text)
-        Self.cacheLock.lock()
-        Self.cache[key] = trimmed
-        Self.cacheLock.unlock()
+        // An empty constraining prompt is the failure this whole path exists
+        // to prevent: `claude -p --system-prompt ""` is an unconstrained model
+        // on the one deliberate network-egress path. Treat it as a missing
+        // resource rather than a usable value.
+        guard !trimmed.isEmpty else {
+            throw PromptProfileError.emptyResource(filename)
+        }
+        if cacheable {
+            Self.cacheLock.lock()
+            Self.cache[key] = trimmed
+            Self.cacheLock.unlock()
+        }
         return trimmed
     }
 
@@ -87,14 +114,21 @@ public enum PromptProfile: String, CaseIterable, Sendable {
             return cached
         }
         Self.hashCacheLock.unlock()
-        let bytes = try load()
-        let data = Data(bytes.utf8)
-        let digest = SHA256.hash(data: data)
-        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        let hex = Self.sha256Hex(try load())
         Self.hashCacheLock.lock()
         Self.hashCache[key] = hex
         Self.hashCacheLock.unlock()
         return hex
+    }
+
+    /// sha256 of arbitrary prompt bytes.
+    ///
+    /// Runtimes hash the text they actually send rather than re-hashing a
+    /// `PromptProfile`. On the system-prompt-override path those differ, and
+    /// hashing the profile made `promptHash` attest to bytes that were never
+    /// transmitted — defeating the fingerprint's stated purpose.
+    public static func sha256Hex(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: - Private
@@ -124,13 +158,106 @@ public enum PromptProfile: String, CaseIterable, Sendable {
 }
 
 public enum PromptProfileError: Error, CustomStringConvertible {
-    case missingResource(String)
+    case missingResource(String, searched: [String])
     case invalidUTF8(String)
+    case emptyResource(String)
 
     public var description: String {
         switch self {
-        case .missingResource(let f): return "PromptProfileError: resource '\(f)' not found in BCICloudBridge bundle"
-        case .invalidUTF8(let f):     return "PromptProfileError: resource '\(f)' is not valid UTF-8"
+        case .missingResource(let f, let searched):
+            return "PromptProfileError: resource '\(f)' not found in the "
+                + "\(PromptResourceLocator.bundleName) bundle. This is a packaging bug — "
+                + "the SwiftPM resource bundle was not copied into the app. Searched: "
+                + searched.joined(separator: ", ")
+        case .invalidUTF8(let f):
+            return "PromptProfileError: resource '\(f)' is not valid UTF-8"
+        case .emptyResource(let f):
+            return "PromptProfileError: resource '\(f)' is empty; refusing to use an "
+                + "unconstrained system prompt on the network egress path"
         }
     }
 }
+
+/// Locates prompt resources without ever evaluating SwiftPM's generated
+/// `Bundle.module`.
+///
+/// `Bundle.module` is a `static let` whose generated initializer ends in
+/// `fatalError()`. When the resource bundle is missing from a packaged .app,
+/// merely *touching* it traps the process (SIGTRAP) during `dispatch_once`,
+/// so no amount of `try`/`catch` at the call site can recover. This type
+/// searches an explicit candidate list and returns `nil` instead.
+///
+/// Candidate roots cover the three layouts the resources actually appear in:
+/// a packaged `.app` (`Contents/Resources`, plus the `Contents`-level
+/// symlink), a plain SwiftPM build (the bundle sits beside the executable in
+/// `.build/<config>/`), and the XCTest bundle layout.
+public struct PromptResourceLocator: Sendable {
+    /// SwiftPM names resource bundles `<PackageName>_<TargetName>`.
+    /// Pinned by `PromptProfileTests.testStandardLocatorFindsBundle`, which
+    /// fails if a package/target rename ever invalidates this string.
+    public static let bundleName = "NeuralCompose_BCICloudBridge"
+
+    private let roots: [URL]
+    let isStandard: Bool
+
+    public init(roots: [URL]) {
+        self.roots = roots
+        self.isStandard = false
+    }
+
+    private init(standardRoots: [URL]) {
+        self.roots = standardRoots
+        self.isStandard = true
+    }
+
+    /// The locator used by the app and CLI.
+    public static var standard: PromptResourceLocator {
+        .init(standardRoots: defaultRoots())
+    }
+
+    /// Paths consulted, for diagnostics in `missingResource`.
+    public var searchedPaths: [String] { roots.map(\.path) }
+
+    /// The resource URL, or `nil` if absent. Never traps.
+    public func url(forResource name: String, withExtension ext: String) -> URL? {
+        let file = "\(name).\(ext)"
+        let fm = FileManager.default
+        for root in roots {
+            let bundleRoot = root.appendingPathComponent("\(Self.bundleName).bundle")
+            let candidates = [
+                // SwiftPM on macOS emits a FLAT resource bundle: the .md files
+                // sit directly inside the .bundle directory.
+                bundleRoot.appendingPathComponent(file),
+                // A bundle restructured into the conventional macOS layout.
+                bundleRoot.appendingPathComponent("Contents/Resources").appendingPathComponent(file),
+                // Resources copied loose into the search root.
+                root.appendingPathComponent(file),
+            ]
+            for candidate in candidates where fm.fileExists(atPath: candidate.path) {
+                return candidate
+            }
+        }
+        return nil
+    }
+
+    private static func defaultRoots() -> [URL] {
+        var out: [URL] = []
+        func add(_ url: URL?) {
+            guard let url, !out.contains(url) else { return }
+            out.append(url)
+        }
+        let main = Bundle.main
+        add(main.resourceURL)                                  // packaged .app: Contents/Resources
+        add(main.bundleURL)                                    // Contents-level symlink
+        add(main.executableURL?.deletingLastPathComponent())   // .build/<config>, Contents/MacOS
+        let anchor = Bundle(for: LocatorAnchor.self)
+        add(anchor.resourceURL)                                // XCTest bundle
+        add(anchor.bundleURL)
+        add(anchor.bundleURL.deletingLastPathComponent())
+        return out
+    }
+}
+
+/// Anchor class so `Bundle(for:)` can resolve the bundle enclosing this
+/// module under XCTest. Never instantiated.
+private final class LocatorAnchor {}
