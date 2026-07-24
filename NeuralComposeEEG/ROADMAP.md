@@ -71,6 +71,18 @@ encoder representation does not become a transition model, MPC objective, or
 dialogue controller. Every JEPA result remains `insufficient_evidence`,
 `promotion_status: not_eligible`, and `runtime_change: none`.
 
+### Synthetic JEPA rehearsal
+
+[`EXP-NC-EEG-JEPA-SYN-000`](experiments/EXP-NC-EEG-JEPA-SYN-000.md) is the
+separate executable path for deterministic S0-S6 objective, control, collapse,
+grouping, and artifact checks. Its
+[generator contract](../docs/scoping/jepa-synthetic-generators-v0.json)
+prohibits fallback acquisition data and physical claims. The optional
+[mode-stratified extension](experiments/EXP-NC-EEG-JEPA-SYN-MODE-000.md)
+treats mirror, focus, reflective, and contemplative only as externally assigned
+synthetic regimes. Neither rehearsal changes the D0 status of the physical
+JEPA experiment or sets physical-study thresholds.
+
 ## EXP-NC-ARC-XFER-001
 
 Deferred until the encoder experiment selects a *fixed* shadow-only state

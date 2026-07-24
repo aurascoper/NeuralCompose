@@ -1,0 +1,140 @@
+{
+  "schema_version": "nc-eeg-jepa-synthetic-config-v0",
+  "experiment_id": "EXP-NC-EEG-JEPA-SYN-000",
+  "mode_experiment_id": "EXP-NC-EEG-JEPA-SYN-MODE-000",
+  "seed": 42,
+  "device": "cpu",
+  "source": {
+    "schema_version": "nc-eeg-jepa-synthetic-source-v0",
+    "source_type": "deterministic_synthetic_fixture",
+    "device_id": "synthetic-generator",
+    "participant_id": null,
+    "physical_capture_eligible": false,
+    "fallback_capture_allowed": false
+  },
+  "data": {
+    "sample_rate_hz": 64,
+    "channel_count": 4,
+    "window_samples": 64,
+    "windows_per_session": 24,
+    "sessions_per_generator": 6,
+    "generator_ids": ["S0", "S1", "S2", "S3", "S4", "S5", "S6"]
+  },
+  "split": {
+    "unit": "complete_synthetic_session",
+    "outer_test_sessions": 2,
+    "inner_validation_sessions": 1,
+    "outer_fold_count": 2,
+    "normalization": "fit_training_sessions_only",
+    "adjacent_window_split_allowed": false
+  },
+  "mask": {
+    "fraction": 0.25,
+    "geometry": "contiguous_temporal_span",
+    "same_schedule_across_conditions": true
+  },
+  "model": {
+    "architecture_id": "synthetic-four-channel-jepa-v0",
+    "encoder_hidden_dim": 16,
+    "latent_dim": 8,
+    "predictor_hidden_dim": 24,
+    "mode_context_dim": 4,
+    "decoder_present_in_every_condition": true
+  },
+  "training": {
+    "optimizer": "adamw",
+    "learning_rate": 0.003,
+    "weight_decay": 0.0001,
+    "batch_size": 32,
+    "steps": 12,
+    "ema_tau": 0.95,
+    "gradient_clip_norm": 5.0,
+    "conditions": ["T0", "T1", "T2", "T3", "T4", "T5"],
+    "matched_fields": [
+      "encoder_architecture",
+      "parameter_count",
+      "generated_samples",
+      "batch_size",
+      "steps",
+      "optimizer",
+      "seed",
+      "context_target_geometry",
+      "mask_schedule",
+      "probe_budget"
+    ]
+  },
+  "loss": {
+    "T0": {
+      "objective": "seeded_random_encoder",
+      "train": false
+    },
+    "T1": {
+      "objective": "masked_reconstruction",
+      "reconstruction_weight": 1.0
+    },
+    "T2": {
+      "objective": "latent_prediction",
+      "prediction_weight": 1.0
+    },
+    "T3": {
+      "objective": "latent_prediction_plus_sigreg",
+      "prediction_weight": 1.0,
+      "sigreg_weight": 0.2,
+      "regularization_scope": "projector_embedding"
+    },
+    "T4": {
+      "objective": "latent_prediction_plus_vicreg",
+      "prediction_weight": 1.0,
+      "vicreg_variance_weight": 0.2,
+      "vicreg_covariance_weight": 0.02,
+      "regularization_scope": "projector_embedding"
+    },
+    "T5": {
+      "objective": "latent_prediction_plus_bounded_reconstruction",
+      "prediction_weight": 1.0,
+      "reconstruction_weight": 0.2,
+      "maximum_reconstruction_fraction": 0.25
+    }
+  },
+  "controls": [
+    "temporal_target_permutation",
+    "different_sequence_target",
+    "channel_order_shuffle",
+    "channel_coordinate_shuffle",
+    "mask_location_shuffle",
+    "constant_embedding",
+    "nonfinite_input"
+  ],
+  "probe": {
+    "type": "logistic_regression",
+    "regularization_c": 1.0,
+    "max_iterations": 200,
+    "fit_scope": "training_sessions_only"
+  },
+  "diagnostics": {
+    "variance_floor": 1e-06,
+    "singular_value_floor": 1e-08,
+    "energy_rank_threshold": 0.99,
+    "constant_output_tolerance": 1e-07,
+    "pairwise_sample_limit": 256
+  },
+  "mode_extension": {
+    "enabled": true,
+    "modes": ["mirror", "focus", "reflective", "contemplative"],
+    "sessions_per_mode": 4,
+    "controls": ["C0", "C1", "C2", "C3", "C4", "C5"],
+    "training_condition": "T3",
+    "split_unit": "complete_synthetic_session",
+    "leave_one_mode_out": true,
+    "mode_is_externally_assigned": true,
+    "cognitive_mode_inference_allowed": false
+  },
+  "artifact": {
+    "schema_version": "nc-eeg-jepa-synthetic-rehearsal-v0",
+    "decision": "pipeline_evidence_only",
+    "promotion_status": "not_eligible",
+    "runtime_change": "none",
+    "physical_eeg_used": false,
+    "scientific_transfer_claim_allowed": false
+  }
+}

@@ -42,6 +42,11 @@ At D0, only this contract, the
 [`jepa-collapse-diagnostics-v0`](../../docs/scoping/jepa-collapse-diagnostics-v0.json)
 schema, and deterministic diagnostic fixtures may be reviewed.
 
+Executable synthetic training belongs exclusively to
+[`EXP-NC-EEG-JEPA-SYN-000`](EXP-NC-EEG-JEPA-SYN-000.md). Its generated
+fixtures and mode-stratified extension are pipeline evidence only, cannot set
+physical thresholds, and do not advance this experiment beyond D0.
+
 D1 remains one integrity-valid physical capture with no encoder training. D2
 remains the multi-day M0/M1 pipeline cohort. A tiny JEPA run at D2 is permitted
 only by a separate preregistration and can establish pipeline execution only.

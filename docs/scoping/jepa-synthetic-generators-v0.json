@@ -1,0 +1,134 @@
+{
+  "schema_version": "nc-eeg-jepa-synthetic-generators-v0",
+  "experiment_id": "EXP-NC-EEG-JEPA-SYN-000",
+  "status": "executable_pipeline_rehearsal",
+  "source_type": "deterministic_synthetic_fixture",
+  "physical_eeg_used": false,
+  "physical_threshold_tuning_allowed": false,
+  "fallback_acquisition_stream": {
+    "accepted": false,
+    "reason": "A fallback-degraded or synthetic acquisition stream is evidence of live transport failure, not a physical Muse capture or a dedicated deterministic fixture.",
+    "canonical_capture_manifest_allowed": false
+  },
+  "generators": [
+    {
+      "id": "S0",
+      "name": "known_low_rank_oscillatory_process",
+      "definition": "Two seeded latent oscillators are mixed into four observed channels with low independent noise.",
+      "expected_invariants": {
+        "raw_entropy_effective_rank_min": 1.5,
+        "raw_entropy_effective_rank_max": 2.6,
+        "correct_targets_should_beat_permutation": true,
+        "correct_to_permuted_ratio_max": 0.98
+      }
+    },
+    {
+      "id": "S1",
+      "name": "full_rank_independent_noise",
+      "definition": "Four independent noise channels have no temporal target structure.",
+      "expected_invariants": {
+        "raw_entropy_effective_rank_min": 3.2,
+        "correct_targets_should_beat_permutation": false,
+        "correct_to_permuted_ratio_min": 0.95
+      }
+    },
+    {
+      "id": "S2",
+      "name": "shared_common_mode_artifact",
+      "definition": "Low-amplitude oscillatory channels receive a large seeded shared transient.",
+      "expected_invariants": {
+        "first_singular_energy_min": 0.55,
+        "artifact_dominance_should_trigger": true
+      }
+    },
+    {
+      "id": "S3",
+      "name": "session_identity_shortcut",
+      "definition": "Every session has a fixed offset and spectral signature unrelated to the synthetic state target.",
+      "expected_invariants": {
+        "raw_nearest_neighbor_session_identity_min": 0.75,
+        "session_identity_should_trigger": true
+      }
+    },
+    {
+      "id": "S4",
+      "name": "channel_dropout_and_rank_collapse",
+      "definition": "A channel is copied, flattened, or explicitly removed with provenance retained.",
+      "expected_invariants": {
+        "raw_matrix_rank_max": 3,
+        "rank_collapse_detector_should_trigger": true,
+        "missing_channel_provenance_required": true
+      }
+    },
+    {
+      "id": "S5",
+      "name": "state_transition_process",
+      "definition": "A seeded latent Markov process changes between observable synthetic states and drives four mixed channels.",
+      "expected_invariants": {
+        "correct_targets_should_beat_permutation": true,
+        "correct_to_permuted_ratio_max": 0.98,
+        "state_probe_above_chance_expected": true,
+        "state_probe_accuracy_min": 0.55
+      }
+    },
+    {
+      "id": "S6",
+      "name": "collapse_trap",
+      "definition": "Weak but real sample variation is paired with an objective geometry that rewards constant latent targets unless encoder-side anti-collapse pressure remains active.",
+      "expected_invariants": {
+        "T2_collapse_expected": true,
+        "T2_effective_rank_max": 2.0,
+        "T3_or_T4_should_reduce_collapse": true,
+        "anti_collapse_effective_rank_gain_min": 0.25,
+        "regularization_must_apply_to": "projector_embedding"
+      }
+    }
+  ],
+  "mode_extension": {
+    "experiment_id": "EXP-NC-EEG-JEPA-SYN-MODE-000",
+    "mode_labels_are": "externally_assigned_generator_conditions",
+    "mode_labels_are_not": "EEG_inferred_cognitive_states",
+    "modes": {
+      "mirror": "faster state tracking with short-range continuity",
+      "focus": "lower transition rate with a persistent latent component",
+      "reflective": "longer context dependence with delayed transitions",
+      "contemplative": "slower low-frequency latent dynamics"
+    },
+    "independently_crossed_nuisance_variables": [
+      "latent_rank",
+      "noise_strength",
+      "oscillation_frequency",
+      "transition_rate",
+      "artifact_probability",
+      "channel_mixing_matrix",
+      "session_offset",
+      "missing_channel_pattern"
+    ],
+    "controls": {
+      "C0": "mode_blind_latent_predictor",
+      "C1": "correct_mode_context",
+      "C2": "shuffled_mode_context",
+      "C3": "constant_uninformative_mode_context",
+      "C4": "leave_one_mode_out_mode_blind_evaluation",
+      "C5": "mode_available_to_probe_only"
+    },
+    "split_rule": "Complete synthetic sessions are the split unit. Leave-one-mode-out uses complete sessions from the held-out mode.",
+    "physical_protocol_effect": "none"
+  },
+  "interpretation": {
+    "supported_question": "Does the pipeline detect collapse and distinguish known synthetic structures under controlled conditions?",
+    "prohibited_claims": [
+      "JEPA learns transferable Muse EEG representations",
+      "J3 J4 or J5 is superior to EEGNet on physical EEG",
+      "real artifact sensitivity or specificity",
+      "cross-session Muse generalization",
+      "participant or headset robustness",
+      "physical EEG data efficiency",
+      "production encoder selection",
+      "Core ML or NeuralCompose runtime integration",
+      "cognitive mode inference"
+    ],
+    "failed_expected_invariant_means": "pipeline_defect_or_inadequately_specified_generator",
+    "promotion_status": "not_eligible"
+  }
+}
