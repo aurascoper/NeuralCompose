@@ -72,7 +72,7 @@ public enum RuntimeFactory {
     ) throws -> ResolvedRuntime {
         switch runtimeName.lowercased() {
         case "claude":
-            return makeClaude(model: model, promptProfile: promptProfile, interactionStyle: interactionStyle)
+            return try makeClaude(model: model, promptProfile: promptProfile, interactionStyle: interactionStyle)
         case "ollama":
             return try makeOllama(
                 model: model,
@@ -90,7 +90,7 @@ public enum RuntimeFactory {
         model: String,
         promptProfile: PromptProfile,
         interactionStyle: String
-    ) -> ResolvedRuntime {
+    ) throws -> ResolvedRuntime {
         // Probe the `claude` CLI. If absent, raise a clean error so
         // the harness reports it and exits 1 — no panic. The
         // keep-bar: rate-limit produces a clean failure at the
@@ -107,8 +107,12 @@ public enum RuntimeFactory {
         // seam the legacy harness used. The system prompt bytes
         // are loaded from the `PromptProfile` so the transport sees
         // the same bytes the Markdown file declares.
-        let systemPrompt = (try? promptProfile.load()) ?? ClaudeCLIGenerator.hypnagogicSystemPrompt
-        let runtime = ClaudeCLIGenerationRuntime(
+        // A failed load previously substituted the hypnagogic (sleep-mirror)
+        // prompt while `promptProfile` still reported the requested profile,
+        // so the fingerprint recorded a profile that was never sent. Fail
+        // instead: the caller reports the runtime as unavailable.
+        let systemPrompt = try promptProfile.load()
+        let runtime = try ClaudeCLIGenerationRuntime(
             model: model,
             systemPrompt: systemPrompt,
             interactionStyle: interactionStyle,
@@ -147,17 +151,17 @@ public enum RuntimeFactory {
         // at the call site. The system prompt is loaded from the
         // `PromptProfile` so the transport sees the same bytes
         // the Markdown file declares.
-        let runtime = OllamaGenerationRuntime(
+        let systemPrompt = try promptProfile.load()
+        let runtime = try OllamaGenerationRuntime(
             model: model,
-            systemPrompt: (try? promptProfile.load()) ?? "",
+            systemPrompt: systemPrompt,
             interactionStyle: interactionStyle,
             baseURL: baseURL,
             session: session
         )
-        let sys = (try? promptProfile.load()) ?? ""
         return ResolvedRuntime(
             runtime: runtime,
-            systemPrompt: sys,
+            systemPrompt: systemPrompt,
             promptProfile: promptProfile,
             interactionStyle: interactionStyle
         )

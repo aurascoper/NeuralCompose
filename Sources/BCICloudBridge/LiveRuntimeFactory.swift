@@ -75,9 +75,9 @@ public enum LiveRuntimeFactory {
             // used pre-branch. Preserved byte-for-byte so the
             // production state is unchanged when the env vars
             // are absent.
-            let gen = ClaudeCLIGenerator(
+            let gen = try ClaudeCLIGenerator(
                 model: resolvedModel,
-                systemPrompt: systemPrompt ?? ClaudeCLIGenerator.hypnagogicSystemPrompt
+                systemPrompt: systemPrompt
             )
             return (gen, Resolved(
                 name: "claude-cli", model: resolvedModel,
@@ -96,10 +96,8 @@ public enum LiveRuntimeFactory {
             // system prompt onto the user prompt with the
             // documented delimiter, never modifies semantic
             // intent.
-            let promptText: String
-            if let s = systemPrompt { promptText = s }
-            else { promptText = (try? PromptProfile.wakingDialectical.load()) ?? "" }
-            let runtime = OllamaGenerationRuntime(
+            let promptText = try systemPrompt ?? PromptProfile.wakingDialectical.load()
+            let runtime = try OllamaGenerationRuntime(
                 model: resolvedModel,
                 systemPrompt: promptText,
                 interactionStyle: "dialectical",
