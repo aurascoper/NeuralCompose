@@ -1,0 +1,18 @@
+{
+  "contract_sha256": "6c0ebb8a4d9dfdc9fda3e6b6c3f4495fd14f378d41e738612fcab0808ed8eafe",
+  "data_gate": "D0",
+  "decision": "insufficient_evidence",
+  "experiment_id": "EXP-NC-EEG-FUSION-001",
+  "live_control": false,
+  "physical_eeg_used": false,
+  "promotion_status": "not_eligible",
+  "record_count": 6,
+  "records_sha256": "6c6987aee0c421460a671859141f8c0e5cf1be5ef671b7e6971b50d4f2e16bfe",
+  "report_sha256": "1593d85b32102ed7811a0bb71d7c703b0008dc3198c2a047fd9de66707704fd7",
+  "runtime_change": "none",
+  "schema_version": "nc-eeg-fused-state-replay-manifest-v0",
+  "shadow_only": true,
+  "state_schema_version": "nc-eeg-fused-state-v0",
+  "status": "foundational_study_only",
+  "synthetic_only": true
+}

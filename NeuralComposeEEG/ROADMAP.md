@@ -91,6 +91,27 @@ treats mirror, focus, reflective, and contemplative only as externally assigned
 synthetic regimes. Neither rehearsal changes the D0 status of the physical
 JEPA experiment or sets physical-study thresholds.
 
+## EXP-NC-EEG-FUSION-001
+
+Proposed late-representation-fusion work only. The
+[`EXP-NC-EEG-FUSION-001`](experiments/EXP-NC-EEG-FUSION-001.md) contract keeps
+EEGNet and EEGPT as independent encoders, prohibits tensor or weight merging,
+and places a small fold-local fusion head after their calibrated outputs. It
+does not alter M0-M4 or authorize physical fusion training before D3.
+
+At D0, the
+[`fusion-synthetic-v0`](configs/fusion-synthetic-v0.json) contract permits
+only synthetic paired output fixtures, fixed F0-F2 calculations, calibration
+and disagreement checks, fail-closed missing-model tests, and hash-bound
+`nc-eeg-fused-state-v0` replay. Qwen remains frozen and unexecuted; only its
+bounded structured-state input and strict shadow-output schemas are validated.
+Raw EEG, encoder embeddings, free-form EEG text, policy fitting, live control,
+and runtime integration remain prohibited.
+
+The next physical action is unchanged: collect one protocol-complete Muse
+session and validate integrity, canonical windows, and deterministic replay
+without encoder or fusion training.
+
 ## EXP-NC-ARC-XFER-001
 
 Deferred until the encoder experiment selects a *fixed* shadow-only state

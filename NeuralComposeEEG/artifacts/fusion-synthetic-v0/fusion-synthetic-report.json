@@ -1,0 +1,70 @@
+{
+  "conditions": {
+    "F0": {
+      "argmax_accuracy": 1.0,
+      "expected_calibration_error": 0.398333333333,
+      "fixture_count": 6,
+      "multiclass_brier_score": 0.1918
+    },
+    "F1": {
+      "argmax_accuracy": 1.0,
+      "expected_calibration_error": 0.466666666667,
+      "fixture_count": 6,
+      "multiclass_brier_score": 0.259133333333
+    },
+    "F2": {
+      "argmax_accuracy": 1.0,
+      "expected_calibration_error": 0.4325,
+      "fixture_count": 6,
+      "multiclass_brier_score": 0.2235
+    }
+  },
+  "contract_sha256": "6c0ebb8a4d9dfdc9fda3e6b6c3f4495fd14f378d41e738612fcab0808ed8eafe",
+  "data_gate": "D0",
+  "decision": "insufficient_evidence",
+  "dialogue_logs_used": false,
+  "encoder_disagreement": {
+    "maximum": 0.12,
+    "mean": 0.08,
+    "metric": "total_variation_distance",
+    "minimum": 0.04
+  },
+  "encoder_training": false,
+  "experiment_id": "EXP-NC-EEG-FUSION-001",
+  "fallback_capture_used": false,
+  "fixture_count": 6,
+  "fixture_sha256": "f49188298931fffc15bfc26eb71c0bad902c91689fdefe692747ad7abc8a29ac",
+  "fusion_head_training": false,
+  "invariants": {
+    "direct_weight_fusion_prohibited": true,
+    "f2_has_no_trainable_parameters": true,
+    "missing_model_fails_closed": true,
+    "no_model_or_runtime_execution": true,
+    "no_physical_or_private_data": true,
+    "qwen_input_is_structured_only": true,
+    "states_exclude_embeddings": true,
+    "states_exclude_waveforms": true
+  },
+  "missing_model_behavior": {
+    "negative_fixture_rejected": true,
+    "policy": "require_both_or_fail_closed"
+  },
+  "physical_eeg_used": false,
+  "promotion_status": "not_eligible",
+  "qwen_bridge": {
+    "input_sha256": "934414bf50fe46b9ef495d0c06bbfce072c2fb6752098335009fa5bab455f484",
+    "model_executed": false,
+    "output_schema_validated": true,
+    "stage": "schema_validation_only",
+    "weights_updated": false
+  },
+  "qwen_model_executed": false,
+  "runtime_change": "none",
+  "schema_version": "nc-eeg-fusion-synthetic-report-v0",
+  "state_count": 6,
+  "state_schema_sha256": "4e02bf0f1713d78911b886aec52ca4ba375c9a4c3381960cf70ba2617cd22b5b",
+  "states_sha256": "6c6987aee0c421460a671859141f8c0e5cf1be5ef671b7e6971b50d4f2e16bfe",
+  "status": "foundational_study_only",
+  "synthetic_only": true,
+  "weights_updated": false
+}

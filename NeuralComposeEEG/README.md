@@ -89,6 +89,30 @@ PYTHONPATH=src .venv/bin/python -m neuralcompose_eeg.evaluate \
 All `EXP-NC-EEG-ENC-001` output is explicitly `insufficient_evidence` during
 the pilot. It is shadow-only and cannot promote a model into NeuralCompose.
 
+## Synthetic late-fusion contract
+
+[`EXP-NC-EEG-FUSION-001`](experiments/EXP-NC-EEG-FUSION-001.md) is a separate,
+proposed post-encoder experiment. It keeps EEGNet and EEGPT independent and
+tests late evidence fusion only after the ordinary encoder gates are met.
+Direct tensor merging and raw EEG input to Qwen are prohibited.
+
+Its current D0 implementation consumes six synthetic encoder-output fixtures,
+emits a closed `nc-eeg-fused-state-v0` replay, and validates bounded Qwen
+shadow-policy JSON without executing a model:
+
+```sh
+PYTHONPATH=src python3 -m neuralcompose_eeg.fusion_contract \
+  --contract configs/fusion-synthetic-v0.json \
+  --states-output /tmp/nc-fusion-states.jsonl \
+  --manifest-output /tmp/nc-fusion-manifest.json \
+  --report-output /tmp/nc-fusion-report.json \
+  --verify
+```
+
+This is interface evidence only. It reads no physical EEG, fits no encoder or
+fusion head, makes no model call, changes no runtime, and remains
+`insufficient_evidence` and `not_eligible`.
+
 ## Capture To Manifest
 
 Start the frozen app's local Muse recording first and wait for live samples,
