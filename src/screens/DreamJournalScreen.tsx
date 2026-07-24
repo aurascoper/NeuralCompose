@@ -16,7 +16,8 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import { useFocusEffect } from '@react-navigation/native';
-import { addEntry, deleteEntry, listEntries, type DreamEntry } from '../storage/DreamJournal';
+import { addEntry, deleteEntry, listEntries, updateEntry, type DreamEntry } from '../storage/DreamJournal';
+import { synthesizeDream } from '../api/LLMClient';
 import { colors, radius, spacing, typography } from '../theme';
 import { useNow, relativeTime } from '../hooks/useNow';
 
@@ -109,8 +110,24 @@ export function DreamJournalScreen() {
       Alert.alert('Empty entry', 'Type something before saving, or record audio.');
       return;
     }
-    await addEntry({ text: text.trim() });
+    const saved = await addEntry({ text: text.trim() });
     setText('');
+    await refresh();
+    // Fire-and-forget synthesis. Update the entry in place when it returns.
+    void runSynthesis(saved.id, saved.text);
+  };
+
+  const runSynthesis = async (id: string, rawText: string) => {
+    if (!rawText.trim()) return;
+    // Mark pending so the UI shows a "synthesizing…" pill immediately.
+    await updateEntry(id, { synthesisStatus: 'pending' });
+    await refresh();
+    const result = await synthesizeDream(rawText);
+    if (result.status === 'ok') {
+      await updateEntry(id, { synthesized: result.synthesized, synthesisStatus: 'ok' });
+    } else {
+      await updateEntry(id, { synthesisStatus: 'failed' });
+    }
     await refresh();
   };
 
@@ -195,6 +212,16 @@ export function DreamJournalScreen() {
               </TouchableOpacity>
             </View>
             {item.text ? <Text style={styles.entryText}>{item.text}</Text> : null}
+            {item.synthesized ? (
+              <View style={styles.synthBlock}>
+                <Text style={styles.synthLabel}>DIALECT</Text>
+                <Text style={styles.synthText}>{item.synthesized}</Text>
+              </View>
+            ) : item.synthesisStatus === 'pending' ? (
+              <Text style={styles.synthPending}>synthesizing…</Text>
+            ) : item.synthesisStatus === 'failed' ? (
+              <Text style={styles.synthFailed}>synthesis unavailable</Text>
+            ) : null}
             {item.audioUri ? (
               <View style={styles.audioRow}>
                 <AudioPlayer uri={item.audioUri} />
@@ -267,4 +294,21 @@ const styles = StyleSheet.create({
   playText: { color: colors.white, fontSize: typography.micro, fontWeight: '700' },
   audioMeta: { color: colors.textMuted, fontSize: typography.micro, fontVariant: ['tabular-nums'] },
   emptyHint: { color: colors.textDim, fontSize: typography.caption, textAlign: 'center', padding: spacing.lg },
+  synthBlock: {
+    backgroundColor: colors.bg,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.accent,
+    gap: 4,
+  },
+  synthLabel: {
+    color: colors.accent,
+    fontSize: typography.micro,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  synthText: { color: colors.text, fontSize: typography.caption, lineHeight: 18 },
+  synthPending: { color: colors.textDim, fontSize: typography.micro, fontStyle: 'italic' },
+  synthFailed: { color: colors.textDim, fontSize: typography.micro },
 });

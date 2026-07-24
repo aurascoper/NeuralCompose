@@ -6,12 +6,16 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export type SynthesisStatus = 'pending' | 'ok' | 'failed';
+
 export interface DreamEntry {
   id: string;
   createdAt: number;      // unix ms
   text: string;           // user-typed report (may be empty if voice-only)
   audioUri?: string;      // local file URI from expo-audio
   audioDurationMs?: number;
+  synthesized?: string;   // dialect rewrite produced by local Qwen; undefined if not run
+  synthesisStatus?: SynthesisStatus; // 'pending' while in-flight, 'ok' on success, 'failed' on error
 }
 
 const STORAGE_KEY = 'neuralcompose.dreamjournal.v1';
@@ -54,6 +58,17 @@ export async function deleteEntry(id: string): Promise<void> {
   const existing = await listEntries();
   const next = existing.filter(e => e.id !== id);
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+}
+
+export async function updateEntry(id: string, patch: Partial<DreamEntry>): Promise<DreamEntry | null> {
+  const existing = await listEntries();
+  const idx = existing.findIndex(e => e.id === id);
+  if (idx === -1) return null;
+  const merged: DreamEntry = { ...existing[idx], ...patch, id: existing[idx].id, createdAt: existing[idx].createdAt };
+  const next = [...existing];
+  next[idx] = merged;
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  return merged;
 }
 
 export async function clearAll(): Promise<void> {
