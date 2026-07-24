@@ -77,6 +77,15 @@ Use this layer for a later, separately preregistered inverse-problem or
 regularization study. Do not call the four-channel encoder benchmark a source
 localization experiment.
 
+The deterministic `EXP-FUNC-SYN-000` package rehearses empirical measures,
+derivative distinctions, finite-basis Sobolev/Tikhonov fitting, Egorov's
+theorem fixture, bounded-operator checks, and mixed-measure integration without
+reading EEG or changing this experiment. See the [function-space decision
+memo](../research/function-space-foundations-decision-memo-v0.md) and
+[contract](../../configs/function-space-foundations-v0.json). A passing
+synthetic fixture remains `insufficient_evidence`; it does not authorize a
+preprocessing method.
+
 #### Electroquasistatics and EEG forward models
 
 The physical model worth learning is the low-frequency EEG forward problem:
@@ -236,3 +245,7 @@ Swift remains the interaction and orchestration layer.
    build the canonical dataset, and run M0/M1 as pipeline evidence only.
 3. Record any mathematical question that cannot be answered by Pass 1 as a
    separate hypothesis before adding a package, model, or runtime path.
+
+`EXP-FUNC-SYN-000` may run in parallel because it uses embedded synthetic
+parameters only. It is not a prerequisite for the first physical capture and
+must not delay the D0-to-D1 acquisition sequence.

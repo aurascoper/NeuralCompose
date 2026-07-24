@@ -32,6 +32,14 @@ Their contracts are [SVD diagnostics](experiments/EXP-NC-SVD-DIAG-001.md),
 [representation analysis](experiments/EXP-NC-SVD-REP-001.md), and the deferred
 [synthetic inverse study](experiments/EXP-NC-SVD-INV-001.md).
 
+The separate [`EXP-FUNC-SYN-000` decision
+memo](../docs/research/function-space-foundations-decision-memo-v0.md) and
+[contract](../configs/function-space-foundations-v0.json) define a
+synthetic-only D0 mathematical-foundations package. Its empirical-measure,
+derivative, Sobolev, convergence, operator, and mixed-integration fixtures do
+not read EEG, alter preprocessing, change M0-M4, or delay physical Muse
+capture. Every result remains `insufficient_evidence` and `not_eligible`.
+
 The [JEPA decision
 memo](../docs/research/jepa-four-channel-eeg-decision-memo-v0.md) and proposed
 [`EXP-NC-EEG-JEPA-001`](experiments/EXP-NC-EEG-JEPA-001.md) define a separate
