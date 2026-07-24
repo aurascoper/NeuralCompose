@@ -18,6 +18,12 @@ export const POLL = {
 // 5 seconds @ 256Hz = 1280 samples per channel. The prompt allows downgrading to 512 (2s) if rendering stutters.
 export const EEG_BUFFER_SAMPLES = 1280;
 
+// Local LLM endpoint — llama-server (Qwen 0.5B Q4_K_M) running on the device.
+// 127.0.0.1 from the JS thread resolves to the device loopback in Expo Go on a real device
+// because both the Expo runtime and llama-server share the host's network stack.
+// If llama-server is on a different host, set LLM_URL in the .env / build config.
+export const LLM_URL = 'http://127.0.0.1:8081';
+
 // Staleness thresholds (ms). Above these, the StaleIndicator turns orange and screens dim.
 export const STALE = {
   heartbeat: 5000,        // OverviewScreen
