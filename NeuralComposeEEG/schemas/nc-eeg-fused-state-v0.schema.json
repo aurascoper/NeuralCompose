@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuralcompose.local/schemas/nc-eeg-fused-state-v0.schema.json",
+  "title": "NeuralCompose D0 fused EEG state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment_id",
+    "state_id",
+    "status",
+    "data_gate",
+    "decision",
+    "promotion_status",
+    "runtime_change",
+    "source_type",
+    "synthetic_only",
+    "physical_eeg_used",
+    "scientific_claim_allowed",
+    "shadow_only",
+    "live_control",
+    "qwen_policy_stage",
+    "source",
+    "encoder_provenance",
+    "fusion",
+    "signal_quality",
+    "artifact_probabilities",
+    "observable_state_probabilities",
+    "encoder_disagreement",
+    "predictive_entropy",
+    "out_of_distribution_score",
+    "calibration_scope"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "nc-eeg-fused-state-v0"
+    },
+    "experiment_id": {
+      "const": "EXP-NC-EEG-FUSION-001"
+    },
+    "state_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "status": {
+      "const": "foundational_study_only"
+    },
+    "data_gate": {
+      "const": "D0"
+    },
+    "decision": {
+      "const": "insufficient_evidence"
+    },
+    "promotion_status": {
+      "const": "not_eligible"
+    },
+    "runtime_change": {
+      "const": "none"
+    },
+    "source_type": {
+      "const": "deterministic_synthetic_fixture"
+    },
+    "synthetic_only": {
+      "const": true
+    },
+    "physical_eeg_used": {
+      "const": false
+    },
+    "scientific_claim_allowed": {
+      "const": false
+    },
+    "shadow_only": {
+      "const": true
+    },
+    "live_control": {
+      "const": false
+    },
+    "qwen_policy_stage": {
+      "const": "schema_validation_only"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixture_id",
+        "source_record_sha256"
+      ],
+      "properties": {
+        "fixture_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_record_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "encoder_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eegnet",
+        "eegpt"
+      ],
+      "properties": {
+        "eegnet": {
+          "$ref": "#/$defs/eegnet_encoder"
+        },
+        "eegpt": {
+          "$ref": "#/$defs/eegpt_encoder"
+        }
+      }
+    },
+    "fusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition_id",
+        "method",
+        "status",
+        "trainable_parameters"
+      ],
+      "properties": {
+        "condition_id": {
+          "const": "F2"
+        },
+        "method": {
+          "const": "fixed_average_of_calibrated_probabilities"
+        },
+        "status": {
+          "const": "complete"
+        },
+        "trainable_parameters": {
+          "const": 0
+        }
+      }
+    },
+    "signal_quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "missing_channels"
+      ],
+      "properties": {
+        "score": {
+          "$ref": "#/$defs/probability"
+        },
+        "missing_channels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "TP9",
+              "AF7",
+              "AF8",
+              "TP10"
+            ]
+          }
+        }
+      }
+    },
+    "artifact_probabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blink_artifact",
+        "jaw_artifact",
+        "head_motion_artifact"
+      ],
+      "properties": {
+        "blink_artifact": {
+          "$ref": "#/$defs/probability"
+        },
+        "jaw_artifact": {
+          "$ref": "#/$defs/probability"
+        },
+        "head_motion_artifact": {
+          "$ref": "#/$defs/probability"
+        }
+      }
+    },
+    "observable_state_probabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eyes_open",
+        "eyes_closed",
+        "listening",
+        "speaking",
+        "recovery"
+      ],
+      "properties": {
+        "eyes_open": {
+          "$ref": "#/$defs/probability"
+        },
+        "eyes_closed": {
+          "$ref": "#/$defs/probability"
+        },
+        "listening": {
+          "$ref": "#/$defs/probability"
+        },
+        "speaking": {
+          "$ref": "#/$defs/probability"
+        },
+        "recovery": {
+          "$ref": "#/$defs/probability"
+        }
+      }
+    },
+    "encoder_disagreement": {
+      "$ref": "#/$defs/probability"
+    },
+    "predictive_entropy": {
+      "$ref": "#/$defs/probability"
+    },
+    "out_of_distribution_score": {
+      "$ref": "#/$defs/probability"
+    },
+    "calibration_scope": {
+      "const": "synthetic_fixture_rehearsal_only"
+    }
+  },
+  "$defs": {
+    "probability": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "eegnet_encoder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "model_revision",
+        "backbone_frozen",
+        "adapter",
+        "checkpoint_kind",
+        "checkpoint_sha256"
+      ],
+      "properties": {
+        "model_id": {
+          "const": "eegnet"
+        },
+        "model_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "backbone_frozen": {
+          "const": true
+        },
+        "adapter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpoint_kind": {
+          "const": "deterministic_synthetic_parameter_fixture"
+        },
+        "checkpoint_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "eegpt_encoder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "model_revision",
+        "backbone_frozen",
+        "adapter",
+        "checkpoint_kind",
+        "checkpoint_sha256"
+      ],
+      "properties": {
+        "model_id": {
+          "const": "eegpt"
+        },
+        "model_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "backbone_frozen": {
+          "const": true
+        },
+        "adapter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpoint_kind": {
+          "const": "deterministic_synthetic_parameter_fixture"
+        },
+        "checkpoint_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,324 @@
+{
+  "schema_version": "nc-eeg-fusion-synthetic-config-v0",
+  "experiment_id": "EXP-NC-EEG-FUSION-001",
+  "scope": "late_representation_fusion",
+  "current_gate": "D0",
+  "fixed_disposition": {
+    "status": "foundational_study_only",
+    "data_gate": "D0",
+    "decision": "insufficient_evidence",
+    "promotion_status": "not_eligible",
+    "runtime_change": "none",
+    "source_type": "deterministic_synthetic_fixture",
+    "physical_eeg_used": false,
+    "scientific_claim_allowed": false,
+    "shadow_only": true,
+    "dialogue_logs_used": false,
+    "model_execution": false,
+    "weights_updated": false
+  },
+  "architecture": {
+    "direct_weight_fusion": false,
+    "joint_end_to_end_training_now": false,
+    "eegnet_eegpt_tensor_merge": false,
+    "eeg_encoder_qwen_tensor_merge": false,
+    "joint_raw_eeg_language_training": false,
+    "online_weight_updates": false,
+    "method": "late_representation_fusion",
+    "m0_m4_unchanged": true
+  },
+  "encoders": {
+    "eegnet": {
+      "role": "compact_eeg_specific_encoder",
+      "backbone_frozen_within_fusion_stage": true,
+      "fixture_embedding_dimension": 4,
+      "fixture_checkpoint": {
+        "kind": "deterministic_synthetic_parameter_fixture",
+        "definition": {
+          "schema_version": "nc-eeg-synthetic-checkpoint-definition-v0",
+          "model_id": "eegnet",
+          "model_revision": "synthetic-eegnet-v0",
+          "adapter": "none",
+          "embedding_dimension": 4,
+          "parameter_fixture": [
+            0.125,
+            -0.25,
+            0.375,
+            0.5
+          ]
+        },
+        "sha256": "11f091adefe87622ed0a1f37a4422da83066f6fc7ba145b3066129d0063c0741"
+      }
+    },
+    "eegpt": {
+      "role": "pretrained_eeg_representation_encoder",
+      "backbone_frozen_within_fusion_stage": true,
+      "channel_adapter": "four_channel_adapter",
+      "adapter_training_scope": "fold_train_only_at_or_after_D3",
+      "fixture_embedding_dimension": 6,
+      "fixture_checkpoint": {
+        "kind": "deterministic_synthetic_parameter_fixture",
+        "definition": {
+          "schema_version": "nc-eeg-synthetic-checkpoint-definition-v0",
+          "model_id": "eegpt",
+          "model_revision": "synthetic-eegpt-v0",
+          "adapter": "four_channel_adapter_synthetic_fixture_v0",
+          "embedding_dimension": 6,
+          "parameter_fixture": [
+            -0.2,
+            0.1,
+            0.3,
+            -0.4,
+            0.5,
+            0.25
+          ]
+        },
+        "sha256": "db669032728ec464a6c6d39e8e5dc8e9c2ca7f031d616e343590ba555d90e25a"
+      }
+    }
+  },
+  "conditions": [
+    {
+      "id": "F0",
+      "name": "eegnet_alone",
+      "implemented_status": "d0_synthetic_baseline",
+      "role": "compact_encoder_baseline",
+      "earliest_physical_gate": "D3",
+      "trainable_within_fusion_stage": [],
+      "permitted_source_type": "deterministic_synthetic_fixture",
+      "missing_model_behavior": "require_eegnet",
+      "separate_preregistration_required": true,
+      "runtime_use_prohibited": true,
+      "scientific_interpretation": "synthetic_interface_rehearsal_only_at_D0"
+    },
+    {
+      "id": "F1",
+      "name": "eegpt_alone",
+      "implemented_status": "d0_synthetic_baseline",
+      "role": "pretrained_representation_baseline",
+      "earliest_physical_gate": "D3",
+      "trainable_within_fusion_stage": [
+        "four_channel_adapter"
+      ],
+      "permitted_source_type": "deterministic_synthetic_fixture",
+      "missing_model_behavior": "require_eegpt",
+      "separate_preregistration_required": true,
+      "runtime_use_prohibited": true,
+      "scientific_interpretation": "synthetic_interface_rehearsal_only_at_D0"
+    },
+    {
+      "id": "F2",
+      "name": "fixed_average_of_calibrated_probabilities",
+      "implemented_status": "d0_synthetic_baseline",
+      "role": "parameter_free_fusion_baseline",
+      "earliest_physical_gate": "D3",
+      "trainable_within_fusion_stage": [],
+      "permitted_source_type": "deterministic_synthetic_fixture",
+      "missing_model_behavior": "require_both_or_fail_closed",
+      "separate_preregistration_required": true,
+      "runtime_use_prohibited": true,
+      "scientific_interpretation": "parameter_free_synthetic_fusion_rehearsal_only_at_D0"
+    },
+    {
+      "id": "F3",
+      "name": "train_only_regularized_logistic_fusion_head",
+      "implemented_status": "specified_not_implemented",
+      "role": "first_learned_fusion_condition",
+      "earliest_physical_gate": "D3",
+      "trainable_within_fusion_stage": [
+        "four_channel_adapter",
+        "fusion_head"
+      ],
+      "permitted_source_type": "none_at_D0",
+      "missing_model_behavior": "require_both_or_fail_closed",
+      "separate_preregistration_required": true,
+      "runtime_use_prohibited": true,
+      "scientific_interpretation": "requires_session_grouped_D3_comparison"
+    },
+    {
+      "id": "F4",
+      "name": "small_mlp_fusion_head",
+      "implemented_status": "specified_not_implemented",
+      "role": "nonlinear_fusion_comparator",
+      "earliest_physical_gate": "D3",
+      "trainable_within_fusion_stage": [
+        "four_channel_adapter",
+        "fusion_head"
+      ],
+      "permitted_source_type": "none_at_D0",
+      "missing_model_behavior": "require_both_or_fail_closed",
+      "separate_preregistration_required": true,
+      "runtime_use_prohibited": true,
+      "scientific_interpretation": "requires_session_grouped_D3_comparison"
+    },
+    {
+      "id": "F5",
+      "name": "uncertainty_gated_mixture_of_experts",
+      "implemented_status": "specified_not_implemented",
+      "role": "reliability_aware_fusion_comparator",
+      "earliest_physical_gate": "D3",
+      "trainable_within_fusion_stage": [
+        "four_channel_adapter",
+        "fusion_head"
+      ],
+      "permitted_source_type": "none_at_D0",
+      "missing_model_behavior": "require_both_or_fail_closed",
+      "separate_preregistration_required": true,
+      "runtime_use_prohibited": true,
+      "scientific_interpretation": "requires_session_grouped_D3_comparison"
+    },
+    {
+      "id": "F6",
+      "name": "eegpt_to_eegnet_distillation",
+      "implemented_status": "specified_not_implemented",
+      "role": "post_fusion_deployment_study",
+      "earliest_physical_gate": "post_fusion_evidence",
+      "trainable_within_fusion_stage": [
+        "eegnet_student"
+      ],
+      "permitted_source_type": "none_at_D0",
+      "missing_model_behavior": "not_executable_at_D0",
+      "separate_preregistration_required": true,
+      "runtime_use_prohibited": true,
+      "scientific_interpretation": "requires_validated_teacher_and_separate_distillation_evidence"
+    }
+  ],
+  "current_execution": {
+    "synthetic_conditions": [
+      "F0",
+      "F1",
+      "F2"
+    ],
+    "state_emitting_conditions": [
+      "F2"
+    ],
+    "allowed": [
+      "schema_validation",
+      "synthetic_fixture_validation",
+      "deterministic_probability_fusion",
+      "calibration_metric_rehearsal",
+      "disagreement_metric_rehearsal",
+      "replay_serialization",
+      "qwen_input_rendering_validation",
+      "qwen_output_schema_validation"
+    ],
+    "forbidden": [
+      "physical_data_read",
+      "encoder_training",
+      "fusion_head_training",
+      "qwen_model_execution",
+      "qwen_weight_update",
+      "threshold_selection",
+      "runtime_integration",
+      "live_control"
+    ]
+  },
+  "probability_space": {
+    "label_order": [
+      "eyes_open",
+      "eyes_closed",
+      "blink_artifact",
+      "jaw_artifact",
+      "head_motion_artifact",
+      "listening",
+      "speaking",
+      "recovery"
+    ],
+    "artifact_labels": [
+      "blink_artifact",
+      "jaw_artifact",
+      "head_motion_artifact"
+    ],
+    "observable_state_labels": [
+      "eyes_open",
+      "eyes_closed",
+      "listening",
+      "speaking",
+      "recovery"
+    ],
+    "sum_tolerance": 1e-12
+  },
+  "metrics": {
+    "encoder_disagreement": "total_variation_distance",
+    "predictive_entropy": "normalized_shannon_entropy",
+    "out_of_distribution_score": "max_encoder_uncertainty_disagreement_and_one_minus_quality",
+    "calibration": {
+      "brier_score": "multiclass_mean_sum_squared_error",
+      "expected_calibration_error_bins": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "scope": "synthetic_fixture_rehearsal_only"
+    }
+  },
+  "controls": [
+    "eegnet_alone",
+    "eegpt_alone",
+    "fixed_probability_average",
+    "randomly_initialized_eegpt_same_adapter",
+    "shuffled_eegpt_embeddings",
+    "shuffled_eegnet_embeddings",
+    "matched_dimension_noise_encoder",
+    "matched_parameter_count_fusion_head",
+    "session_identity_probe",
+    "channel_map_shuffle",
+    "missing_channel_control"
+  ],
+  "missing_model_policy": {
+    "F0": "require_eegnet",
+    "F1": "require_eegpt",
+    "F2": "require_both_or_fail_closed",
+    "F3": "require_both_or_fail_closed",
+    "F4": "require_both_or_fail_closed",
+    "F5": "require_both_or_fail_closed",
+    "F6": "not_executable_at_D0"
+  },
+  "state_contract": {
+    "schema_version": "nc-eeg-fused-state-v0",
+    "schema_path": "../schemas/nc-eeg-fused-state-v0.schema.json",
+    "replay_manifest_schema_version": "nc-eeg-fused-state-replay-manifest-v0",
+    "report_schema_version": "nc-eeg-fusion-synthetic-report-v0",
+    "embeddings_serialized": false,
+    "waveforms_serialized": false
+  },
+  "fixtures": {
+    "schema_version": "nc-eeg-synthetic-encoder-pair-v0",
+    "source_kind": "synthetic_contract_fixture",
+    "source_type": "deterministic_synthetic_fixture",
+    "path": "../fixtures/fusion-synthetic-v0/encoder-outputs.jsonl",
+    "required_count": 6
+  },
+  "qwen_bridge": {
+    "current_stage": "schema_validation_only",
+    "earliest_execution_gate": "post_encoder",
+    "model_family": "qwen_0_5b_to_0_6b",
+    "backbone_frozen": true,
+    "model_call_allowed": false,
+    "raw_eeg_allowed": false,
+    "encoder_embeddings_allowed": false,
+    "free_text_state_allowed": false,
+    "input_schema_version": "nc-eeg-qwen-shadow-input-v0",
+    "output_schema_version": "nc-eeg-qwen-shadow-output-v0",
+    "task": "rank_registered_engineering_hypotheses_from_synthetic_fused_state",
+    "legal_actions": [
+      "abstain",
+      "hold_state",
+      "request_operator_review"
+    ],
+    "reason_codes": [
+      "encoder_agreement",
+      "encoder_disagreement",
+      "high_predictive_entropy",
+      "low_signal_quality",
+      "missing_encoder",
+      "insufficient_evidence"
+    ],
+    "shadow_only": true,
+    "live_control": false,
+    "weights_updated": false
+  }
+}
