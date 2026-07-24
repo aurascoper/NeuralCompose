@@ -36,23 +36,30 @@ public struct OllamaGenerationRuntime: GenerationRuntime {
     public let capabilities: RuntimeCapabilities
 
     private let model: String
-    private let promptProfile: PromptProfile
+    private let promptProfileName: String
     private let systemPrompt: String
+    private let promptHash: String
     private let transport: OllamaHTTPTransport
     private let interactionStyle: String
 
+    /// Fails rather than constructing a runtime with no constraining prompt.
+    /// `OllamaHTTPTransport.composePrompt` drops the delimiter entirely when
+    /// the system prompt is empty, so the model would have received bare user
+    /// text with no framing at all.
     public init(
         model: String,
         promptProfile: PromptProfile,
         interactionStyle: String = "dialectical",
         baseURL: URL = URL(string: "http://localhost:11434")!,
         session: URLSession = URLSession(configuration: .default)
-    ) {
+    ) throws {
+        let loaded = try promptProfile.load()
         self.model = model
-        self.promptProfile = promptProfile
+        self.promptProfileName = promptProfile.rawValue
         self.interactionStyle = interactionStyle
         self.modelIdentifier = "\(model) (ollama)"
-        self.systemPrompt = (try? promptProfile.load()) ?? ""
+        self.systemPrompt = loaded
+        self.promptHash = PromptProfile.sha256Hex(loaded)
         self.transport = OllamaHTTPTransport(baseURL: baseURL, session: session)
         // Ollama exposes token counts in its response envelope;
         // the Claude runtime does not. Capability advertising
@@ -65,22 +72,25 @@ public struct OllamaGenerationRuntime: GenerationRuntime {
         )
     }
 
+    /// System-prompt-override path. The profile name is `custom` and the hash
+    /// covers the caller's bytes; it previously claimed `wakingDialectical`
+    /// and hashed that profile regardless of what was actually sent.
     public init(
         model: String,
         systemPrompt: String,
         interactionStyle: String = "dialectical",
         baseURL: URL = URL(string: "http://localhost:11434")!,
         session: URLSession = URLSession(configuration: .default)
-    ) {
+    ) throws {
+        guard !systemPrompt.isEmpty else {
+            throw PromptProfileError.emptyResource("<caller-supplied system prompt>")
+        }
         self.model = model
         self.systemPrompt = systemPrompt
+        self.promptHash = PromptProfile.sha256Hex(systemPrompt)
         self.interactionStyle = interactionStyle
         self.modelIdentifier = "\(model) (ollama)"
-        // The system-prompt-override path uses `.wakingDialectical`
-        // for prompt-hash bookkeeping; the bytes the transport
-        // sees are the caller's `systemPrompt`, NOT the loaded
-        // profile. Same keep-bar as `ClaudeCLIGenerationRuntime`.
-        self.promptProfile = .wakingDialectical
+        self.promptProfileName = "custom"
         self.transport = OllamaHTTPTransport(baseURL: baseURL, session: session)
         self.capabilities = RuntimeCapabilities(
             tokenCounting: true,
@@ -94,6 +104,10 @@ public struct OllamaGenerationRuntime: GenerationRuntime {
         context: GenerationContext
     ) async throws -> GenerationResult {
         try Task.checkCancellation()
+        // Backstop at the last gate before the request leaves the process.
+        guard !systemPrompt.isEmpty else {
+            throw PromptProfileError.emptyResource("<system prompt at egress>")
+        }
         let started = Date()
         let request = GenerationTransportRequest(
             model: model,
@@ -104,7 +118,6 @@ public struct OllamaGenerationRuntime: GenerationRuntime {
         )
         let response = try await transport.send(request)
         let elapsed = Int(Date().timeIntervalSince(started) * 1000)
-        let promptHash = (try? promptProfile.hash()) ?? ""
         let tokenCount: Int? = {
             if let s = response.rawMetadata["eval_count"], let v = Int(s) { return v }
             return nil
@@ -115,7 +128,7 @@ public struct OllamaGenerationRuntime: GenerationRuntime {
             provider: transport.providerName,
             model: model,
             promptHash: promptHash,
-            promptProfile: promptProfile.rawValue,
+            promptProfile: promptProfileName,
             interactionStyle: interactionStyle,
             generationParameters: Self.flatParameters(context.generationParameters),
             latencyMilliseconds: elapsed,
