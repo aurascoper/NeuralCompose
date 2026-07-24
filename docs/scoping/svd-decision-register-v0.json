@@ -3,6 +3,17 @@
   "document_status": "foundational_study_only",
   "current_data_gate": "D0",
   "promotion_status": "not_eligible",
+  "foundational_reference": {
+    "experiment_id": "EXP-FUNC-SYN-000",
+    "status": "foundational_study_only",
+    "report_sha256": "5625b616a846c58978ec4b965c2e717509fbc60990b129da36987813c0414b0e",
+    "contract_sha256": "6a08b3a3ff717f98bd40d37bcb35cc4745097e0a72013ec852fd081747c1d1c3",
+    "science_workspace_commit": "8eafaea",
+    "synthetic_jepa_isolation_commit": "ba7822b",
+    "claim_scope": "mathematical and implementation reference only",
+    "physical_thresholds_derived": false,
+    "runtime_dependency_authorized": false
+  },
   "entries": [
     {
       "method": "per-window spatial singular-spectrum diagnostic",

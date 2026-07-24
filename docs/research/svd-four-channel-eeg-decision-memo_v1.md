@@ -44,6 +44,43 @@ In particular, `EXP-NC-EEG-ENC-001` remains the unchanged four-channel,
 observable-label, complete-session benchmark. A low-rank plot is not encoder
 generalization, and an SVD result cannot alter the application.
 
+## Function-space foundational provenance
+
+[`EXP-FUNC-SYN-000`](function-space-foundations-decision-memo-v0.md) is a
+synthetic mathematical and implementation reference for this track. Its
+canonical report and contract are pinned in the
+[SVD decision register](../scoping/svd-decision-register-v0.json). It supplies
+no physical-data threshold, does not authorize a runtime dependency, and does
+not change any gate or disposition in this memo.
+
+The relevant connection is FS4, which demonstrates finite-dimensional
+operator norms and perturbation bounds under pinned synthetic fixtures. This
+supports the language used here for:
+
+- operator norms and measured perturbation amplification;
+- condition numbers and honest rank-deficient reporting;
+- pseudoinverse instability along weak singular directions;
+- retained-rank sensitivity rather than a post-hoc rank threshold; and
+- controlled truncated-SVD versus ridge/Tikhonov comparisons.
+
+FS0 additionally illustrates that finite observations define an empirical
+pseudometric: equality on sampled points does not imply equality off-grid.
+That is a warning about observational identifiability, not a license to infer
+unmeasured physiology. FS2 is a deterministic regularization reference only;
+it does not select an SVD rank, ridge penalty, physical threshold, or EEG
+preprocessing rule.
+
+The provenance relationship is one-way:
+
+```text
+EXP-FUNC-SYN-000 synthetic fixtures
+  -> mathematical and implementation vocabulary
+  -> SVD experiment contracts retain their own physical-data gates
+```
+
+It does not establish physical EEG stability, justify source localization, or
+promote any SVD method into the application.
+
 ## Program boundary and data gates
 
 This memo uses the following study-local meanings. They name evidence gates;

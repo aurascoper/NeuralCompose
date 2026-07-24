@@ -31,6 +31,33 @@ control.
 The next physical action remains one frozen `encoder-pilot-v1` Muse capture,
 followed only by integrity, window, and deterministic replay validation.
 
+## Function-space foundational provenance
+
+[`EXP-FUNC-SYN-000`](function-space-foundations-decision-memo-v0.md) is a
+synthetic mathematical and implementation reference for this track. Its
+canonical report and contract are pinned in the
+[JEPA diagnostics contract](../scoping/jepa-collapse-diagnostics-v0.json). It
+does not supply a collapse threshold, physical-data result, runtime
+dependency, or promotion argument.
+
+Its uses are deliberately narrow:
+
+- FS0 supplies the empirical-pseudometric vocabulary for describing when an
+  encoder maps distinct EEG windows to indistinguishable latent points. It
+  does not prove that a particular encoder has learned such an equivalence.
+- FS4 supplies operator-stability language for singular spectra, effective
+  rank, condition numbers, and adapter perturbation analysis. JEPA still needs
+  its registered grouped folds and controls.
+- FS2 is only a possible reference for a future, separately registered
+  smoothness objective. No Sobolev term is added to J0-J6 by this memo.
+- FS3 motivates reporting small collapse-prone exceptional subsets as an
+  explanatory analogy. Egorov's theorem is never a threshold, epoch-selection
+  rule, stopping rule, or permission to remove difficult windows.
+
+The foundational package therefore strengthens definitions and numerical
+fixtures while leaving all JEPA losses, gates, thresholds, and runtime
+boundaries unchanged.
+
 ## The Precise Architectural Claim
 
 NeuralCompose already uses staged lossy abstraction:
