@@ -1146,7 +1146,6 @@ def evaluate_expected_invariants(
     raw: dict[str, Any],
     condition_reports: dict[str, list[dict[str, Any]]],
 ) -> list[dict[str, Any]]:
-    generator_id = generator_contract["id"]
     expected = generator_contract["expected_invariants"]
     checks: list[dict[str, Any]] = []
 
