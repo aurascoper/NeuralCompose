@@ -19,7 +19,7 @@
       "multiclass_brier_score": 0.2235
     }
   },
-  "contract_sha256": "6c0ebb8a4d9dfdc9fda3e6b6c3f4495fd14f378d41e738612fcab0808ed8eafe",
+  "contract_sha256": "d17e37e1214a75b360f8e42eaefbccdf75f9a0a1dab9a6762a0472f6402349f6",
   "data_gate": "D0",
   "decision": "insufficient_evidence",
   "dialogue_logs_used": false,
@@ -33,7 +33,7 @@
   "experiment_id": "EXP-NC-EEG-FUSION-001",
   "fallback_capture_used": false,
   "fixture_count": 6,
-  "fixture_sha256": "f49188298931fffc15bfc26eb71c0bad902c91689fdefe692747ad7abc8a29ac",
+  "fixture_sha256": "8b6e6771f5e106f74c5be1b2332fb971f4711ef4a94ea8a74c2128da57a63685",
   "fusion_head_training": false,
   "invariants": {
     "direct_weight_fusion_prohibited": true,
@@ -52,7 +52,7 @@
   "physical_eeg_used": false,
   "promotion_status": "not_eligible",
   "qwen_bridge": {
-    "input_sha256": "934414bf50fe46b9ef495d0c06bbfce072c2fb6752098335009fa5bab455f484",
+    "input_sha256": "815ad68e41dd0aba38b9d8411aa5d1fba7ed0410808dd563bc907e3e7812f60b",
     "model_executed": false,
     "output_schema_validated": true,
     "stage": "schema_validation_only",
@@ -61,9 +61,12 @@
   "qwen_model_executed": false,
   "runtime_change": "none",
   "schema_version": "nc-eeg-fusion-synthetic-report-v0",
+  "scientific_claim_allowed": false,
+  "shadow_only": true,
+  "source_type": "deterministic_synthetic_fixture",
   "state_count": 6,
-  "state_schema_sha256": "4e02bf0f1713d78911b886aec52ca4ba375c9a4c3381960cf70ba2617cd22b5b",
-  "states_sha256": "6c6987aee0c421460a671859141f8c0e5cf1be5ef671b7e6971b50d4f2e16bfe",
+  "state_schema_sha256": "4c5820cc1589777ecbb4445ff27c8bb1c5a78058861458078c52fe0f9cbaf3bf",
+  "states_sha256": "a795c28afa7dda9d96d1a787fd6b848fdd9fde23618ace63486da480b2131657",
   "status": "foundational_study_only",
   "synthetic_only": true,
   "weights_updated": false

@@ -13,8 +13,10 @@
     "decision",
     "promotion_status",
     "runtime_change",
+    "source_type",
     "synthetic_only",
     "physical_eeg_used",
+    "scientific_claim_allowed",
     "shadow_only",
     "live_control",
     "qwen_policy_stage",
@@ -55,10 +57,16 @@
     "runtime_change": {
       "const": "none"
     },
+    "source_type": {
+      "const": "deterministic_synthetic_fixture"
+    },
     "synthetic_only": {
       "const": true
     },
     "physical_eeg_used": {
+      "const": false
+    },
+    "scientific_claim_allowed": {
       "const": false
     },
     "shadow_only": {
@@ -97,10 +105,10 @@
       ],
       "properties": {
         "eegnet": {
-          "$ref": "#/$defs/encoder"
+          "$ref": "#/$defs/eegnet_encoder"
         },
         "eegpt": {
-          "$ref": "#/$defs/encoder"
+          "$ref": "#/$defs/eegpt_encoder"
         }
       }
     },
@@ -220,21 +228,20 @@
       "minimum": 0,
       "maximum": 1
     },
-    "encoder": {
+    "eegnet_encoder": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "model_id",
         "model_revision",
         "backbone_frozen",
-        "adapter"
+        "adapter",
+        "checkpoint_kind",
+        "checkpoint_sha256"
       ],
       "properties": {
         "model_id": {
-          "enum": [
-            "eegnet",
-            "eegpt"
-          ]
+          "const": "eegnet"
         },
         "model_revision": {
           "type": "string",
@@ -246,6 +253,48 @@
         "adapter": {
           "type": "string",
           "minLength": 1
+        },
+        "checkpoint_kind": {
+          "const": "deterministic_synthetic_parameter_fixture"
+        },
+        "checkpoint_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "eegpt_encoder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "model_revision",
+        "backbone_frozen",
+        "adapter",
+        "checkpoint_kind",
+        "checkpoint_sha256"
+      ],
+      "properties": {
+        "model_id": {
+          "const": "eegpt"
+        },
+        "model_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "backbone_frozen": {
+          "const": true
+        },
+        "adapter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpoint_kind": {
+          "const": "deterministic_synthetic_parameter_fixture"
+        },
+        "checkpoint_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         }
       }
     }

@@ -26,6 +26,7 @@ REPLAY_MANIFEST_SCHEMA = "nc-eeg-fused-state-replay-manifest-v0"
 REPORT_SCHEMA = "nc-eeg-fusion-synthetic-report-v0"
 QWEN_INPUT_SCHEMA = "nc-eeg-qwen-shadow-input-v0"
 QWEN_OUTPUT_SCHEMA = "nc-eeg-qwen-shadow-output-v0"
+SYNTHETIC_CHECKPOINT_SCHEMA = "nc-eeg-synthetic-checkpoint-definition-v0"
 
 _FIXED_DISPOSITION = {
     "status": "foundational_study_only",
@@ -33,11 +34,139 @@ _FIXED_DISPOSITION = {
     "decision": "insufficient_evidence",
     "promotion_status": "not_eligible",
     "runtime_change": "none",
+    "source_type": "deterministic_synthetic_fixture",
     "physical_eeg_used": False,
+    "scientific_claim_allowed": False,
+    "shadow_only": True,
 }
 _MODEL_IDS = ("eegnet", "eegpt")
 _CHANNELS = ("TP9", "AF7", "AF8", "TP10")
 _SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9._-]+$")
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_EXPECTED_QWEN_TASK = "rank_registered_engineering_hypotheses_from_synthetic_fused_state"
+_EXPECTED_QWEN_REASON_CODES = (
+    "encoder_agreement",
+    "encoder_disagreement",
+    "high_predictive_entropy",
+    "low_signal_quality",
+    "missing_encoder",
+    "insufficient_evidence",
+)
+_FORBIDDEN_QWEN_FIELDS = frozenset(
+    {
+        "agreement",
+        "diagnosis",
+        "dialogue",
+        "eeg_values",
+        "emotion",
+        "encoder_embedding",
+        "encoder_embeddings",
+        "free_text",
+        "intention",
+        "prompt",
+        "raw_eeg",
+        "speech",
+        "thought",
+        "waveform",
+        "waveforms",
+    }
+)
+_EXPECTED_CONDITIONS = (
+    {
+        "id": "F0",
+        "name": "eegnet_alone",
+        "implemented_status": "d0_synthetic_baseline",
+        "role": "compact_encoder_baseline",
+        "earliest_physical_gate": "D3",
+        "trainable_within_fusion_stage": [],
+        "permitted_source_type": "deterministic_synthetic_fixture",
+        "missing_model_behavior": "require_eegnet",
+        "separate_preregistration_required": True,
+        "runtime_use_prohibited": True,
+        "scientific_interpretation": "synthetic_interface_rehearsal_only_at_D0",
+    },
+    {
+        "id": "F1",
+        "name": "eegpt_alone",
+        "implemented_status": "d0_synthetic_baseline",
+        "role": "pretrained_representation_baseline",
+        "earliest_physical_gate": "D3",
+        "trainable_within_fusion_stage": ["four_channel_adapter"],
+        "permitted_source_type": "deterministic_synthetic_fixture",
+        "missing_model_behavior": "require_eegpt",
+        "separate_preregistration_required": True,
+        "runtime_use_prohibited": True,
+        "scientific_interpretation": "synthetic_interface_rehearsal_only_at_D0",
+    },
+    {
+        "id": "F2",
+        "name": "fixed_average_of_calibrated_probabilities",
+        "implemented_status": "d0_synthetic_baseline",
+        "role": "parameter_free_fusion_baseline",
+        "earliest_physical_gate": "D3",
+        "trainable_within_fusion_stage": [],
+        "permitted_source_type": "deterministic_synthetic_fixture",
+        "missing_model_behavior": "require_both_or_fail_closed",
+        "separate_preregistration_required": True,
+        "runtime_use_prohibited": True,
+        "scientific_interpretation": "parameter_free_synthetic_fusion_rehearsal_only_at_D0",
+    },
+    {
+        "id": "F3",
+        "name": "train_only_regularized_logistic_fusion_head",
+        "implemented_status": "specified_not_implemented",
+        "role": "first_learned_fusion_condition",
+        "earliest_physical_gate": "D3",
+        "trainable_within_fusion_stage": ["four_channel_adapter", "fusion_head"],
+        "permitted_source_type": "none_at_D0",
+        "missing_model_behavior": "require_both_or_fail_closed",
+        "separate_preregistration_required": True,
+        "runtime_use_prohibited": True,
+        "scientific_interpretation": "requires_session_grouped_D3_comparison",
+    },
+    {
+        "id": "F4",
+        "name": "small_mlp_fusion_head",
+        "implemented_status": "specified_not_implemented",
+        "role": "nonlinear_fusion_comparator",
+        "earliest_physical_gate": "D3",
+        "trainable_within_fusion_stage": ["four_channel_adapter", "fusion_head"],
+        "permitted_source_type": "none_at_D0",
+        "missing_model_behavior": "require_both_or_fail_closed",
+        "separate_preregistration_required": True,
+        "runtime_use_prohibited": True,
+        "scientific_interpretation": "requires_session_grouped_D3_comparison",
+    },
+    {
+        "id": "F5",
+        "name": "uncertainty_gated_mixture_of_experts",
+        "implemented_status": "specified_not_implemented",
+        "role": "reliability_aware_fusion_comparator",
+        "earliest_physical_gate": "D3",
+        "trainable_within_fusion_stage": ["four_channel_adapter", "fusion_head"],
+        "permitted_source_type": "none_at_D0",
+        "missing_model_behavior": "require_both_or_fail_closed",
+        "separate_preregistration_required": True,
+        "runtime_use_prohibited": True,
+        "scientific_interpretation": "requires_session_grouped_D3_comparison",
+    },
+    {
+        "id": "F6",
+        "name": "eegpt_to_eegnet_distillation",
+        "implemented_status": "specified_not_implemented",
+        "role": "post_fusion_deployment_study",
+        "earliest_physical_gate": "post_fusion_evidence",
+        "trainable_within_fusion_stage": ["eegnet_student"],
+        "permitted_source_type": "none_at_D0",
+        "missing_model_behavior": "not_executable_at_D0",
+        "separate_preregistration_required": True,
+        "runtime_use_prohibited": True,
+        "scientific_interpretation": "requires_validated_teacher_and_separate_distillation_evidence",
+    },
+)
+_EXPECTED_MISSING_MODEL_POLICY = {
+    condition["id"]: condition["missing_model_behavior"] for condition in _EXPECTED_CONDITIONS
+}
 _STATE_KEYS = {
     "schema_version",
     "experiment_id",
@@ -47,8 +176,10 @@ _STATE_KEYS = {
     "decision",
     "promotion_status",
     "runtime_change",
+    "source_type",
     "synthetic_only",
     "physical_eeg_used",
+    "scientific_claim_allowed",
     "shadow_only",
     "live_control",
     "qwen_policy_stage",
@@ -126,11 +257,39 @@ def _safe_identifier(value: Any, name: str) -> str:
     return value
 
 
+def _sha256_identifier(value: Any, name: str) -> str:
+    _require(isinstance(value, str) and bool(_SHA256.fullmatch(value)), f"{name} must be a SHA-256 digest")
+    return value
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant: {value}")
+
+
+def _strict_json_loads(text: str, name: str) -> Any:
+    try:
+        return json.loads(text, parse_constant=_reject_json_constant)
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise ContractError(f"{name} is malformed: {exc}") from exc
+
+
+def _reject_forbidden_qwen_fields(value: Any, name: str = "Qwen payload") -> None:
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            _require(isinstance(key, str), f"{name} keys must be strings")
+            _require(key.casefold() not in _FORBIDDEN_QWEN_FIELDS, f"{name} contains forbidden field: {key}")
+            _reject_forbidden_qwen_fields(nested, f"{name}.{key}")
+    elif isinstance(value, list):
+        for index, nested in enumerate(value):
+            _reject_forbidden_qwen_fields(nested, f"{name}[{index}]")
+
+
 def _read_json(path: Path, name: str) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
         raise ContractError(f"cannot read {name}: {exc}") from exc
+    value = _strict_json_loads(text, name)
     _require(isinstance(value, dict), f"{name} must contain an object")
     return value
 
@@ -200,15 +359,19 @@ def validate_fusion_contract(contract: dict[str, Any], contract_path: Path) -> d
     _require(contract["scope"] == "late_representation_fusion", "fusion scope changed")
     _require(contract["current_gate"] == "D0", "fusion contract is not at D0")
 
-    disposition = contract["fixed_disposition"]
-    _require(isinstance(disposition, dict), "fixed disposition must be an object")
-    for key, expected in {
+    expected_disposition = {
         **_FIXED_DISPOSITION,
         "dialogue_logs_used": False,
         "model_execution": False,
         "weights_updated": False,
-    }.items():
-        _require(disposition.get(key) == expected, f"fixed disposition {key} changed")
+    }
+    disposition = _require_exact_keys(
+        contract["fixed_disposition"],
+        set(expected_disposition),
+        "fixed disposition",
+    )
+    for key, expected in expected_disposition.items():
+        _require(disposition[key] == expected, f"fixed disposition {key} changed")
 
     architecture = contract["architecture"]
     _require(isinstance(architecture, dict), "architecture must be an object")
@@ -232,16 +395,53 @@ def validate_fusion_contract(contract: dict[str, Any], contract_path: Path) -> d
     for model_id in _MODEL_IDS:
         dimension = encoders[model_id].get("fixture_embedding_dimension")
         _require(isinstance(dimension, int) and dimension > 0, f"{model_id} fixture dimension is invalid")
+        checkpoint = _require_exact_keys(
+            encoders[model_id].get("fixture_checkpoint"),
+            {"kind", "definition", "sha256"},
+            f"{model_id} fixture checkpoint",
+        )
+        _require(
+            checkpoint["kind"] == "deterministic_synthetic_parameter_fixture",
+            f"{model_id} checkpoint kind changed",
+        )
+        definition = _require_exact_keys(
+            checkpoint["definition"],
+            {
+                "schema_version",
+                "model_id",
+                "model_revision",
+                "adapter",
+                "embedding_dimension",
+                "parameter_fixture",
+            },
+            f"{model_id} checkpoint definition",
+        )
+        _require(definition["schema_version"] == SYNTHETIC_CHECKPOINT_SCHEMA, f"{model_id} checkpoint schema changed")
+        _require(definition["model_id"] == model_id, f"{model_id} checkpoint identity changed")
+        _safe_identifier(definition["model_revision"], f"{model_id} checkpoint revision")
+        _safe_identifier(definition["adapter"], f"{model_id} checkpoint adapter")
+        _require(definition["embedding_dimension"] == dimension, f"{model_id} checkpoint dimension changed")
+        parameters = definition["parameter_fixture"]
+        _require(isinstance(parameters, list) and parameters, f"{model_id} checkpoint parameters are required")
+        for index, value in enumerate(parameters):
+            _finite_number(value, f"{model_id} checkpoint parameter[{index}]")
+        checkpoint_sha256 = _sha256_identifier(checkpoint["sha256"], f"{model_id} checkpoint sha256")
+        _require(checkpoint_sha256 == _sha256_json(definition), f"{model_id} checkpoint hash does not match definition")
+    _require(
+        encoders["eegnet"]["fixture_checkpoint"]["sha256"]
+        != encoders["eegpt"]["fixture_checkpoint"]["sha256"],
+        "synthetic encoder checkpoints must have distinct identities",
+    )
 
     conditions = contract["conditions"]
-    _require(isinstance(conditions, list), "conditions must be a list")
-    condition_map = {item.get("id"): item for item in conditions if isinstance(item, dict)}
-    _require(list(condition_map) == [f"F{index}" for index in range(7)], "conditions must be exactly F0-F6")
-    _require(condition_map["F3"].get("name") == "train_only_regularized_logistic_fusion_head", "F3 changed")
-    _require(condition_map["F3"].get("earliest_physical_gate") == "D3", "F3 cannot run before D3")
-    _require(condition_map["F6"].get("earliest_physical_gate") == "post_fusion_evidence", "distillation gate changed")
+    _require(conditions == list(_EXPECTED_CONDITIONS), "conditions must exactly match the F0-F6 registry")
 
     execution = contract["current_execution"]
+    _require_exact_keys(
+        execution,
+        {"synthetic_conditions", "state_emitting_conditions", "allowed", "forbidden"},
+        "current execution",
+    )
     _require(execution.get("synthetic_conditions") == ["F0", "F1", "F2"], "D0 synthetic conditions changed")
     _require(execution.get("state_emitting_conditions") == ["F2"], "D0 state-emitting condition changed")
     forbidden = set(execution.get("forbidden", ()))
@@ -294,7 +494,10 @@ def validate_fusion_contract(contract: dict[str, Any], contract_path: Path) -> d
         "missing_channel_control",
     }
     _require(set(contract["controls"]) == required_controls, "fusion controls changed")
-    _require(contract["missing_model_policy"].get("F2") == "require_both_or_fail_closed", "F2 must fail closed")
+    _require(
+        contract["missing_model_policy"] == _EXPECTED_MISSING_MODEL_POLICY,
+        "missing-model policy must exactly match F0-F6",
+    )
 
     state_contract = contract["state_contract"]
     _require(state_contract.get("schema_version") == STATE_SCHEMA, "fused-state version changed")
@@ -304,16 +507,46 @@ def validate_fusion_contract(contract: dict[str, Any], contract_path: Path) -> d
     _require(state_contract.get("waveforms_serialized") is False, "waveforms cannot enter fused state")
     _validate_state_schema(_resolve_contract_path(contract_path, state_contract.get("schema_path"), "schemas"))
 
-    fixtures = contract["fixtures"]
+    fixtures = _require_exact_keys(
+        contract["fixtures"],
+        {"schema_version", "source_kind", "source_type", "path", "required_count"},
+        "fixture registry",
+    )
     _require(fixtures.get("schema_version") == FIXTURE_SCHEMA, "fixture schema changed")
     _require(fixtures.get("source_kind") == "synthetic_contract_fixture", "fixtures must remain synthetic")
+    _require(
+        fixtures.get("source_type") == "deterministic_synthetic_fixture",
+        "fixture source type must remain deterministic synthetic",
+    )
     _require(
         isinstance(fixtures.get("required_count"), int) and fixtures["required_count"] > 0,
         "fixture count is invalid",
     )
     _resolve_contract_path(contract_path, fixtures.get("path"), "fixtures")
 
-    qwen = contract["qwen_bridge"]
+    qwen = _require_exact_keys(
+        contract["qwen_bridge"],
+        {
+            "current_stage",
+            "earliest_execution_gate",
+            "model_family",
+            "backbone_frozen",
+            "model_call_allowed",
+            "raw_eeg_allowed",
+            "encoder_embeddings_allowed",
+            "free_text_state_allowed",
+            "input_schema_version",
+            "output_schema_version",
+            "task",
+            "legal_actions",
+            "reason_codes",
+            "shadow_only",
+            "live_control",
+            "weights_updated",
+        },
+        "Qwen bridge",
+    )
+    _reject_forbidden_qwen_fields(qwen, "Qwen bridge")
     for key, expected in {
         "current_stage": "schema_validation_only",
         "earliest_execution_gate": "post_encoder",
@@ -329,8 +562,12 @@ def validate_fusion_contract(contract: dict[str, Any], contract_path: Path) -> d
         "weights_updated": False,
     }.items():
         _require(qwen.get(key) == expected, f"Qwen boundary {key} changed")
+    _require(qwen.get("task") == _EXPECTED_QWEN_TASK, "unexpected Qwen task")
     _require(qwen.get("legal_actions") == ["abstain", "hold_state", "request_operator_review"], "legal actions changed")
-    _require(isinstance(qwen.get("reason_codes"), list) and qwen["reason_codes"], "Qwen reason codes are required")
+    _require(
+        qwen.get("reason_codes") == list(_EXPECTED_QWEN_REASON_CODES),
+        "unexpected Qwen reason-code registry",
+    )
     return contract
 
 
@@ -351,6 +588,8 @@ def _validate_encoder_output(
         "model_revision",
         "backbone_frozen",
         "adapter",
+        "checkpoint_kind",
+        "checkpoint_sha256",
         "probabilities",
         "embedding",
         "uncertainty",
@@ -365,6 +604,23 @@ def _validate_encoder_output(
         _require(adapter == "none", f"{fixture_id}.eegnet must not invent an adapter")
     else:
         _require(adapter == "four_channel_adapter_synthetic_fixture_v0", f"{fixture_id}.eegpt adapter changed")
+    checkpoint = contract["encoders"][model_id]["fixture_checkpoint"]
+    _require(
+        encoder["model_revision"] == checkpoint["definition"]["model_revision"],
+        f"{fixture_id}.{model_id} revision does not match checkpoint",
+    )
+    _require(
+        encoder["checkpoint_kind"] == checkpoint["kind"],
+        f"{fixture_id}.{model_id} checkpoint kind changed",
+    )
+    _require(
+        _sha256_identifier(
+            encoder["checkpoint_sha256"],
+            f"{fixture_id}.{model_id}.checkpoint_sha256",
+        )
+        == checkpoint["sha256"],
+        f"{fixture_id}.{model_id} checkpoint identity changed",
+    )
     labels = contract["probability_space"]["label_order"]
     tolerance = float(contract["probability_space"]["sum_tolerance"])
     _validate_probability_vector(
@@ -390,6 +646,15 @@ def validate_synthetic_fixture(value: Any, contract: dict[str, Any]) -> dict[str
         "schema_version",
         "fixture_id",
         "source_kind",
+        "source_type",
+        "status",
+        "data_gate",
+        "decision",
+        "promotion_status",
+        "runtime_change",
+        "physical_eeg_used",
+        "scientific_claim_allowed",
+        "shadow_only",
         "synthetic_label",
         "signal_quality",
         "encoders",
@@ -398,6 +663,8 @@ def validate_synthetic_fixture(value: Any, contract: dict[str, Any]) -> dict[str
     _require(fixture["schema_version"] == FIXTURE_SCHEMA, "synthetic fixture schema changed")
     fixture_id = _safe_identifier(fixture["fixture_id"], "fixture_id")
     _require(fixture["source_kind"] == "synthetic_contract_fixture", f"{fixture_id} is not synthetic")
+    for key, expected_value in _FIXED_DISPOSITION.items():
+        _require(fixture.get(key) == expected_value, f"{fixture_id} disposition {key} changed")
     labels = contract["probability_space"]["label_order"]
     _require(fixture["synthetic_label"] in labels, f"{fixture_id} has an unknown synthetic label")
 
@@ -426,9 +693,14 @@ def validate_synthetic_fixture(value: Any, contract: dict[str, Any]) -> dict[str
 def load_synthetic_fixtures(contract: dict[str, Any], contract_path: Path) -> list[dict[str, Any]]:
     fixture_path = _resolve_contract_path(contract_path, contract["fixtures"]["path"], "fixtures")
     try:
-        rows = [json.loads(line) for line in fixture_path.read_text(encoding="utf-8").splitlines() if line]
-    except (OSError, json.JSONDecodeError) as exc:
+        lines = fixture_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
         raise ContractError(f"cannot read synthetic fusion fixtures: {exc}") from exc
+    rows = [
+        _strict_json_loads(line, f"synthetic fusion fixture line {index}")
+        for index, line in enumerate(lines, 1)
+        if line
+    ]
     fixtures = [validate_synthetic_fixture(row, contract) for row in rows]
     fixture_ids = [fixture["fixture_id"] for fixture in fixtures]
     _require(len(fixtures) == contract["fixtures"]["required_count"], "synthetic fixture count changed")
@@ -510,7 +782,6 @@ def build_fused_state(
         ),
         **_FIXED_DISPOSITION,
         "synthetic_only": True,
-        "shadow_only": True,
         "live_control": False,
         "qwen_policy_stage": "schema_validation_only",
         "source": {
@@ -523,6 +794,8 @@ def build_fused_state(
                 "model_revision": fixture["encoders"][model_id]["model_revision"],
                 "backbone_frozen": True,
                 "adapter": fixture["encoders"][model_id]["adapter"],
+                "checkpoint_kind": fixture["encoders"][model_id]["checkpoint_kind"],
+                "checkpoint_sha256": fixture["encoders"][model_id]["checkpoint_sha256"],
             }
             for model_id in _MODEL_IDS
         },
@@ -584,7 +857,14 @@ def validate_fused_state(
     for model_id in _MODEL_IDS:
         encoder = _require_exact_keys(
             provenance[model_id],
-            {"model_id", "model_revision", "backbone_frozen", "adapter"},
+            {
+                "model_id",
+                "model_revision",
+                "backbone_frozen",
+                "adapter",
+                "checkpoint_kind",
+                "checkpoint_sha256",
+            },
             f"encoder provenance {model_id}",
         )
         _require(encoder["model_id"] == model_id, f"{model_id} provenance identity changed")
@@ -594,6 +874,19 @@ def validate_fused_state(
         )
         _require(encoder["backbone_frozen"] is True, f"{model_id} backbone is not frozen")
         _require(encoder["adapter"] == fixture["encoders"][model_id]["adapter"], f"{model_id} adapter changed")
+        _require(
+            encoder["checkpoint_kind"] == fixture["encoders"][model_id]["checkpoint_kind"],
+            f"{model_id} checkpoint kind changed",
+        )
+        _require(
+            _sha256_identifier(encoder["checkpoint_sha256"], f"{model_id} checkpoint sha256")
+            == fixture["encoders"][model_id]["checkpoint_sha256"],
+            f"{model_id} checkpoint identity changed",
+        )
+    _require(
+        provenance["eegnet"]["checkpoint_sha256"] != provenance["eegpt"]["checkpoint_sha256"],
+        "encoder checkpoint identities must be distinct",
+    )
 
     fusion = _require_exact_keys(
         state["fusion"],
@@ -682,6 +975,7 @@ def validate_fused_state(
 
 
 def _validate_state_for_qwen(state: Any, contract: dict[str, Any]) -> dict[str, Any]:
+    _reject_forbidden_qwen_fields(state, "Qwen source state")
     state = _require_exact_keys(state, _STATE_KEYS, "Qwen source state")
     for key, expected in {
         "schema_version": STATE_SCHEMA,
@@ -697,6 +991,44 @@ def _validate_state_for_qwen(state: Any, contract: dict[str, Any]) -> dict[str, 
     _require(
         isinstance(state["state_id"], str) and bool(re.fullmatch(r"[0-9a-f]{64}", state["state_id"])),
         "Qwen source state id is invalid",
+    )
+    source = _require_exact_keys(
+        state["source"],
+        {"fixture_id", "source_record_sha256"},
+        "Qwen source identity",
+    )
+    _safe_identifier(source["fixture_id"], "Qwen source fixture id")
+    _sha256_identifier(source["source_record_sha256"], "Qwen source record sha256")
+    provenance = _require_exact_keys(
+        state["encoder_provenance"],
+        set(_MODEL_IDS),
+        "Qwen source encoder provenance",
+    )
+    for model_id in _MODEL_IDS:
+        encoder = _require_exact_keys(
+            provenance[model_id],
+            {
+                "model_id",
+                "model_revision",
+                "backbone_frozen",
+                "adapter",
+                "checkpoint_kind",
+                "checkpoint_sha256",
+            },
+            f"Qwen source {model_id} provenance",
+        )
+        _require(encoder["model_id"] == model_id, f"Qwen source {model_id} identity changed")
+        _safe_identifier(encoder["model_revision"], f"Qwen source {model_id} revision")
+        _require(encoder["backbone_frozen"] is True, f"Qwen source {model_id} must be frozen")
+        _safe_identifier(encoder["adapter"], f"Qwen source {model_id} adapter")
+        _require(
+            encoder["checkpoint_kind"] == "deterministic_synthetic_parameter_fixture",
+            f"Qwen source {model_id} checkpoint kind changed",
+        )
+        _sha256_identifier(encoder["checkpoint_sha256"], f"Qwen source {model_id} checkpoint sha256")
+    _require(
+        provenance["eegnet"]["checkpoint_sha256"] != provenance["eegpt"]["checkpoint_sha256"],
+        "Qwen source checkpoint identities must be distinct",
     )
     fusion = _require_exact_keys(
         state["fusion"],
@@ -834,6 +1166,7 @@ def render_qwen_shadow_input(state: dict[str, Any], contract: dict[str, Any]) ->
 
 
 def _validate_qwen_input_payload(value: Any, contract: dict[str, Any]) -> dict[str, Any]:
+    _reject_forbidden_qwen_fields(value, "Qwen shadow input")
     expected_keys = {
         "schema_version",
         "experiment_id",
@@ -882,11 +1215,44 @@ def _validate_qwen_input_payload(value: Any, contract: dict[str, Any]) -> dict[s
         },
         "Qwen bounded structured state",
     )
-    _require(isinstance(structured["signal_quality"], dict), "Qwen signal quality must be an object")
-    _require(isinstance(structured["artifact_probabilities"], dict), "Qwen artifact probabilities must be an object")
+    quality = _require_exact_keys(
+        structured["signal_quality"],
+        {"score", "missing_channels"},
+        "Qwen input signal quality",
+    )
+    _probability(quality["score"], "Qwen input signal quality score")
+    missing = quality["missing_channels"]
     _require(
-        isinstance(structured["observable_state_probabilities"], dict),
-        "Qwen observable probabilities must be an object",
+        isinstance(missing, list)
+        and len(missing) == len(set(missing))
+        and all(channel in _CHANNELS for channel in missing),
+        "Qwen input missing channels are invalid",
+    )
+    artifacts = contract["probability_space"]["artifact_labels"]
+    observables = contract["probability_space"]["observable_state_labels"]
+    artifact_values = _require_exact_keys(
+        structured["artifact_probabilities"],
+        set(artifacts),
+        "Qwen input artifact probabilities",
+    )
+    observable_values = _require_exact_keys(
+        structured["observable_state_probabilities"],
+        set(observables),
+        "Qwen input observable probabilities",
+    )
+    combined = {**artifact_values, **observable_values}
+    probabilities = [
+        _probability(combined[label], f"Qwen input probability {label}")
+        for label in contract["probability_space"]["label_order"]
+    ]
+    _require(
+        math.isclose(
+            sum(probabilities),
+            1.0,
+            rel_tol=0.0,
+            abs_tol=float(contract["probability_space"]["sum_tolerance"]),
+        ),
+        "Qwen input probabilities must sum to one",
     )
     for field in ("encoder_disagreement", "predictive_entropy", "out_of_distribution_score"):
         _probability(structured[field], f"Qwen structured state {field}")
@@ -899,11 +1265,9 @@ def validate_qwen_shadow_output(
     contract: dict[str, Any],
 ) -> dict[str, Any]:
     """Validate a hypothetical Qwen JSON result without executing Qwen."""
-    try:
-        payload = json.loads(output) if isinstance(output, str) else output
-        input_payload = json.loads(rendered_input)
-    except json.JSONDecodeError as exc:
-        raise ContractError(f"Qwen shadow JSON is malformed: {exc}") from exc
+    payload = _strict_json_loads(output, "Qwen shadow output") if isinstance(output, str) else output
+    input_payload = _strict_json_loads(rendered_input, "Qwen shadow input")
+    _reject_forbidden_qwen_fields(payload, "Qwen shadow output")
     input_payload = _validate_qwen_input_payload(input_payload, contract)
     expected_keys = {
         "schema_version",
@@ -955,7 +1319,7 @@ def run_synthetic_fusion_fixture(
         "action": "abstain",
         "confidence": 1.0,
         "abstained": True,
-        "reason_code": "nominal_shadow_review",
+        "reason_code": "insufficient_evidence",
         "shadow_only": True,
         "live_control": False,
         "weights_updated": False,
@@ -1033,7 +1397,6 @@ def write_synthetic_fusion_artifacts(
         "experiment_id": report["experiment_id"],
         **_FIXED_DISPOSITION,
         "synthetic_only": True,
-        "shadow_only": True,
         "live_control": False,
         "record_count": len(states),
         "records_sha256": _sha256_bytes(states_bytes),
@@ -1059,6 +1422,19 @@ def load_fused_state_replay(
     fixtures = load_synthetic_fixtures(contract, contract_path)
     fixture_map = {fixture["fixture_id"]: fixture for fixture in fixtures}
     manifest = _read_json(manifest_path, "fused-state replay manifest")
+    expected_manifest_keys = {
+        "schema_version",
+        "state_schema_version",
+        "experiment_id",
+        *set(_FIXED_DISPOSITION),
+        "synthetic_only",
+        "live_control",
+        "record_count",
+        "records_sha256",
+        "report_sha256",
+        "contract_sha256",
+    }
+    manifest = _require_exact_keys(manifest, expected_manifest_keys, "fused-state replay manifest")
     for key, expected in {
         "schema_version": REPLAY_MANIFEST_SCHEMA,
         "state_schema_version": STATE_SCHEMA,
@@ -1072,9 +1448,14 @@ def load_fused_state_replay(
         _require(manifest.get(key) == expected, f"replay manifest {key} changed")
     try:
         states_bytes = states_path.read_bytes()
-        records = [json.loads(line) for line in states_bytes.decode("utf-8").splitlines() if line]
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        lines = states_bytes.decode("utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as exc:
         raise ContractError(f"cannot read fused-state replay: {exc}") from exc
+    records = [
+        _strict_json_loads(line, f"fused-state replay line {index}")
+        for index, line in enumerate(lines, 1)
+        if line
+    ]
     _require(manifest.get("record_count") == len(records), "replay record count changed")
     _require(manifest.get("records_sha256") == _sha256_bytes(states_bytes), "replay record hash changed")
     seen_ids: set[str] = set()

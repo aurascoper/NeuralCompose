@@ -192,6 +192,7 @@ The D0 state contains:
 - normalized predictive entropy;
 - a pinned synthetic OOD rehearsal score;
 - encoder and adapter provenance; and
+- deterministic synthetic checkpoint identity and SHA-256 for each encoder;
 - fixed shadow-only, nonpromotion disposition.
 
 It excludes waveforms, raw EEG, training labels, encoder embeddings, dialogue,
@@ -238,10 +239,14 @@ predictive entropy
 OOD score
 ```
 
-It pins three legal shadow actions (`abstain`, `hold_state`, and
-`request_operator_review`) and controlled reason codes. Output validation
-rejects extra prose, illegal actions, state-ID mismatches, live control, and
-weight-update claims.
+It pins the task
+`rank_registered_engineering_hypotheses_from_synthetic_fused_state`, three
+legal shadow actions (`abstain`, `hold_state`, and
+`request_operator_review`), and an exact ordered reason-code registry. Input
+validation recursively rejects unknown or prohibited fields, non-finite JSON,
+non-numeric probabilities, and non-normalized probability vectors. Output
+validation rejects extra prose, illegal actions, state-ID mismatches, live
+control, and weight-update claims.
 
 Any future Qwen execution requires a separate post-encoder policy
 preregistration with fresh session-level splits. It may rank registered
@@ -292,7 +297,10 @@ data_gate: D0
 decision: insufficient_evidence
 promotion_status: not_eligible
 runtime_change: none
+source_type: deterministic_synthetic_fixture
 physical_eeg_used: false
+scientific_claim_allowed: false
+shadow_only: true
 ```
 
 ## Entry Gates
