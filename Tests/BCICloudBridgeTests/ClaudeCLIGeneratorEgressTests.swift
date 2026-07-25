@@ -18,6 +18,7 @@ final class ClaudeCLIGeneratorEgressTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("claude-stub-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let stub = directory.appendingPathComponent("claude")
         // NUL-delimit the captured args so a multi-line arg (the system prompt)
         // isn't split apart on its own newlines.

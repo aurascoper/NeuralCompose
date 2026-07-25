@@ -70,9 +70,12 @@ public enum ClaudeExecutableResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         fileManager: FileManager = .default
     ) throws -> String {
-        if let explicitPath, !explicitPath.isEmpty {
-            guard fileManager.fileExists(atPath: explicitPath) else {
-                throw ResolutionError.explicitPathMissing(explicitPath)
+        if let explicitPath {
+            // An empty configured value is a misconfiguration, and falling back
+            // to PATH here would be exactly the silent substitution this type
+            // exists to prevent.
+            guard !explicitPath.isEmpty else {
+                throw ResolutionError.explicitPathMissing("<empty configured path>")
             }
             try validate(explicitPath, fileManager: fileManager)
             return explicitPath

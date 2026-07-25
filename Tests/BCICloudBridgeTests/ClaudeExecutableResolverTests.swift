@@ -52,6 +52,27 @@ final class ClaudeExecutableResolverTests: XCTestCase {
         }
     }
 
+    /// An empty configured value is a misconfiguration. Falling back to PATH
+    /// here would be precisely the silent substitution this type exists to
+    /// prevent — and it is the same class of bug as the original defect.
+    func testEmptyExplicitPathIsAHardErrorNotAPathFallback() throws {
+        let pathDir = try makeDirectory()
+        try makeExecutable(named: "claude", in: pathDir)
+
+        XCTAssertThrowsError(
+            try ClaudeExecutableResolver.resolve(
+                explicitPath: "",
+                environment: ["PATH": pathDir.path]
+            ),
+            "an empty configured path must not silently resolve via PATH"
+        ) { error in
+            guard case .explicitPathMissing? =
+                error as? ClaudeExecutableResolver.ResolutionError else {
+                return XCTFail("expected .explicitPathMissing, got \(error)")
+            }
+        }
+    }
+
     /// An explicit path is used exclusively — no PATH fallback — so a
     /// misconfiguration is a hard error, never a silent substitution.
     func testExplicitPathDoesNotFallBackToPath() throws {
