@@ -112,10 +112,15 @@ public actor ClaudeCLIGenerator: TextGenerating {
     private func runClaude(_ args: [String]) async throws -> Data {
         let inv = CLIInvocation()
         if let override = executableOverride {
+            // Same gate as `ClaudeCLITransport`: this branch passes `args`
+            // unmodified, so a non-`claude` override would receive Claude's
+            // flags directly. Fail before launch rather than after.
+            try ClaudeExecutableResolver.validate(override)
             inv.process.executableURL = URL(fileURLWithPath: override)
             inv.process.arguments = args
         } else {
             // Resolve `claude` from PATH without hardcoding a location.
+            // The wrapper is correct here, because `claude` is prepended.
             inv.process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             inv.process.arguments = ["claude"] + args
         }

@@ -9,9 +9,17 @@ final class ClaudeCLIGeneratorEgressTests: XCTestCase {
 
     /// Writes an executable stub that captures its argv (one per line) to
     /// `argsFile` and emits a valid `claude -p --output-format json` envelope.
+    /// The stub is named exactly `claude`, inside a unique directory. The
+    /// executable-override path now refuses anything not named `claude`
+    /// (a wrapper would silently receive Claude's own flags), so a stub called
+    /// `claude-stub-….sh` would be rejected — and a real installation is named
+    /// `claude` anyway, so this is the more faithful fixture.
     private func makeStub(argsFile: URL, reply: String = "STUB REPLY") throws -> URL {
-        let stub = FileManager.default.temporaryDirectory
-            .appendingPathComponent("claude-stub-\(UUID().uuidString).sh")
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("claude-stub-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let stub = directory.appendingPathComponent("claude")
         // NUL-delimit the captured args so a multi-line arg (the system prompt)
         // isn't split apart on its own newlines.
         let script = """

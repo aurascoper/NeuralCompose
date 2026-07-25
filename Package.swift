@@ -270,6 +270,13 @@ let package = Package(
             swiftSettings: strictConcurrency
         ),
 
+        .testTarget(
+            name: "DialecticSessionTests",
+            dependencies: ["DialecticSession", "BCICloudBridge", "BCICore"],
+            path: "Tests/DialecticSessionTests",
+            swiftSettings: strictConcurrency
+        ),
+
         // ── Tests ────────────────────────────────────────────────────────
         .testTarget(
             name: "BCICoreTests",
@@ -331,7 +338,13 @@ let package = Package(
         ),
         .testTarget(
             name: "NeuralComposeAppTests",
-            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice"],
+            dependencies: [
+                "NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice",
+                // Declared explicitly: the fail-closed tests import
+                // LiveRuntimeFactory. It resolved transitively before, which
+                // is an implicit dependency.
+                "BCICloudBridge",
+            ],
             path: "Tests/NeuralComposeAppTests"
         ),
     ],
