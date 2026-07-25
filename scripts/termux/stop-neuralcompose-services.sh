@@ -1,43 +1,69 @@
 #!/usr/bin/env bash
-# stop-neuralcompose-services.sh — cleanly stop all local services.
-# Only stops processes we own (by PID file).
-
 set -euo pipefail
 
-HOME_DIR="${HOME:-/data/data/com.termux/files/home}"
-RUNTIME_DIR="${HOME_DIR}/.neuralcompose-runtime"
+# ──────────────────────────────────────────────────────────────
+# stop-neuralcompose-services.sh — safely stop managed services
+# on the Pixel 8a.
+#
+# Usage:
+#   ./scripts/termux/stop-neuralcompose-services.sh [--runtime|--all]
+#
+#   --runtime   stop Qwen + embeddings + STT (default)
+#   --all       stop everything including Metro
+# ──────────────────────────────────────────────────────────────
 
-stop_by_pidfile() {
-  local name="$1"
-  local pidfile="$RUNTIME_DIR/$2"
-  local logfile="$RUNTIME_DIR/$3"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+RUNTIME_DIR="$REPO_ROOT/.runtime/neuralcompose"
+MODE="${1:---runtime}"
 
-  if [ ! -f "${pidfile}" ]; then
+_stop_service() {
+  local name="$1" match="$2"
+  local pid_file="$RUNTIME_DIR/pids/$name.pid"
+  local log_file="$RUNTIME_DIR/logs/$name.log"
+
+  if [[ ! -f "$pid_file" ]]; then
+    echo "  [$name] not running (no PID file)"
     return 0
   fi
 
-  local PID
-  PID=$(cat "${pidfile}")
-  if kill -0 "${PID}" 2>/dev/null; then
-    echo "Stopping ${name} (PID ${PID})..."
-    kill "${PID}" 2>/dev/null || true
-    for i in $(seq 1 10); do
-      if ! kill -0 "${PID}" 2>/dev/null; then break; fi
-      sleep 0.5
-    done
-    if kill -0 "${PID}" 2>/dev/null; then
-      echo "Force killing ${name}..."
-      kill -9 "${PID}" 2>/dev/null || true
-    fi
-    echo "${name} stopped."
-  else
-    echo "${name}: process ${PID} not running (stale PID file)."
+  local pid
+  pid="$(cat "$pid_file" 2>/dev/null)" || { echo "  [$name] stale PID file"; rm -f "$pid_file"; return 0; }
+
+  # Verify PID belongs to expected process
+  local cmd
+  cmd="$(ps -p "$pid" -o comm= 2>/dev/null)" || { echo "  [$name] PID $pid not found (stale)"; rm -f "$pid_file"; return 0; }
+  if [[ "$cmd" != *"$match"* ]]; then
+    echo "  [$name] PID $pid is $cmd, not $match — leaving untouched"
+    return 0
   fi
-  rm -f "${pidfile}"
+
+  echo "  [$name] sending TERM to PID $pid"
+  kill -TERM "$pid" 2>/dev/null || true
+
+  # Wait with bounded timeout
+  local waited=0
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 1
+    waited=$((waited + 1))
+    if [[ "$waited" -ge 10 ]]; then
+      echo "  [$name] timeout — sending KILL to PID $pid"
+      kill -KILL "$pid" 2>/dev/null || true
+      break
+    fi
+  done
+
+  rm -f "$pid_file"
+  echo "  [$name] stopped"
 }
 
-stop_by_pidfile "Qwen" "llama-server.pid" "llama-server.log"
-stop_by_pidfile "BGE" "embedding-server.pid" "embedding-server.log"
-stop_by_pidfile "Whisper" "whisper-server.pid" "whisper-server.log"
+echo "NeuralCompose services — stopping ($MODE)"
 
-echo "All services stopped."
+_stop_service "qwen" "llama-server"
+_stop_service "embed" "llama-server"  # same binary, different port
+_stop_service "stt" "whisper"
+
+if [[ "$MODE" == "--all" ]]; then
+  _stop_service "metro" "node"
+fi
+
+echo "Done."

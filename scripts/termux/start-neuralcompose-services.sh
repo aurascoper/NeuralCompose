@@ -1,187 +1,177 @@
 #!/usr/bin/env bash
-# start-neuralcompose-services.sh — start local services for the dialectic MVP.
-# Starts: (1) Qwen chat-completions llama-server on :8081
-#         (2) BGE embedding llama-server on :8082
-#         (3) whisper.cpp server on :8083 (if built and model present)
-# Uses absolute paths, writes PID/log files under a gitignored runtime directory.
-# Rejects duplicate starts. Waits for health endpoints. Prints model hashes/ids.
-
+# shellcheck disable=SC2317
 set -euo pipefail
 
-HOME_DIR="${HOME:-/data/data/com.termux/files/home}"
-LLAMA_BIN="${HOME_DIR}/llama.cpp/build/bin/llama-server"
-RUNTIME_DIR="${HOME_DIR}/.neuralcompose-runtime"
+# ──────────────────────────────────────────────────────────────
+# start-neuralcompose-services.sh — bring up local runtime services
+# on the Pixel 8a for device validation.
+#
+# Usage:
+#   ./scripts/termux/start-neuralcompose-services.sh [--runtime|--dev|--all]
+#
+#   --runtime   Qwen generation + embeddings + STT (default)
+#   --dev       Metro bundler only
+#   --all       everything
+# ──────────────────────────────────────────────────────────────
 
-# Models
-QWEN_MODEL="${HOME_DIR}/models/qwen2.5-0.5b-instruct-q4_k_m.gguf"
-BGE_MODEL="${HOME_DIR}/models/bge-small-en-v1.5-q8_0.gguf"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+RUNTIME_DIR="$REPO_ROOT/.runtime/neuralcompose"
+CONFIG_FILE="$REPO_ROOT/.runtime/neuralcompose/neuralcompose-services.env"
+MODE="${1:---runtime}"
 
-# Ports
-LLM_PORT="${NEURALCOMPOSE_LLM_PORT:-8081}"
-EMB_PORT="${NEURALCOMPOSE_EMB_PORT:-8082}"
-STT_PORT="${NEURALCOMPOSE_STT_PORT:-8083}"
+mkdir -p "$RUNTIME_DIR/pids" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/state"
 
-# Build config
-CONTEXT="${NEURALCOMPOSE_CONTEXT:-512}"
-THREADS="${NEURALCOMPOSE_THREADS:-2}"
+# Source local config if present
+if [[ -f "$CONFIG_FILE" ]]; then
+  # shellcheck source=/dev/null
+  source "$CONFIG_FILE"
+fi
 
-# Whisper (optional)
-WHISPER_BIN="${HOME_DIR}/whisper.cpp/build/bin/whisper-server"
-WHISPER_MODEL="${HOME_DIR}/models/ggml-tiny.en-q5_1.bin"
+# Defaults — override in neuralcompose-services.env
+QWEN_PORT="${QWEN_PORT:-8081}"
+QWEN_MODEL="${QWEN_MODEL:-$HOME/models/qwen2.5-0.5b-instruct-q4_k_m.gguf}"
+QWEN_BIN="${QWEN_BIN:-$HOME/llama.cpp/build/bin/llama-server}"
+QWEN_CONTEXT="${QWEN_CONTEXT:-1024}"
+QWEN_THREADS="${QWEN_THREADS:-2}"
 
-mkdir -p "${RUNTIME_DIR}"
+EMBED_PORT="${EMBED_PORT:-8083}"
+EMBED_BIN="${EMBED_BIN:-}"
+EMBED_MODEL="${EMBED_MODEL:-}"
 
-# --- LLM server (Qwen) ---
-LLM_PID_FILE="${RUNTIME_DIR}/llama-server.pid"
-LLM_LOG_FILE="${RUNTIME_DIR}/llama-server.log"
+STT_PORT="${STT_PORT:-8084}"
+STT_BIN="${STT_BIN:-}"
+STT_MODEL="${STT_MODEL:-}"
 
-start_llm() {
-  if [ -f "${LLM_PID_FILE}" ] && kill -0 "$(cat "${LLM_PID_FILE}")" 2>/dev/null; then
-    echo "Qwen server already running (PID $(cat "${LLM_PID_FILE}"))"
+METRO_PORT="${METRO_PORT:-8082}"
+METRO_DIR="${METRO_DIR:-$REPO_ROOT}"
+
+# ── Helpers ──────────────────────────────────────────────────
+
+_pid_file() { echo "$RUNTIME_DIR/pids/$1.pid"; }
+_log_file() { echo "$RUNTIME_DIR/logs/$1.log"; }
+_err_file() { echo "$RUNTIME_DIR/logs/$1.err"; }
+
+_is_running() {
+  local pid_file; pid_file="$(_pid_file "$1")"
+  [[ -f "$pid_file" ]] || return 1
+  local pid; pid="$(cat "$pid_file" 2>/dev/null)" || return 1
+  [[ -n "$pid" ]] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  # Verify it's the expected process
+  local cmd; cmd="$(ps -p "$pid" -o comm= 2>/dev/null)" || return 1
+  [[ "$cmd" == *"$2"* ]] || return 1
+  return 0
+}
+
+_start_service() {
+  local name="$1" match="$2" pid_file; pid_file="$(_pid_file "$name")"
+  if _is_running "$name" "$match"; then
+    echo "  [$name] already running (PID $(cat "$pid_file"))"
     return 0
   fi
+  shift 2
+  echo "  [$name] starting..."
+  nohup "$@" > "$(_log_file "$name")" 2> "$(_err_file "$name")" &
+  local pid=$!
+  echo "$pid" > "$pid_file"
+  echo "  [$name] PID $pid"
+}
 
-  if [ ! -f "${QWEN_MODEL}" ]; then
-    echo "ERROR: Qwen model not found at ${QWEN_MODEL}"
-    exit 1
-  fi
-
-  echo "=== Starting Qwen (chat-completions) ==="
-  echo "Model: ${QWEN_MODEL}"
-  sha256sum "${QWEN_MODEL}" | awk '{print "SHA256: " $1}'
-  echo "Port: 127.0.0.1:${LLM_PORT}"
-
-  "${LLAMA_BIN}" \
-    --model "${QWEN_MODEL}" \
-    --host 127.0.0.1 \
-    --port "${LLM_PORT}" \
-    --ctx-size "${CONTEXT}" \
-    --threads "${THREADS}" \
-    > "${LLM_LOG_FILE}" 2>&1 &
-
-  echo $! > "${LLM_PID_FILE}"
-  echo "PID: $(cat "${LLM_PID_FILE}")"
-
-  echo "Waiting for health..."
-  for i in $(seq 1 30); do
-    if curl -s --max-time 1 "http://127.0.0.1:${LLM_PORT}/health" >/dev/null 2>&1; then
-      echo "Qwen: OK"
+_wait_for_port() {
+  local port="$1" timeout="${2:-10}"
+  for i in $(seq 1 "$timeout"); do
+    if nc -z 127.0.0.1 "$port" 2>/dev/null; then
       return 0
     fi
     sleep 1
   done
-  echo "ERROR: Qwen server did not become healthy"
   return 1
 }
 
-# --- Embedding server (BGE) ---
-EMB_PID_FILE="${RUNTIME_DIR}/embedding-server.pid"
-EMB_LOG_FILE="${RUNTIME_DIR}/embedding-server.log"
-
-start_emb() {
-  if [ -f "${EMB_PID_FILE}" ] && kill -0 "$(cat "${EMB_PID_FILE}")" 2>/dev/null; then
-    echo "Embedding server already running (PID $(cat "${EMB_PID_FILE}"))"
-    return 0
-  fi
-
-  if [ ! -f "${BGE_MODEL}" ]; then
-    echo "WARNING: BGE model not found at ${BGE_MODEL}"
-    echo "Gates will use MOCK embedder."
-    return 0
-  fi
-
-  echo ""
-  echo "=== Starting BGE (embeddings) ==="
-  echo "Model: ${BGE_MODEL}"
-  sha256sum "${BGE_MODEL}" | awk '{print "SHA256: " $1}'
-  echo "Port: 127.0.0.1:${EMB_PORT}"
-
-  "${LLAMA_BIN}" \
-    --model "${BGE_MODEL}" \
-    --host 127.0.0.1 \
-    --port "${EMB_PORT}" \
-    --embedding \
-    --pooling mean \
-    --ctx-size 512 \
-    --threads "${THREADS}" \
-    > "${EMB_LOG_FILE}" 2>&1 &
-
-  echo $! > "${EMB_PID_FILE}"
-  echo "PID: $(cat "${EMB_PID_FILE}")"
-
-  echo "Waiting for health..."
-  for i in $(seq 1 30); do
-    if curl -s --max-time 1 "http://127.0.0.1:${EMB_PORT}/health" >/dev/null 2>&1; then
-      echo "BGE: OK"
+_wait_for_model_ready() {
+  local port="$1" model_fragment="$2" timeout="${3:-30}"
+  for i in $(seq 1 "$timeout"); do
+    local resp
+    resp="$(curl -s http://127.0.0.1:"$port"/v1/models 2>/dev/null || true)"
+    if echo "$resp" | grep -qi "$model_fragment" 2>/dev/null; then
       return 0
     fi
     sleep 1
   done
-  echo "WARNING: BGE server did not become healthy. Gates will use MOCK."
-  return 0
+  return 1
 }
 
-# --- STT server (whisper.cpp, optional) ---
-STT_PID_FILE="${RUNTIME_DIR}/whisper-server.pid"
-STT_LOG_FILE="${RUNTIME_DIR}/whisper-server.log"
+# ── Start functions ─────────────────────────────────────────
 
-start_stt() {
-  if [ -f "${STT_PID_FILE}" ] && kill -0 "$(cat "${STT_PID_FILE}")" 2>/dev/null; then
-    echo "Whisper server already running (PID $(cat "${STT_PID_FILE}"))"
-    return 0
+_start_qwen() {
+  if [[ ! -f "$QWEN_BIN" ]]; then
+    echo "  [qwen] SKIP: $QWEN_BIN not found"
+    return 1
   fi
-
-  if [ ! -x "${WHISPER_BIN}" ]; then
-    echo ""
-    echo "=== STT: whisper.cpp not built ==="
-    echo "STT will be unavailable (text injection only)."
-    echo "To enable: clone and build whisper.cpp."
-    return 0
+  if [[ ! -f "$QWEN_MODEL" ]]; then
+    echo "  [qwen] SKIP: $QWEN_MODEL not found"
+    return 1
   fi
-
-  if [ ! -f "${WHISPER_MODEL}" ]; then
-    echo ""
-    echo "=== STT: whisper model not found ==="
-    echo "Expected: ${WHISPER_MODEL}"
-    echo "STT will be unavailable (text injection only)."
-    return 0
-  fi
-
-  echo ""
-  echo "=== Starting Whisper (STT) ==="
-  echo "Model: ${WHISPER_MODEL}"
-  echo "Port: 127.0.0.1:${STT_PORT}"
-
-  "${WHISPER_BIN}" \
-    --model "${WHISPER_MODEL}" \
-    --host 127.0.0.1 \
-    --port "${STT_PORT}" \
-    > "${STT_LOG_FILE}" 2>&1 &
-
-  echo $! > "${STT_PID_FILE}"
-  echo "PID: $(cat "${STT_PID_FILE}")"
-
-  echo "Waiting for health..."
-  for i in $(seq 1 30); do
-    if curl -s --max-time 1 "http://127.0.0.1:${STT_PORT}/health" >/dev/null 2>&1; then
-      echo "Whisper: OK"
-      return 0
+  _start_service "qwen" "llama-server" \
+    "$QWEN_BIN" \
+    -m "$QWEN_MODEL" \
+    --port "$QWEN_PORT" --host 127.0.0.1 \
+    -c "$QWEN_CONTEXT" -t "$QWEN_THREADS"
+  if _wait_for_port "$QWEN_PORT" 15; then
+    if _wait_for_model_ready "$QWEN_PORT" "qwen" 30; then
+      echo "  [qwen] ready on port $QWEN_PORT"
+    else
+      echo "  [qwen] WARNING: port open but model not confirmed"
     fi
-    sleep 1
-  done
-  echo "WARNING: Whisper server did not become healthy. STT unavailable."
-  return 0
+  else
+    echo "  [qwen] FAILED: port $QWEN_PORT not listening"
+    return 1
+  fi
 }
 
-# --- Main ---
-start_llm
-start_emb
-start_stt
+_start_metro() {
+  if ! command -v npx &>/dev/null; then
+    echo "  [metro] SKIP: npx not found"
+    return 1
+  fi
+  if [[ ! -f "$METRO_DIR/package.json" ]]; then
+    echo "  [metro] SKIP: no package.json in $METRO_DIR"
+    return 1
+  fi
+  _start_service "metro" "node" \
+    npx expo start --port "$METRO_PORT" --no-dev --minify
+  if _wait_for_port "$METRO_PORT" 30; then
+    echo "  [metro] ready on port $METRO_PORT"
+  else
+    echo "  [metro] WARNING: port $METRO_PORT not confirmed"
+  fi
+}
 
-echo ""
-echo "=== All services started ==="
-echo "Qwen:        127.0.0.1:${LLM_PORT}"
-echo "Embeddings:  127.0.0.1:${EMB_PORT}"
-echo "STT:         127.0.0.1:${STT_PORT} (if available)"
-echo ""
-echo "Use stop-neuralcompose-services.sh to stop all."
+# ── Main ─────────────────────────────────────────────────────
+
+echo "NeuralCompose services — starting ($MODE)"
+
+case "$MODE" in
+  --runtime)
+    _start_qwen
+    # Embeddings and STT are not yet configured — add when binaries exist
+    echo "  [embed] SKIP: no binary configured"
+    echo "  [stt]   SKIP: no binary configured"
+    ;;
+  --dev)
+    _start_metro
+    ;;
+  --all)
+    _start_qwen
+    _start_metro
+    echo "  [embed] SKIP: no binary configured"
+    echo "  [stt]   SKIP: no binary configured"
+    ;;
+  *)
+    echo "Unknown mode: $MODE" >&2
+    echo "Usage: $0 [--runtime|--dev|--all]" >&2
+    exit 1
+    ;;
+esac
+
+echo "Done."
