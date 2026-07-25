@@ -7,15 +7,12 @@ import XCTest
 @testable import BCIVoice
 @testable import BCICloudBridge
 
-/// R7 + R18 fail-closed coverage.
+/// R7 + R18 fail-closed coverage, and R3's "a disabled role resolves nothing".
 ///
-/// These drive `resolveHypnagogicRuntime` — the real resolution step including
-/// its `catch` — rather than the disable helper, which would only prove the
-/// helper works when called, not that a failure reaches it.
-///
-/// **Not covered here:** R3. The Witness is still resolved unconditionally,
-/// and nothing yet rejects a runtime resolved for the wrong role. Both land
-/// with the Witness fix in the following commit.
+/// These drive `resolveHypnagogicRuntime` / `resolveWitnessRuntime` — the real
+/// resolution steps including their `catch` — rather than the disable helper,
+/// which would only prove the helper works when called, not that a failure
+/// reaches it.
 ///
 /// **A1 left one gap here, now closed.** The enabled→disabled *transition* was
 /// unprovable: `hypnagogicLoopEnabled` defaults to `false`, so an assertion
@@ -215,6 +212,91 @@ final class AppViewModelRuntimeFailClosedTests: XCTestCase {
         XCTAssertNil(viewModel.witnessRuntimeIdentity)
     }
 
+    // MARK: - R3: a disabled Witness resolves nothing
+
+    /// The exact regression: the Witness was resolved unconditionally and the
+    /// `witnessEnabled` flag was consulted only afterwards, when deciding
+    /// whether to *use* it. A disabled role must not load a prompt, construct a
+    /// runtime, or probe an endpoint.
+    func testDisabledWitnessIsNeverResolved() async {
+        let viewModel = await makeViewModel()
+        var resolverCalls = 0
+
+        let outcome = await viewModel.resolveWitnessRuntime(witnessEnabled: false) {
+            resolverCalls += 1
+            return (StubGenerator(), self.makeIdentity(role: .witness))
+        }
+
+        guard case .disabled = outcome else {
+            return XCTFail("a disabled Witness must report .disabled, got \(outcome)")
+        }
+        XCTAssertEqual(
+            resolverCalls, 0,
+            "a disabled Witness must not resolve a runtime, load a prompt, or probe an endpoint")
+        XCTAssertNil(viewModel.witnessRuntimeIdentity)
+        XCTAssertNil(viewModel.lastError, "a disabled role is not an error")
+    }
+
+    func testEnabledWitnessResolvesAndStoresItsOwnIdentity() async {
+        let viewModel = await makeViewModel()
+        let witnessIdentity = makeIdentity(role: .witness)
+        let outcome = await viewModel.resolveWitnessRuntime(witnessEnabled: true) {
+            (StubGenerator(), witnessIdentity)
+        }
+        guard case .resolved = outcome else {
+            return XCTFail("expected .resolved, got \(outcome)")
+        }
+        XCTAssertEqual(viewModel.witnessRuntimeIdentity, witnessIdentity)
+        XCTAssertEqual(viewModel.witnessRuntimeIdentity?.promptProfile, "witness")
+        XCTAssertNil(
+            viewModel.dialogueRuntimeIdentity,
+            "the Witness must not overwrite the dialogue identity")
+    }
+
+    /// Handing the Witness a *pole* runtime must fail closed rather than be
+    /// filed under the Witness identity. Both sides are the same tuple type, so
+    /// nothing but this check catches it.
+    func testWitnessResolvedToThePoleRuntimeIsRefused() async {
+        let viewModel = await makeViewModel()
+        let poleIdentity = makeIdentity(role: .dialectic)
+
+        let outcome = await viewModel.resolveWitnessRuntime(witnessEnabled: true) {
+            (StubGenerator(), poleIdentity)   // the pole's runtime, not the Witness's
+        }
+
+        guard case .failed = outcome else {
+            return XCTFail("a pole runtime must not be accepted as the Witness, got \(outcome)")
+        }
+        XCTAssertNil(
+            viewModel.witnessRuntimeIdentity,
+            "a rejected runtime must not be stored as the Witness identity")
+        XCTAssertFalse(viewModel.hypnagogicLoopEnabled)
+    }
+
+    func testDialogueResolvedToTheWitnessRuntimeIsRefused() async {
+        let viewModel = await makeViewModel()
+        let result = await viewModel.resolveHypnagogicRuntime(role: .dialectic) {
+            (StubGenerator(), self.makeIdentity(role: .witness))
+        }
+        XCTAssertNil(result, "a Witness runtime must not stand in for the dialectic poles")
+        XCTAssertNil(viewModel.dialogueRuntimeIdentity)
+    }
+
+    /// A requested Witness that cannot resolve fails the configuration closed
+    /// rather than degrading to a two-voice exchange the user did not select.
+    func testRequestedWitnessFailureIsNotSilentlyDowngraded() async {
+        let viewModel = await makeViewModel()
+        let outcome = await viewModel.resolveWitnessRuntime(witnessEnabled: true) {
+            throw self.makeFailure(code: .promptResourceUnavailable)
+        }
+        guard case .failed = outcome else {
+            return XCTFail("expected .failed, got \(outcome)")
+        }
+        XCTAssertFalse(viewModel.hypnagogicLoopEnabled)
+        XCTAssertEqual(
+            viewModel.witnessRuntimeIdentity?.readiness,
+            .unavailable(.promptResourceUnavailable))
+    }
 }
 
 /// Minimal `TextGenerating` that never generates. Present only so identity

@@ -1,11 +1,9 @@
 import BCICore
 import Foundation
 
-/// A `TextGenerating` adapter that wraps any `GenerationRuntime`
-/// (and its fixed system prompt) so the existing
-/// `HypnagogicDialecticLoop` — which depends on `TextGenerating`,
-/// not `GenerationRuntime` — can use any of the new runtimes
-/// without a loop refactor.
+/// A `TextGenerating` adapter that wraps any `GenerationRuntime` so the
+/// existing `HypnagogicDialecticLoop` — which depends on `TextGenerating`, not
+/// `GenerationRuntime` — can use any of the runtimes without a loop refactor.
 ///
 /// This is the *smallest* change to wire runtime selection into
 /// the harness: the loop's interface stays exactly the same, and
@@ -16,27 +14,19 @@ import Foundation
 /// text; it only shapes a `GenerationContext` and calls
 /// `runtime.generate(prompt:context:)`).
 ///
-/// The adapter is `Sendable` because both the wrapped runtime
-/// (which is `Sendable`) and the `systemPrompt` (a `String`) are
-/// safe to pass across actor boundaries; the actor isolation on
-/// the loop side is unchanged.
+/// **This adapter does not carry a system prompt.** It once had a
+/// `systemPrompt` field that was stored and never read: the bytes actually
+/// transmitted come from the wrapped runtime's own prompt. That made the field
+/// worse than useless — it let a caller construct a "Witness" adapter around
+/// the *pole* runtime, pass the Witness prompt into the dead field, and get an
+/// object that reported one prompt while sending another. Removing it forces
+/// role-specific prompts to be resolved where they take effect: in the runtime.
+///
+/// The adapter is `Sendable` because the wrapped runtime is; the actor
+/// isolation on the loop side is unchanged.
 public struct GenerationRuntimeTextGeneratingAdapter: MetadataPublishingTextGenerating {
     public nonisolated let isLive: Bool
     public nonisolated let modelIdentifier: String
-
-    /// **LEGACY / DEAD — scheduled for removal with the R3 Witness fix.**
-    ///
-    /// Stored and never read. The bytes actually transmitted come from the
-    /// wrapped runtime's own prompt, so this field describes nothing: a caller
-    /// can construct a "Witness" adapter around the *pole* runtime, pass the
-    /// Witness prompt here, and get an object that reports one prompt while
-    /// sending another. `Sources/DialecticSession/main.swift` does exactly
-    /// that today.
-    ///
-    /// It is retained for this commit only so the identity/readiness layer can
-    /// land without also rewriting Witness resolution. Do not read it, and do
-    /// not treat it as provenance.
-    public nonisolated let systemPrompt: String
 
     private let runtime: any GenerationRuntime
     private let maxTokens: Int
@@ -72,12 +62,10 @@ public struct GenerationRuntimeTextGeneratingAdapter: MetadataPublishingTextGene
 
     public init(
         runtime: any GenerationRuntime,
-        systemPrompt: String,
         maxTokens: Int = 256,
         defaultTemperature: Double = 0.7
     ) {
         self.runtime = runtime
-        self.systemPrompt = systemPrompt
         self.isLive = runtime.isLive
         self.modelIdentifier = runtime.modelIdentifier
         self.maxTokens = maxTokens

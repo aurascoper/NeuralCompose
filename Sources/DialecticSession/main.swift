@@ -120,25 +120,37 @@ do {
 // the wiring on the next `generate(...)` call. (See the long
 // comment in `attachMetadataCaptureFromAdapter` for the
 // existential-box pattern.)
-let poleGenerator = GenerationRuntimeTextGeneratingAdapter(
-    runtime: resolved.runtime,
-    systemPrompt: resolved.systemPrompt
-)
-// NOTE: `GenerationRuntimeTextGeneratingAdapter.systemPrompt` is currently a
-// stored-but-unread field — the bytes actually sent come from
-// `resolved.runtime`'s own prompt. Giving the Witness its own resolved runtime
-// is a separate fix (tracked as R3) and is deliberately not attempted here.
-// What changes now is only that a failed load stops the run instead of
-// silently passing "".
-let witnessPrompt: String?
-do {
-    witnessPrompt = profile.witnessEnabled ? try PromptProfile.witness.load() : nil
-} catch {
-    FileHandle.standardError.write(Data("● dialectic-session: \(error)\n".utf8))
-    exit(1)
-}
-let witnessGenerator: GenerationRuntimeTextGeneratingAdapter? = witnessPrompt.map {
-    GenerationRuntimeTextGeneratingAdapter(runtime: resolved.runtime, systemPrompt: $0)
+let poleGenerator = GenerationRuntimeTextGeneratingAdapter(runtime: resolved.runtime)
+
+// R3: the Witness gets its OWN resolved runtime, loaded with the Witness
+// profile. It previously wrapped the *pole* runtime and passed the Witness
+// prompt into the adapter's stored-but-unread `systemPrompt` field, so the
+// Witness reported one prompt and transmitted another — the pole's. The field
+// is gone; the prompt now lives in the runtime that sends it.
+//
+// Resolution is skipped entirely when the profile disables the Witness. A
+// disabled role must not load a prompt, resolve a runtime, or probe an
+// endpoint: doing so makes readiness depend on a component the configuration
+// says is not in use.
+let witnessGenerator: GenerationRuntimeTextGeneratingAdapter?
+if profile.witnessEnabled {
+    let witnessResolved: ResolvedRuntime
+    do {
+        witnessResolved = try RuntimeFactory.make(
+            runtimeName: opts.runtime,
+            model: opts.model,
+            promptProfile: .witness
+        )
+    } catch {
+        // The Witness is part of the requested configuration, so its failure
+        // fails the run closed rather than quietly degrading to a two-voice
+        // exchange the operator did not ask for.
+        FileHandle.standardError.write(Data("● dialectic-session: witness runtime: \(error)\n".utf8))
+        exit(1)
+    }
+    witnessGenerator = GenerationRuntimeTextGeneratingAdapter(runtime: witnessResolved.runtime)
+} else {
+    witnessGenerator = nil
 }
 
 print("● dialectic-session — profile=\(profile.rawValue) witness=\(profile.witnessEnabled) "

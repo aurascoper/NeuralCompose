@@ -790,6 +790,25 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     ) async -> HypnagogicRuntime? {
         do {
             let resolved = try await resolve()
+            // The resolver must return a runtime for the role that was asked
+            // for. Without this, a call site could hand the Witness closure a
+            // `.dialectic` runtime and the result would be filed under the
+            // Witness identity — a Witness transmitting the pole prompt, which
+            // is exactly the confusion the role/prompt binding exists to
+            // prevent. Type-checking cannot catch it because both sides are the
+            // same tuple type.
+            guard resolved.identity.role == role else {
+                store(identity: nil, for: role)
+                disableHypnagogicLoop(
+                    publicReason: "The \(role.rawValue) runtime resolved to the wrong role "
+                        + "(\(resolved.identity.role.rawValue)).",
+                    internalDetail:
+                        "role mismatch: requested \(role.rawValue), "
+                        + "resolved \(resolved.identity.role.rawValue) "
+                        + "with profile \(resolved.identity.promptProfile)"
+                )
+                return nil
+            }
             store(identity: resolved.identity, for: role)
             return resolved
         } catch let failure as RuntimeResolutionFailure {
@@ -813,6 +832,42 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             )
             return nil
         }
+    }
+
+    /// The outcome of asking for a Witness. Three states, not two: "the
+    /// profile has no Witness" and "the Witness failed to resolve" must lead to
+    /// different behaviour, and an optional cannot say which is which.
+    enum WitnessResolution {
+        /// The active profile has no Witness. Not a failure.
+        case disabled
+        case resolved(any TextGenerating)
+        /// Requested but unavailable. The caller fails the loop closed.
+        case failed
+    }
+
+    /// Resolves the Witness **only when the profile enables it**.
+    ///
+    /// A disabled role must not load a prompt, resolve a runtime, or probe an
+    /// endpoint. Resolving unconditionally — which is what this did — made an
+    /// unused role's readiness a precondition for a loop that would never call
+    /// it, and on the Ollama path spent a network probe on a runtime the
+    /// configuration says is not in use.
+    ///
+    /// Internal and closure-injected for the same reason as
+    /// `resolveHypnagogicRuntime`: the production call site sits behind the
+    /// mic/speech authorization gate.
+    func resolveWitnessRuntime(
+        witnessEnabled: Bool,
+        _ resolve: () async throws -> HypnagogicRuntime
+    ) async -> WitnessResolution {
+        guard witnessEnabled else {
+            clearWitnessIdentity()
+            return .disabled
+        }
+        guard let resolved = await resolveHypnagogicRuntime(role: .witness, resolve) else {
+            return .failed
+        }
+        return .resolved(resolved.generator)
     }
 
     /// Files an identity under the published property its role belongs to.
@@ -1003,19 +1058,30 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // a typo'd NEURALCOMPOSE_RUNTIME — silently produced network
             // egress the user had not selected. Now the loop reports
             // unavailable and does not generate at all.
-            // NOTE: the Witness is still resolved unconditionally here, even
-            // when `profile.witnessEnabled` is false — a disabled role paying
-            // for a prompt load and (on Ollama) an endpoint probe it will never
-            // use. That is R3 and is fixed in the following commit; this one
-            // changes only how runtimes are resolved and described.
-            guard
-                let dialecticResolved = await resolveHypnagogicRuntime(role: .dialectic, {
-                    try await LiveRuntimeFactory.make(role: .dialectic)
-                }),
-                let witnessResolved = await resolveHypnagogicRuntime(role: .witness, {
-                    try await LiveRuntimeFactory.make(role: .witness)
-                })
-            else { return }
+            guard let dialecticResolved = await resolveHypnagogicRuntime(role: .dialectic, {
+                try await LiveRuntimeFactory.make(role: .dialectic)
+            }) else { return }
+
+            // R3: the Witness is resolved separately, with the Witness prompt,
+            // and ONLY when the profile enables it. Resolving it unconditionally
+            // — as this did — made an unused role's readiness a precondition for
+            // a loop that would never call it, and paid for a prompt load and
+            // (on Ollama) an endpoint probe that the configuration says are not
+            // in use.
+            let witnessGenerator: (any TextGenerating)?
+            switch await resolveWitnessRuntime(witnessEnabled: profile.witnessEnabled, {
+                try await LiveRuntimeFactory.make(role: .witness)
+            }) {
+            case .disabled:
+                witnessGenerator = nil
+            case .resolved(let generator):
+                witnessGenerator = generator
+            case .failed:
+                // The Witness is part of the requested configuration, so its
+                // failure fails the loop closed rather than silently running a
+                // two-voice exchange the user did not select.
+                return
+            }
             BCILog.pipeline.notice(
                 "dialectic runtime: \(dialecticResolved.identity.resolvedProvider)/\(dialecticResolved.identity.resolvedModel)")
             loop = HypnagogicDialecticLoop(
@@ -1031,9 +1097,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 // a non-voiced third generator that names what both poles avoided
                 // (WITNESS.md). This is the third cloud call; Focused/Contemplative
                 // leave it nil.
-                witness: profile.witnessEnabled
-                    ? witnessResolved.generator
-                    : nil,
+                witness: witnessGenerator,
                 config: profile.loopConfig()
             )
         } else {

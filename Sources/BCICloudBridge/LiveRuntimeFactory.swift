@@ -291,11 +291,7 @@ public enum LiveRuntimeFactory {
                 detail: String(describing: error)
             )
         }
-        // `systemPrompt:` here feeds the adapter's dead legacy field; the bytes
-        // that actually go out come from `runtime`. Both the field and this
-        // argument are removed with the R3 Witness fix.
-        let adapter = GenerationRuntimeTextGeneratingAdapter(
-            runtime: runtime, systemPrompt: promptText)
+        let adapter = GenerationRuntimeTextGeneratingAdapter(runtime: runtime)
 
         return (adapter, ResolvedRuntimeIdentity(
             role: role,
