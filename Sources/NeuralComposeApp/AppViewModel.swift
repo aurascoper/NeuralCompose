@@ -211,6 +211,21 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
+    /// What the dialogue runtime actually is — provider, model, locality,
+    /// readiness. Set on both the success and failure paths: a failed
+    /// resolution stores the *requested* identity with an `unavailable`
+    /// readiness, so the privacy UI can say "Ollama / qwen2.5:0.5b —
+    /// on-device — model unavailable" rather than falling back to a hardcoded
+    /// guess about which provider was in play.
+    ///
+    /// `nil` only before the loop has ever been enabled.
+    @Published public private(set) var dialogueRuntimeIdentity: ResolvedRuntimeIdentity?
+
+    /// The Witness runtime's identity, or `nil` when the active profile
+    /// disables the Witness. Distinct from the dialogue identity even when both
+    /// resolve to the same provider and model, because the prompt differs.
+    @Published public private(set) var witnessRuntimeIdentity: ResolvedRuntimeIdentity?
+
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
@@ -733,15 +748,34 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// later loop iterations).
     private func setLastError(_ description: String) { lastError = description }
 
+    /// Cancels any in-flight loop reconciliation.
+    ///
+    /// Internal, and deliberately a *method* rather than an exposed task
+    /// property: the only capability tests need is "stop the pending
+    /// reconcile", not arbitrary mutation of it. Setting
+    /// `hypnagogicLoopEnabled` starts that task, which reaches the mic/speech
+    /// authorization gate and — when permission is absent, as in CI — flips the
+    /// toggle back off itself. A transition test that did not cancel it would
+    /// pass whether or not the fail-closed path set the toggle, which is
+    /// exactly the false green such a test exists to catch.
+    ///
+    /// No production caller uses this.
+    func cancelPendingHypnagogicReconcile() {
+        hypnagogicLoopReconcile?.cancel()
+        hypnagogicLoopReconcile = nil
+    }
+
     /// The resolution result the loop needs: a generator plus the identity of
     /// what actually resolved.
-    typealias HypnagogicRuntime = (generator: any TextGenerating, resolved: LiveRuntimeFactory.Resolved)
+    typealias HypnagogicRuntime = (generator: any TextGenerating, identity: ResolvedRuntimeIdentity)
 
-    /// Resolves a runtime for the opt-in loop, failing closed.
+    /// Resolves a runtime for `role`, failing closed and recording the identity
+    /// either way.
     ///
-    /// `nil` means the loop must not start. On failure this disables the
-    /// toggle and records the typed reason; it never substitutes a different
-    /// provider, which is what the old
+    /// `nil` means the loop must not start. On failure this stores the
+    /// *requested* identity with an `unavailable` readiness, records a
+    /// **sanitized** reason, and disables the toggle. It never substitutes a
+    /// different provider, which is what the old
     /// `(try? LiveRuntimeFactory.make(...)) ?? (ClaudeCLIGenerator(...), …)`
     /// did — turning a mistyped `NEURALCOMPOSE_RUNTIME` into unrequested cloud
     /// egress.
@@ -751,23 +785,60 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// a test that flipped the toggle would return early at that gate and pass
     /// without ever reaching this code.
     func resolveHypnagogicRuntime(
-        _ resolve: () throws -> HypnagogicRuntime
-    ) -> HypnagogicRuntime? {
+        role: RuntimeRole,
+        _ resolve: () async throws -> HypnagogicRuntime
+    ) async -> HypnagogicRuntime? {
         do {
-            return try resolve()
+            let resolved = try await resolve()
+            store(identity: resolved.identity, for: role)
+            return resolved
+        } catch let failure as RuntimeResolutionFailure {
+            // The failure carries its own sanitized message. The raw error is
+            // NOT interpolated: `ResolutionError.notFoundOnPath` embeds the
+            // user's entire `PATH`, and `lastError` is rendered in the UI.
+            store(identity: failure.identity, for: role)
+            disableHypnagogicLoop(
+                publicReason: failure.publicMessage,
+                internalDetail: failure.internalDetail ?? String(describing: failure.code)
+            )
+            return nil
         } catch {
-            disableHypnagogicLoop(reason: error)
+            // Safety net for an error type that predates the sanitized failure.
+            // Deliberately generic: an arbitrary error's description may carry
+            // paths or transport text, and this string reaches the UI.
+            store(identity: nil, for: role)
+            disableHypnagogicLoop(
+                publicReason: "The \(role.rawValue) runtime could not be resolved.",
+                internalDetail: String(describing: error)
+            )
             return nil
         }
     }
+
+    /// Files an identity under the published property its role belongs to.
+    /// `.mirror` and `.dialectic` are both the *dialogue* runtime — they are
+    /// alternative dialogue shapes, not alternative roles in one exchange.
+    private func store(identity: ResolvedRuntimeIdentity?, for role: RuntimeRole) {
+        switch role {
+        case .dialectic, .mirror: dialogueRuntimeIdentity = identity
+        case .witness:            witnessRuntimeIdentity = identity
+        }
+    }
+
+    /// Clears the Witness identity when the active profile has no Witness, so
+    /// the UI reports "Disabled" rather than a stale identity from a previous
+    /// mode.
+    private func clearWitnessIdentity() { witnessRuntimeIdentity = nil }
 
     /// Turns the opt-in loop off and surfaces why, when its runtime cannot be
     /// resolved. The alternative — substituting a default cloud generator —
     /// meant a packaging failure or a mistyped runtime name produced network
     /// egress the user never chose, so the loop now stays off.
-    private func disableHypnagogicLoop(reason: any Error) {
-        BCILog.pipeline.error("hypnagogic runtime unavailable: \(String(describing: reason))")
-        setLastError("Hypnagogic loop unavailable: \(reason)")
+    ///
+    /// `publicReason` is rendered; `internalDetail` is logged only.
+    private func disableHypnagogicLoop(publicReason: String, internalDetail: String) {
+        BCILog.pipeline.error("hypnagogic runtime unavailable: \(internalDetail, privacy: .private)")
+        setLastError("Hypnagogic loop unavailable: \(publicReason)")
         hypnagogicLoopEnabled = false
     }
 
@@ -932,20 +1003,21 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // a typo'd NEURALCOMPOSE_RUNTIME — silently produced network
             // egress the user had not selected. Now the loop reports
             // unavailable and does not generate at all.
+            // NOTE: the Witness is still resolved unconditionally here, even
+            // when `profile.witnessEnabled` is false — a disabled role paying
+            // for a prompt load and (on Ollama) an endpoint probe it will never
+            // use. That is R3 and is fixed in the following commit; this one
+            // changes only how runtimes are resolved and described.
             guard
-                let dialecticResolved = resolveHypnagogicRuntime({
-                    try LiveRuntimeFactory.make(
-                        systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt()
-                    )
+                let dialecticResolved = await resolveHypnagogicRuntime(role: .dialectic, {
+                    try await LiveRuntimeFactory.make(role: .dialectic)
                 }),
-                let witnessResolved = resolveHypnagogicRuntime({
-                    try LiveRuntimeFactory.make(
-                        systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt()
-                    )
+                let witnessResolved = await resolveHypnagogicRuntime(role: .witness, {
+                    try await LiveRuntimeFactory.make(role: .witness)
                 })
             else { return }
             BCILog.pipeline.notice(
-                "dialectic runtime: \(dialecticResolved.resolved); witness runtime: \(witnessResolved.resolved)")
+                "dialectic runtime: \(dialecticResolved.identity.resolvedProvider)/\(dialecticResolved.identity.resolvedModel)")
             loop = HypnagogicDialecticLoop(
                 listener: listener,
                 generator: dialecticResolved.generator,
@@ -969,9 +1041,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // RVS-001+1: same `LiveRuntimeFactory` resolution as the
             // dialectic path, so the mirror uses the selected runtime
             // (default: Claude).
-            guard let mirrorResolved = resolveHypnagogicRuntime({
-                try LiveRuntimeFactory.make()
+            guard let mirrorResolved = await resolveHypnagogicRuntime(role: .mirror, {
+                try await LiveRuntimeFactory.make(role: .mirror)
             }) else { return }
+            // The mirror has no Witness; clear any identity a previous
+            // dialectical mode left behind so the UI cannot report a Witness
+            // that is not running.
+            clearWitnessIdentity()
             loop = HypnagogicDialogueLoop(
                 listener: listener,
                 generator: mirrorResolved.generator,

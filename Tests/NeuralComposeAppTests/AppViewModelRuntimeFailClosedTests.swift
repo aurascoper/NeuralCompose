@@ -7,29 +7,66 @@ import XCTest
 @testable import BCIVoice
 @testable import BCICloudBridge
 
-/// R7 regression coverage. The behaviour landed in PR #29; these tests pin it.
+/// R7 + R18 fail-closed coverage.
 ///
-/// They drive `resolveHypnagogicRuntime` — the real resolution step including
+/// These drive `resolveHypnagogicRuntime` — the real resolution step including
 /// its `catch` — rather than the disable helper, which would only prove the
 /// helper works when called, not that a failure reaches it.
 ///
-/// **What these tests deliberately do NOT claim.** An earlier version asserted
-/// `generatorsBuilt == 0` and `processesLaunched == 0` against counters that
-/// nothing in production ever increments; they were structurally incapable of
-/// failing. It also asserted `hypnagogicLoopEnabled == false` on a property
-/// that defaults to `false` and was never set `true` — deleting the assignment
-/// from production left the test green. Both were removed rather than left as
-/// false comfort.
+/// **Not covered here:** R3. The Witness is still resolved unconditionally,
+/// and nothing yet rejects a runtime resolved for the wrong role. Both land
+/// with the Witness fix in the following commit.
 ///
-/// Proving the toggle *transition*, and proving the call-site `guard`
-/// short-circuits, both require stubbing the mic/speech authorization gate that
-/// sits in front of `ensureHypnagogicLoopRunning`. That is A2 work; until then
-/// those two properties are unverified and are not claimed here.
+/// **A1 left one gap here, now closed.** The enabled→disabled *transition* was
+/// unprovable: `hypnagogicLoopEnabled` defaults to `false`, so an assertion
+/// that it ends `false` passed even with the production assignment deleted.
+/// `testFailureTransitionsAnEnabledLoopToDisabled` sets the toggle first and
+/// cancels the reconcile task so the authorization gate cannot flip it instead.
 @MainActor
 final class AppViewModelRuntimeFailClosedTests: XCTestCase {
 
-    private struct StubResolutionError: Error, CustomStringConvertible {
-        let description = "unknown runtime 'olama' — supported: claude, ollama"
+    /// A sanitized failure of the kind `LiveRuntimeFactory` actually throws.
+    private func makeFailure(
+        code: RuntimeReadinessFailure = .modelMissing,
+        requestedProvider: String = "ollama",
+        requestedModel: String = "qwen2.5:0.5b",
+        publicMessage: String = "Ollama does not have the model 'qwen2.5:0.5b'.",
+        internalDetail: String? = "PATH=/very/private/path"
+    ) -> RuntimeResolutionFailure {
+        RuntimeResolutionFailure(
+            identity: ResolvedRuntimeIdentity(
+                role: .dialectic,
+                requestedProvider: requestedProvider,
+                requestedModel: requestedModel,
+                resolvedProvider: "",
+                resolvedModel: "",
+                locality: .onDevice,
+                readiness: .unavailable(code),
+                promptProfile: "wakingDialectical",
+                promptHash: "",
+                systemPromptSource: "unresolved"
+            ),
+            code: code,
+            publicMessage: publicMessage,
+            internalDetail: internalDetail
+        )
+    }
+
+    private func makeIdentity(
+        role: RuntimeRole,
+        provider: String = "ollama",
+        model: String = "qwen2.5:0.5b",
+        locality: RuntimeLocality = .onDevice
+    ) -> ResolvedRuntimeIdentity {
+        ResolvedRuntimeIdentity(
+            role: role,
+            requestedProvider: provider, requestedModel: model,
+            resolvedProvider: provider, resolvedModel: model,
+            locality: locality, readiness: .ready,
+            promptProfile: LiveRuntimeFactory.promptProfile(for: role).rawValue,
+            promptHash: "hash-\(role.rawValue)",
+            systemPromptSource: "PromptProfile"
+        )
     }
 
     /// Fully stubbed container — no model, no mic, no network.
@@ -49,20 +86,19 @@ final class AppViewModelRuntimeFailClosedTests: XCTestCase {
         return AppViewModel(container: container)
     }
 
-    /// A failed resolution yields no runtime. Every assertion here fails if the
-    /// corresponding production line is removed.
+    // MARK: - Fail closed
+
     func testResolutionFailureYieldsNoRuntimeAndRecordsTheReason() async {
         let viewModel = await makeViewModel()
         var resolverCalls = 0
         XCTAssertNil(viewModel.lastError, "precondition")
         let startupBefore = viewModel.startupWarning
 
-        let result = viewModel.resolveHypnagogicRuntime {
+        let result = await viewModel.resolveHypnagogicRuntime(role: .dialectic) {
             resolverCalls += 1
-            throw StubResolutionError()
+            throw self.makeFailure()
         }
 
-        // Fails if `catch` returned anything but nil.
         XCTAssertNil(result, "a failed resolution must yield no runtime")
         XCTAssertEqual(resolverCalls, 1, "the resolver runs exactly once")
 
@@ -70,34 +106,126 @@ final class AppViewModelRuntimeFailClosedTests: XCTestCase {
         let recorded = viewModel.lastError ?? ""
         XCTAssertTrue(recorded.contains("unavailable"), "should say unavailable: \(recorded)")
         XCTAssertTrue(
-            recorded.contains("olama"),
-            "the typed reason must be preserved, not flattened: \(recorded)")
+            recorded.contains("qwen2.5:0.5b"),
+            "the sanitized public reason must be preserved: \(recorded)")
 
         // Fails if a runtime failure were filed as a startup substitution notice.
         XCTAssertEqual(viewModel.startupWarning, startupBefore)
     }
 
-    /// The success path is untouched: a resolved runtime is returned verbatim
-    /// and records no error.
-    func testSuccessfulResolutionReturnsTheRequestedRuntime() async throws {
+    func testFailureDoesNotProduceASubstituteRuntime() async {
         let viewModel = await makeViewModel()
-        let expected = try LiveRuntimeFactory.make(
-            runtimeName: "claude", model: "claude-sonnet-5", systemPrompt: "SYS")
+        let result = await viewModel.resolveHypnagogicRuntime(role: .dialectic) {
+            throw self.makeFailure()
+        }
+        XCTAssertNil(result, "the old code returned a ClaudeCLIGenerator here instead of nil")
+    }
 
-        let resolved = try XCTUnwrap(viewModel.resolveHypnagogicRuntime { expected })
+    /// Closes A1's M4 gap. The toggle is set true first, and the reconcile task
+    /// is cancelled so the authorization gate cannot be the thing that turns it
+    /// off. Deleting `hypnagogicLoopEnabled = false` from production fails this.
+    func testFailureTransitionsAnEnabledLoopToDisabled() async {
+        let viewModel = await makeViewModel()
+        viewModel.hypnagogicLoopEnabled = true
+        viewModel.cancelPendingHypnagogicReconcile()
+        XCTAssertTrue(viewModel.hypnagogicLoopEnabled, "precondition: the loop is enabled")
 
-        XCTAssertEqual(resolved.resolved.name, "claude-cli")
-        XCTAssertEqual(resolved.resolved.model, "claude-sonnet-5")
+        _ = await viewModel.resolveHypnagogicRuntime(role: .dialectic) {
+            throw self.makeFailure()
+        }
+
+        XCTAssertFalse(
+            viewModel.hypnagogicLoopEnabled,
+            "a readiness failure must turn an ENABLED loop off, not merely leave it off")
+    }
+
+    /// Generation must be impossible while readiness is unavailable: the caller
+    /// receives no generator at all, so there is nothing to call.
+    func testUnavailableReadinessLeavesNoGeneratorToCall() async {
+        let viewModel = await makeViewModel()
+        let result = await viewModel.resolveHypnagogicRuntime(role: .dialectic) {
+            throw self.makeFailure(code: .endpointUnreachable)
+        }
+        XCTAssertNil(result)
+        let identity = viewModel.dialogueRuntimeIdentity
+        XCTAssertEqual(identity?.readiness, .unavailable(.endpointUnreachable))
+        XCTAssertEqual(identity?.isReady, false)
+    }
+
+    // MARK: - Sanitization
+
+    /// `lastError` is rendered in the privacy banner. The internal detail —
+    /// which on the Claude path carries the resolver's full `PATH` dump — must
+    /// not reach it.
+    func testInternalDetailNeverReachesTheUserFacingError() async {
+        let viewModel = await makeViewModel()
+        _ = await viewModel.resolveHypnagogicRuntime(role: .dialectic) {
+            throw self.makeFailure(internalDetail: "PATH=/Users/someone/secret/bin:/usr/bin")
+        }
+        let recorded = viewModel.lastError ?? ""
+        XCTAssertFalse(recorded.contains("PATH="), "leaked internal detail: \(recorded)")
+        XCTAssertFalse(recorded.contains("/Users/someone"), "leaked a private path: \(recorded)")
+    }
+
+    /// An error type that is not a `RuntimeResolutionFailure` still fails
+    /// closed, and its raw description is still kept out of the UI.
+    func testUntypedErrorFailsClosedWithoutLeakingItsDescription() async {
+        struct Leaky: Error, CustomStringConvertible {
+            let description = "PATH=/Users/someone/secret/bin"
+        }
+        let viewModel = await makeViewModel()
+        let result = await viewModel.resolveHypnagogicRuntime(role: .dialectic) { throw Leaky() }
+        XCTAssertNil(result)
+        let recorded = viewModel.lastError ?? ""
+        XCTAssertFalse(recorded.contains("/Users/someone"), "leaked: \(recorded)")
+    }
+
+    // MARK: - Identity storage
+
+    func testSuccessStoresTheDialogueIdentity() async {
+        let viewModel = await makeViewModel()
+        let expected = makeIdentity(role: .dialectic)
+        let resolved = await viewModel.resolveHypnagogicRuntime(role: .dialectic) {
+            (StubGenerator(), expected)
+        }
+        XCTAssertNotNil(resolved)
+        XCTAssertEqual(viewModel.dialogueRuntimeIdentity, expected)
         XCTAssertNil(viewModel.lastError, "a successful resolution records no error")
     }
 
-    /// A thrown error is not swallowed into a substituted provider: the caller
-    /// receives nil and must decide, which is what the production `guard` does.
-    func testFailureDoesNotProduceASubstituteRuntime() async {
+    /// A failure stores the *requested* identity, so the banner can say what was
+    /// asked for and why it is unavailable rather than falling silent.
+    func testFailureStillStoresADisplayableIdentity() async {
         let viewModel = await makeViewModel()
-        let result = viewModel.resolveHypnagogicRuntime { throw StubResolutionError() }
-        XCTAssertNil(
-            result,
-            "the old code returned a ClaudeCLIGenerator here instead of nil")
+        _ = await viewModel.resolveHypnagogicRuntime(role: .dialectic) {
+            throw self.makeFailure()
+        }
+        let identity = viewModel.dialogueRuntimeIdentity
+        XCTAssertEqual(identity?.requestedProvider, "ollama")
+        XCTAssertEqual(identity?.requestedModel, "qwen2.5:0.5b")
+        XCTAssertEqual(identity?.displayReadiness, "Model unavailable")
+    }
+
+    func testMirrorAndDialecticBothFileUnderTheDialogueIdentity() async {
+        let viewModel = await makeViewModel()
+        _ = await viewModel.resolveHypnagogicRuntime(role: .mirror) {
+            (StubGenerator(), self.makeIdentity(role: .mirror))
+        }
+        XCTAssertEqual(viewModel.dialogueRuntimeIdentity?.role, .mirror)
+        XCTAssertNil(viewModel.witnessRuntimeIdentity)
+    }
+
+}
+
+/// Minimal `TextGenerating` that never generates. Present only so identity
+/// plumbing has something to carry; calling it would be a test bug.
+private struct StubGenerator: TextGenerating {
+    let isLive = false
+    let modelIdentifier = "stub"
+    func generate(
+        prompt: String, maxTokens: Int, temperature: Double, cancellationID: UUID
+    ) async throws -> String {
+        XCTFail("no test in this file may generate")
+        return ""
     }
 }

@@ -23,6 +23,19 @@ import Foundation
 public struct GenerationRuntimeTextGeneratingAdapter: MetadataPublishingTextGenerating {
     public nonisolated let isLive: Bool
     public nonisolated let modelIdentifier: String
+
+    /// **LEGACY / DEAD — scheduled for removal with the R3 Witness fix.**
+    ///
+    /// Stored and never read. The bytes actually transmitted come from the
+    /// wrapped runtime's own prompt, so this field describes nothing: a caller
+    /// can construct a "Witness" adapter around the *pole* runtime, pass the
+    /// Witness prompt here, and get an object that reports one prompt while
+    /// sending another. `Sources/DialecticSession/main.swift` does exactly
+    /// that today.
+    ///
+    /// It is retained for this commit only so the identity/readiness layer can
+    /// land without also rewriting Witness resolution. Do not read it, and do
+    /// not treat it as provenance.
     public nonisolated let systemPrompt: String
 
     private let runtime: any GenerationRuntime
