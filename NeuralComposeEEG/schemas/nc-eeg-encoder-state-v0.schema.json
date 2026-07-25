@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuralcompose.local/schemas/nc-eeg-encoder-state-v0.schema.json",
+  "title": "nc-eeg-encoder-state-v0",
+  "description": "One encoder's output for one window, emitted by an offline encoder job (W3/W4) and consumed by a Swift replay bridge (W1). Shadow-only. The source object is a closed discriminated union so a synthetic fixture record and a physical-recording replay record are distinguishable and neither can masquerade as the other; top-level if/then rules make the source type additionally constrain the window's clock fields. window_geometry makes the 2 s live / 4 s contract boundary machine-visible: the live 2 s Swift window is never a legal input, and a record that claims otherwise is rejected rather than silently padded. The arithmetic relation window_end_sample_exclusive - window_start_sample == 1024 is not expressible here and is pinned in tests/test_shadow_scope_contract.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "state_id",
+    "experiment_id",
+    "shadow_only",
+    "live_control",
+    "scientific_claim_allowed",
+    "promotion_status",
+    "runtime_change",
+    "source",
+    "window_geometry",
+    "encoder",
+    "label_order",
+    "probabilities",
+    "uncertainty",
+    "signal_quality"
+  ],
+  "properties": {
+    "schema_version": { "const": "nc-eeg-encoder-state-v0" },
+    "state_id": { "$ref": "#/$defs/identifier" },
+    "experiment_id": { "const": "EXP-NC-EEG-SHADOW-001" },
+
+    "shadow_only": { "const": true },
+    "live_control": { "const": false },
+    "scientific_claim_allowed": { "const": false },
+    "promotion_status": { "const": "not_eligible" },
+    "runtime_change": { "const": "none" },
+
+    "source": {
+      "description": "Closed discriminated union. Exactly one branch may validate. physical_eeg_used is deliberately NOT globally pinned to false: a future physical replay record must be representable without weakening the synthetic branch.",
+      "oneOf": [
+        { "$ref": "#/$defs/synthetic_source" },
+        { "$ref": "#/$defs/physical_replay_source" }
+      ]
+    },
+
+    "window_geometry": { "$ref": "#/$defs/window_geometry" },
+    "encoder": { "$ref": "#/$defs/encoder_identity" },
+
+    "label_order": {
+      "description": "Pinned to the fusion contract's label_order so a record is self-describing and probabilities cannot be silently reordered.",
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "const": [
+        "eyes_open",
+        "eyes_closed",
+        "blink_artifact",
+        "jaw_artifact",
+        "head_motion_artifact",
+        "listening",
+        "speaking",
+        "recovery"
+      ]
+    },
+    "probabilities": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/probability" }
+    },
+    "uncertainty": { "$ref": "#/$defs/probability" },
+    "embedding": {
+      "description": "Optional encoder embedding. Present for offline analysis only. It is listed in the fusion contract's forbidden-field blocklist and must never reach the Qwen shadow-policy boundary.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "number" }
+    },
+    "signal_quality": { "$ref": "#/$defs/signal_quality" }
+  },
+
+  "allOf": [
+    {
+      "description": "A physical replay record must carry real clock origin. Timing may not be null, and may not be inferred from filenames or file modification times.",
+      "if": {
+        "required": ["source"],
+        "properties": {
+          "source": {
+            "required": ["source_type"],
+            "properties": { "source_type": { "const": "physical_recording_replay" } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "window_geometry": {
+            "properties": {
+              "window_start_timestamp": { "type": "number" },
+              "window_end_timestamp": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "A synthetic record has no wall clock; timing is explicitly absent.",
+      "if": {
+        "required": ["source"],
+        "properties": {
+          "source": {
+            "required": ["source_type"],
+            "properties": { "source_type": { "const": "deterministic_synthetic_fixture" } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "window_geometry": {
+            "properties": {
+              "window_start_timestamp": { "type": "null" },
+              "window_end_timestamp": { "type": "null" }
+            }
+          }
+        }
+      }
+    }
+  ],
+
+  "$defs": {
+    "probability": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+
+    "synthetic_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_type", "physical_eeg_used", "fixture_sha256", "fixture_id"],
+      "properties": {
+        "source_type": { "const": "deterministic_synthetic_fixture" },
+        "physical_eeg_used": { "const": false },
+        "fixture_sha256": { "$ref": "#/$defs/sha256" },
+        "fixture_id": { "$ref": "#/$defs/identifier" }
+      }
+    },
+
+    "physical_replay_source": {
+      "description": "Reserved for a future physical replay record. Admission still requires the capture-integrity contract to have passed; the hashes below are the binding evidence and may not be inferred from filenames or file modification times.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_type",
+        "physical_eeg_used",
+        "session_id",
+        "recording_sha256",
+        "capture_manifest_sha256",
+        "integrity_report_sha256"
+      ],
+      "properties": {
+        "source_type": { "const": "physical_recording_replay" },
+        "physical_eeg_used": { "const": true },
+        "session_id": { "$ref": "#/$defs/identifier" },
+        "recording_sha256": { "$ref": "#/$defs/sha256" },
+        "capture_manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "integrity_report_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+
+    "window_geometry": {
+      "description": "Exactly which samples produced this record. window_samples is pinned to 1024 (4 s at 256 Hz) because every encoder adapter hard-asserts [B, 4, 1024]. live_two_second_window_used must be false: the app's 2 s live window (EEGWindowingConfig) is not a legal encoder input, and a padded or duplicated window is a defect, not a fallback.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "channel_order",
+        "sample_rate_hz",
+        "window_samples",
+        "stride_samples",
+        "window_start_sample",
+        "window_end_sample_exclusive",
+        "window_start_timestamp",
+        "window_end_timestamp",
+        "window_sha256",
+        "rewindowing_config_sha256",
+        "live_two_second_window_used"
+      ],
+      "properties": {
+        "channel_order": {
+          "const": ["TP9", "AF7", "AF8", "TP10"]
+        },
+        "sample_rate_hz": { "const": 256 },
+        "window_samples": { "const": 1024 },
+        "stride_samples": { "const": 256 },
+        "window_start_sample": { "type": "integer", "minimum": 0 },
+        "window_end_sample_exclusive": { "type": "integer", "minimum": 1024 },
+        "window_start_timestamp": {
+          "description": "Narrowed by the top-level if/then rules: null for a synthetic fixture, a real number for a physical replay. Follows the capture-integrity clock contract; never inferred from a filename or mtime.",
+          "type": ["number", "null"]
+        },
+        "window_end_timestamp": { "type": ["number", "null"] },
+        "window_sha256": {
+          "description": "Hash of this window's samples. The containing recording or fixture is identified by the source union, not duplicated here — two copies of a source hash can disagree.",
+          "$ref": "#/$defs/sha256"
+        },
+        "rewindowing_config_sha256": { "$ref": "#/$defs/sha256" },
+        "live_two_second_window_used": { "const": false }
+      }
+    },
+
+    "encoder_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "model_revision",
+        "backbone_frozen",
+        "adapter",
+        "checkpoint_kind",
+        "checkpoint_sha256"
+      ],
+      "properties": {
+        "model_id": { "enum": ["eegnet", "eegpt"] },
+        "model_revision": { "$ref": "#/$defs/identifier" },
+        "backbone_frozen": { "const": true },
+        "adapter": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "checkpoint_kind": {
+          "enum": [
+            "deterministic_synthetic_parameter_fixture",
+            "pinned_upstream_checkpoint"
+          ]
+        },
+        "checkpoint_sha256": {
+          "description": "Required and non-null. An unacquired upstream checkpoint is represented by withholding the record entirely, never by a placeholder digest.",
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+
+    "signal_quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "missing_channels"],
+      "properties": {
+        "score": { "$ref": "#/$defs/probability" },
+        "missing_channels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["TP9", "AF7", "AF8", "TP10"] }
+        }
+      }
+    }
+  }
+}
