@@ -1,0 +1,68 @@
+[
+  {
+    "role": "coherence-seeking",
+    "heard": "I think the main issue is that we're not spending enough time on the problem.",
+    "expected_characteristics": [
+      "stays close to the claim",
+      "makes it clearer or more precise",
+      "does not introduce a new position",
+      "1-3 short sentences",
+      "spoken register"
+    ]
+  },
+  {
+    "role": "displacement-seeking",
+    "heard": "I think the main issue is that we're not spending enough time on the problem.",
+    "expected_characteristics": [
+      "opens a genuinely different angle",
+      "does not restate or agree",
+      "surfaces a counter-position or overlooked assumption",
+      "1-3 short sentences",
+      "spoken register"
+    ]
+  },
+  {
+    "role": "coherence-seeking",
+    "heard": "Sleep is just the brain cleaning itself.",
+    "expected_characteristics": [
+      "stays close to the claim",
+      "makes it clearer or more precise",
+      "does not introduce a new position",
+      "1-3 short sentences",
+      "spoken register"
+    ]
+  },
+  {
+    "role": "displacement-seeking",
+    "heard": "Sleep is just the brain cleaning itself.",
+    "expected_characteristics": [
+      "opens a genuinely different angle",
+      "does not restate or agree",
+      "surfaces a counter-position or overlooked assumption",
+      "1-3 short sentences",
+      "spoken register"
+    ]
+  },
+  {
+    "role": "coherence-seeking",
+    "heard": "Technology will solve everything eventually.",
+    "expected_characteristics": [
+      "stays close to the claim",
+      "makes it clearer or more precise",
+      "does not introduce a new position",
+      "1-3 short sentences",
+      "spoken register"
+    ]
+  },
+  {
+    "role": "displacement-seeking",
+    "heard": "Technology will solve everything eventually.",
+    "expected_characteristics": [
+      "opens a genuinely different angle",
+      "does not restate or agree",
+      "surfaces a counter-position or overlooked assumption",
+      "1-3 short sentences",
+      "spoken register"
+    ]
+  }
+]

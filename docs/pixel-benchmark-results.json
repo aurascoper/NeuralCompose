@@ -1,0 +1,298 @@
+{
+  "warmups": 5,
+  "scripted_turns": 30,
+  "timings": [
+    {
+      "coherence_generate_ms": 1120,
+      "displacement_generate_ms": 878,
+      "turn_total_ms": 2000,
+      "prompt_tokens": 204,
+      "completion_tokens": 34,
+      "outcome": "spoke",
+      "cold_or_warm": "cold"
+    },
+    {
+      "coherence_generate_ms": 800,
+      "displacement_generate_ms": 835,
+      "turn_total_ms": 1636,
+      "prompt_tokens": 186,
+      "completion_tokens": 28,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 683,
+      "displacement_generate_ms": 732,
+      "turn_total_ms": 1416,
+      "prompt_tokens": 182,
+      "completion_tokens": 21,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 849,
+      "displacement_generate_ms": 812,
+      "turn_total_ms": 1663,
+      "prompt_tokens": 190,
+      "completion_tokens": 26,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 836,
+      "displacement_generate_ms": 945,
+      "turn_total_ms": 1784,
+      "prompt_tokens": 184,
+      "completion_tokens": 25,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 764,
+      "displacement_generate_ms": 831,
+      "turn_total_ms": 1597,
+      "prompt_tokens": 178,
+      "completion_tokens": 28,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 928,
+      "displacement_generate_ms": 1301,
+      "turn_total_ms": 2231,
+      "prompt_tokens": 182,
+      "completion_tokens": 49,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1139,
+      "displacement_generate_ms": 931,
+      "turn_total_ms": 2072,
+      "prompt_tokens": 182,
+      "completion_tokens": 44,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 831,
+      "displacement_generate_ms": 512,
+      "turn_total_ms": 1347,
+      "prompt_tokens": 178,
+      "completion_tokens": 19,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1070,
+      "displacement_generate_ms": 765,
+      "turn_total_ms": 1838,
+      "prompt_tokens": 184,
+      "completion_tokens": 33,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 703,
+      "displacement_generate_ms": 1124,
+      "turn_total_ms": 1830,
+      "prompt_tokens": 182,
+      "completion_tokens": 34,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 811,
+      "displacement_generate_ms": 1172,
+      "turn_total_ms": 1986,
+      "prompt_tokens": 188,
+      "completion_tokens": 37,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 977,
+      "displacement_generate_ms": 995,
+      "turn_total_ms": 1975,
+      "prompt_tokens": 186,
+      "completion_tokens": 36,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 964,
+      "displacement_generate_ms": 1079,
+      "turn_total_ms": 2044,
+      "prompt_tokens": 184,
+      "completion_tokens": 37,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1190,
+      "displacement_generate_ms": 614,
+      "turn_total_ms": 1805,
+      "prompt_tokens": 176,
+      "completion_tokens": 33,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1446,
+      "displacement_generate_ms": 755,
+      "turn_total_ms": 2204,
+      "prompt_tokens": 182,
+      "completion_tokens": 42,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1111,
+      "displacement_generate_ms": 892,
+      "turn_total_ms": 2004,
+      "prompt_tokens": 184,
+      "completion_tokens": 42,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 897,
+      "displacement_generate_ms": 618,
+      "turn_total_ms": 1517,
+      "prompt_tokens": 178,
+      "completion_tokens": 22,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1271,
+      "displacement_generate_ms": 566,
+      "turn_total_ms": 1840,
+      "prompt_tokens": 184,
+      "completion_tokens": 31,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1420,
+      "displacement_generate_ms": 897,
+      "turn_total_ms": 2320,
+      "prompt_tokens": 186,
+      "completion_tokens": 47,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 638,
+      "displacement_generate_ms": 972,
+      "turn_total_ms": 1612,
+      "prompt_tokens": 178,
+      "completion_tokens": 28,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 926,
+      "displacement_generate_ms": 807,
+      "turn_total_ms": 1736,
+      "prompt_tokens": 182,
+      "completion_tokens": 29,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1938,
+      "displacement_generate_ms": 1126,
+      "turn_total_ms": 3066,
+      "prompt_tokens": 182,
+      "completion_tokens": 36,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1452,
+      "displacement_generate_ms": 675,
+      "turn_total_ms": 2132,
+      "prompt_tokens": 178,
+      "completion_tokens": 28,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1112,
+      "displacement_generate_ms": 1551,
+      "turn_total_ms": 2665,
+      "prompt_tokens": 184,
+      "completion_tokens": 43,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1365,
+      "displacement_generate_ms": 1156,
+      "turn_total_ms": 2525,
+      "prompt_tokens": 188,
+      "completion_tokens": 37,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1303,
+      "displacement_generate_ms": 755,
+      "turn_total_ms": 2061,
+      "prompt_tokens": 180,
+      "completion_tokens": 23,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 2228,
+      "displacement_generate_ms": 979,
+      "turn_total_ms": 3210,
+      "prompt_tokens": 184,
+      "completion_tokens": 31,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1198,
+      "displacement_generate_ms": 1184,
+      "turn_total_ms": 2386,
+      "prompt_tokens": 188,
+      "completion_tokens": 29,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    },
+    {
+      "coherence_generate_ms": 1181,
+      "displacement_generate_ms": 919,
+      "turn_total_ms": 2103,
+      "prompt_tokens": 178,
+      "completion_tokens": 28,
+      "outcome": "spoke",
+      "cold_or_warm": "warm"
+    }
+  ],
+  "summary": {
+    "coherence_generate_ms": {
+      "p50": 1111,
+      "p95": 1938,
+      "max": 2228,
+      "count": 30
+    },
+    "displacement_generate_ms": {
+      "p50": 897,
+      "p95": 1301,
+      "max": 1551,
+      "count": 30
+    },
+    "turn_total_ms": {
+      "p50": 2000,
+      "p95": 3066,
+      "max": 3210,
+      "count": 30
+    }
+  },
+  "total_prompt_tokens": 5502,
+  "total_completion_tokens": 980
+}

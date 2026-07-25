@@ -13,6 +13,7 @@ import { EEGScreen } from './src/screens/EEGScreen';
 import { HealthScreen } from './src/screens/HealthScreen';
 import { ClassifierScreen } from './src/screens/ClassifierScreen';
 import { DreamJournalScreen } from './src/screens/DreamJournalScreen';
+import { DialecticSessionScreen } from './src/screens/DialecticSessionScreen';
 import { colors, spacing, typography } from './src/theme';
 import { USE_MOCK, SERVER_URL } from './src/config';
 
@@ -95,6 +96,14 @@ export default function App() {
             options={{
               headerShown: false,
               tabBarIcon: (p: IconProps) => <Icon label="ML" {...p} />,
+            }}
+          />
+          <Tab.Screen
+            name="Dialectic"
+            component={DialecticSessionScreen}
+            options={{
+              headerShown: false,
+              tabBarIcon: (p: IconProps) => <Icon label="DL" {...p} />,
             }}
           />
           <Tab.Screen
