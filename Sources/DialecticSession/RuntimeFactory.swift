@@ -91,12 +91,15 @@ public enum RuntimeFactory {
         promptProfile: PromptProfile,
         interactionStyle: String
     ) throws -> ResolvedRuntime {
-        // Probe the `claude` CLI. If absent, raise a clean error so
-        // the harness reports it and exits 1 — no panic. The
-        // keep-bar: rate-limit produces a clean failure at the
-        // *first call*, not at construction; that's the legacy
-        // behavior and we preserve it.
-        let cliPath = resolveClaudeCLI()
+        // Resolve the `claude` CLI to an actual executable, or fail with a
+        // typed error before any Process is launched — the harness reports it
+        // and exits 1, no panic. The keep-bar is unchanged: a rate-limit still
+        // produces a clean failure at the *first call*, not at construction.
+        //
+        // Previously this took the first executable from a candidate list that
+        // began with `/usr/bin/env`, which always matched, so the transport ran
+        // `/usr/bin/env -p --model …` and env rejected `-p` as its own flag.
+        let cliPath = try ClaudeExecutableResolver.resolve()
         // `ClaudeCLIGenerationRuntime` is the `GenerationRuntime`
         // conformer for the `claude -p` path (added in step 3 of
         // the seed-004 plan). It composes `ClaudeCLITransport`
@@ -167,19 +170,6 @@ public enum RuntimeFactory {
         )
     }
 
-    /// Best-effort resolution of the `claude` CLI on PATH. Returns
-    /// the absolute path or `nil` if the binary is not on PATH.
-    /// Used only so we can give a clean error at dry-run time if
-    /// it's missing; the live subprocess path uses `/usr/bin/env
-    /// claude` so the keep-bar subprocess invocation is
-    /// unchanged.
-    private static func resolveClaudeCLI() -> String? {
-        let candidates = ["/usr/bin/env", "/usr/local/bin/claude", "/opt/homebrew/bin/claude"]
-        for c in candidates where FileManager.default.isExecutableFile(atPath: c) {
-            return c
-        }
-        return nil
-    }
 }
 
 /// `OllamaProbe` is a tiny sync wrapper around an async Ollama
