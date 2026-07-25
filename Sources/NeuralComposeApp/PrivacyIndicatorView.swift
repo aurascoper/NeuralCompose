@@ -1,5 +1,6 @@
 import SwiftUI
 import BCICore
+import BCICloudBridge
 
 /// Always-visible banner telling the user what's actually running. Green
 /// when every stage is real; amber when any stage is a stand-in; red when a
@@ -57,6 +58,17 @@ struct PrivacyIndicatorView: View {
     /// `focused`/`reflective`/`contemplative` (the dialectic competition, two
     /// cloud calls/turn).
     @Binding var hypnagogicMode: HypnagogicMode
+    /// What the dialogue and Witness runtimes **actually are**.
+    ///
+    /// The banner renders these instead of naming a provider, because naming
+    /// one means asserting it. This view used to say "the claude CLI" and
+    /// "Listening + Cloud" unconditionally, which had been wrong since runtime
+    /// selection landed: with `NEURALCOMPOSE_RUNTIME=ollama` the app ran
+    /// entirely on-device while the privacy banner reported cloud egress.
+    /// A privacy indicator that is wrong in the reassuring direction is worse
+    /// than none; this one was wrong in both directions at different times.
+    var dialogueRuntimeIdentity: ResolvedRuntimeIdentity? = nil
+    var witnessRuntimeIdentity: ResolvedRuntimeIdentity? = nil
     /// Latest app-watchdog snapshot for the degraded badge (read-only display).
     var health: HealthSnapshot? = nil
 
@@ -124,11 +136,17 @@ struct PrivacyIndicatorView: View {
                     GridRow {
                         Text("Network").bold()
                         if hypnagogicLoopEnabled {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Cloud active — Hypnagogic (\(hypnagogicMode.label))").foregroundStyle(.red)
-                                Text(hypnagogicMode.isDialectical
-                                     ? "Transcript text (never audio) may be sent to the claude CLI — \(hypnagogicMode.profile?.witnessEnabled == true ? "three" : "two") calls per turn in the dialectical modes\(hypnagogicMode.profile?.witnessEnabled == true ? " (Reflective adds a non-voiced Witness)" : ""). Opt-in exception — see decision_registry entry 8."
-                                     : "Transcript text (never audio) may be sent to the claude CLI. Opt-in exception — see decision_registry entry 8.")
+                            let presentation = runtimePresentation
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("\(presentation.headline) — Hypnagogic (\(hypnagogicMode.label))")
+                                    .foregroundStyle(runtimeEgressColor)
+                                Text(presentation.dialogueLine)
+                                    .font(.caption2)
+                                    .foregroundStyle(identityColor(dialogueRuntimeIdentity))
+                                Text(presentation.witnessLine)
+                                    .font(.caption2)
+                                    .foregroundStyle(identityColor(witnessRuntimeIdentity))
+                                Text(presentation.caption)
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -440,19 +458,44 @@ struct PrivacyIndicatorView: View {
         }
     }
 
-    /// The most consequential badge: while active the mic is capturing AND
-    /// transcript text may be leaving the machine (cloud LLM). Explicit
-    /// "+ Cloud" + a network icon so the runtime egress is never invisible —
-    /// this is the one place the app breaks its "no network at runtime" default.
+    // MARK: - Runtime identity rendering (R8)
+
+    /// Every runtime claim this banner makes, derived from the resolved
+    /// identities. Computed in `RuntimeIdentityPresentation` so it is testable
+    /// — the strings it replaces lived inside `body`, where nothing could
+    /// assert on them.
+    private var runtimePresentation: RuntimeIdentityPresentation {
+        RuntimeIdentityPresentation(
+            dialogue: dialogueRuntimeIdentity,
+            witness: witnessRuntimeIdentity,
+            isDialectical: hypnagogicMode.isDialectical
+        )
+    }
+
+    private var runtimeEgressColor: Color {
+        runtimePresentation.involvesEgress ? .red : .orange
+    }
+
+    /// A runtime that is not ready must not read as running.
+    private func identityColor(_ identity: ResolvedRuntimeIdentity?) -> Color {
+        guard let identity else { return .secondary }
+        return identity.isReady ? .secondary : .red
+    }
+
+    /// The most consequential badge: while active the mic is always capturing,
+    /// and transcript text *may* be leaving the machine. Which of those is true
+    /// is read from the resolved locality rather than assumed — this badge said
+    /// "+ Cloud" unconditionally even when the whole loop ran on Ollama.
     @ViewBuilder
     private var hypnagogicLoopBadge: some View {
         if hypnagogicLoopEnabled {
-            Label("Listening + Cloud", systemImage: "antenna.radiowaves.left.and.right")
+            let presentation = runtimePresentation
+            Label(presentation.badgeLabel, systemImage: presentation.badgeSystemImage)
                 .font(.caption)
-                .foregroundStyle(.red)
+                .foregroundStyle(runtimeEgressColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(Color.red.opacity(0.18))
+                .background(runtimeEgressColor.opacity(0.18))
                 .cornerRadius(4)
         }
     }
