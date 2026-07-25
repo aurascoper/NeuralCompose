@@ -37,6 +37,7 @@ ADR_PATH = (
 ADR_REGISTRY_PATH = (
     REPO_ROOT / "docs" / "architecture" / "decision-log" / "README.md"
 )
+MVP_PATH = REPO_ROOT / "docs" / "architecture" / "eeg-shadow-lab-mvp.md"
 ENCODER_CONFIG_PATH = (
     REPO_ROOT / "NeuralComposeEEG" / "configs" / "experiment-v0.json"
 )
@@ -350,6 +351,82 @@ class ExistingEvidenceUntouchedTests(unittest.TestCase):
         )
         self.assertEqual(committed.returncode, 0)
         self.assertEqual((REPO_ROOT / rel).read_bytes(), committed.stdout)
+
+
+class ShadowLabMVPScopeTests(unittest.TestCase):
+    """The MVP is an offline-analysis + shadow-replay preview, nothing larger."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = " ".join(MVP_PATH.read_text().split())
+
+    def test_mvp_is_not_framed_as_a_live_assistant(self) -> None:
+        # Emphasis markers are part of the source text; strip them so the
+        # assertion tracks the claim rather than the formatting.
+        plain = self.text.replace("**", "")
+        self.assertIn("not a live BCI assistant", plain)
+        self.assertIn("not a weight-fusion system", plain)
+        self.assertIn("offline-analysis plus in-app shadow-replay research preview", plain)
+        self.assertIn(
+            "No component speaks, changes pacing, modifies acquisition, "
+            "or controls the user experience",
+            plain,
+        )
+        self.assertIn("Nothing in this pipeline has live authority", plain)
+
+    def test_fusion_scope_is_f0_to_f2_only(self) -> None:
+        for later in ("F3", "F4", "F5", "F6"):
+            self.assertIn(later, self.text, f"{later} must be named as deferred")
+        self.assertIn("remain later experiments", self.text)
+        self.assertIn("never silently substitute one encoder", self.text)
+
+    def test_legal_actions_match_the_executable_fusion_contract(self) -> None:
+        """The doc's action list must not drift from the code that enforces it."""
+        source = (
+            REPO_ROOT
+            / "NeuralComposeEEG"
+            / "src"
+            / "neuralcompose_eeg"
+            / "fusion_contract.py"
+        ).read_text()
+        actions = re.findall(r'"(abstain|hold_state|request_operator_review)"', source)
+        self.assertTrue(actions, "fusion contract no longer names the legal actions")
+        for action in sorted(set(actions)):
+            self.assertIn(f'"{action}"', self.text, f"{action} missing from the MVP doc")
+
+    def test_qwen_input_prohibitions_are_stated(self) -> None:
+        for prohibited in (
+            "raw EEG",
+            "unrestricted EEGPT embeddings",
+            "dialogue transcripts",
+            "arbitrary action names",
+        ):
+            self.assertIn(prohibited, self.text, f"{prohibited!r} must be prohibited")
+        self.assertIn("evaluated **before** Qwen `P2`", self.text)
+
+    def test_dmg_exclusions_are_explicit(self) -> None:
+        for excluded in (
+            "Python",
+            "Julia",
+            "raw EEG",
+            "public EEG corpora",
+            "Laya",
+            "unpinned checkpoints",
+            "dialogue corpora",
+            "LoRA",
+        ):
+            self.assertIn(excluded, self.text, f"{excluded!r} must be listed as excluded")
+        self.assertIn("No model download at first launch", self.text)
+
+    def test_acceptance_gate_denies_live_authority_and_promotion(self) -> None:
+        self.assertIn("live_authority: false", self.text)
+        self.assertIn("raw_eeg_input: false", self.text)
+        self.assertIn("promotion_status: not_eligible", self.text)
+        self.assertIn("deterministic_baseline_present: true", self.text)
+
+    def test_physical_mvp_is_gated_behind_d3(self) -> None:
+        self.assertIn("after D3 and encoder selection", self.text)
+        self.assertIn("physical_claims: false", self.text)
 
 
 class ShadowScopeSeparationTests(unittest.TestCase):
