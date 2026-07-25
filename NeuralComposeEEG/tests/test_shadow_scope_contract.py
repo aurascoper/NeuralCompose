@@ -38,6 +38,36 @@ ADR_REGISTRY_PATH = (
     REPO_ROOT / "docs" / "architecture" / "decision-log" / "README.md"
 )
 MVP_PATH = REPO_ROOT / "docs" / "architecture" / "eeg-shadow-lab-mvp.md"
+V1_SCHEMA_PATH = (
+    REPO_ROOT / "NeuralComposeEEG" / "schemas" / "nc-eeg-fused-state-v1.schema.json"
+)
+V0_SCHEMA_PATH = (
+    REPO_ROOT / "NeuralComposeEEG" / "schemas" / "nc-eeg-fused-state-v0.schema.json"
+)
+BACKGROUND_MEMO_PATH = (
+    REPO_ROOT / "docs" / "science" / "predictive-processing-background.md"
+)
+
+# Labels that would constitute cognitive / affective / intentional inference.
+# The montage cannot support these claims and the governance forbids them.
+FORBIDDEN_LABEL_TOKENS = (
+    "state_focused",
+    "state_overwhelmed",
+    "hippea",
+    "prediction_error_vector",
+    "inject_contextual_anchor",
+)
+
+EXECUTION_STATES = {
+    "eegnet_execution": ["none", "synthetic_offline", "physical_offline"],
+    "eegpt_execution": [
+        "none",
+        "synthetic_adapter_smoke",
+        "physical_compatibility",
+        "physical_comparison",
+    ],
+    "qwen_policy_execution": ["none", "synthetic_shadow", "physical_shadow"],
+}
 ENCODER_CONFIG_PATH = (
     REPO_ROOT / "NeuralComposeEEG" / "configs" / "experiment-v0.json"
 )
@@ -321,6 +351,241 @@ class EncoderStateSchemaTests(unittest.TestCase):
                 )
 
 
+class ExecutionStateVocabularyTests(unittest.TestCase):
+    """"Executing" is graduated, and live_control is never a variable."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mvp = " ".join(MVP_PATH.read_text().split())
+        cls.adr = " ".join(ADR_PATH.read_text().split())
+
+    def test_every_execution_state_value_is_documented(self) -> None:
+        for field, values in EXECUTION_STATES.items():
+            self.assertIn(field, self.mvp, f"{field} missing from the MVP doc")
+            for value in values:
+                self.assertIn(value, self.mvp, f"{field} value {value!r} undocumented")
+
+    def test_adr_carries_the_same_vocabulary(self) -> None:
+        for field in EXECUTION_STATES:
+            self.assertIn(field, self.adr, f"{field} missing from ADR-011")
+        self.assertIn("not a variable", self.adr)
+
+    def test_live_control_is_never_true(self) -> None:
+        for name, text in (("MVP", self.mvp), ("ADR-011", self.adr)):
+            self.assertNotIn("live_control: true", text.lower(), name)
+        self.assertIn("live_control: false", self.mvp)
+
+    def test_both_mvp_levels_are_expressed_in_the_vocabulary(self) -> None:
+        for value in (
+            "eegnet_execution: synthetic_offline",
+            "eegpt_execution: synthetic_adapter_smoke",
+            "qwen_policy_execution: synthetic_shadow",
+            "eegnet_execution: physical_offline",
+            "eegpt_execution: physical_comparison",
+            "qwen_policy_execution: physical_shadow",
+        ):
+            self.assertIn(value, self.mvp, f"{value!r} missing")
+
+    def test_release_0_2_0_executes_nothing(self) -> None:
+        for field in EXECUTION_STATES:
+            self.assertIn(f"{field}: none", self.mvp, f"{field}: none missing")
+
+
+class NoCognitiveInferenceTests(unittest.TestCase):
+    """No cognitive, affective, or intentional label may enter any artifact."""
+
+    def _tracked_contract_files(self):
+        for directory, patterns in (
+            (REPO_ROOT / "NeuralComposeEEG" / "schemas", ("*.json",)),
+            (REPO_ROOT / "NeuralComposeEEG" / "configs", ("*.json",)),
+            (REPO_ROOT / "NeuralComposeEEG" / "artifacts", ("**/*.json", "**/*.jsonl")),
+            (REPO_ROOT / "NeuralComposeEEG" / "fixtures", ("**/*.jsonl",)),
+        ):
+            for pattern in patterns:
+                yield from directory.glob(pattern)
+
+    def test_no_forbidden_label_in_any_schema_config_or_artifact(self) -> None:
+        offenders = []
+        for path in self._tracked_contract_files():
+            lowered = path.read_text(errors="replace").lower()
+            for token in FORBIDDEN_LABEL_TOKENS:
+                if token in lowered:
+                    offenders.append(f"{path.relative_to(REPO_ROOT)}: {token}")
+        self.assertEqual(offenders, [], f"forbidden labels present: {offenders}")
+
+    def test_observable_states_stay_protocol_observable(self) -> None:
+        schema = json.loads(V1_SCHEMA_PATH.read_text())
+        observable = schema["$defs"]["observable_state_probabilities"]
+        self.assertEqual(
+            sorted(observable["required"]),
+            ["eyes_closed", "eyes_open", "listening", "recovery", "speaking"],
+        )
+        self.assertIs(observable["additionalProperties"], False)
+
+    def test_background_memo_makes_no_claim(self) -> None:
+        memo = " ".join(BACKGROUND_MEMO_PATH.read_text().split())
+        self.assertIn("claim_scope: background evidence only", memo)
+        self.assertIn("cognitive_state_inference_authorized: false", memo)
+        self.assertIn("introduces_labels: false", memo)
+        self.assertIn("It records a reason to measure. It does not license", memo)
+
+    def test_legal_action_registry_is_still_exactly_three(self) -> None:
+        source = (
+            REPO_ROOT
+            / "NeuralComposeEEG"
+            / "src"
+            / "neuralcompose_eeg"
+            / "fusion_contract.py"
+        ).read_text()
+        self.assertIn(
+            '["abstain", "hold_state", "request_operator_review"]',
+            source,
+            "the legal-action registry changed",
+        )
+        self.assertNotIn("inject_contextual_anchor", source)
+
+
+class FusedStateV1Tests(unittest.TestCase):
+    """v1 fails closed when an encoder is missing."""
+
+    SHA = "a" * 64
+
+    def setUp(self) -> None:
+        self.schema = json.loads(V1_SCHEMA_PATH.read_text())
+
+    def _validator(self):
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:  # pragma: no cover - environment dependent
+            self.skipTest("jsonschema is not installed")
+        Draft202012Validator.check_schema(self.schema)
+        return Draft202012Validator(self.schema)
+
+    def _encoder(self, model_id: str, status: str = "completed") -> dict:
+        encoder = {"model_id": model_id, "completion_status": status}
+        if status == "completed":
+            encoder.update(
+                model_revision=f"synthetic-{model_id}-v0",
+                backbone_frozen=True,
+                adapter="none",
+                checkpoint_kind="deterministic_synthetic_parameter_fixture",
+                checkpoint_sha256=self.SHA,
+                configuration_sha256=self.SHA,
+            )
+        return encoder
+
+    def _base(self) -> dict:
+        return {
+            "schema_version": "nc-eeg-fused-state-v1",
+            "experiment_id": "EXP-NC-EEG-FUSION-001",
+            "state_id": self.SHA,
+            "status": "foundational_study_only",
+            "data_gate": "D0",
+            "decision": "insufficient_evidence",
+            "promotion_status": "not_eligible",
+            "runtime_change": "none",
+            "source_type": "deterministic_synthetic_fixture",
+            "synthetic_only": True,
+            "physical_eeg_used": False,
+            "scientific_claim_allowed": False,
+            "shadow_only": True,
+            "live_control": False,
+            "qwen_policy_stage": "schema_validation_only",
+            "calibration_scope": "train_fold_only_not_fitted_at_d0",
+            "source": {"fixture_id": "fusion-syn-001", "source_record_sha256": self.SHA},
+            "signal_quality": {"score": 0.96, "missing_channels": []},
+        }
+
+    @staticmethod
+    def _probabilities() -> dict:
+        return {
+            "artifact_probabilities": {
+                "blink_artifact": 0.05,
+                "jaw_artifact": 0.05,
+                "head_motion_artifact": 0.05,
+            },
+            "observable_state_probabilities": {
+                "eyes_open": 0.5,
+                "eyes_closed": 0.1,
+                "listening": 0.1,
+                "speaking": 0.1,
+                "recovery": 0.1,
+            },
+            "encoder_disagreement": 0.22,
+            "predictive_entropy": 0.48,
+            "out_of_distribution_score": 0.1,
+        }
+
+    def _fusion(self, status: str) -> dict:
+        return {
+            "condition_id": "F2",
+            "method": "fixed_average_of_calibrated_probabilities",
+            "completion_status": status,
+            "trainable_parameters": 0,
+        }
+
+    def test_completed_fusion_validates(self) -> None:
+        validator = self._validator()
+        record = dict(
+            self._base(),
+            encoder_provenance={
+                "eegnet": self._encoder("eegnet"),
+                "eegpt": self._encoder("eegpt"),
+            },
+            fusion=self._fusion("completed"),
+            **self._probabilities(),
+        )
+        self.assertEqual(list(validator.iter_errors(record)), [])
+
+    def test_missing_encoder_fails_closed(self) -> None:
+        validator = self._validator()
+        unavailable = dict(
+            self._base(),
+            encoder_provenance={
+                "eegnet": self._encoder("eegnet"),
+                "eegpt": self._encoder("eegpt", "missing"),
+            },
+            fusion=self._fusion("unavailable_due_to_missing_encoder"),
+        )
+        self.assertEqual(list(validator.iter_errors(unavailable)), [])
+
+        # The whole point: it must not carry fused probabilities anyway.
+        leaking = dict(unavailable, **self._probabilities())
+        self.assertTrue(
+            list(validator.iter_errors(leaking)),
+            "a missing-encoder fusion must not publish fused probabilities",
+        )
+
+    def test_completed_fusion_must_carry_its_quantities(self) -> None:
+        validator = self._validator()
+        incomplete = dict(
+            self._base(),
+            encoder_provenance={
+                "eegnet": self._encoder("eegnet"),
+                "eegpt": self._encoder("eegpt"),
+            },
+            fusion=self._fusion("completed"),
+        )
+        self.assertTrue(list(validator.iter_errors(incomplete)))
+
+    def test_missing_encoder_carries_no_checkpoint_identity(self) -> None:
+        validator = self._validator()
+        forged = self._encoder("eegpt", "missing")
+        forged["checkpoint_sha256"] = self.SHA
+        record = dict(
+            self._base(),
+            encoder_provenance={"eegnet": self._encoder("eegnet"), "eegpt": forged},
+            fusion=self._fusion("unavailable_due_to_missing_encoder"),
+        )
+        self.assertTrue(list(validator.iter_errors(record)))
+
+    def test_v0_remains_the_frozen_evidence_schema(self) -> None:
+        v0 = json.loads(V0_SCHEMA_PATH.read_text())
+        self.assertEqual(v0["properties"]["schema_version"]["const"], "nc-eeg-fused-state-v0")
+        self.assertEqual(v0["properties"]["fusion"]["properties"]["status"]["const"], "complete")
+        self.assertEqual(self.schema["properties"]["schema_version"]["const"], "nc-eeg-fused-state-v1")
+
+
 class ExistingEvidenceUntouchedTests(unittest.TestCase):
     """The F0-F2 evidence bundle's byte identity is part of its provenance.
 
@@ -426,7 +691,11 @@ class ShadowLabMVPScopeTests(unittest.TestCase):
 
     def test_physical_mvp_is_gated_behind_d3(self) -> None:
         self.assertIn("after D3 and encoder selection", self.text)
-        self.assertIn("physical_claims: false", self.text)
+        # The synthetic level must disclaim physical evidence. This is stated
+        # with the artifact-level fields rather than a bespoke flag, so it
+        # matches the disposition vocabulary the schemas already enforce.
+        self.assertIn("physical_eeg_used: false", self.text)
+        self.assertIn("scientific_claim_allowed: false", self.text)
 
 
 class ShadowScopeSeparationTests(unittest.TestCase):

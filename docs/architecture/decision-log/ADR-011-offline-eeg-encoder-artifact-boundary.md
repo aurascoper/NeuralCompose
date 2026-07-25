@@ -131,6 +131,37 @@ which is a statement about the *experiment*, not the codebase. The invariant
 that matters: **no model gains live authority, and no generated state changes
 speech, pacing, dialogue policy, acquisition, or user-facing behaviour.**
 
+### Execution states, not booleans
+
+Each subsystem carries a graduated state rather than a boolean, because
+"executing" can mean ran-once-on-a-fixture, embedded-in-the-app, or
+controls-something — three very different claims:
+
+```yaml
+eegnet_execution:      none | synthetic_offline | physical_offline
+eegpt_execution:       none | synthetic_adapter_smoke | physical_compatibility | physical_comparison
+qwen_policy_execution: none | synthetic_shadow | physical_shadow
+live_control:          false        # not a variable
+```
+
+Per-state flip gates are in `../eeg-shadow-lab-mvp.md`. No flip grants live
+authority.
+
+### Fused-state schema versions
+
+`nc-eeg-fused-state-v0` stays the **frozen D0 evidence schema** for the
+committed `fusion-synthetic-v0` artifacts; those records are not migrated.
+
+W5 targets `nc-eeg-fused-state-v1`, which adds per-encoder and fusion
+completion status. v1 exists rather than an in-place amendment because v0
+cannot represent a missing encoder: `fusion.status` is a `const` of
+`"complete"`, and the probability fields are root-required, so an unavailable
+fused state is unrepresentable without either weakening the closed contract or
+invalidating committed evidence. In v1 a fusion marked
+`unavailable_due_to_missing_encoder` is **forbidden** from carrying fused
+probabilities, so losing an encoder cannot silently become a one-model
+prediction.
+
 ### Compute budget — M4, 16 GB unified memory
 
 Model residency is **sequential, never concurrent**, until measured otherwise

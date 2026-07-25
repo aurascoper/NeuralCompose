@@ -19,6 +19,26 @@ before claiming a number.
 | ADR-009 | **Reserved: pluggable generation runtime.** Cited as normative in ~45 places across `Sources/BCICloudBridge/`, `Sources/BCICore/Protocols/`, and `Package.swift`, but **no file exists yet** | *(absent — owed)* |
 | ADR-010 | **Rust Compute Engine.** Reserved on another branch — see below | not present on this branch |
 | ADR-011 | Offline EEG encoder artifact boundary | `ADR-011-offline-eeg-encoder-artifact-boundary.md` |
+| ADR-012 | **Reserved (deferred): distributed-edge deployment topology** — see below | *(not written)* |
+
+### ADR-012 reservation
+
+Reserved for a distributed-edge deployment topology (for example an
+`batman-adv` mesh of Raspberry Pi nodes running the offline encoder jobs). It
+is deliberately **outside W0–W7**: it is a deployment question, not part of the
+encoder/fusion/policy boundary, and `ADR-011` commits to an offline artifact
+boundary with no streaming or IPC.
+
+Open questions it must answer before any adoption:
+
+```text
+mesh transport integrity      — what a dropped or reordered packet means for a window
+packet-loss semantics         — whether a partial window is rejected or reconstructed
+cross-node clock provenance   — how window timestamps are established across nodes
+```
+
+None of these are addressed by the current capture-integrity contract, which
+assumes a single recording host.
 
 ### ADR-010 reservation
 

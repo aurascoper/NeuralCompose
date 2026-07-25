@@ -178,23 +178,75 @@ enter the app as immutable artifacts. For Qwen, the safer first distribution is
 a **separate, manually installed model pack with a pinned manifest** rather
 than inflating the DMG or fetching weights at launch.
 
-## Two MVP levels
+## Execution states
 
-### Synthetic engineering MVP — buildable after branch stabilization
+"Executing" is ambiguous as a boolean. It can mean the model ran once on a
+fixture, or that it is embedded in the shipped app, or that it controls
+something. Those are very different claims, so each subsystem carries a
+graduated state instead:
 
 ```yaml
-source: deterministic_synthetic_fixture
-EEGNet: synthetic/fixed output
-EEGPT: synthetic/fixed output
-fusion: F2
-deterministic_policy: enabled_shadow
-Qwen: optional_shadow
-physical_claims: false
+eegnet_execution:      none | synthetic_offline | physical_offline
+eegpt_execution:       none | synthetic_adapter_smoke | physical_compatibility | physical_comparison
+qwen_policy_execution: none | synthetic_shadow | physical_shadow
+live_control:          false        # not a variable; never becomes true here
 ```
 
-Proves the complete app-facing integration. Says nothing about physical EEG.
+This lets all three subsystems execute meaningfully long before any live
+authority exists — and makes it impossible to describe a fixture run as
+physical evidence.
 
-### Physical research MVP — gated
+### Flip gates
+
+A state advances only when its gate passes. Common to every flip:
+
+```yaml
+clean_checkout: true
+python_ci: pass
+job_status: completed
+checkpoint_or_fixture_hash: recorded
+nonfinite_outputs: 0
+schema_failures: 0
+swift_replay: pass
+silent_fallback: false
+```
+
+Additionally, per state:
+
+| State | Additional requirement |
+|---|---|
+| `eegnet_execution: synthetic_offline` | `eegnet` added to the encoder-ID registry; frozen artifact format defined |
+| `eegnet_execution: physical_offline` | D2 eligible multi-day recordings; interpretation is `pipeline_evidence_only` |
+| `eegpt_execution: synthetic_adapter_smoke` | shape, masking, missing-channel and replay gates pass on fixtures |
+| `eegpt_execution: physical_compatibility` | D2; checkpoint manually acquired, licensed, revision and SHA-256 pinned, adapter architecture hashed |
+| `eegpt_execution: physical_comparison` | D3; fold-local adapter/probe fitting, complete-session holdout, random-init / shuffled-channel / zero-fill controls |
+| `qwen_policy_execution: synthetic_shadow` | P0 and P1 results recorded beside P2; MLX provenance complete; zero malformed outputs on the acceptance fixture; no cloud egress |
+| `qwen_policy_execution: physical_shadow` | post_encoder; fresh grouped policy trajectories; separate preregistration |
+
+No flip grants live authority. `live_control` stays `false` in every row.
+
+## Two MVP levels
+
+### Synthetic Shadow Lab MVP — buildable after branch stabilization
+
+```yaml
+eegnet_execution: synthetic_offline
+eegpt_execution: synthetic_adapter_smoke
+fusion_execution: synthetic_F0_F1_F2
+qwen_policy_execution: synthetic_shadow
+
+source_disposition: deterministic_synthetic_fixture
+physical_eeg_used: false
+scientific_claim_allowed: false
+live_control: false
+promotion_status: not_eligible
+```
+
+This is the first point at which all three subsystems are truthfully
+"executing". It proves the complete app-facing integration end to end and says
+nothing whatever about physical EEG.
+
+### Physical Shadow Lab MVP — gated
 
 ```text
 D1  one integrity-valid physical capture
@@ -203,8 +255,18 @@ D3  grouped EEGNet/EEGPT/fusion comparison
 post_encoder  deterministic/GRU/Qwen shadow-policy experiment
 ```
 
+```yaml
+eegnet_execution: physical_offline
+eegpt_execution: physical_comparison
+qwen_policy_execution: physical_shadow
+
+live_control: false
+promotion_status: not_eligible
+```
+
 A full physical MVP therefore sits **after D3 and encoder selection** — not
-merely after the code compiles.
+merely after the code compiles. Note that even here `live_control` remains
+`false`: a physical shadow run is evidence, not authority.
 
 ## Release milestones
 
@@ -212,6 +274,13 @@ Calling this "v2" would imply a production transition that the evidence does
 not support.
 
 ### NeuralCompose 0.2.0 — stability
+
+```yaml
+eegnet_execution: none
+eegpt_execution: none
+qwen_policy_execution: none
+```
+
 
 Prompt-resource fix (landed, PR #29); truthful runtime/provider UI; runtime and
 CI stabilization; capture integrity; quarantine boundaries; W1 structured-state
