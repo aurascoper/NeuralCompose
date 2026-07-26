@@ -89,8 +89,12 @@ public enum LiveRuntimeFactory {
                     requestedProvider: requestedProvider,
                     requestedModel: requestedModel,
                     // An unknown provider has no endpoint, so there is nothing
-                    // to classify. Reporting a locality here would be a guess.
-                    locality: .localBrokerToRemoteService,
+                    // to classify — and `.localBrokerToRemoteService`, which
+                    // this used to report, *was* a guess: it asserted a known
+                    // egress topology for a provider nothing knows anything
+                    // about. `.unresolved` keeps the conservative egress
+                    // presentation without the false claim.
+                    locality: .unresolved,
                     failure: .unknownProvider
                 ),
                 code: .unknownProvider,

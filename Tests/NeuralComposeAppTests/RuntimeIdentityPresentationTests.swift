@@ -92,6 +92,20 @@ final class RuntimeIdentityPresentationTests: XCTestCase {
         XCTAssertTrue(p.caption.contains("potential egress"))
     }
 
+    /// An identity whose locality could not be established (unknown provider)
+    /// discloses egress and says the classification is unverified — never
+    /// "On-device", never a named remote topology it cannot substantiate.
+    func testUnresolvedLocalityDisclosesEgressAsUnverified() {
+        let p = RuntimeIdentityPresentation(
+            dialogue: identity(
+                provider: "olama", locality: .unresolved,
+                readiness: .unavailable(.unknownProvider)),
+            witness: nil, isDialectical: false)
+        XCTAssertTrue(p.involvesEgress, "unverified egress must read as egress")
+        XCTAssertTrue(p.dialogueLine.contains("Egress unverified"), p.dialogueLine)
+        XCTAssertFalse(p.dialogueLine.contains("On-device"), p.dialogueLine)
+    }
+
     // MARK: - Readiness
 
     func testUnavailableRuntimeShowsItsFailureNotReady() {

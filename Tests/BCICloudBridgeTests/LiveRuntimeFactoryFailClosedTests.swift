@@ -91,6 +91,15 @@ final class LiveRuntimeFactoryFailClosedTests: XCTestCase {
             XCTAssertEqual(
                 failure.identity.resolvedProvider, "",
                 "nothing resolved, so the resolved provider must be empty rather than a guess")
+            // An unknown provider has no endpoint to classify, so its locality
+            // is a fourth honest state — not a claim of any known topology.
+            XCTAssertEqual(
+                failure.identity.locality, .unresolved,
+                "an unknown provider is not known to be a local broker")
+            XCTAssertTrue(
+                failure.identity.locality.involvesNetworkEgress,
+                "unverified egress must still be presented conservatively as egress")
+            XCTAssertEqual(failure.identity.locality.displayLabel, "Egress unverified")
         } catch {
             XCTFail("expected RuntimeResolutionFailure, got \(error)")
         }
@@ -173,12 +182,47 @@ final class LiveRuntimeFactoryFailClosedTests: XCTestCase {
 
     /// An untagged request resolves to the daemon's `:latest` entry, and the
     /// identity records the *stored* name — what is loaded, not what was typed.
+    ///
+    /// The identity must agree with the probe about what "the same model"
+    /// means: the probe deliberately accepts `qwen2.5:latest` for `qwen2.5`,
+    /// so `isSubstitution` comparing the raw strings made one resolution both
+    /// "the same model" (readiness) and "a substitution" (identity). A
+    /// canonical `:latest` resolution is not a substitution alarm.
     func testUntaggedRequestRecordsTheCanonicalStoredName() async throws {
         stubTags([("qwen2.5:latest", "sha256:beef")])
         let (_, identity) = try await makeOllama(model: "qwen2.5")
         XCTAssertEqual(identity.requestedModel, "qwen2.5")
         XCTAssertEqual(identity.resolvedModel, "qwen2.5:latest")
-        XCTAssertTrue(identity.isSubstitution, "a canonicalised name is still a visible difference")
+        XCTAssertFalse(
+            identity.isSubstitution,
+            "the probe's canonicalization and the identity's comparison must agree")
+    }
+
+    /// The canonicalization must not widen into fuzzy matching: any resolved
+    /// model that differs by more than the implicit `:latest` tag is still a
+    /// substitution the UI discloses.
+    func testNonLatestModelDifferenceIsStillASubstitution() {
+        let base = ResolvedRuntimeIdentity(
+            role: .dialectic,
+            requestedProvider: "ollama", requestedModel: "qwen2.5",
+            resolvedProvider: "ollama", resolvedModel: "qwen2.5:0.5b",
+            locality: .onDevice, readiness: .ready,
+            promptProfile: "wakingDialectical", promptHash: "abc",
+            systemPromptSource: "test")
+        XCTAssertTrue(
+            base.isSubstitution,
+            "an explicit non-latest tag is a different model, not a canonical spelling")
+
+        let provider = ResolvedRuntimeIdentity(
+            role: .dialectic,
+            requestedProvider: "ollama", requestedModel: "qwen2.5",
+            resolvedProvider: "claude", resolvedModel: "qwen2.5",
+            locality: .localBrokerToRemoteService, readiness: .ready,
+            promptProfile: "wakingDialectical", promptHash: "abc",
+            systemPromptSource: "test")
+        XCTAssertTrue(
+            provider.isSubstitution,
+            "a provider swap is always a substitution, whatever the model strings say")
     }
 
     // MARK: - Locality

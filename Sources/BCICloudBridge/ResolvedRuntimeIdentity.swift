@@ -65,8 +65,25 @@ public struct ResolvedRuntimeIdentity: Codable, Sendable, Equatable {
     /// True when the resolved provider/model differ from what was requested.
     /// The privacy UI treats this as a disclosure condition: a substitution the
     /// user did not choose must never be silent.
+    ///
+    /// Models are compared *canonically*: `OllamaReadinessProbe` deliberately
+    /// accepts a stored `name:latest` for an untagged request — the daemon
+    /// stores an untagged pull under `:latest`, so they are the same model —
+    /// and the identity records the stored name. Comparing the raw strings
+    /// here made the same resolution simultaneously "accepted as the same
+    /// model by readiness" and "reported as a substitution by identity". A
+    /// canonical `:latest` resolution is not a substitution alarm; any other
+    /// difference still is.
     public var isSubstitution: Bool {
-        resolvedProvider != requestedProvider || resolvedModel != requestedModel
+        resolvedProvider != requestedProvider
+            || Self.canonicalModelName(resolvedModel) != Self.canonicalModelName(requestedModel)
+    }
+
+    /// An untagged model name canonicalizes to `name:latest`, mirroring the
+    /// probe's one allowed equivalence. Empty stays empty (the failure-path
+    /// identity, where nothing resolved) so no phantom tag is fabricated.
+    static func canonicalModelName(_ name: String) -> String {
+        name.isEmpty || name.contains(":") ? name : name + ":latest"
     }
 
     public var isReady: Bool { readiness == .ready }
@@ -131,9 +148,19 @@ public enum RuntimeLocality: String, Codable, Sendable, Equatable, CaseIterable 
     case localBrokerToRemoteService
     /// A non-loopback endpoint. Ollama on another host. Text leaves the device.
     case remoteEndpoint
+    /// No locality could be established — an unsupported provider name, so
+    /// there is no endpoint or executable to classify. Distinct from the three
+    /// known localities because an unknown provider is *not known* to be a
+    /// local broker (the previous classification), any more than it is known
+    /// to be on-device: unknown ≠ on-device, unknown ≠ known remote broker,
+    /// unknown = egress unverified. Egress is still assumed (the safe
+    /// direction) while the label says it is unverified (the honest one).
+    case unresolved
 
     /// Whether text leaves the machine on this locality. The privacy UI reads
-    /// this rather than pattern-matching provider names.
+    /// this rather than pattern-matching provider names. `unresolved` counts
+    /// as egress: a banner must not claim on-device operation it cannot
+    /// substantiate.
     public var involvesNetworkEgress: Bool { self != .onDevice }
 
     public var displayLabel: String {
@@ -141,6 +168,7 @@ public enum RuntimeLocality: String, Codable, Sendable, Equatable, CaseIterable 
         case .onDevice:                  return "On-device"
         case .localBrokerToRemoteService: return "Local broker → remote service"
         case .remoteEndpoint:            return "Remote endpoint"
+        case .unresolved:                return "Egress unverified"
         }
     }
 }
