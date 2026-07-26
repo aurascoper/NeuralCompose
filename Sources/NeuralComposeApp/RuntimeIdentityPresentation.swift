@@ -72,6 +72,35 @@ struct RuntimeIdentityPresentation: Equatable {
             : "desktopcomputer"
     }
 
+    /// The persistent diagnostics for the *disabled* state — the loop toggle
+    /// is off, but a previous enable attempt left identities behind.
+    ///
+    /// The gap this closes: a fail-closed disablement stored the unavailable
+    /// identity and then set `hypnagogicLoopEnabled = false`, after which the
+    /// expanded privacy view rendered only "Disabled at runtime" — hiding the
+    /// requested provider, model, locality, and readiness failure the
+    /// identity was designed to preserve. The failure identity stays visible
+    /// here; the active-listening badge stays hidden because the loop is not
+    /// running. Empty before the first enable attempt, so a fresh app still
+    /// reads as plainly disabled. Every rendered field comes from the
+    /// sanitized identity — never from the raw error.
+    static func lastAttemptLines(
+        dialogue: ResolvedRuntimeIdentity?,
+        witness: ResolvedRuntimeIdentity?
+    ) -> [String] {
+        var lines: [String] = []
+        if let dialogue { lines.append(lastAttemptLine("Dialogue", dialogue)) }
+        if let witness { lines.append(lastAttemptLine("Witness", witness)) }
+        return lines
+    }
+
+    private static func lastAttemptLine(
+        _ title: String, _ identity: ResolvedRuntimeIdentity
+    ) -> String {
+        "Last attempt — \(title): \(identity.displayProvider) · \(identity.displayModel) · "
+            + "\(identity.locality.displayLabel) · \(identity.displayReadiness)"
+    }
+
     /// `role: provider · model · locality · readiness`.
     private static func line(
         _ title: String,

@@ -151,7 +151,25 @@ struct PrivacyIndicatorView: View {
                                     .foregroundStyle(.secondary)
                             }
                         } else {
-                            Text("Disabled at runtime").foregroundStyle(.green)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Disabled at runtime").foregroundStyle(.green)
+                                // A fail-closed disablement stores the failed
+                                // identity and flips the toggle off; hiding it
+                                // here would discard exactly the diagnosis the
+                                // identity exists to preserve. Empty before the
+                                // first enable attempt. The active badge stays
+                                // hidden — the loop is not running.
+                                ForEach(
+                                    RuntimeIdentityPresentation.lastAttemptLines(
+                                        dialogue: dialogueRuntimeIdentity,
+                                        witness: witnessRuntimeIdentity),
+                                    id: \.self
+                                ) { line in
+                                    Text(line)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
                     GridRow {

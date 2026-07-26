@@ -139,4 +139,48 @@ final class RuntimeIdentityPresentationTests: XCTestCase {
             dialogue: identity(), witness: nil, isDialectical: false)
         XCTAssertTrue(p.caption.contains("one call per turn"), p.caption)
     }
+
+    // MARK: - Last runtime attempt (visible after fail-closed disablement)
+
+    /// A fresh app has attempted nothing: the disabled row must stay plainly
+    /// "Disabled at runtime" with no phantom attempt to explain.
+    func testNoAttemptYieldsNoLastAttemptLines() {
+        XCTAssertTrue(
+            RuntimeIdentityPresentation.lastAttemptLines(dialogue: nil, witness: nil).isEmpty)
+    }
+
+    /// The fail-closed sequence stores the unavailable identity and disables
+    /// the toggle. The expanded diagnostics must keep showing what was
+    /// requested and why it failed — the identity was designed to preserve
+    /// exactly this, and rendering only "Disabled at runtime" discarded it.
+    func testFailedIdentityStaysVisibleAfterDisablement() {
+        let lines = RuntimeIdentityPresentation.lastAttemptLines(
+            dialogue: identity(readiness: .unavailable(.modelMissing)),
+            witness: nil)
+        XCTAssertEqual(lines.count, 1)
+        let line = lines[0]
+        XCTAssertTrue(line.contains("Last attempt"), line)
+        // The failure identity resolves nothing, so display falls back to the
+        // *requested* pair — the user must see what they asked for.
+        XCTAssertTrue(line.contains("Ollama"), line)
+        XCTAssertTrue(line.contains("qwen2.5:0.5b"), line)
+        XCTAssertTrue(line.contains("On-device"), line)
+        XCTAssertTrue(line.contains("Model unavailable"), line)
+        XCTAssertFalse(line.contains("Ready"), line)
+    }
+
+    /// A failed Witness attempt is part of the requested configuration and is
+    /// reported alongside the dialogue attempt, in that order.
+    func testWitnessAttemptIsReportedAlongsideTheDialogueAttempt() {
+        let lines = RuntimeIdentityPresentation.lastAttemptLines(
+            dialogue: identity(),
+            witness: identity(
+                role: .witness, provider: "claude", model: "claude-sonnet-5",
+                locality: .localBrokerToRemoteService,
+                readiness: .unavailable(.executableNotFound)))
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertTrue(lines[0].contains("Dialogue"), lines[0])
+        XCTAssertTrue(lines[1].contains("Witness"), lines[1])
+        XCTAssertTrue(lines[1].contains("CLI not found"), lines[1])
+    }
 }
