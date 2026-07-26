@@ -170,13 +170,23 @@ public struct DialecticalCompetition: Sendable, Equatable {
     /// decode; `Codable` treats missing keys as `nil` for `Optional`
     /// fields. See `Sources/BCICore/Telemetry/GeneratorFingerprint.swift`.
     public let generatorFingerprint: GeneratorFingerprint?
+    /// The generator identity of the **Witness** this turn — separate from
+    /// `generatorFingerprint`, which is documented as the generator that
+    /// produced the *candidates*. The bug class this closes: the Witness once
+    /// reported one prompt while transmitting another, and a persisted turn
+    /// carrying only the pole fingerprint cannot independently attest which
+    /// runtime/prompt produced the finding. nil when the Witness did not
+    /// generate this turn (disabled profile, or a turn it never ran on) or
+    /// when its generator publishes no metadata.
+    public let witnessGeneratorFingerprint: GeneratorFingerprint?
 
     public init(index: Int, heard: String, scored: [ScoredCandidate], tension: Float,
                 margin: Float, selectionTemperature: Float, outcome: DialecticalOutcome,
                 glossScalar: Float, spectralState: SpectralState? = nil,
                 witnessFinding: String? = nil, witnessDistance: Float? = nil,
                 selfSimilarity: Float? = nil, witnessAttempted: Bool? = nil,
-                generatorFingerprint: GeneratorFingerprint? = nil) {
+                generatorFingerprint: GeneratorFingerprint? = nil,
+                witnessGeneratorFingerprint: GeneratorFingerprint? = nil) {
         self.index = index
         self.heard = heard
         self.scored = scored
@@ -191,5 +201,6 @@ public struct DialecticalCompetition: Sendable, Equatable {
         self.selfSimilarity = selfSimilarity
         self.witnessAttempted = witnessAttempted
         self.generatorFingerprint = generatorFingerprint
+        self.witnessGeneratorFingerprint = witnessGeneratorFingerprint
     }
 }

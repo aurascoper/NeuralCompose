@@ -54,6 +54,14 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     /// interactionStyle / promptHash). Optional so pre-fingerprint
     /// logs still decode. See `Sources/BCICore/Telemetry/GeneratorFingerprint.swift`.
     public let generatorFingerprint: GeneratorFingerprint?
+    /// The Witness generator's identity this turn — persisted separately
+    /// because `generatorFingerprint` attests only to the candidates'
+    /// generator, and the Witness bug being guarded against was precisely
+    /// "reported Witness prompt ≠ prompt actually transmitted". With this
+    /// field a persisted Reflective turn can independently prove which
+    /// provider/model/prompt produced the finding. Optional so every
+    /// pre-Witness-fingerprint log still decodes (missing key → nil).
+    public let witnessGeneratorFingerprint: GeneratorFingerprint?
 
     public init(_ c: DialecticalCompetition) {
         self.index = c.index
@@ -73,6 +81,7 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
         self.selfSimilarity = c.selfSimilarity
         self.witnessAttempted = c.witnessAttempted
         self.generatorFingerprint = c.generatorFingerprint
+        self.witnessGeneratorFingerprint = c.witnessGeneratorFingerprint
         switch c.outcome {
         case let .spoke(cand):
             self.outcome = "spoke:\(cand.roleID)"
