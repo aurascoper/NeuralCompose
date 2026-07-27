@@ -355,8 +355,11 @@ class LocalOpenWeightReviewTests(unittest.TestCase):
             dataset, _ = build_canonical_dataset(_manifest(root), _preprocessing_path())
             probabilities = np.zeros((len(dataset.labels), len(dataset.label_order)), dtype=np.float64)
             probabilities[:, 0] = 1.0
-            states = root / "states.jsonl"
-            manifest = root / "manifest.json"
+            # Publish under a subdirectory: _manifest(root) already wrote the
+            # *source* manifest to root/manifest.json, and the shadow bridge
+            # refuses to overwrite an existing artifact that differs.
+            states = root / "shadow" / "states.jsonl"
+            manifest = root / "shadow" / "manifest.json"
             written = write_shadow_state_artifacts(
                 dataset,
                 probabilities,
