@@ -22,6 +22,7 @@ from .provenance import sha256_file, sha256_json
 
 
 CAPTURE_INDEX_SCHEMA = "nc-eeg-capture-index-v1"
+CAPTURE_INTEGRITY_SCHEMA = "nc-eeg-capture-integrity-v0"
 OBSERVABLE_PROTOCOL_SCHEMA = "nc-eeg-observable-protocol-v1"
 OBSERVABLE_PROTOCOL_ID = "encoder-pilot-v1"
 PROTOCOL_SPEC_PATH = Path(__file__).resolve().parents[2] / "configs" / "observable-protocol-v1.json"
@@ -242,16 +243,49 @@ def _recording_start_unix(metadata: dict[str, Any], recording_start: float) -> f
     raise ContractError("recorder metadata must declare eeg_timestamp_clock as unix_epoch or stream_relative")
 
 
-def compile_capture_manifest(index_path: Path, output_path: Path) -> dict[str, Any]:
-    """Create an ignored source manifest from reviewed local capture paths."""
+def _experiment_eligibility_reason(compiled_sessions: list[dict[str, Any]]) -> str | None:
+    """Return the cohort gate that remains after per-capture integrity passes."""
+    if len(compiled_sessions) < 2:
+        return "insufficient_session_count"
+    if len({session["recording_date"] for session in compiled_sessions}) < 2:
+        return "insufficient_recording_date_count"
+    stimulus_identity = {
+        key: compiled_sessions[0]["capture_provenance"][key]
+        for key in (
+            "protocol_preset_sha256", "listening_audio_id", "listening_audio_sha256",
+            "speaking_script_id", "speaking_script_sha256",
+        )
+    }
+    for session in compiled_sessions[1:]:
+        if any(session["capture_provenance"][key] != value for key, value in stimulus_identity.items()):
+            return "stimulus_identity_mismatch"
+    return None
+
+
+def _raise_experiment_eligibility_error(reason: str) -> None:
+    messages = {
+        "insufficient_session_count": "capture index needs at least two non-excluded eligible sessions",
+        "insufficient_recording_date_count": "capture index needs eligible sessions on at least two recording dates",
+        "stimulus_identity_mismatch": "eligible sessions do not share the pinned protocol and stimulus identity",
+    }
+    raise ContractError(messages[reason])
+
+
+def _compile_capture_manifest(
+    index_path: Path,
+    output_path: Path,
+    *,
+    require_experiment_eligibility: bool,
+) -> tuple[dict[str, Any], str | None]:
+    """Validate local captures, optionally enforcing the multi-session benchmark gate."""
     index = _load_json(index_path)
     if index.get("schema_version") != CAPTURE_INDEX_SCHEMA:
         raise ContractError(f"expected schema_version={CAPTURE_INDEX_SCHEMA}")
     if not isinstance(index.get("dataset_id"), str) or not index["dataset_id"]:
         raise ContractError("capture index requires dataset_id")
     sessions = index.get("sessions")
-    if not isinstance(sessions, list) or len(sessions) < 2:
-        raise ContractError("capture index needs at least two sessions")
+    if not isinstance(sessions, list) or not sessions:
+        raise ContractError("capture index needs at least one session")
     session_ids: set[str] = set()
     compiled_sessions: list[dict[str, Any]] = []
     excluded_sessions: list[dict[str, str]] = []
@@ -348,18 +382,9 @@ def compile_capture_manifest(index_path: Path, output_path: Path) -> dict[str, A
                 },
             }
         )
-    if len(compiled_sessions) < 2:
-        raise ContractError("capture index needs at least two non-excluded eligible sessions")
-    stimulus_identity = {
-        key: compiled_sessions[0]["capture_provenance"][key]
-        for key in (
-            "protocol_preset_sha256", "listening_audio_id", "listening_audio_sha256",
-            "speaking_script_id", "speaking_script_sha256",
-        )
-    }
-    for session in compiled_sessions[1:]:
-        if any(session["capture_provenance"][key] != value for key, value in stimulus_identity.items()):
-            raise ContractError("eligible sessions do not share the pinned protocol and stimulus identity")
+    eligibility_reason = _experiment_eligibility_reason(compiled_sessions)
+    if require_experiment_eligibility and eligibility_reason is not None:
+        _raise_experiment_eligibility_error(eligibility_reason)
     label_order = list(dict.fromkeys(block["label"] for session in compiled_sessions for block in session["task_blocks"]))
     capture_identity = {
         "dataset_id": index["dataset_id"],
@@ -383,16 +408,69 @@ def compile_capture_manifest(index_path: Path, output_path: Path) -> dict[str, A
         "capture_index_sha256": sha256_json(capture_identity),
         "excluded_capture_index_entries": excluded_sessions,
     }
+    return manifest, eligibility_reason
+
+
+def compile_capture_manifest(index_path: Path, output_path: Path) -> dict[str, Any]:
+    """Create a source manifest only for a complete multi-day benchmark cohort."""
+    manifest, _ = _compile_capture_manifest(
+        index_path,
+        output_path,
+        require_experiment_eligibility=True,
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
 
 
+def validate_capture_integrity(index_path: Path, output_path: Path) -> dict[str, Any]:
+    """Write an integrity report without treating one clean capture as a benchmark cohort."""
+    manifest, eligibility_reason = _compile_capture_manifest(
+        index_path,
+        output_path,
+        require_experiment_eligibility=False,
+    )
+    report = {
+        "schema_version": CAPTURE_INTEGRITY_SCHEMA,
+        "dataset_id": manifest["dataset_id"],
+        "integrity_valid": bool(manifest["sessions"]),
+        "integrity_session_count": len(manifest["sessions"]),
+        "experiment_eligible": eligibility_reason is None,
+        "experiment_eligibility_reason": eligibility_reason,
+        "capture_index_sha256": manifest["capture_index_sha256"],
+        "sessions": [
+            {
+                "session_id": session["session_id"],
+                "participant_id": session["participant_id"],
+                "recording_date": session["recording_date"],
+                "device_id": session["device_id"],
+                "headset_fit_id": session["headset_fit_id"],
+                "capture_provenance": session["capture_provenance"],
+            }
+            for session in manifest["sessions"]
+        ],
+        "excluded_capture_index_entries": manifest["excluded_capture_index_entries"],
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    return report
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--capture-index", required=True, type=Path)
-    parser.add_argument("--output", required=True, type=Path)
+    output = parser.add_mutually_exclusive_group(required=True)
+    output.add_argument("--output", type=Path, help="multi-day source-manifest output")
+    output.add_argument("--integrity-output", type=Path, help="per-capture integrity-report output")
     args = parser.parse_args(argv)
+    if args.integrity_output is not None:
+        report = validate_capture_integrity(args.capture_index, args.integrity_output)
+        print(
+            f"wrote {args.integrity_output} "
+            f"({report['integrity_session_count']} integrity-valid live-Muse sessions; "
+            f"experiment_eligible={report['experiment_eligible']})"
+        )
+        return 0
     manifest = compile_capture_manifest(args.capture_index, args.output)
     print(f"wrote {args.output} ({len(manifest['sessions'])} complete live-Muse sessions)")
     return 0

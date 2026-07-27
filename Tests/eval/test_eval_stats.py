@@ -26,15 +26,31 @@ def test_cohens_d_identical():
     assert d == 0.0
 
 
-def test_cohens_d_large_effect():
-    d = cohens_d([1, 1, 1, 1], [5, 5, 5, 5])
-    assert d > 2.0  # very large effect
+def test_cohens_d_identical_constant_groups_are_zero():
+    assert cohens_d([1, 1, 1, 1], [1, 1, 1, 1]) == 0.0
+
+
+def test_cohens_d_separated_constant_groups_are_undefined():
+    # Zero pooled variance with separated means: d is unbounded, not absent.
+    # Returning 0.0 here would rank total separation as "no effect".
+    assert np.isnan(cohens_d([1, 1, 1, 1], [5, 5, 5, 5]))
+
+
+def test_cohens_d_large_nondegenerate_effect():
+    d = cohens_d([0.9, 1.0, 1.1, 1.0], [4.9, 5.0, 5.1, 5.0])
+    assert abs(d) > 2.0
 
 
 def test_mann_whitney_u_disjoint():
-    result = mann_whitney_u([1, 2, 3], [10, 11, 12])
+    # Four per group, not three: with n1 = n2 = 3 the smallest attainable
+    # two-sided p is 2/20 = 0.1, so no correct implementation can clear 0.05
+    # there however cleanly the groups separate. At four per group the exact
+    # minimum is 2/70 = 0.029.
+    result = mann_whitney_u([1, 2, 3, 4], [10, 11, 12, 13])
+    assert result["u_statistic"] == 0.0
     assert result["p_value"] < 0.05
-    assert "u_statistic" in result
+    assert result["n_a"] == 4
+    assert result["n_b"] == 4
 
 
 def test_bonferroni_correct():

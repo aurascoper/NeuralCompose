@@ -35,6 +35,13 @@ OUTPUT_DIR = EVAL_DIR / "results" / "stage_3_4"
 
 
 def cka(X, Y):
+    """Biased linear CKA over centered Gram matrices.
+
+    Null values can be substantially inflated when feature dimension approaches
+    or exceeds sample count — independent Gaussians at n=50, d=128/256 score
+    ~0.78, not ~0. Do not compare scores across different n/d regimes without a
+    matched null or permutation baseline.
+    """
     X = np.array(X, dtype=np.float64)
     Y = np.array(Y, dtype=np.float64)
     X = X - X.mean(axis=0)

@@ -27,6 +27,9 @@ from pathlib import Path
 
 import numpy as np
 from scipy import stats as sp_stats
+
+sys.path.insert(0, str(Path(__file__).parent))
+from eval_stats import cohens_d
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
@@ -48,16 +51,6 @@ def bootstrap_ci(data, confidence=0.95, n_boot=10000):
     lo = float(np.percentile(boot_means, alpha * 100))
     hi = float(np.percentile(boot_means, (1 - alpha) * 100))
     return (lo, hi, len(data))
-
-
-def cohens_d(a, b):
-    a, b = np.array(a, dtype=float), np.array(b, dtype=float)
-    if len(a) < 2 or len(b) < 2:
-        return float("nan")
-    pooled_std = math.sqrt((a.var(ddof=1) + b.var(ddof=1)) / 2)
-    if pooled_std == 0:
-        return 0.0
-    return float((a.mean() - b.mean()) / pooled_std)
 
 
 def mann_whitney_u(a, b):
