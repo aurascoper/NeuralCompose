@@ -269,28 +269,38 @@ merges and this manifest's staging snapshot is refreshed.
 ```
 current main
 │
-├── Integration A: runtime foundation + packaging + A2
+├── D0: Python/evaluation gate bootstrap        (must precede B and C)
 │
-├── Integration B: NeuralComposeEEG foundation and capture contracts
+├── A:  runtime foundation + packaging + A2
+│
+├── B:  NeuralComposeEEG foundation and capture contracts
 │   │
-│   ├── Integration C: structured-state + quarantine + review governance
-│   │
-│   └── Integration D: Python CI + evaluation/statistics corrections
+│   └── C: structured state, quarantine, review governance
 │
-├── Integration E: trajectory, soak, and offline analysis tooling
+├── E1: soak harness
+├── E2: dialectic analyzer metrics + new tests
+├── E3: trajectory reconstruction/analysis
+├── E4: research findings and retained aggregate artifacts
 │
-├── Integration F: Rust prosody research kernel
+├── F:  Rust prosody research kernel
 │
-└── Integration G: remaining architecture/research documentation
+└── G:  cross-lane documentation and README reconciliation
 ```
+
+D was renamed D0 and hoisted ahead of B and C: it is the gate bootstrap, not a
+follow-on correction. Its statistical fixes (`5f2cf64`, `b0695c3`, `c1aba1a`)
+ride with it because they edit the same workflow file it owns.
 
 | Integration | Lanes | Commits | Test gate |
 | --- | --- | ---: | --- |
+| D0 | EVAL_CI_STATISTICS | 11 | `python-contracts` job green; `pytest Tests/eval` with **zero** deselections; discovery guarded per the note above |
 | A | RUNTIME_A2, PACKAGING_AND_RESOURCES, + PR #32 A–G | 16 + #32 | `swift build`; BCICore/BCICloudBridge/DialecticSession/NeuralComposeApp suites; `package-app-bundle.sh`; `smoke-packaged-resources.sh`; `codesign --verify --deep --strict`; #32 operator matrix |
 | B | EEG_FOUNDATION, EEG_CAPTURE_CONTRACTS | 8 | `NeuralComposeEEG.tests`; `test_session_consume`; `CalibrationRecorderTests` |
 | C | STRUCTURED_STATE, QUARANTINE_REVIEW_GOVERNANCE | 13 | `test_structured_state`; `test_dialectic_corpus_quarantine`; `test_local_dialectic_review`; `test_local_open_weight_review` |
-| D | EVAL_CI_STATISTICS | 11 | `pytest Tests/eval` with **zero** deselections; `python-contracts` job green |
-| E | TRAJECTORY_AND_SOAK_RESEARCH | 17 | `test_state_reconstruction`; `test_state_trajectory_analysis` — **and nothing else; see below** |
+| E1 | TRAJECTORY (harness/artifacts) | 4 | none committed — state the gap |
+| E2 | TRAJECTORY (analyzer metrics) | 6 | none committed — see coverage gap below |
+| E3 | TRAJECTORY (trajectory tooling) | 3 | `test_state_reconstruction`; `test_state_trajectory_analysis` |
+| E4 | TRAJECTORY (findings + aggregates) | 4 | none (documents + 56 KB aggregate evidence) |
 | F | RUST_PROSODY | 3 | Rust kernel tests; BCICoreTests |
 | G | ARCHITECTURE_DOCUMENTATION | 5 | none; README reconciliation |
 
@@ -306,6 +316,35 @@ current main
 - A must include PR #32; splitting #32 across integrations would break its
   bisect-safe A–G identities, which its acceptance record names.
 - F edits `Sources/BCICore`, owned by A. F follows A.
+
+**D0 must distinguish "absent" from "collected nothing".**
+
+`NeuralComposeEEG/` does not exist on `main`. The first clean CI workflow
+therefore lands on a revision where its test discovery has nothing to find, and
+the two states below must not be reported identically:
+
+```
+NeuralComposeEEG absent on this revision      truthful pre-integration state
+NeuralComposeEEG present but 0 tests collected   failure
+```
+
+`python -m unittest discover` exits 0 on both. Reporting the second as success
+would reproduce, in the bootstrap, exactly the vacuous-green defect that
+`bb7dff4` was written to remove — and it would do so on the one job whose
+purpose is to make collection counts trustworthy.
+
+D0 must therefore either guard the step explicitly:
+
+```
+if [ -d NeuralComposeEEG ]; then run discovery
+else echo "::notice::NeuralComposeEEG absent on this revision — step skipped"
+fi
+```
+
+or defer the step to a separate **D1 activation commit** landing with lane B,
+so the job never runs discovery against a directory that does not exist. Either
+is acceptable; silently reporting "0 tests, success" is not. The same applies to
+`Tests/eval`, whose contents arrive across lanes B, C, D and E.
 
 **Splits this inventory recommends.**
 
