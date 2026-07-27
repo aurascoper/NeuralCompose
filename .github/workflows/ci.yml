@@ -113,8 +113,8 @@ jobs:
       # fail collection here — run it locally.
       #
       # The three deselected cases fail on this base and are tracked separately;
-      # they are pre-existing, reproduce on both NumPy 1.26 and 2.4, and are not
-      # caused by this workflow. The rest of their files still run.
+      # they are pre-existing (issue #38), reproduce on both NumPy 1.26 and 2.4, and
+      # are not caused by this workflow. The rest of their files still run.
       - name: Test (eval contract suites)
         run: |
           pytest Tests/eval -v \
