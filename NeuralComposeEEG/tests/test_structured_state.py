@@ -42,8 +42,8 @@ class StructuredStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             dataset, probabilities = self._dataset_and_probabilities(root)
-            states = root / "states.jsonl"
-            manifest = root / "manifest.json"
+            states = root / "shadow" / "states.jsonl"
+            manifest = root / "shadow" / "manifest.json"
             first = write_shadow_state_artifacts(
                 dataset,
                 probabilities,
@@ -78,8 +78,8 @@ class StructuredStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             dataset, probabilities = self._dataset_and_probabilities(root)
-            states = root / "states.jsonl"
-            manifest = root / "manifest.json"
+            states = root / "shadow" / "states.jsonl"
+            manifest = root / "shadow" / "manifest.json"
             write_shadow_state_artifacts(
                 dataset,
                 probabilities,
@@ -99,8 +99,8 @@ class StructuredStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             dataset, probabilities = self._dataset_and_probabilities(root)
-            states = root / "states.jsonl"
-            manifest = root / "manifest.json"
+            states = root / "shadow" / "states.jsonl"
+            manifest = root / "shadow" / "manifest.json"
             write_shadow_state_artifacts(
                 dataset,
                 probabilities,
@@ -193,8 +193,8 @@ class StructuredStateTests(unittest.TestCase):
 
     def _published(self, root: Path) -> tuple[Path, Path, list[dict]]:
         dataset, probabilities = self._dataset_and_probabilities(root)
-        states = root / "states.jsonl"
-        manifest = root / "manifest.json"
+        states = root / "shadow" / "states.jsonl"
+        manifest = root / "shadow" / "manifest.json"
         write_shadow_state_artifacts(
             dataset,
             probabilities,
@@ -257,8 +257,8 @@ class StructuredStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             dataset, probabilities = self._dataset_and_probabilities(root)
-            states = root / "states.jsonl"
-            manifest = root / "manifest.json"
+            states = root / "shadow" / "states.jsonl"
+            manifest = root / "shadow" / "manifest.json"
             write_shadow_state_artifacts(
                 dataset,
                 probabilities,
@@ -277,8 +277,130 @@ class StructuredStateTests(unittest.TestCase):
                     manifest_output=manifest,
                 )
             self.assertEqual(states.read_bytes(), previous)
-            self.assertEqual([path.name for path in root.iterdir() if ".partial" in path.name], [])
+            self.assertEqual([path.name for path in states.parent.iterdir() if ".partial" in path.name], [])
             load_shadow_state_records(states, manifest)
+
+    # ── record/manifest provenance agreement ─────────────────────────────
+    #
+    # records_sha256 only proves the records are the ones the manifest was
+    # written for. Each case below rehashes the manifest so that check passes,
+    # leaving the agreement checks as the only thing standing between a
+    # mismatched artifact and a successful replay.
+
+    def test_replay_rejects_record_encoder_mismatch_with_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            states, manifest, records = self._published(root)
+            records[0]["encoder"] = {**self._encoder_provenance(), "model_id": "substituted-encoder"}
+            self._rehash(states, manifest, records)
+            with self.assertRaisesRegex(ContractError, "encoder does not match the manifest"):
+                load_shadow_state_records(states, manifest)
+
+    def test_replay_rejects_record_source_mismatch_with_manifest(self) -> None:
+        for field in ("dataset_sha256", "source_manifest_sha256"):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                states, manifest, records = self._published(root)
+                records[0]["source"][field] = "0" * 64
+                self._rehash(states, manifest, records)
+                with self.assertRaisesRegex(ContractError, f"{field} does not match the manifest"):
+                    load_shadow_state_records(states, manifest)
+
+    def test_replay_rejects_invalid_or_unrecomputed_state_id(self) -> None:
+        cases = {
+            "not_hexadecimal": ("z" * 64, "state_id must be a lowercase SHA-256"),
+            "wrong_length": ("abc123", "state_id must be a lowercase SHA-256"),
+            "valid_hex_but_not_derived": ("a" * 64, "not derived from its dataset and raw window"),
+        }
+        for name, (state_id, expected) in cases.items():
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                states, manifest, records = self._published(root)
+                records[0]["state_id"] = state_id
+                self._rehash(states, manifest, records)
+                with self.assertRaisesRegex(ContractError, expected):
+                    load_shadow_state_records(states, manifest)
+
+    def test_replay_rejects_raw_window_that_is_not_a_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            states, manifest, records = self._published(root)
+            records[0]["source"]["raw_window_sha256"] = "not-a-digest"
+            self._rehash(states, manifest, records)
+            with self.assertRaisesRegex(ContractError, "raw_window_sha256 must be a lowercase SHA-256"):
+                load_shadow_state_records(states, manifest)
+
+    # ── the pair is the unit of publication ──────────────────────────────
+
+    def test_differing_republication_is_refused_and_preserves_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset, probabilities = self._dataset_and_probabilities(root)
+            states = root / "shadow" / "states.jsonl"
+            manifest = root / "shadow" / "manifest.json"
+            write_shadow_state_artifacts(
+                dataset,
+                probabilities,
+                encoder_provenance=self._encoder_provenance(),
+                states_output=states,
+                manifest_output=manifest,
+            )
+            published = (states.read_bytes(), manifest.read_bytes())
+            # A different but entirely valid run over the same output paths.
+            probabilities[:, 0], probabilities[:, 2] = 0.1, 0.7
+            with self.assertRaisesRegex(ContractError, "refusing to overwrite"):
+                write_shadow_state_artifacts(
+                    dataset,
+                    probabilities,
+                    encoder_provenance=self._encoder_provenance(),
+                    states_output=states,
+                    manifest_output=manifest,
+                )
+            self.assertEqual((states.read_bytes(), manifest.read_bytes()), published)
+            self.assertEqual([path.name for path in states.parent.iterdir() if ".partial" in path.name], [])
+            load_shadow_state_records(states, manifest)
+
+    def test_matching_states_only_publication_can_complete_manifest(self) -> None:
+        """An interrupted first publication — records committed, manifest never
+        written — is completable, because the records on disk match exactly."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset, probabilities = self._dataset_and_probabilities(root)
+            states = root / "shadow" / "states.jsonl"
+            manifest = root / "shadow" / "manifest.json"
+            write_shadow_state_artifacts(
+                dataset,
+                probabilities,
+                encoder_provenance=self._encoder_provenance(),
+                states_output=states,
+                manifest_output=manifest,
+            )
+            committed = states.read_bytes()
+            manifest.unlink()
+            write_shadow_state_artifacts(
+                dataset,
+                probabilities,
+                encoder_provenance=self._encoder_provenance(),
+                states_output=states,
+                manifest_output=manifest,
+            )
+            self.assertEqual(states.read_bytes(), committed)
+            self.assertEqual(len(load_shadow_state_records(states, manifest)), len(dataset.labels))
+
+    def test_states_and_manifest_outputs_must_be_distinct(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset, probabilities = self._dataset_and_probabilities(root)
+            shared = root / "artifact.json"
+            with self.assertRaisesRegex(ContractError, "must be distinct paths"):
+                write_shadow_state_artifacts(
+                    dataset,
+                    probabilities,
+                    encoder_provenance=self._encoder_provenance(),
+                    states_output=shared,
+                    manifest_output=shared,
+                )
+            self.assertFalse(shared.exists())
 
 
 if __name__ == "__main__":

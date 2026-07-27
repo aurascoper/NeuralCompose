@@ -43,6 +43,7 @@ _ENCODER_PROVENANCE_KEYS = frozenset(
         "source_kind",
     }
 )
+_HEX_DIGITS = "0123456789abcdef"
 _FORBIDDEN_SERIALIZED_TERMS = (
     "dialogue",
     "dialectic",
@@ -71,6 +72,31 @@ def _publish_text(path: Path, text: str) -> None:
         os.replace(partial, path)
     finally:
         partial.unlink(missing_ok=True)
+
+
+def _require_sha256(value: Any, field: str) -> str:
+    if not isinstance(value, str) or len(value) != 64 or value.strip(_HEX_DIGITS):
+        raise ContractError(f"{field} must be a lowercase SHA-256 hex digest")
+    return value
+
+
+def _state_id(dataset_sha256: str, raw_window_sha256: str) -> str:
+    return hashlib.sha256(f"{dataset_sha256}:{raw_window_sha256}".encode("utf-8")).hexdigest()
+
+
+def _settled(path: Path, text: str, description: str) -> bool:
+    """Report whether `path` already holds exactly `text`, refusing any other
+    existing content. Called for both artifacts before either is written, so a
+    refusal leaves the published pair untouched."""
+    try:
+        existing = path.read_bytes()
+    except FileNotFoundError:
+        return False
+    except OSError as exc:
+        raise ContractError(f"cannot read existing {description}: {exc}") from exc
+    if existing != text.encode("utf-8"):
+        raise ContractError(f"refusing to overwrite existing {description} that differs from this run")
+    return True
 
 
 def _sha256_lines(records: Iterable[dict[str, Any]]) -> str:
@@ -142,9 +168,7 @@ def build_shadow_state_records(
         state = {
             "schema_version": STATE_SCHEMA,
             **_REQUIRED_GLOBAL_STATUS,
-            "state_id": hashlib.sha256(
-                f"{dataset_sha256}:{dataset.raw_window_hashes[row]}".encode("utf-8")
-            ).hexdigest(),
+            "state_id": _state_id(dataset_sha256, str(dataset.raw_window_hashes[row])),
             "source": {
                 "dataset_sha256": dataset_sha256,
                 "source_manifest_sha256": dataset.source_manifest_sha256,
@@ -173,10 +197,19 @@ def write_shadow_state_artifacts(
     states_output: Path,
     manifest_output: Path,
 ) -> dict[str, Any]:
-    """Persist canonical JSONL records and a hash-bound replay manifest."""
+    """Persist canonical JSONL records and a hash-bound replay manifest.
+
+    The pair is the unit of publication, not either file. Both payloads are
+    built and validated before anything is written, and the manifest is written
+    last as the commit marker — a reader that finds no manifest knows the
+    records were never committed.
+
+    Republication is idempotent, never destructive: byte-identical inputs are a
+    no-op, and any differing existing file is refused with both files left
+    untouched. An interrupted first publication (records present, manifest
+    absent) can be completed, but only when the existing records match exactly.
+    """
     records = build_shadow_state_records(dataset, probabilities, encoder_provenance=encoder_provenance)
-    states_output.parent.mkdir(parents=True, exist_ok=True)
-    _publish_text(states_output, "".join(f"{_canonical_json(record)}\n" for record in records))
     manifest = {
         "schema_version": MANIFEST_SCHEMA,
         "state_schema_version": STATE_SCHEMA,
@@ -190,8 +223,21 @@ def write_shadow_state_artifacts(
         "input_probability_sha256": sha256_json(np.asarray(probabilities, dtype=np.float64).tolist()),
     }
     _require_no_forbidden_serialized_terms(manifest)
+    if states_output.resolve() == manifest_output.resolve():
+        raise ContractError("state and manifest outputs must be distinct paths")
+
+    states_text = "".join(f"{_canonical_json(record)}\n" for record in records)
+    manifest_text = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+    states_settled = _settled(states_output, states_text, "state records")
+    manifest_settled = _settled(manifest_output, manifest_text, "state manifest")
+    if states_settled and manifest_settled:
+        return manifest
+
+    states_output.parent.mkdir(parents=True, exist_ok=True)
     manifest_output.parent.mkdir(parents=True, exist_ok=True)
-    _publish_text(manifest_output, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    if not states_settled:
+        _publish_text(states_output, states_text)
+    _publish_text(manifest_output, manifest_text)
     return manifest
 
 
@@ -214,6 +260,15 @@ def load_shadow_state_records(states_path: Path, manifest_path: Path) -> list[di
         raise ContractError("state record count does not match manifest")
     if _sha256_lines(records) != manifest.get("records_sha256"):
         raise ContractError("state records do not match manifest hash")
+    # The hash above only proves the records are the ones this manifest was
+    # written for. It says nothing about whether they *agree* with it, so a
+    # rehashed file could still claim a different encoder or dataset than the
+    # manifest it ships with. Bind the two together explicitly.
+    manifest_encoder = _validate_encoder_provenance(manifest.get("encoder"))
+    manifest_dataset_sha256 = _require_sha256(manifest.get("dataset_sha256"), "manifest dataset_sha256")
+    manifest_source_sha256 = _require_sha256(
+        manifest.get("source_manifest_sha256"), "manifest source_manifest_sha256"
+    )
     seen_ids: set[str] = set()
     for record in records:
         if record.get("schema_version") != STATE_SCHEMA:
@@ -221,14 +276,23 @@ def load_shadow_state_records(states_path: Path, manifest_path: Path) -> list[di
         for key, expected in _REQUIRED_GLOBAL_STATUS.items():
             if record.get(key) != expected:
                 raise ContractError(f"state record {key} violates shadow-only status")
-        state_id = record.get("state_id")
-        if not isinstance(state_id, str) or len(state_id) != 64 or state_id in seen_ids:
-            raise ContractError("state ids must be unique SHA-256 values")
-        seen_ids.add(state_id)
         source = record.get("source")
         observable = record.get("observable_state")
         if not isinstance(source, dict) or not isinstance(observable, dict):
             raise ContractError("state record needs source and observable_state objects")
+        if record.get("encoder") != manifest_encoder:
+            raise ContractError("state record encoder does not match the manifest")
+        if source.get("dataset_sha256") != manifest_dataset_sha256:
+            raise ContractError("state record dataset_sha256 does not match the manifest")
+        if source.get("source_manifest_sha256") != manifest_source_sha256:
+            raise ContractError("state record source_manifest_sha256 does not match the manifest")
+        raw_window_sha256 = _require_sha256(source.get("raw_window_sha256"), "raw_window_sha256")
+        state_id = record.get("state_id")
+        if state_id in seen_ids:
+            raise ContractError("state ids must be unique SHA-256 values")
+        if _require_sha256(state_id, "state_id") != _state_id(manifest_dataset_sha256, raw_window_sha256):
+            raise ContractError("state_id is not derived from its dataset and raw window")
+        seen_ids.add(state_id)
         probabilities = observable.get("probabilities")
         if not isinstance(probabilities, dict) or not probabilities:
             raise ContractError("state record needs observable probabilities")
