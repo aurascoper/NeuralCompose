@@ -65,6 +65,44 @@ jobs:
         # covered socket-free by MuseOSCDecoderTests / MindMonitorDecoderTests,
         # which still run. Run the socket integration test locally.
 
+      # The step above names five targets. The package declares nine, and the
+      # app-level fail-closed, runtime-presentation, cancellation, and headless
+      # runtime-factory regressions live in two it never selected:
+      # NeuralComposeAppTests (116 tests) and DialecticSessionTests (5).
+      #
+      # Assert they are discoverable before running them. A `--filter` that
+      # matches nothing exits 0, so a renamed, moved, or emptied target would
+      # otherwise turn into another green step that ran nothing.
+      - name: Assert A2 suites are discoverable
+        run: |
+          swift test list > /tmp/neuralcompose-tests.txt
+
+          # Sentinel classes, one per target.
+          grep -q "AppViewModelRuntimeFailClosedTests" /tmp/neuralcompose-tests.txt \
+            || { echo "::error::AppViewModelRuntimeFailClosedTests not discoverable"; exit 1; }
+          grep -q "RuntimeFactoryClaudeResolutionTests" /tmp/neuralcompose-tests.txt \
+            || { echo "::error::RuntimeFactoryClaudeResolutionTests not discoverable"; exit 1; }
+
+          # Sentinels alone would still pass if the rest of a target vanished,
+          # so floor each target's discovered count too. Floors are set below
+          # the current 116/5 so ordinary test additions never trip them.
+          app=$(grep -c '^NeuralComposeAppTests\.' /tmp/neuralcompose-tests.txt)
+          session=$(grep -c '^DialecticSessionTests\.' /tmp/neuralcompose-tests.txt)
+          echo "discovered: NeuralComposeAppTests=$app DialecticSessionTests=$session"
+          [ "$app" -ge 100 ] \
+            || { echo "::error::NeuralComposeAppTests discovered $app, expected >= 100"; exit 1; }
+          [ "$session" -ge 5 ] \
+            || { echo "::error::DialecticSessionTests discovered $session, expected >= 5"; exit 1; }
+
+      # RuntimeIdentityPresentationTests is deliberately NOT asserted here: it
+      # arrives with PR #32. Add it as a third sentinel when that lands, so the
+      # guard stays true at every revision rather than failing on this base.
+      - name: Test (A2 app and session suites)
+        run: |
+          swift test \
+            --filter NeuralComposeAppTests \
+            --filter DialecticSessionTests
+
   # The Python contract suites had no CI at all until now, which is how a test
   # importing an uncommitted module (neuralcompose_eeg.structured_state) reached
   # a pull request unnoticed: build-and-test above is Swift-only.
