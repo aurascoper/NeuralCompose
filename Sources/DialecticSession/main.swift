@@ -38,11 +38,10 @@ if opts.runtimeReport {
         RuntimeReport.render(resolved: resolved, runtimeName: opts.runtime, model: opts.model)
         let v = RuntimeReport.verify(resolved: resolved)
         print("")
-        print("Verification:")
-        print("  prompt loaded:       \(v.promptLoaded ? "yes" : "no")")
-        print("  transport reachable: \(v.transportOK ? "yes" : "no")")
-        print("  model available:     \(v.modelAvailable ? "yes" : "no")")
-        exit(v.promptLoaded && v.transportOK && v.modelAvailable ? 0 : 1)
+        RuntimeReport.verificationLines(v).forEach { print($0) }
+        // `notChecked` is an absence of evidence, not a failure, so it does
+        // not fail the report — only a check that ran and did not hold does.
+        exit(v.hasFailure ? 1 : 0)
     } catch {
         FileHandle.standardError.write(Data("error: \(error)\n".utf8))
         exit(1)
@@ -61,20 +60,17 @@ if opts.dryRun {
         RuntimeReport.render(resolved: resolved, runtimeName: opts.runtime, model: opts.model)
         let v = RuntimeReport.verify(resolved: resolved)
         print("")
-        print("Verification:")
-        print("  prompt loaded:       \(v.promptLoaded ? "yes" : "no")")
-        print("  transport reachable: \(v.transportOK ? "yes" : "no")")
-        print("  model available:     \(v.modelAvailable ? "yes" : "no")")
-        if !(v.promptLoaded && v.transportOK && v.modelAvailable) {
+        RuntimeReport.verificationLines(v).forEach { print($0) }
+        if v.hasFailure {
             FileHandle.standardError.write(Data("dry-run failed verification\n".utf8))
             exit(1)
         }
         print("")
-        print("✓ runtime created")
-        print("✓ transport reachable")
-        print("✓ model exists")
-        print("✓ prompt loaded")
-        print("✓ fingerprint generated")
+        // Only checks that ran get a tick. A Claude dry run configures a
+        // runtime and loads a prompt; it does not establish that the provider
+        // answers or that this account may use this model, so it must not
+        // print those as verified.
+        RuntimeReport.dryRunSummaryLines(v).forEach { print($0) }
         print("")
         print("No LLM call was made.")
         exit(0)

@@ -65,16 +65,22 @@ public enum RuntimeReport {
 
     /// Perform the live verification: load the prompt profile,
     /// probe the transport, and (for Ollama) verify the model is
-    /// available. Returns a tuple of (promptLoaded, transportOK,
-    /// modelAvailable). All checks are best-effort; failures
-    /// return `false` for the failed check and never throw.
-    public static func verify(resolved: ResolvedRuntime) -> (promptLoaded: Bool, transportOK: Bool, modelAvailable: Bool) {
-        let promptLoaded: Bool
+    /// available. All checks are best-effort and never throw.
+    ///
+    /// **A check that was not performed is not a check that passed.**
+    /// This returned `(promptLoaded, true, true)` for Claude while
+    /// its own comment said no call had been made, so the harness
+    /// printed `transport reachable: yes` / `model available: yes`
+    /// on evidence it had not collected. `notChecked` is the third
+    /// state that was missing; it is not a failure, and a
+    /// configuration-only dry run still exits 0.
+    public static func verify(resolved: ResolvedRuntime) -> RuntimeVerification {
+        let promptLoaded: VerificationStatus
         do {
             _ = try resolved.promptProfile.load()
-            promptLoaded = true
+            promptLoaded = .passed
         } catch {
-            promptLoaded = false
+            promptLoaded = .failed
         }
 
         // For Ollama, the factory already validated the model is
@@ -101,18 +107,67 @@ public enum RuntimeReport {
             }
             _ = sem.wait(timeout: .now() + 5)
             task.cancel()
-            let transportOK = ok.withLock { $0 }
-            return (promptLoaded, transportOK, transportOK)
+            let reached: VerificationStatus = ok.withLock { $0 } ? .passed : .failed
+            return RuntimeVerification(
+                prompt: promptLoaded, transport: reached, model: reached)
         } else if resolved.runtime is ClaudeCLIGenerationRuntime {
-            // Claude: the subprocess path validates the CLI on
-            // first call. For the dry-run, we don't call. We
-            // report `transportOK = true` (the factory has the
-            // runtime) and `modelAvailable = true` (the
-            // subprocess will tell us on the first live call).
-            return (promptLoaded, true, true)
+            // Claude validates the CLI on the first call, and a
+            // dry run makes no call — so the provider was never
+            // contacted and this account's entitlement to this
+            // model is unknown. Both are reported as `notChecked`
+            // rather than assumed good; the prompt check above is
+            // real and still stands on its own.
+            return RuntimeVerification(
+                prompt: promptLoaded,
+                transport: .notChecked,
+                model: .notChecked,
+                notCheckedReason: "no generation request made"
+            )
         }
 
-        return (promptLoaded, false, false)
+        return RuntimeVerification(prompt: promptLoaded, transport: .failed, model: .failed)
+    }
+
+    /// The `Verification:` block, as lines rather than `print`
+    /// calls, so the wording is reachable by a test. The previous
+    /// version formatted inline at two call sites in `main.swift`,
+    /// which is why nothing could assert on what it claimed.
+    public static func verificationLines(_ v: RuntimeVerification) -> [String] {
+        [
+            "Verification:",
+            "  prompt loaded:        \(describe(v.prompt, reason: v.notCheckedReason))",
+            "  provider reachable:   \(describe(v.transport, reason: v.notCheckedReason))",
+            "  exact model present:  \(describe(v.model, reason: v.notCheckedReason))",
+        ]
+    }
+
+    /// The dry-run summary. Only checks that actually ran get a
+    /// `✓`; unchecked ones get a `–` that names the gap, so the
+    /// summary cannot read as stronger evidence than the block
+    /// above it.
+    public static func dryRunSummaryLines(_ v: RuntimeVerification) -> [String] {
+        var lines = ["✓ runtime configured"]
+        if v.prompt == .passed { lines.append("✓ prompt loaded") }
+        switch (v.transport, v.model) {
+        case (.passed, .passed):
+            lines.append("✓ endpoint reachable")
+            lines.append("✓ exact model present")
+        case (.notChecked, .notChecked):
+            lines.append("– provider and model were not operationally verified")
+        default:
+            if v.transport == .passed { lines.append("✓ endpoint reachable") }
+            if v.model == .passed { lines.append("✓ exact model present") }
+        }
+        lines.append("✓ fingerprint generated")
+        return lines
+    }
+
+    private static func describe(_ status: VerificationStatus, reason: String?) -> String {
+        switch status {
+        case .passed:     return "yes"
+        case .failed:     return "no"
+        case .notChecked: return "not checked — \(reason ?? "not performed on this path")"
+        }
     }
 
     private static func transportName(of runtime: any GenerationRuntime) -> String {
@@ -142,5 +197,56 @@ public enum RuntimeReport {
         case "ollama":     return "http://localhost:11434"
         default:           return "(unknown)"
         }
+    }
+}
+
+/// The outcome of one verification check.
+///
+/// Three states, not two. A boolean forces every check that was
+/// skipped to be reported as either a pass or a failure, and the
+/// Claude dry-run path chose "pass" — printing `transport
+/// reachable: yes` for a provider it had never contacted.
+public enum VerificationStatus: Equatable, Sendable {
+    /// The check ran and the condition held.
+    case passed
+    /// The check ran and the condition did not hold.
+    case failed
+    /// The check did not run, so there is no evidence either way.
+    /// Explicitly **not** a failure.
+    case notChecked
+}
+
+/// What a dry run actually established about a runtime.
+///
+/// This mirrors `RuntimeReadiness`'s configured/ready split on the
+/// headless side: a Claude runtime can be fully constructed with a
+/// loaded prompt while its provider and model entitlement remain
+/// entirely unverified.
+public struct RuntimeVerification: Equatable, Sendable {
+    public let prompt: VerificationStatus
+    public let transport: VerificationStatus
+    public let model: VerificationStatus
+    /// Why the unchecked checks were not run, rendered beside each
+    /// `notChecked` line so an absence of evidence names its cause
+    /// instead of looking like an omission.
+    public let notCheckedReason: String?
+
+    public init(
+        prompt: VerificationStatus,
+        transport: VerificationStatus,
+        model: VerificationStatus,
+        notCheckedReason: String? = nil
+    ) {
+        self.prompt = prompt
+        self.transport = transport
+        self.model = model
+        self.notCheckedReason = notCheckedReason
+    }
+
+    /// Only an actual `failed` check fails the run. A
+    /// configuration-only dry run — everything that could be
+    /// checked passed, the rest was never attempted — still exits 0.
+    public var hasFailure: Bool {
+        [prompt, transport, model].contains(.failed)
     }
 }
