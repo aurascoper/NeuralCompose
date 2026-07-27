@@ -119,5 +119,4 @@ jobs:
         run: |
           pytest Tests/eval -v \
             --ignore=Tests/eval/test_joint_embedding.py \
-            --deselect Tests/eval/test_eval_stats.py::test_mann_whitney_u_disjoint \
             --deselect Tests/eval/test_embedding_space.py::test_cka_independent
