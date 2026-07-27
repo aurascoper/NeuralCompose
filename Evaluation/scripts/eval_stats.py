@@ -32,14 +32,20 @@ def bootstrap_ci(data, confidence=0.95, n_boot=10000):
 
 
 def cohens_d(a, b):
-    """Cohen's d effect size between two samples."""
+    """Cohen's d effect size between two samples.
+
+    Returns NaN where d is undefined rather than a finite value that would rank
+    alongside real effects: under-sized samples, and zero pooled variance with
+    separated means. Only equal constant groups are a true zero.
+    """
     a, b = np.array(a, dtype=float), np.array(b, dtype=float)
     if len(a) < 2 or len(b) < 2:
         return float("nan")
+    mean_difference = float(a.mean() - b.mean())
     pooled_std = math.sqrt((a.var(ddof=1) + b.var(ddof=1)) / 2)
     if pooled_std == 0:
-        return 0.0
-    return float((a.mean() - b.mean()) / pooled_std)
+        return 0.0 if mean_difference == 0 else float("nan")
+    return mean_difference / pooled_std
 
 
 def mann_whitney_u(a, b):

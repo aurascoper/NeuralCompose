@@ -26,9 +26,19 @@ def test_cohens_d_identical():
     assert d == 0.0
 
 
-def test_cohens_d_large_effect():
-    d = cohens_d([1, 1, 1, 1], [5, 5, 5, 5])
-    assert d > 2.0  # very large effect
+def test_cohens_d_identical_constant_groups_are_zero():
+    assert cohens_d([1, 1, 1, 1], [1, 1, 1, 1]) == 0.0
+
+
+def test_cohens_d_separated_constant_groups_are_undefined():
+    # Zero pooled variance with separated means: d is unbounded, not absent.
+    # Returning 0.0 here would rank total separation as "no effect".
+    assert np.isnan(cohens_d([1, 1, 1, 1], [5, 5, 5, 5]))
+
+
+def test_cohens_d_large_nondegenerate_effect():
+    d = cohens_d([0.9, 1.0, 1.1, 1.0], [4.9, 5.0, 5.1, 5.0])
+    assert abs(d) > 2.0
 
 
 def test_mann_whitney_u_disjoint():

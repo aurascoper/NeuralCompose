@@ -112,13 +112,12 @@ jobs:
       # test_joint_embedding.py imports mlx.core (Apple Silicon only) and would
       # fail collection here — run it locally.
       #
-      # The three deselected cases fail on this base and are tracked separately;
-      # they are pre-existing (issue #38), reproduce on both NumPy 1.26 and 2.4, and
-      # are not caused by this workflow. The rest of their files still run.
+      # The remaining deselected cases are pre-existing failures tracked in
+      # issue #38, reproducing on both NumPy 1.26 and 2.4. They are removed one
+      # at a time as each is resolved; the rest of their files still run.
       - name: Test (eval contract suites)
         run: |
           pytest Tests/eval -v \
             --ignore=Tests/eval/test_joint_embedding.py \
-            --deselect Tests/eval/test_eval_stats.py::test_cohens_d_large_effect \
             --deselect Tests/eval/test_eval_stats.py::test_mann_whitney_u_disjoint \
             --deselect Tests/eval/test_embedding_space.py::test_cka_independent
