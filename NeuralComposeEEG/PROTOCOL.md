@@ -39,15 +39,23 @@ never infer alignment from filenames, file modification times, or recollection.
 4. Let every block complete, then stop calibration recording in the app. Do
    not reuse a protocol log for a later recording or manually edit its times.
 5. Add the resulting recording directory and protocol-log path to a local
-   capture index, then let `capture_manifest` decide eligibility. A rejected
-   session is evidence about collection integrity, not a reason to repair its
-   timestamps by hand.
+   capture index, then run `capture_manifest --integrity-output` for the
+   individual capture. A rejected session is evidence about collection
+   integrity, not a reason to repair its timestamps by hand.
 
 The first capture is an engineering capture, but it must execute the complete
-protocol without relaxing any gate. Afterward run only the manifest compiler,
-window builder, integrity report, and deterministic replay check. Do not train
-EEGNet from one session. A second eligible day permits M0/M1 only as pipeline
-evidence; collect three or more days before interpreting held-out performance.
+protocol without relaxing any gate. Afterward run only the per-capture
+integrity report, window builder, and deterministic replay check. Do not train
+EEGNet from one session. A second clean capture on a distinct UTC recording
+date permits source-manifest compilation and M0/M1 only as pipeline evidence;
+collect three or more days before interpreting held-out performance.
+
+Capture integrity and experiment eligibility are intentionally separate.
+`--integrity-output` establishes that one non-excluded capture is complete,
+clock-aligned, and trustworthy. The canonical `--output` source manifest
+additionally requires two or more clean sessions on two or more UTC recording
+dates with pinned stimulus identity; one valid session never becomes eligible
+for model evaluation by override.
 
 Run the exact `encoder-pilot` preset. It writes an
 `nc-eeg-observable-protocol-v1` log that records the activity instruction,

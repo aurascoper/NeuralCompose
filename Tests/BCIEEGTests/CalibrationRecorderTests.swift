@@ -42,6 +42,34 @@ final class CalibrationRecorderTests: XCTestCase {
 
         let metadata = try await readMetadata(sessionDir: dir, recorder: recorder)
         XCTAssertEqual(metadata["transport"] as? String, "brainflow")
+        XCTAssertEqual(metadata["device_profile"] as? String, "muse_s_native_ble")
+    }
+
+    func testFirstSampleRecordsExplicitClockProvenance() async throws {
+        let recorder = CalibrationRecorder()
+        let dir = try makeTempDirectory()
+        try await recorder.beginSession(to: dir, profile: .synthetic)
+        await recorder.recordSample(EEGSample(timestamp: 2.5, channels: [0, 0, 0, 0]))
+        await recorder.finishSession()
+
+        let metadata = try await readMetadata(sessionDir: dir, recorder: recorder)
+        XCTAssertEqual(metadata["eeg_timestamp_clock"] as? String, "stream_relative")
+        XCTAssertEqual(metadata["first_sample_timestamp"] as? Double, 2.5)
+        XCTAssertNotNil(metadata["first_sample_wallclock_unix"] as? Double)
+    }
+
+    func testEpochSampleRecordsUnixEpochClockProvenance() async throws {
+        let recorder = CalibrationRecorder()
+        let dir = try makeTempDirectory()
+        try await recorder.beginSession(to: dir, profile: .museSNativeBLE)
+        let epochTimestamp = 1_784_000_000.25
+        await recorder.recordSample(EEGSample(timestamp: epochTimestamp, channels: [0, 0, 0, 0]))
+        await recorder.finishSession()
+
+        let metadata = try await readMetadata(sessionDir: dir, recorder: recorder)
+        XCTAssertEqual(metadata["eeg_timestamp_clock"] as? String, "unix_epoch")
+        XCTAssertEqual(metadata["first_sample_timestamp"] as? Double, epochTimestamp)
+        XCTAssertNotNil(metadata["first_sample_wallclock_unix"] as? Double)
     }
 
     func testStalledEventIsWrittenAndSummarized() async throws {
