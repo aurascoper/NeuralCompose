@@ -57,16 +57,19 @@ class JEPATransitionDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tens
     def __init__(self, jsonl_path: str | Path, normalize: bool = True,
                  mean: torch.Tensor | None = None, std: torch.Tensor | None = None,
                  clip_sigma: float = 8.0, log_features: bool = False,
-                 log_epsilon: float = 1e-6):
+                 log_epsilon: float = 1e-6, symlog: bool = False):
         if clip_sigma <= 0:
             raise ValueError(f"clip_sigma must be positive, got {clip_sigma}")
         if log_epsilon <= 0:
             raise ValueError(f"log_epsilon must be positive, got {log_epsilon}")
+        if log_features and symlog:
+            raise ValueError("log_features and symlog are mutually exclusive input-space transforms")
         self.path = Path(jsonl_path)
         self.normalize = normalize
         self.clip_sigma = clip_sigma
         self.log_features = log_features
         self.log_epsilon = log_epsilon
+        self.symlog = symlog
         self.transitions = self._load_records()
         self.pre_action_windows, self.actions, self.post_action_windows = self._make_tensors()
 
@@ -78,6 +81,15 @@ class JEPATransitionDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tens
             # log-space and __getitem__ normalizes the (now log-space) stored windows.
             self.pre_action_windows = torch.log(self.pre_action_windows.clamp_min(0.0) + self.log_epsilon)
             self.post_action_windows = torch.log(self.post_action_windows.clamp_min(0.0) + self.log_epsilon)
+        elif symlog:
+            # Signed log1p: same heavy-tail compression as log_features, but WITHOUT the
+            # epsilon-floor artifact. log_features maps a zero/near-dead channel to
+            # log(log_epsilon) ~= -13.8, a large negative outlier the z-score then
+            # amplifies; log1p(0)=0 preserves it exactly. sign() keeps it valid for any
+            # FP-negative power. Stats below are computed in this space and __getitem__
+            # normalizes the (now symlog-space) stored windows.
+            self.pre_action_windows = torch.sign(self.pre_action_windows) * torch.log1p(self.pre_action_windows.abs())
+            self.post_action_windows = torch.sign(self.post_action_windows) * torch.log1p(self.post_action_windows.abs())
 
         self.sequence_length = self.pre_action_windows.shape[1]
         self.state_dim = self.pre_action_windows.shape[2]
@@ -518,6 +530,9 @@ def main() -> None:
                              "z-scoring, so high-power bands don't swamp low-power ones")
     parser.add_argument("--log-epsilon", type=float, default=1e-6,
                         help="additive constant inside log(x+eps) when --log-features is set")
+    parser.add_argument("--symlog", action="store_true",
+                        help="signed-log1p compress powers before z-scoring (node-7 arm; "
+                             "mutually exclusive with --log-features, no epsilon floor)")
     parser.add_argument("--smoke-test", action="store_true")
     args = parser.parse_args()
 
@@ -530,7 +545,8 @@ def main() -> None:
 
     dataset = JEPATransitionDataset(args.dataset, normalize=not args.no_normalize,
                                     clip_sigma=args.clip_sigma,
-                                    log_features=args.log_features, log_epsilon=args.log_epsilon)
+                                    log_features=args.log_features, log_epsilon=args.log_epsilon,
+                                    symlog=args.symlog)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     config = EEGJEPAConfig(
         latent_dim=args.latent_dim,
@@ -558,6 +574,7 @@ def main() -> None:
             args.val_dataset, normalize=not args.no_normalize,
             mean=dataset.mean, std=dataset.std, clip_sigma=args.clip_sigma,
             log_features=args.log_features, log_epsilon=args.log_epsilon,
+            symlog=args.symlog,
         )
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
         model.encoder.eval()
