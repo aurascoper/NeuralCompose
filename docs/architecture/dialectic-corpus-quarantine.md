@@ -17,10 +17,15 @@ Every derived artifact carries this exact disposition:
   "eligible_for_encoder_evaluation": false,
   "eligible_for_policy_training": false,
   "eligible_for_policy_evaluation": false,
+  "eligible_for_science": false,
   "contains_private_dialogue": true,
   "cloud_exposure_allowed": false
 }
 ```
+
+The cascade requires every field above. A report produced before
+`eligible_for_science: false` existed must be regenerated from the unchanged
+local source rather than patched by hand.
 
 Local engineering may inspect the raw file for parser recovery, chronological
 reconstruction, UI replay, turn reconciliation, dialogue-state debugging, or
@@ -71,3 +76,62 @@ structured-state schema, temporal alignment rules, whole-session splits,
 privacy rules, and unseen confirmation sessions. See
 [the EEG methods scope](../scoping/eeg-mathematics-physics-methods-scope.md)
 and [ADR-005](decision-log/ADR-005-local-interaction-logging.md).
+
+## Local Semantic Engineering Review
+
+New review work should use the
+[Local Open-Weight Review Cascade](local-open-weight-review-cascade.md), which
+keeps source-line identity canonical, never repairs citations, limits retries,
+and admits only metadata-only artifacts. It still produces development-only
+engineering observations, never scientific evidence.
+
+An already quarantined source may be inspected by a local Qwen 0.5B-class
+model for bounded engineering review. This is not a scientific analysis and
+does not change the disposition above. The reviewer accepts only a loopback
+Ollama endpoint and a local `qwen2.5:*` model; remote or cloud-backed model
+identities are rejected.
+
+Before a run, the operator must verify that the local runtime will not retain
+prompt text outside this quarantine directory, then attest to that state on
+the command line:
+
+```sh
+python3 Scripts/review_quarantined_dialectics.py review \
+  --input "$HOME/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-07-22.jsonl" \
+  --parse-report "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-parse-report-2026-07-22.json" \
+  --findings-output "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-local-review-2026-07-22.jsonl" \
+  --run-manifest-output "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-local-review-run-2026-07-22.json" \
+  --prompt-logging-status verified_disabled
+```
+
+The review is stateless: fixed 16-valid-record chunks, two-record overlap,
+temperature `0.0`, seed `42`, no embeddings, and no weight updates. The tool
+itself persists neither raw prompts nor raw responses; the external runtime is
+used only after the operator verifies its retention behavior. It accepts only
+bounded JSON findings that cite source lines in their own chunk, use an allowed
+engineering category, and do not contain verbatim private content.
+
+For legacy logs, a reviewer may confuse the non-unique `index` field with a
+physical source line. The tool normalizes that citation only when each cited
+legacy index maps to exactly one source line inside the active chunk; ambiguous
+or inconsistent citations are rejected rather than guessed.
+
+An invalid model response creates a metadata-only rejection receipt and stops
+the run before later chunks are exposed. It stores the safe contract failure,
+never the raw response. A rejected run has no validated engineering findings
+and is evidence that the selected local model is unsuitable for this review
+configuration, not evidence about the dialogue itself.
+
+Aggregate the metadata-only review stream without reopening the raw corpus:
+
+```sh
+python3 Scripts/review_quarantined_dialectics.py aggregate \
+  --findings-input "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-local-review-2026-07-22.jsonl" \
+  --output "$HOME/Documents/NeuralCompose/InteractionLogs/local-manifests/dialectic-local-review-aggregate-2026-07-22.json"
+```
+
+The aggregate reports issue categories, counts, affected source lines,
+conflicting findings, confidence buckets, and cross-chunk recurrence. Any
+future policy or prompt affected by this review remains development-only and
+must be evaluated on fresh, protocol-defined sessions that have not been
+inspected.
