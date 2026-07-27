@@ -20,12 +20,21 @@ def test_cka_identical():
     assert abs(score - 1.0) < 1e-3
 
 
-def test_cka_independent():
-    np.random.seed(42)
-    X = np.random.randn(50, 128)
-    Y = np.random.randn(50, 256)
-    score = cka(X, Y)
-    assert abs(score) < 0.3
+def test_cka_independent_is_small_when_samples_exceed_dimensions():
+    rng = np.random.default_rng(42)
+    X = rng.standard_normal((500, 16))
+    Y = rng.standard_normal((500, 32))
+    assert cka(X, Y) < 0.1
+
+
+def test_biased_cka_null_is_inflated_when_dimensions_exceed_samples():
+    # Characterizes the selected biased estimator; NOT evidence that these
+    # representations are genuinely similar. The previous expectation
+    # (< 0.3 at n=50, d=128/256) assumed an unbiased estimator or n >> d.
+    rng = np.random.default_rng(42)
+    X = rng.standard_normal((50, 128))
+    Y = rng.standard_normal((50, 256))
+    assert cka(X, Y) > 0.5
 
 
 def test_svcca_identical():

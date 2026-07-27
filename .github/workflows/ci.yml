@@ -104,19 +104,14 @@ jobs:
           PYTHONPATH=NeuralComposeEEG/src \
             python -m unittest discover -s NeuralComposeEEG/tests -t . --verbose
 
-      # pytest, because Tests/eval mixes four harness styles: unittest.TestCase,
+      # pytest, because Tests/eval mixes harness styles: unittest.TestCase,
       # bare `def test_*` with a __main__ runner, and bare `def test_*` with no
-      # runner at all. pytest collects all of them; unittest collects 8 of 62
-      # and reports OK for the rest.
+      # runner at all. pytest collects all of them; `python -m unittest` skips
+      # most silently and still reports OK, so it cannot gate this directory.
       #
       # test_joint_embedding.py imports mlx.core (Apple Silicon only) and would
       # fail collection here — run it locally.
-      #
-      # The remaining deselected cases are pre-existing failures tracked in
-      # issue #38, reproducing on both NumPy 1.26 and 2.4. They are removed one
-      # at a time as each is resolved; the rest of their files still run.
       - name: Test (eval contract suites)
         run: |
           pytest Tests/eval -v \
-            --ignore=Tests/eval/test_joint_embedding.py \
-            --deselect Tests/eval/test_embedding_space.py::test_cka_independent
+            --ignore=Tests/eval/test_joint_embedding.py
