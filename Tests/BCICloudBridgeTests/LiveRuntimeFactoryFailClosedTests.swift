@@ -34,8 +34,10 @@ final class LiveRuntimeFactoryFailClosedTests: XCTestCase {
     }
 
     /// A PATH containing a stub executable named `claude`. Resolution validates
-    /// the file and never runs it, so this is enough to reach a `ready`
-    /// identity without contacting Anthropic.
+    /// the file and never runs it, so this is enough to reach a `configured`
+    /// identity without contacting Anthropic — and never enough to reach
+    /// `ready`, which requires a verified provider round trip this path has no
+    /// way to perform.
     private func makeClaudeEnvironment() throws -> [String: String] {
         let dir = try makeDirectory()
         let claude = dir.appendingPathComponent("claude")
@@ -370,5 +372,78 @@ final class LiveRuntimeFactoryFailClosedTests: XCTestCase {
         XCTAssertEqual(identity.resolvedModel, "claude-sonnet-5")
         XCTAssertFalse(identity.isSubstitution)
         XCTAssertTrue(generator is ClaudeCLIGenerator)
+    }
+
+    // MARK: - Readiness evidence: configured vs verified
+
+    /// Claude resolution proves the runtime is *constructible*, never that it
+    /// works. Nothing here contacts Anthropic, so `ready` — which the Ollama
+    /// path earns with an exact-model match against a live daemon — would be an
+    /// unearned claim. This assertion is the one the original suite lacked:
+    /// `testDefaultResolutionIsStillClaude` checked provider, model,
+    /// substitution and generator type, and never looked at readiness at all,
+    /// which is precisely how the over-claim survived.
+    func testClaudeResolutionIsConfiguredNotVerified() async throws {
+        let environment = try makeClaudeEnvironment()
+        let (_, identity) = try await LiveRuntimeFactory.make(
+            role: .dialectic, runtimeName: "claude", model: nil, environment: environment)
+
+        XCTAssertEqual(identity.readiness, .configured)
+        XCTAssertFalse(identity.isReady, "an unverified runtime must not report verified")
+        XCTAssertTrue(identity.canAttemptGeneration, "configured is unverified, not broken")
+        XCTAssertEqual(identity.displayReadiness, "Configured")
+    }
+
+    /// The Ollama path reached the daemon and matched the exact requested
+    /// model, so `ready` is a statement about an observed fact.
+    func testOllamaExactModelResolutionIsVerified() async throws {
+        stubTags([("qwen2.5:0.5b", "sha256:deadbeef")])
+        let (_, identity) = try await makeOllama(model: "qwen2.5:0.5b")
+
+        XCTAssertEqual(identity.readiness, .ready)
+        XCTAssertTrue(identity.isReady)
+        XCTAssertTrue(identity.canAttemptGeneration)
+        XCTAssertEqual(identity.displayReadiness, "Endpoint + model verified")
+    }
+
+    /// The usability predicate admits both success cases. Without this the
+    /// strict predicate would have to serve both questions, and every Claude
+    /// session would render as a fault.
+    func testConfiguredRuntimeCanAttemptGeneration() {
+        XCTAssertTrue(RuntimeReadiness.configured.canAttemptGeneration)
+        XCTAssertTrue(RuntimeReadiness.ready.canAttemptGeneration)
+    }
+
+    /// Every failure reason stays fail-closed. Iterating `allCases` rather than
+    /// spot-checking one means a newly added failure cannot default to usable.
+    func testUnavailableRuntimeCannotAttemptGeneration() {
+        for failure in RuntimeReadinessFailure.allCases {
+            XCTAssertFalse(
+                RuntimeReadiness.unavailable(failure).canAttemptGeneration,
+                "\(failure) must not be attemptable")
+        }
+    }
+
+    // MARK: - Readiness wire compatibility
+
+    /// Adding a case must not rewrite the encoding of the existing ones.
+    /// Synthesized enum `Codable` keys on the *case name*, not a declaration
+    /// ordinal, so `configured` landing first in the declaration cannot shift
+    /// `ready` — but that is a property of the compiler, not of this type, so
+    /// it is asserted rather than assumed.
+    func testOldReadyIdentityStillDecodes() throws {
+        let legacy = Data(#"{"ready":{}}"#.utf8)
+        XCTAssertEqual(try JSONDecoder().decode(RuntimeReadiness.self, from: legacy), .ready)
+
+        // And the current encoder still emits exactly that form.
+        let encoded = try JSONEncoder().encode(RuntimeReadiness.ready)
+        XCTAssertEqual(String(decoding: encoded, as: UTF8.self), #"{"ready":{}}"#)
+    }
+
+    func testOldUnavailableIdentityStillDecodes() throws {
+        let legacy = Data(#"{"unavailable":{"_0":"modelMissing"}}"#.utf8)
+        XCTAssertEqual(
+            try JSONDecoder().decode(RuntimeReadiness.self, from: legacy),
+            .unavailable(.modelMissing))
     }
 }

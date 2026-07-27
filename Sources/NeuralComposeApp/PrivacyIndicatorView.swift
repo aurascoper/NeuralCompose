@@ -494,10 +494,18 @@ struct PrivacyIndicatorView: View {
         runtimePresentation.involvesEgress ? .red : .orange
     }
 
-    /// A runtime that is not ready must not read as running.
+    /// A runtime that cannot be used must not read as running.
+    ///
+    /// Keyed on `canAttemptGeneration`, not `isReady`: since the readiness split,
+    /// a resolved Claude runtime is `configured` — usable but unverified — and
+    /// the strict predicate would paint every Claude session red. Red is the
+    /// fault colour, so that would replace an over-claim ("Ready" when nothing
+    /// was checked) with the opposite false claim. The unverified/verified
+    /// distinction is carried by `displayReadiness` in the line text, which is
+    /// where a nuance belongs; the colour answers only "is this broken?".
     private func identityColor(_ identity: ResolvedRuntimeIdentity?) -> Color {
         guard let identity else { return .secondary }
-        return identity.isReady ? .secondary : .red
+        return identity.canAttemptGeneration ? .secondary : .red
     }
 
     /// The most consequential badge: while active the mic is always capturing,

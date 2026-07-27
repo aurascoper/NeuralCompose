@@ -22,8 +22,13 @@ final class RuntimeIdentityPresentationTests: XCTestCase {
         ResolvedRuntimeIdentity(
             role: role,
             requestedProvider: provider, requestedModel: model,
-            resolvedProvider: readiness == .ready ? provider : "",
-            resolvedModel: readiness == .ready ? model : "",
+            // Resolved fields are populated whenever something resolved, and
+            // empty only on the failure identity. Keyed on
+            // `canAttemptGeneration`, not `== .ready`: a `configured` runtime
+            // did resolve a provider and model, and the older two-valued test
+            // would have handed it the empty *failure* shape instead.
+            resolvedProvider: readiness.canAttemptGeneration ? provider : "",
+            resolvedModel: readiness.canAttemptGeneration ? model : "",
             locality: locality, readiness: readiness,
             promptProfile: "p", promptHash: "h", systemPromptSource: "s"
         )
@@ -182,5 +187,44 @@ final class RuntimeIdentityPresentationTests: XCTestCase {
         XCTAssertTrue(lines[0].contains("Dialogue"), lines[0])
         XCTAssertTrue(lines[1].contains("Witness"), lines[1])
         XCTAssertTrue(lines[1].contains("CLI not found"), lines[1])
+    }
+
+    // MARK: - Readiness evidence is read, never inferred
+
+    /// The banner must say "Configured" because the *identity* says so — not
+    /// because the provider happens to be spelled "claude".
+    ///
+    /// The mutation this catches is the tempting contained fix: branching the
+    /// view on `resolvedProvider == "claude"`. That would reproduce the exact
+    /// class of provider-name inference R8 removed, and would silently
+    /// mis-describe any future runtime whose resolution is also unverified. So
+    /// the identity here is a **Claude-free** one — an Ollama provider carrying
+    /// `configured` — which a provider-branching implementation renders as
+    /// verified and this assertion rejects.
+    func testPresentationShowsConfiguredWithoutProviderBranching() {
+        let p = RuntimeIdentityPresentation(
+            dialogue: identity(provider: "ollama", readiness: .configured),
+            witness: nil,
+            isDialectical: false)
+
+        XCTAssertTrue(p.dialogueLine.contains("Configured"), p.dialogueLine)
+        XCTAssertFalse(p.dialogueLine.contains("verified"), p.dialogueLine)
+        XCTAssertFalse(allText(p).lowercased().contains("claude"), allText(p))
+    }
+
+    /// The converse, for the same reason: a Claude-spelled provider carrying a
+    /// verified readiness must render as verified. Together these two pin the
+    /// line text to `readiness` in both directions, so no implementation can
+    /// satisfy both by reading the provider.
+    func testPresentationShowsEndpointAndModelVerified() {
+        let p = RuntimeIdentityPresentation(
+            dialogue: identity(
+                provider: "claude", model: "claude-sonnet-5",
+                locality: .localBrokerToRemoteService, readiness: .ready),
+            witness: nil,
+            isDialectical: false)
+
+        XCTAssertTrue(p.dialogueLine.contains("Endpoint + model verified"), p.dialogueLine)
+        XCTAssertFalse(p.dialogueLine.contains("Configured"), p.dialogueLine)
     }
 }

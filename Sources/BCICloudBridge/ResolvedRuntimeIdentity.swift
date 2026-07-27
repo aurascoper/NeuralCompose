@@ -86,7 +86,14 @@ public struct ResolvedRuntimeIdentity: Codable, Sendable, Equatable {
         name.isEmpty || name.contains(":") ? name : name + ":latest"
     }
 
+    /// The *strict* predicate: the endpoint and exact model were verified.
+    /// Deliberately false for a `configured` Claude runtime, which is usable
+    /// but unproven — see `canAttemptGeneration` for the usability question.
     public var isReady: Bool { readiness == .ready }
+
+    /// The *usability* predicate: generation may be attempted. True for both
+    /// `configured` and `ready`.
+    public var canAttemptGeneration: Bool { readiness.canAttemptGeneration }
 
     /// Human-readable provider name for display. Falls back to the *requested*
     /// provider when nothing resolved, so a failed identity still names what
@@ -99,10 +106,14 @@ public struct ResolvedRuntimeIdentity: Codable, Sendable, Equatable {
         resolvedModel.isEmpty ? requestedModel : resolvedModel
     }
 
-    /// `Ready`, or the specific reason it is not.
+    /// What resolution actually proved, or the specific reason it failed.
+    ///
+    /// `ready` names its evidence rather than saying "Ready", because the whole
+    /// point of the `configured` split is that the user can tell the two apart.
     public var displayReadiness: String {
         switch readiness {
-        case .ready:                    return "Ready"
+        case .configured:               return "Configured"
+        case .ready:                    return "Endpoint + model verified"
         case .unavailable(let failure): return failure.displayLabel
         }
     }
@@ -173,11 +184,47 @@ public enum RuntimeLocality: String, Codable, Sendable, Equatable, CaseIterable 
     }
 }
 
-/// Whether a runtime may be used. `unavailable` is a *pre-generation* verdict:
-/// the loop must not start, and no alternate provider is attempted.
+/// Whether a runtime may be used, and *on what evidence*. `unavailable` is a
+/// *pre-generation* verdict: the loop must not start, and no alternate provider
+/// is attempted.
+///
+/// The success side is split because the two resolution paths prove different
+/// things and used to report the same word for both.
+///
+/// - Ollama contacts `/api/tags` and requires the exact requested model before
+///   enablement, so its success is a *positively observed* fact about the
+///   endpoint: the daemon answered and holds that model.
+/// - Claude resolves an executable and loads a prompt. Nothing contacts the
+///   provider. An expired `claude login`, an unreachable network, or a model
+///   name the account cannot use all still resolve.
+///
+/// Collapsing those into one `ready` made the failure side of this type strictly
+/// more precise than the success side: six distinct reasons a runtime cannot be
+/// used, one undifferentiated reason it can. `configured` closes that gap.
 public enum RuntimeReadiness: Codable, Sendable, Equatable {
+    /// Local construction prerequisites resolved, but no real provider or
+    /// exact-model round trip has been observed.
+    case configured
+
+    /// The configured endpoint/provider and exact requested model were
+    /// positively verified before enablement.
     case ready
+
+    /// The runtime must not be used.
     case unavailable(RuntimeReadinessFailure)
+
+    /// Whether generation may be attempted at all. Both success cases qualify:
+    /// `configured` is unverified, not broken, and a UI that painted it as a
+    /// fault would trade one false claim for its mirror image.
+    ///
+    /// Read this for *usability*; read `isReady` for *verified* usability. The
+    /// two are deliberately different questions.
+    public var canAttemptGeneration: Bool {
+        switch self {
+        case .configured, .ready: return true
+        case .unavailable:        return false
+        }
+    }
 
     public var failure: RuntimeReadinessFailure? {
         if case .unavailable(let f) = self { return f }

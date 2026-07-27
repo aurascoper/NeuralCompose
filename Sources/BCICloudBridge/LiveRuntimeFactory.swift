@@ -17,12 +17,19 @@ import Foundation
 /// `RuntimeResolutionFailure`), because a UI that can only describe runtimes
 /// that resolved cannot tell the user what went wrong with the one that didn't.
 ///
-/// **Readiness is checked before the loop starts, never by generating.**
-///   - Claude: the executable is resolved through `ClaudeExecutableResolver`
-///     — the same resolver the harness uses — and the prompt is loaded and
-///     hashed. No request is made to Anthropic.
-///   - Ollama: a bounded `GET /api/tags` confirms the daemon is up and has the
-///     exact requested model. No prompt is sent.
+/// **Readiness is checked before the loop starts, never by generating** — and
+/// the two paths prove different things, so they report different readiness.
+///   - Claude → `.configured`: the executable is resolved through
+///     `ClaudeExecutableResolver` — the same resolver the harness uses — and
+///     the prompt is loaded and hashed. No request is made to Anthropic, so
+///     authentication, account state, and model entitlement remain unverified.
+///   - Ollama → `.ready`: a bounded `GET /api/tags` confirms the daemon is up
+///     and has the exact requested model. No prompt is sent.
+///
+/// Both are usable (`canAttemptGeneration`); only one is verified (`isReady`).
+/// A generation that later succeeds is *session* evidence and does not mutate
+/// the identity — the identity describes what resolution proved, and rewriting
+/// it after the fact would erase the distinction this split exists to record.
 ///
 /// A readiness failure disables the loop. **No alternate provider is ever
 /// attempted**: substituting Claude when Ollama is unavailable would turn a
@@ -198,7 +205,13 @@ public enum LiveRuntimeFactory {
             // placeholder, so telemetry never records a fabricated value.
             modelDigest: nil,
             locality: locality,
-            readiness: .ready,
+            // `configured`, not `ready`. Everything above proved the runtime is
+            // *constructible*: an executable resolved and a prompt loaded. No
+            // request reached the provider, so authentication, account state,
+            // network reachability, and whether this account may use this model
+            // are all still unknown. Reporting `ready` here claimed the
+            // verification only the Ollama path actually performs.
+            readiness: .configured,
             promptProfile: profile.rawValue,
             promptHash: PromptProfile.sha256Hex(promptText),
             systemPromptSource: "PromptProfile(\(profile.rawValue))"
@@ -308,6 +321,8 @@ public enum LiveRuntimeFactory {
             resolvedModel: resolvedModel,
             modelDigest: digest,
             locality: locality,
+            // `ready` is earned here: `OllamaReadinessProbe` reached the daemon
+            // and matched the exact requested model before enablement.
             readiness: .ready,
             promptProfile: profile.rawValue,
             promptHash: PromptProfile.sha256Hex(promptText),
