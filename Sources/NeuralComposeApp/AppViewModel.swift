@@ -733,6 +733,44 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// later loop iterations).
     private func setLastError(_ description: String) { lastError = description }
 
+    /// The resolution result the loop needs: a generator plus the identity of
+    /// what actually resolved.
+    typealias HypnagogicRuntime = (generator: any TextGenerating, resolved: LiveRuntimeFactory.Resolved)
+
+    /// Resolves a runtime for the opt-in loop, failing closed.
+    ///
+    /// `nil` means the loop must not start. On failure this disables the
+    /// toggle and records the typed reason; it never substitutes a different
+    /// provider, which is what the old
+    /// `(try? LiveRuntimeFactory.make(...)) ?? (ClaudeCLIGenerator(...), …)`
+    /// did — turning a mistyped `NEURALCOMPOSE_RUNTIME` into unrequested cloud
+    /// egress.
+    ///
+    /// Internal and closure-injected so a test can drive the real catch path.
+    /// The production call sites sit behind a mic/speech authorization gate, so
+    /// a test that flipped the toggle would return early at that gate and pass
+    /// without ever reaching this code.
+    func resolveHypnagogicRuntime(
+        _ resolve: () throws -> HypnagogicRuntime
+    ) -> HypnagogicRuntime? {
+        do {
+            return try resolve()
+        } catch {
+            disableHypnagogicLoop(reason: error)
+            return nil
+        }
+    }
+
+    /// Turns the opt-in loop off and surfaces why, when its runtime cannot be
+    /// resolved. The alternative — substituting a default cloud generator —
+    /// meant a packaging failure or a mistyped runtime name produced network
+    /// egress the user never chose, so the loop now stays off.
+    private func disableHypnagogicLoop(reason: any Error) {
+        BCILog.pipeline.error("hypnagogic runtime unavailable: \(String(describing: reason))")
+        setLastError("Hypnagogic loop unavailable: \(reason)")
+        hypnagogicLoopEnabled = false
+    }
+
     /// Drives `spokenLoop` toward the current toggle value, serialized through a
     /// single chained task so overlapping enable/disable events apply in order
     /// (a sync-start / async-stop race could otherwise orphan a running loop).
@@ -889,20 +927,23 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // unchanged when the env vars are absent. The witness
             // gets a separate resolver call so its system prompt
             // is the Witness prompt, not the dialectic prompt.
-            let dialecticResolved = (try? LiveRuntimeFactory.make(
-                systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
-            )) ?? (ClaudeCLIGenerator(systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt),
-                   LiveRuntimeFactory.Resolved(
-                       name: "claude-cli-fallback",
-                       model: "claude-sonnet-5",
-                       systemPromptSource: "fallback"))
-            let witnessResolved = (try? LiveRuntimeFactory.make(
-                systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt
-            )) ?? (ClaudeCLIGenerator(systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt),
-                   LiveRuntimeFactory.Resolved(
-                       name: "claude-cli-fallback",
-                       model: "claude-sonnet-5",
-                       systemPromptSource: "fallback"))
+            // Fail closed. This previously swallowed the error and substituted
+            // a cloud `ClaudeCLIGenerator`, so a missing prompt resource — or
+            // a typo'd NEURALCOMPOSE_RUNTIME — silently produced network
+            // egress the user had not selected. Now the loop reports
+            // unavailable and does not generate at all.
+            guard
+                let dialecticResolved = resolveHypnagogicRuntime({
+                    try LiveRuntimeFactory.make(
+                        systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt()
+                    )
+                }),
+                let witnessResolved = resolveHypnagogicRuntime({
+                    try LiveRuntimeFactory.make(
+                        systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt()
+                    )
+                })
+            else { return }
             BCILog.pipeline.notice(
                 "dialectic runtime: \(dialecticResolved.resolved); witness runtime: \(witnessResolved.resolved)")
             loop = HypnagogicDialecticLoop(
@@ -928,11 +969,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // RVS-001+1: same `LiveRuntimeFactory` resolution as the
             // dialectic path, so the mirror uses the selected runtime
             // (default: Claude).
-            let mirrorResolved = (try? LiveRuntimeFactory.make()) ??
-                (ClaudeCLIGenerator(), LiveRuntimeFactory.Resolved(
-                    name: "claude-cli-fallback",
-                    model: "claude-sonnet-5",
-                    systemPromptSource: "fallback"))
+            guard let mirrorResolved = resolveHypnagogicRuntime({
+                try LiveRuntimeFactory.make()
+            }) else { return }
             loop = HypnagogicDialogueLoop(
                 listener: listener,
                 generator: mirrorResolved.generator,

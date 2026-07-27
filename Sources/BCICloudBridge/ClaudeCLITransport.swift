@@ -83,10 +83,17 @@ public struct ClaudeCLITransport: GenerationTransport {
     ) async throws -> Data {
         let inv = CLIInvocation()
         if let override = executableOverride {
+            // Last gate before launch. The override branch passes `args`
+            // unmodified, so an override that is not itself `claude` — a
+            // wrapper like `env`, say — would need a subcommand argument this
+            // argv does not carry, and the process would receive Claude's
+            // flags directly. Refuse instead of launching a malformed command.
+            try ClaudeExecutableResolver.validate(override)
             inv.process.executableURL = URL(fileURLWithPath: override)
             inv.process.arguments = args
         } else {
             // Resolve `claude` from PATH without hardcoding a location.
+            // Here the wrapper IS correct, because `claude` is prepended.
             inv.process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             inv.process.arguments = ["claude"] + args
         }

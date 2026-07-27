@@ -29,8 +29,13 @@ public actor ClaudeCLIGenerator: TextGenerating {
     /// computed property is a load-by-name convenience for the legacy
     /// `static let` call sites. The loaded text is byte-identical to the
     /// pre-extraction value.
-    public static var hypnagogicSystemPrompt: String {
-        (try? PromptProfile.hypnagogic.load()) ?? ""
+    /// Throws rather than yielding `""`. An empty value here would be sent as
+    /// `claude -p --system-prompt ""` — an unconstrained model on the one
+    /// deliberate network-egress path — which is precisely what the "callers
+    /// can't accidentally point this at an unconstrained prompt" guarantee
+    /// above is supposed to prevent.
+    public static func hypnagogicSystemPrompt() throws -> String {
+        try PromptProfile.hypnagogic.load()
     }
 
     /// Constrained WAKING dialectical system prompt: lucid and present, NOT the
@@ -42,8 +47,8 @@ public actor ClaudeCLIGenerator: TextGenerating {
     /// app speaks — so edit it to taste (cf. `DialecticalField.target()`).
     ///
     /// Source: `Sources/BCICloudBridge/Prompts/waking-dialectical.md`.
-    public static var wakingDialecticalSystemPrompt: String {
-        (try? PromptProfile.wakingDialectical.load()) ?? ""
+    public static func wakingDialecticalSystemPrompt() throws -> String {
+        try PromptProfile.wakingDialectical.load()
     }
 
     /// The Witness's system prompt — a NON-VOICED introspective observer for the
@@ -56,21 +61,32 @@ public actor ClaudeCLIGenerator: TextGenerating {
     /// this ships on a waking rung).
     ///
     /// Source: `Sources/BCICloudBridge/Prompts/witness.md`.
-    public static var witnessSystemPrompt: String {
-        (try? PromptProfile.witness.load()) ?? ""
+    public static func witnessSystemPrompt() throws -> String {
+        try PromptProfile.witness.load()
     }
 
     private let model: String
     private let systemPrompt: String
     private let executableOverride: String?
 
+    /// `systemPrompt: nil` loads the hypnagogic profile. Throws if the prompt
+    /// resource is unavailable or empty, so a packaging failure disables this
+    /// path instead of silently sending an unconstrained prompt.
+    ///
+    /// This cannot be a defaulted argument, because a default expression
+    /// cannot throw — which is exactly how the empty-string fallback got
+    /// introduced in the first place.
     public init(
         model: String = "claude-sonnet-5",
-        systemPrompt: String = ClaudeCLIGenerator.hypnagogicSystemPrompt,
+        systemPrompt: String? = nil,
         executablePath: String? = nil
-    ) {
+    ) throws {
+        let resolved = try systemPrompt ?? PromptProfile.hypnagogic.load()
+        guard !resolved.isEmpty else {
+            throw PromptProfileError.emptyResource("<caller-supplied system prompt>")
+        }
         self.model = model
-        self.systemPrompt = systemPrompt
+        self.systemPrompt = resolved
         self.executableOverride = executablePath
         self.modelIdentifier = "\(model) (claude-cli)"
     }
@@ -96,10 +112,15 @@ public actor ClaudeCLIGenerator: TextGenerating {
     private func runClaude(_ args: [String]) async throws -> Data {
         let inv = CLIInvocation()
         if let override = executableOverride {
+            // Same gate as `ClaudeCLITransport`: this branch passes `args`
+            // unmodified, so a non-`claude` override would receive Claude's
+            // flags directly. Fail before launch rather than after.
+            try ClaudeExecutableResolver.validate(override)
             inv.process.executableURL = URL(fileURLWithPath: override)
             inv.process.arguments = args
         } else {
             // Resolve `claude` from PATH without hardcoding a location.
+            // The wrapper is correct here, because `claude` is prepended.
             inv.process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             inv.process.arguments = ["claude"] + args
         }

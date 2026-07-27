@@ -32,45 +32,57 @@ public struct ClaudeCLIGenerationRuntime: GenerationRuntime {
     public let capabilities = RuntimeCapabilities() // token counting / streaming / logProbs not exposed by `claude -p`
 
     private let model: String
-    private let promptProfile: PromptProfile
+    private let promptProfileName: String
     private let systemPrompt: String
+    private let promptHash: String
     private let transport: ClaudeCLITransport
     private let interactionStyle: String
     private let executableOverride: String?
 
+    /// Fails rather than constructing a runtime with no constraining prompt.
+    /// This path previously swallowed the load error and sent
+    /// `--system-prompt ""` — an unconstrained model on the network egress
+    /// path — so the error now propagates and the caller must disable itself.
     public init(
         model: String = "claude-sonnet-5",
         promptProfile: PromptProfile,
         interactionStyle: String = "dialectical",
         executablePath: String? = nil
-    ) {
+    ) throws {
+        let loaded = try promptProfile.load()
         self.model = model
-        self.promptProfile = promptProfile
+        self.promptProfileName = promptProfile.rawValue
         self.interactionStyle = interactionStyle
         self.executableOverride = executablePath
         self.modelIdentifier = "\(model) (claude-cli)"
-        self.systemPrompt = (try? promptProfile.load()) ?? ""
+        self.systemPrompt = loaded
+        self.promptHash = PromptProfile.sha256Hex(loaded)
         self.transport = ClaudeCLITransport(model: model, executablePath: executablePath)
     }
 
+    /// System-prompt-override path: the caller owns the prompt text (legacy
+    /// `TextGenerating` callers do this).
+    ///
+    /// The profile name is `custom` and the hash is taken over the caller's
+    /// bytes. Previously this claimed `wakingDialectical` and hashed *that*
+    /// profile regardless of what was sent, so telemetry attested to bytes
+    /// that never left the process.
     public init(
         model: String = "claude-sonnet-5",
         systemPrompt: String,
         interactionStyle: String = "dialectical",
         executablePath: String? = nil
-    ) {
+    ) throws {
+        guard !systemPrompt.isEmpty else {
+            throw PromptProfileError.emptyResource("<caller-supplied system prompt>")
+        }
         self.model = model
         self.systemPrompt = systemPrompt
+        self.promptHash = PromptProfile.sha256Hex(systemPrompt)
         self.interactionStyle = interactionStyle
         self.executableOverride = executablePath
         self.modelIdentifier = "\(model) (claude-cli)"
-        // System-prompt-override path: the caller owns the prompt
-        // text (legacy `TextGenerating` callers do this). The
-        // `PromptProfile` is a synthetic `.wakingDialectical` for
-        // prompt-hash bookkeeping; the bytes the transport sees are
-        // the caller's `systemPrompt`, NOT the loaded profile. This
-        // is the keep-bar: text-equivalence with the legacy path.
-        self.promptProfile = .wakingDialectical
+        self.promptProfileName = "custom"
         self.transport = ClaudeCLITransport(model: model, executablePath: executablePath)
     }
 
@@ -79,6 +91,12 @@ public struct ClaudeCLIGenerationRuntime: GenerationRuntime {
         context: GenerationContext
     ) async throws -> GenerationResult {
         try Task.checkCancellation()
+        // Backstop: no reachable construction path can produce an empty
+        // system prompt, but this is the last gate before bytes leave the
+        // machine, so it is checked here too rather than trusted upstream.
+        guard !systemPrompt.isEmpty else {
+            throw PromptProfileError.emptyResource("<system prompt at egress>")
+        }
         let started = Date()
         let request = GenerationTransportRequest(
             model: model,
@@ -89,14 +107,13 @@ public struct ClaudeCLIGenerationRuntime: GenerationRuntime {
         )
         let response = try await transport.send(request)
         let elapsed = Int(Date().timeIntervalSince(started) * 1000)
-        let promptHash = (try? promptProfile.hash()) ?? ""
         let metadata = GenerationMetadata(
             runtime: runtimeName,
             transport: transport.transportName,
             provider: transport.providerName,
             model: model,
             promptHash: promptHash,
-            promptProfile: promptProfile.rawValue,
+            promptProfile: promptProfileName,
             interactionStyle: interactionStyle,
             generationParameters: Self.flatParameters(context.generationParameters),
             latencyMilliseconds: elapsed,
