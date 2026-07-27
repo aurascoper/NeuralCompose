@@ -64,3 +64,61 @@ jobs:
         # collision/flake risk on a headless runner. The OSC *decode* logic is
         # covered socket-free by MuseOSCDecoderTests / MindMonitorDecoderTests,
         # which still run. Run the socket integration test locally.
+
+  # The Python contract suites had no CI at all until now, which is how a test
+  # importing an uncommitted module (neuralcompose_eeg.structured_state) reached
+  # a pull request unnoticed: build-and-test above is Swift-only.
+  #
+  # Linux, not macOS: nothing here is platform-specific, and the runner is both
+  # cheaper and faster. The one Apple-only suite is excluded by name below.
+  python-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: NeuralComposeEEG/requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          # CPU wheel explicitly: the default Linux torch pulls a ~800MB CUDA
+          # build for a runner with no GPU. Installed first so the pinned
+          # requirements below see torch>=2.0 as already satisfied.
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install -r NeuralComposeEEG/requirements.txt
+          # pandas is a Tests/eval harness dependency only (session capture
+          # frames); deliberately not a NeuralComposeEEG requirement.
+          # pytest is required, not stylistic: most Tests/eval modules are bare
+          # `def test_*` functions with no unittest.TestCase and no __main__
+          # runner, so `python -m unittest` collects ZERO of them and exits 0.
+          pip install pandas pytest
+
+      # Offline scientific package: canonical dataset contracts, capture
+      # manifests, and the structured-state shadow bridge. Discovered rather
+      # than enumerated so new contract suites are picked up automatically.
+      - name: Test (NeuralComposeEEG contracts)
+        run: |
+          PYTHONPATH=NeuralComposeEEG/src \
+            python -m unittest discover -s NeuralComposeEEG/tests -t . --verbose
+
+      # pytest, because Tests/eval mixes four harness styles: unittest.TestCase,
+      # bare `def test_*` with a __main__ runner, and bare `def test_*` with no
+      # runner at all. pytest collects all of them; unittest collects 8 of 62
+      # and reports OK for the rest.
+      #
+      # test_joint_embedding.py imports mlx.core (Apple Silicon only) and would
+      # fail collection here — run it locally.
+      #
+      # The three deselected cases fail on this base and are tracked separately;
+      # they are pre-existing (issue #38), reproduce on both NumPy 1.26 and 2.4, and
+      # are not caused by this workflow. The rest of their files still run.
+      - name: Test (eval contract suites)
+        run: |
+          pytest Tests/eval -v \
+            --ignore=Tests/eval/test_joint_embedding.py \
+            --deselect Tests/eval/test_eval_stats.py::test_cohens_d_large_effect \
+            --deselect Tests/eval/test_eval_stats.py::test_mann_whitney_u_disjoint \
+            --deselect Tests/eval/test_embedding_space.py::test_cka_independent
