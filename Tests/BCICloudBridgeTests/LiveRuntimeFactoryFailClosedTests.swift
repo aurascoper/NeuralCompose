@@ -12,8 +12,10 @@ import XCTest
 /// mistyped `NEURALCOMPOSE_RUNTIME` — set by a user who wanted local-only
 /// inference — silently produced cloud egress to Anthropic instead.
 ///
-/// **No test here makes a real provider request.** Claude resolution stops at
-/// executable validation; Ollama readiness is served by `MockURLProtocol`.
+/// **No test here makes a real provider request.** Most Claude tests stop at
+/// executable validation; the commit-J provenance tests additionally invoke a
+/// stub `claude` that prints a canned JSON envelope, which never leaves the
+/// machine. Ollama readiness is served by `MockURLProtocol`.
 final class LiveRuntimeFactoryFailClosedTests: XCTestCase {
 
     private let ollamaURL = URL(string: "http://localhost:11434")!
@@ -371,7 +373,170 @@ final class LiveRuntimeFactoryFailClosedTests: XCTestCase {
         XCTAssertEqual(identity.resolvedProvider, "claude")
         XCTAssertEqual(identity.resolvedModel, "claude-sonnet-5")
         XCTAssertFalse(identity.isSubstitution)
-        XCTAssertTrue(generator is ClaudeCLIGenerator)
+        // The Claude path now returns a metadata-publishing adapter, not a raw
+        // `ClaudeCLIGenerator`. Asserting the concrete adapter type would pin an
+        // implementation detail; asserting the *capability* pins the thing that
+        // was actually broken — see `testClaudeGeneratorPublishesMetadata`.
+        XCTAssertTrue(generator is any MetadataPublishingTextGenerating)
+    }
+
+    // MARK: - App-side Claude provenance (commit J)
+
+    /// The regression guard. Returning a raw `ClaudeCLIGenerator` here — as the
+    /// factory did through `71c5c02` — makes this fail, because that type
+    /// conforms only to `TextGenerating`.
+    ///
+    /// `HypnagogicDialecticLoop` populates `generatorFingerprint` *solely* from a
+    /// `MetadataPublishingTextGenerating` (`HypnagogicDialecticLoop.swift:86`), so
+    /// without this conformance the packaged app persisted Claude turns with no
+    /// provider, model, or prompt hash — and the same gap hid the Claude
+    /// Witness's identity. The Ollama path had it; the harness had it; the app's
+    /// Claude path did not.
+    func testClaudeGeneratorPublishesMetadata() async throws {
+        let environment = try makeClaudeEnvironment()
+        let (generator, _) = try await LiveRuntimeFactory.make(
+            role: .dialectic, runtimeName: "claude", model: nil, environment: environment)
+
+        XCTAssertTrue(
+            generator is any MetadataPublishingTextGenerating,
+            "a Claude generator that cannot publish metadata leaves every app-side "
+                + "turn with no durable provider/model/prompt identity")
+        XCTAssertFalse(
+            generator is ClaudeCLIGenerator,
+            "the raw generator is the defect this commit fixes")
+    }
+
+    /// Readiness is unchanged by the provenance fix: resolution still contacts
+    /// nothing, so it is still `configured` rather than `ready`.
+    func testClaudeReadinessStaysConfiguredAfterMetadataChange() async throws {
+        let environment = try makeClaudeEnvironment()
+        let (_, identity) = try await LiveRuntimeFactory.make(
+            role: .dialectic, runtimeName: "claude", model: nil, environment: environment)
+        XCTAssertEqual(identity.readiness, .configured)
+        XCTAssertFalse(identity.isReady)
+        XCTAssertTrue(identity.canAttemptGeneration)
+        XCTAssertEqual(identity.locality, .localBrokerToRemoteService)
+    }
+
+    /// The identity is a description of what *resolution* proved and must not be
+    /// rewritten by a later successful call. Constructing the runtime does not
+    /// mutate it, and nothing in the adapter path writes back to it.
+    func testResolvedIdentityIsUnchangedByConstruction() async throws {
+        let environment = try makeClaudeEnvironment()
+        let (_, first) = try await LiveRuntimeFactory.make(
+            role: .dialectic, runtimeName: "claude", model: nil, environment: environment)
+        let (_, second) = try await LiveRuntimeFactory.make(
+            role: .dialectic, runtimeName: "claude", model: nil, environment: environment)
+        XCTAssertEqual(first, second, "resolution must be deterministic and side-effect free")
+    }
+
+    /// Role selects the prompt profile, and the profile the runtime hashes must
+    /// be the one the identity reports — the Witness must not be able to resolve
+    /// to the poles' prompt.
+    func testWitnessRoleResolvesADifferentPromptThanTheDialecticPole() async throws {
+        let environment = try makeClaudeEnvironment()
+        let (_, pole) = try await LiveRuntimeFactory.make(
+            role: .dialectic, runtimeName: "claude", model: nil, environment: environment)
+        let (_, witness) = try await LiveRuntimeFactory.make(
+            role: .witness, runtimeName: "claude", model: nil, environment: environment)
+
+        XCTAssertNotEqual(pole.promptProfile, witness.promptProfile)
+        XCTAssertNotEqual(
+            pole.promptHash, witness.promptHash,
+            "a shared pole/Witness prompt hash is the exact collision the Witness "
+                + "fingerprint exists to make impossible")
+    }
+
+    /// Both roles publish metadata, so a Reflective turn can record the pole and
+    /// the Witness fingerprints independently.
+    func testBothClaudeRolesPublishMetadata() async throws {
+        let environment = try makeClaudeEnvironment()
+        for role in [RuntimeRole.dialectic, .witness, .mirror] {
+            let (generator, _) = try await LiveRuntimeFactory.make(
+                role: role, runtimeName: "claude", model: nil, environment: environment)
+            XCTAssertTrue(
+                generator is any MetadataPublishingTextGenerating,
+                "role \(role) must be able to attest its own generator")
+        }
+    }
+
+    /// A PATH with a stub `claude` that emits `body` on stdout. Nothing here
+    /// contacts Anthropic; the transport only parses the envelope.
+    private func makeStubClaudeEnvironment(emitting body: String) throws -> [String: String] {
+        let dir = try makeDirectory()
+        let claude = dir.appendingPathComponent("claude")
+        // `cat <<'EOF'` so the JSON is emitted verbatim regardless of quoting.
+        try "#!/bin/bash\ncat <<'ENVELOPE'\n\(body)\nENVELOPE\n"
+            .write(to: claude, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755], ofItemAtPath: claude.path)
+        return ["PATH": dir.path]
+    }
+
+    /// A successful call publishes the identity the log needs: which runtime,
+    /// which provider, which model, which profile, and the hash of the bytes
+    /// that were actually transmitted.
+    func testSuccessfulClaudeGenerationPublishesMetadata() async throws {
+        let environment = try makeStubClaudeEnvironment(emitting: #"{"result":"ok"}"#)
+        let (generator, identity) = try await LiveRuntimeFactory.make(
+            role: .dialectic, runtimeName: "claude", model: "claude-sonnet-5",
+            environment: environment)
+
+        let captured = MetadataCapture()
+        var publisher = try XCTUnwrap(generator as? any MetadataPublishingTextGenerating)
+        publisher.onMetadata = { captured.record($0) }
+
+        _ = try await publisher.generate(
+            prompt: "p", maxTokens: 32, temperature: 0.7, cancellationID: UUID())
+
+        let m = try XCTUnwrap(captured.value, "a successful call must publish metadata")
+        XCTAssertEqual(m.runtime, "claude-cli")
+        XCTAssertEqual(m.transport, "claude-cli")
+        XCTAssertEqual(m.provider, "anthropic")
+        XCTAssertEqual(m.model, "claude-sonnet-5")
+        // The real profile, not `custom` — `custom` would tell a later reader
+        // nothing about which prompt governed the turn.
+        XCTAssertEqual(m.promptProfile, LiveRuntimeFactory.promptProfile(for: .dialectic).rawValue)
+        // The hash attests the bytes transmitted, and agrees with the identity
+        // resolution reported before any call was made.
+        XCTAssertEqual(
+            m.promptHash,
+            try LiveRuntimeFactory.promptProfile(for: .dialectic).hash())
+        XCTAssertEqual(m.promptHash, identity.promptHash)
+    }
+
+    /// A failed call must publish nothing. Metadata is built inside
+    /// `ClaudeCLIGenerationRuntime.generate` only after `transport.send`
+    /// returns, and the adapter fires `onMetadata` only after `generate`
+    /// returns — so a throw short-circuits both. A success fingerprint on a
+    /// failed turn would be exactly the fabricated evidence commit I removed
+    /// from the harness.
+    func testFailedClaudeGenerationPublishesNoMetadata() async throws {
+        let environment = try makeStubClaudeEnvironment(emitting: #"{"is_error":true}"#)
+        let (generator, _) = try await LiveRuntimeFactory.make(
+            role: .dialectic, runtimeName: "claude", model: "claude-sonnet-5",
+            environment: environment)
+
+        let captured = MetadataCapture()
+        var publisher = try XCTUnwrap(generator as? any MetadataPublishingTextGenerating)
+        publisher.onMetadata = { captured.record($0) }
+
+        do {
+            _ = try await publisher.generate(
+                prompt: "p", maxTokens: 32, temperature: 0.7, cancellationID: UUID())
+            XCTFail("a CLI-reported error must propagate, not resolve")
+        } catch {
+            // expected
+        }
+        XCTAssertNil(captured.value, "a failed generation must publish no metadata")
+    }
+
+    /// Ollama already published metadata; this fix must not disturb it.
+    func testOllamaMetadataPublicationIsUnchanged() async throws {
+        stubTags([("qwen2.5:0.5b", "sha256:deadbeef")])
+        let (generator, identity) = try await makeOllama(model: "qwen2.5:0.5b")
+        XCTAssertTrue(generator is any MetadataPublishingTextGenerating)
+        XCTAssertEqual(identity.readiness, .ready)
     }
 
     // MARK: - Readiness evidence: configured vs verified
@@ -445,5 +610,20 @@ final class LiveRuntimeFactoryFailClosedTests: XCTestCase {
         XCTAssertEqual(
             try JSONDecoder().decode(RuntimeReadiness.self, from: legacy),
             .unavailable(.modelMissing))
+    }
+}
+
+/// Thread-safe one-shot capture for the adapter's metadata callback, which
+/// fires synchronously on whichever task called `generate`.
+private final class MetadataCapture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: GenerationMetadata?
+    var value: GenerationMetadata? {
+        lock.lock(); defer { lock.unlock() }
+        return stored
+    }
+    func record(_ m: GenerationMetadata) {
+        lock.lock(); defer { lock.unlock() }
+        stored = m
     }
 }

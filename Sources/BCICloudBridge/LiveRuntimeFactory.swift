@@ -180,11 +180,30 @@ public enum LiveRuntimeFactory {
             )
         }
 
-        let generator: ClaudeCLIGenerator
+        // A `GenerationRuntime` wrapped in the metadata-publishing adapter —
+        // the same shape the Ollama path uses — rather than a raw
+        // `ClaudeCLIGenerator`.
+        //
+        // `ClaudeCLIGenerator` conforms only to `TextGenerating`, and
+        // `HypnagogicDialecticLoop` populates `generatorFingerprint` solely from
+        // a `MetadataPublishingTextGenerating` (`HypnagogicDialecticLoop.swift:86`
+        // — nil "when the generator is the legacy TextGenerating conformers").
+        // So the packaged app persisted Claude turns with no provider, model, or
+        // prompt hash, and the same gap hid the Claude Witness's identity. The
+        // absence was self-concealing: with no fingerprint there is no record of
+        // which provider produced the record.
+        //
+        // The `promptProfile:` initializer (not `systemPrompt:`) so the metadata
+        // records the real profile instead of `custom`. It re-loads the profile,
+        // which is byte-identical by construction: `PromptProfile.load()` caches
+        // on `cacheKey`, and `promptText` above has already populated that entry,
+        // so this is a cache hit on the same `String`. The transmitted bytes are
+        // unchanged — the adapter deliberately carries no prompt of its own.
+        let runtime: ClaudeCLIGenerationRuntime
         do {
-            generator = try ClaudeCLIGenerator(
+            runtime = try ClaudeCLIGenerationRuntime(
                 model: requestedModel,
-                systemPrompt: promptText,
+                promptProfile: profile,
                 executablePath: executablePath
             )
         } catch {
@@ -194,6 +213,10 @@ public enum LiveRuntimeFactory {
                 detail: String(describing: error)
             )
         }
+        // Metadata is built inside `ClaudeCLIGenerationRuntime.generate` *after*
+        // `transport.send` returns, and the adapter fires `onMetadata` only
+        // after `runtime.generate` returns — so a failed call publishes nothing.
+        let generator = GenerationRuntimeTextGeneratingAdapter(runtime: runtime)
 
         return (generator, ResolvedRuntimeIdentity(
             role: role,

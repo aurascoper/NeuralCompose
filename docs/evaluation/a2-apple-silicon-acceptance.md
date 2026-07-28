@@ -138,3 +138,73 @@ Per the A2 report's acceptance plan; none of the below is claimed.
    pre-B Reflective runs `status: superseded` (dead-prompt-field defect,
    `fixed_by: 3067cd8`) and rerun the Focused-vs-Reflective fixture so the
    replacement captures dialogue + Witness fingerprints.
+
+## 5. Commit J — app-side Claude provenance (correction, not a rewrite)
+
+Sections 1–4 stand as written. They record what was observed at the heads they
+name, and nothing below revises them.
+
+### What the log audit found
+
+A read-only review of the `71c5c02` session logs
+(`NeuralCompose-a2-handoff/a2-final/sonnet5-dialectic-log-review.md`) found the
+day-file's twelve dialectical turns carried **no `generatorFingerprint` and no
+`witnessGeneratorFingerprint`**, while the harness runs of the same head carried
+both. The cause was an app-path asymmetry, established from source rather than
+inferred:
+
+- `ClaudeCLIGenerator` conforms only to `TextGenerating`;
+- `GenerationRuntimeTextGeneratingAdapter` is the sole
+  `MetadataPublishingTextGenerating` conformer;
+- `LiveRuntimeFactory.makeClaude` returned the raw generator, while
+  `makeOllama` returned the adapter;
+- `HypnagogicDialecticLoop` populates `generatorFingerprint` *only* from a
+  metadata-publishing generator (`HypnagogicDialecticLoop.swift:86`).
+
+So the packaged app could not durably attribute a Claude turn to its provider,
+model, or prompt hash, and the same gap hid the Claude Witness's identity. The
+absence was self-concealing: with no fingerprint there is no record of which
+provider produced the record. Pre-existing rather than introduced by this PR —
+the Ollama adapter work made it visible.
+
+### The correction
+
+Commit J routes `makeClaude` through the bridge the repository already had:
+`ClaudeCLIGenerationRuntime` wrapped in `GenerationRuntimeTextGeneratingAdapter`,
+matching the Ollama path. No second provenance mechanism was introduced.
+
+Prompt bytes are unchanged. The `promptProfile:` initializer re-loads the
+profile so metadata records the real profile rather than `custom`; that load is
+a cache hit on the entry the factory has already populated
+(`PromptProfile.load()` caches on `cacheKey`), so it returns the identical
+`String`. The adapter carries no prompt of its own by construction.
+
+Readiness semantics are untouched: Claude still resolves `.configured`, not
+`.ready`, and a successful call does not mutate `ResolvedRuntimeIdentity`.
+
+Failed calls publish nothing. Metadata is built inside
+`ClaudeCLIGenerationRuntime.generate` only after `transport.send` returns, and
+the adapter fires `onMetadata` only after `generate` returns, so a throw
+short-circuits both.
+
+### Evidence status
+
+- The `71c5c02` bundle hashes in §1 remain **historical evidence for that head**.
+  Commit J necessarily produces a new bundle and new hashes.
+- New final-head hashes and the targeted rerun below are appended after packaging.
+- Admissible from the prior record: harness provider/model/prompt provenance;
+  Reflective-only Witness operation; zero pole/Witness prompt-hash collisions;
+  a failed Claude generation writing zero records; and `spectralState: null`
+  disambiguating the stub `glossScalar` from a real reading.
+- **Not claimed:** Focused, Contemplative, or Mirror behavioural fidelity. The
+  available sessions were one turn per profile, and every knob distinguishing
+  those profiles governs sustained behaviour.
+
+### Recorded limitations (unchanged by this commit)
+
+1. **Mirror has no durable telemetry.** `HypnagogicDialogueLoop` emits no
+   `DialecticalTurnEvent`, which is architecturally correct — Mirror is not a
+   `ContextProfile` — but leaves it observable only through an operator.
+2. **No event-to-build self-attribution.** `DialecticalTurnEvent` carries no
+   timestamp and no build identifier, so a log cannot independently attest which
+   bundle produced it; attribution rests on filesystem metadata.
