@@ -57,11 +57,61 @@ All four are mechanical and recomputable from the referenced window.
 Baselines are the median over the opening windows of the *same* session. A
 cross-session baseline would silently import another night's headset fit.
 
+### Detector eligibility
+
 `artifact_burst` is deliberately per-channel. A cross-channel envelope makes one
 bad electrode trip it on every window: the first run against a real recording had
 a saturated AF7 (~900 µV against ~20 µV elsewhere) producing a burst almost every
 second, restating a fault `channel_health_change` already reported. A burst is a
 departure from a channel's own norm, so the norm must be its own.
+
+**A suppressed detector is not a clean channel.** When a channel's baseline is
+itself pathological, the comparison is vacuous — nothing exceeds `burst_sigma` ×
+a rail — so it emits no `artifact_burst`. On a real recording a saturated AF7 did
+exactly that. An absent record is ambiguous between *clean*, *no transient*, and
+*never eligible*, so eligibility is stated rather than inferred from silence:
+
+```json
+"channels": {
+  "AF7":  {"detector_status": "suppressed", "suppressed_reason": "channel_saturated"},
+  "TP9":  {"detector_status": "eligible",   "suppressed_reason": null}
+}
+```
+
+in `session-events-manifest.json` beside the log. The validator rejects a
+manifest that omits any channel, because a missing entry restores the ambiguity.
+`suppressed_reason` is one of `channel_saturated` or `channel_silent`.
+
+## The manifest's dispositions
+
+All negative, all pinned, all enforced:
+
+```
+contains_signal              false
+science_status               pipeline_only
+label_status                 heuristic_observation
+live_control                 false
+promotion_status             not_eligible
+clean_session_gate_credited  false
+```
+
+The last is the important one. Running an extractor over a recording credits
+nothing toward the §21 five-clean-session gate — whether a session was *clean* is
+a judgement about the recording, not about whether a script parsed it.
+
+`science_status: pipeline_only` and `label_status: heuristic_observation` set the
+standard of proof. The 750-event run over a real recording is **pipeline
+validation** — evidence the extractor runs, is deterministic, and replays. It is
+not evidence that 750 heuristic observations are individually correct.
+
+## Sample intervals
+
+Half-open, `[start_sample, start_sample + sample_count)`, non-empty, and within
+`recording_sample_count`. The convention is declared in the manifest as
+`sample_interval_convention` rather than left to the reader. Events may overlap —
+the window stride is shorter than the window — and are not deduplicated: two
+kinds firing on one window are two observations of it, and `event_id` separates
+them because the kind and the observation are both in the hash.
 
 ## Determinism
 
