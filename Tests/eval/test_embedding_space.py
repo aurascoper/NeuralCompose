@@ -21,11 +21,35 @@ def test_cka_identical():
 
 
 def test_cka_independent():
+    """Independent data does NOT give CKA near zero when d >> n.
+
+    This is the biased linear CKA estimator (Kornblith et al.). With 50 samples
+    against 128 and 256 features it inflates severely — ~0.78 here — because the
+    Gram matrices of independent high-dimensional Gaussians are far from
+    orthogonal at this sample size. The previous `< 0.3` described an unbiased
+    estimator this code does not implement, and the test never ran to contradict
+    it.
+
+    Pinned as an upper bound rather than an equality: the point is that the
+    inflation is real and bounded, so a future switch to an unbiased estimator
+    (which would drop this toward 0) fails here and forces the expectation to be
+    revisited deliberately.
+    """
     np.random.seed(42)
     X = np.random.randn(50, 128)
     Y = np.random.randn(50, 256)
     score = cka(X, Y)
-    assert abs(score) < 0.3
+    assert 0.0 <= score <= 1.0
+    assert score > 0.5, "biased CKA is expected to inflate at d >> n"
+
+
+def test_cka_inflation_shrinks_as_samples_grow():
+    """The inflation is a sample-size artefact, not a property of the data:
+    raising n against fixed d moves the independent-data score down."""
+    np.random.seed(42)
+    few = cka(np.random.randn(50, 128), np.random.randn(50, 128))
+    many = cka(np.random.randn(400, 128), np.random.randn(400, 128))
+    assert many < few
 
 
 def test_svcca_identical():
