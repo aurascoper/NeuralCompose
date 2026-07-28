@@ -76,7 +76,6 @@ final class GenerationRuntimeTextGeneratingAdapterTests: XCTestCase {
         let runtime = StubRuntime(result: Self.stubResult)
         let adapter = GenerationRuntimeTextGeneratingAdapter(
             runtime: runtime,
-            systemPrompt: "system",
             maxTokens: 256,
             defaultTemperature: 0.7
         )
@@ -93,7 +92,6 @@ final class GenerationRuntimeTextGeneratingAdapterTests: XCTestCase {
         let runtime = StubRuntime(result: Self.stubResult)
         var adapter = GenerationRuntimeTextGeneratingAdapter(
             runtime: runtime,
-            systemPrompt: "system",
             maxTokens: 256,
             defaultTemperature: 0.7
         )
@@ -117,7 +115,6 @@ final class GenerationRuntimeTextGeneratingAdapterTests: XCTestCase {
         let runtime = StubRuntime(result: Self.stubResult)
         var adapter = GenerationRuntimeTextGeneratingAdapter(
             runtime: runtime,
-            systemPrompt: "system",
             maxTokens: 256,
             defaultTemperature: 0.7
         )
@@ -144,8 +141,7 @@ final class GenerationRuntimeTextGeneratingAdapterTests: XCTestCase {
         // silently. Pin the conformance with a compile-time check.
         let runtime = StubRuntime(result: Self.stubResult)
         let adapter = GenerationRuntimeTextGeneratingAdapter(
-            runtime: runtime,
-            systemPrompt: "system"
+            runtime: runtime
         )
         let publisher: MetadataPublishingTextGenerating = adapter
         XCTAssertNotNil(publisher as AnyObject)
@@ -158,8 +154,7 @@ final class GenerationRuntimeTextGeneratingAdapterTests: XCTestCase {
         // crash on the nil callback.
         let runtime = StubRuntime(result: Self.stubResult)
         let adapter = GenerationRuntimeTextGeneratingAdapter(
-            runtime: runtime,
-            systemPrompt: "system"
+            runtime: runtime
         )
         XCTAssertNil(adapter.onMetadata)
         let text = try await adapter.generate(
@@ -186,8 +181,7 @@ final class GenerationRuntimeTextGeneratingAdapterTests: XCTestCase {
     func testOnMetadataPropagatesAcrossExistentialCopy() async throws {
         let runtime = StubRuntime(result: Self.stubResult)
         let adapter = GenerationRuntimeTextGeneratingAdapter(
-            runtime: runtime,
-            systemPrompt: "system"
+            runtime: runtime
         )
 
         // The dialectic loop stores the generator as

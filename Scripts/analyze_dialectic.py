@@ -285,6 +285,12 @@ class Turn:
     candidates: list[dict]
     has_fingerprint: bool
     fingerprint_model: str | None   # model name from generatorFingerprint, if any
+    fingerprint_prompt_hash: str | None
+    # Witness provenance — separate from the pole fingerprint, which only
+    # attests the candidates' generator. nil on pre-Witness-fingerprint logs.
+    has_witness_fingerprint: bool
+    witness_fingerprint_model: str | None
+    witness_fingerprint_prompt_hash: str | None
 
     def __post_init__(self) -> None:
         # If outcome is somehow None or empty, fall back to a sentinel
@@ -328,6 +334,22 @@ def load_turns(path: Path) -> list[Turn]:
                 fingerprint_model=(
                     d.get("generatorFingerprint", {}).get("model")
                     if d.get("generatorFingerprint") is not None
+                    else None
+                ),
+                fingerprint_prompt_hash=(
+                    d.get("generatorFingerprint", {}).get("promptHash")
+                    if d.get("generatorFingerprint") is not None
+                    else None
+                ),
+                has_witness_fingerprint=d.get("witnessGeneratorFingerprint") is not None,
+                witness_fingerprint_model=(
+                    d.get("witnessGeneratorFingerprint", {}).get("model")
+                    if d.get("witnessGeneratorFingerprint") is not None
+                    else None
+                ),
+                witness_fingerprint_prompt_hash=(
+                    d.get("witnessGeneratorFingerprint", {}).get("promptHash")
+                    if d.get("witnessGeneratorFingerprint") is not None
                     else None
                 ),
             ))
@@ -1322,6 +1344,13 @@ class ProvenanceReport:
     turns_with_fingerprint: int
     fingerprint_rate: float
     fingerprint_models: dict[str, int]   # model name -> count
+    # Witness provenance. A Reflective run recorded after the Witness
+    # fingerprint landed should have one per witness-attempted turn; the
+    # prompt-hash collision count is the old bug's signature (a "Witness"
+    # transmitting the pole prompt) and must be 0.
+    turns_with_witness_fingerprint: int
+    witness_fingerprint_models: dict[str, int]
+    witness_pole_prompt_hash_collisions: int
     note: str
 
 
@@ -1331,11 +1360,25 @@ def compute_provenance(turns: list[Turn]) -> ProvenanceReport:
     for t in turns:
         if t.has_fingerprint and t.fingerprint_model:
             models[t.fingerprint_model] += 1
+    wfp = sum(1 for t in turns if t.has_witness_fingerprint)
+    witness_models: collections.Counter = collections.Counter()
+    collisions = 0
+    for t in turns:
+        if not t.has_witness_fingerprint:
+            continue
+        if t.witness_fingerprint_model:
+            witness_models[t.witness_fingerprint_model] += 1
+        if (t.witness_fingerprint_prompt_hash is not None
+                and t.witness_fingerprint_prompt_hash == t.fingerprint_prompt_hash):
+            collisions += 1
     return ProvenanceReport(
         total_turns=len(turns),
         turns_with_fingerprint=fp,
         fingerprint_rate=(fp / len(turns)) if turns else 0.0,
         fingerprint_models=dict(models),
+        turns_with_witness_fingerprint=wfp,
+        witness_fingerprint_models=dict(witness_models),
+        witness_pole_prompt_hash_collisions=collisions,
         note=("0/140 is the expected baseline pre-b9c09fd-live-app. "
               "The core runtime records fingerprints (commit b9c09fd); "
               "the live app will start recording them once the "
@@ -1575,6 +1618,16 @@ def render_report(rep: dict[str, Any]) -> str:
         out.append(f"  fingerprint models:")
         for m, c in sorted(p['fingerprint_models'].items(), key=lambda x: -x[1]):
             out.append(f"    {m}: {c}")
+    wfp = p.get('turns_with_witness_fingerprint', 0)
+    out.append(f"  turns with witness fp:      {wfp} / {p['total_turns']}  ({100*wfp/p['total_turns']:.1f}%)")
+    if p.get('witness_fingerprint_models'):
+        out.append(f"  witness fingerprint models:")
+        for m, c in sorted(p['witness_fingerprint_models'].items(), key=lambda x: -x[1]):
+            out.append(f"    {m}: {c}")
+    collisions = p.get('witness_pole_prompt_hash_collisions', 0)
+    if wfp:
+        verdict = "OK (witness prompt ≠ pole prompt)" if collisions == 0 else "BUG SIGNATURE — witness transmitted the pole prompt"
+        out.append(f"  witness/pole hash collisions: {collisions}  {verdict}")
     if p.get('note'):
         out.append(f"  note:                       {p['note']}")
     out.append("")

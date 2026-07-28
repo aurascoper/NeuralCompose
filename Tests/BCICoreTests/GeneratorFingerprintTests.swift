@@ -25,7 +25,8 @@ final class GeneratorFingerprintTests: XCTestCase {
         DialecticalCandidate(text: "\(role)-text", embedding: emb([1, 0]), roleID: role)
     }
 
-    private func competition(fingerprint: GeneratorFingerprint?) -> DialecticalCompetition {
+    private func competition(fingerprint: GeneratorFingerprint?,
+                             witnessFingerprint: GeneratorFingerprint? = nil) -> DialecticalCompetition {
         DialecticalCompetition(
             index: 0,
             heard: "hi",
@@ -47,7 +48,8 @@ final class GeneratorFingerprintTests: XCTestCase {
             outcome: .spoke(candidate("coherence")),
             glossScalar: 0.5,
             spectralState: nil,
-            generatorFingerprint: fingerprint
+            generatorFingerprint: fingerprint,
+            witnessGeneratorFingerprint: witnessFingerprint
         )
     }
 
@@ -107,6 +109,43 @@ final class GeneratorFingerprintTests: XCTestCase {
         let data = try JSONEncoder().encode(event)
         let decoded = try JSONDecoder().decode(DialecticalTurnEvent.self, from: data)
         XCTAssertEqual(decoded.generatorFingerprint, claudeFingerprint)
+    }
+
+    /// The Witness fingerprint persists *separately* from the pole
+    /// fingerprint: a decoded Reflective turn must be able to prove which
+    /// runtime/prompt produced the finding, and the two prompt hashes must
+    /// survive the round-trip distinct (equal hashes are the signature of
+    /// the Witness-transmitted-the-pole-prompt bug).
+    func testWitnessFingerprintRoundTripsSeparatelyFromPoleFingerprint() throws {
+        let witnessFP = GeneratorFingerprint(
+            runtime: "ollama", transport: "ollama-http", provider: "ollama",
+            model: "qwen2.5:0.5b", promptProfile: "witness",
+            interactionStyle: "dialectical", promptHash: "witness-hash-999")
+        let event = DialecticalTurnEvent(
+            competition(fingerprint: ollamaFingerprint, witnessFingerprint: witnessFP))
+        let data = try JSONEncoder().encode(event)
+        let decoded = try JSONDecoder().decode(DialecticalTurnEvent.self, from: data)
+        XCTAssertEqual(decoded.generatorFingerprint, ollamaFingerprint)
+        XCTAssertEqual(decoded.witnessGeneratorFingerprint, witnessFP)
+        XCTAssertNotEqual(
+            decoded.generatorFingerprint?.promptHash,
+            decoded.witnessGeneratorFingerprint?.promptHash)
+    }
+
+    /// A log written between the pole fingerprint (b9c09fd) and the Witness
+    /// fingerprint landing has `generatorFingerprint` but no
+    /// `witnessGeneratorFingerprint` key at all — it must decode with the
+    /// Witness field `nil`, not throw.
+    func testLogWithOnlyPoleFingerprintDecodesWitnessAsNil() throws {
+        let event = DialecticalTurnEvent(competition(fingerprint: ollamaFingerprint))
+        let data = try JSONEncoder().encode(event)
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        XCTAssertFalse(
+            json.contains("witnessGeneratorFingerprint"),
+            "a nil Witness fingerprint must be an absent key, matching the pre-field format")
+        let decoded = try JSONDecoder().decode(DialecticalTurnEvent.self, from: data)
+        XCTAssertEqual(decoded.generatorFingerprint, ollamaFingerprint)
+        XCTAssertNil(decoded.witnessGeneratorFingerprint)
     }
 
     // MARK: - Backward compatibility (item 10 of the smoke checklist)

@@ -98,6 +98,13 @@ public actor HypnagogicDialecticLoop {
     /// property, losing the metadata for that turn. The class box
     /// keeps the read/write synchronous.
     private let latestMetadata = MetadataBox()
+    /// The Witness's own metadata box, parallel to `latestMetadata` and never
+    /// shared with it: `latestMetadata` is documented as the generator that
+    /// produced the *candidates*, and filing the Witness's metadata there
+    /// would make the last writer win — a turn record attesting the pole
+    /// prompt for the Witness, which is the exact confusion the Witness
+    /// fingerprint exists to make impossible.
+    private let latestWitnessMetadata = MetadataBox()
     private let speaker: any SpeechSynthesizing
     private let embedder: any SentenceEmbedder
     private let roles: [DialecticalRole]
@@ -184,6 +191,13 @@ public actor HypnagogicDialecticLoop {
         latestMetadata.set(metadata)
     }
 
+    /// The Witness-side sibling of `recordGeneratorMetadata`, writing to the
+    /// Witness's own box. Same synchrony argument, same `nonisolated`
+    /// rationale; only the destination differs.
+    public nonisolated func recordWitnessMetadata(_ metadata: GenerationMetadata) {
+        latestWitnessMetadata.set(metadata)
+    }
+
     /// Convenience: if the passed-in `generator` is a
     /// `MetadataPublishingTextGenerating` (today: any runtime wrapped
     /// by `GenerationRuntimeTextGeneratingAdapter` in `BCICloudBridge`;
@@ -206,11 +220,20 @@ public actor HypnagogicDialecticLoop {
     /// is global. This pattern is the standard fix for "set a
     /// callback on a struct-typed existential."
     public func attachMetadataCaptureFromAdapter() {
-        guard var publisher = generator as? MetadataPublishingTextGenerating else {
-            return
+        if var publisher = generator as? any MetadataPublishingTextGenerating {
+            publisher.onMetadata = { [weak self] metadata in
+                self?.recordGeneratorMetadata(metadata)
+            }
         }
-        publisher.onMetadata = { [weak self] metadata in
-            self?.recordGeneratorMetadata(metadata)
+        // The Witness gets its own callback into its own box. This relies on
+        // the Witness being a DISTINCT adapter instance from the pole
+        // generator — which the factory guarantees, since each role resolves
+        // its own runtime; wiring one shared instance here would overwrite
+        // the pole callback (each adapter holds a single callback box).
+        if var publisher = witness as? any MetadataPublishingTextGenerating {
+            publisher.onMetadata = { [weak self] metadata in
+                self?.recordWitnessMetadata(metadata)
+            }
         }
     }
 
@@ -399,7 +422,12 @@ public actor HypnagogicDialecticLoop {
             outcome: result.outcome, glossScalar: gloss.value, spectralState: state,
             witnessFinding: witnessFinding, witnessDistance: witnessDistance,
             selfSimilarity: selfSimilarity, witnessAttempted: witnessAttempted,
-            generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init)
+            generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init),
+            // Gated on the attempt: a turn on which the Witness never ran must
+            // not attest a Witness identity, however recent the box contents.
+            witnessGeneratorFingerprint: witnessAttempted
+                ? latestWitnessMetadata.get().flatMap(GeneratorFingerprint.init)
+                : nil
         )
         await turnLogger.log(DialecticalTurnEvent(record))
 
@@ -457,7 +485,10 @@ public actor HypnagogicDialecticLoop {
             witnessDistance: nil,
             selfSimilarity: nil,
             witnessAttempted: config.witnessEnabled && witness != nil,
-            generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init)
+            generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init),
+            // A candidate-less turn never reaches the Witness call, so there
+            // is no Witness generation to attest — regardless of the box.
+            witnessGeneratorFingerprint: nil
         )
         let event = DialecticalTurnEvent(competition)
         await turnLogger.log(event)

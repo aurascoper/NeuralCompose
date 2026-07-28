@@ -38,11 +38,10 @@ if opts.runtimeReport {
         RuntimeReport.render(resolved: resolved, runtimeName: opts.runtime, model: opts.model)
         let v = RuntimeReport.verify(resolved: resolved)
         print("")
-        print("Verification:")
-        print("  prompt loaded:       \(v.promptLoaded ? "yes" : "no")")
-        print("  transport reachable: \(v.transportOK ? "yes" : "no")")
-        print("  model available:     \(v.modelAvailable ? "yes" : "no")")
-        exit(v.promptLoaded && v.transportOK && v.modelAvailable ? 0 : 1)
+        RuntimeReport.verificationLines(v).forEach { print($0) }
+        // `notChecked` is an absence of evidence, not a failure, so it does
+        // not fail the report — only a check that ran and did not hold does.
+        exit(v.hasFailure ? 1 : 0)
     } catch {
         FileHandle.standardError.write(Data("error: \(error)\n".utf8))
         exit(1)
@@ -61,20 +60,17 @@ if opts.dryRun {
         RuntimeReport.render(resolved: resolved, runtimeName: opts.runtime, model: opts.model)
         let v = RuntimeReport.verify(resolved: resolved)
         print("")
-        print("Verification:")
-        print("  prompt loaded:       \(v.promptLoaded ? "yes" : "no")")
-        print("  transport reachable: \(v.transportOK ? "yes" : "no")")
-        print("  model available:     \(v.modelAvailable ? "yes" : "no")")
-        if !(v.promptLoaded && v.transportOK && v.modelAvailable) {
+        RuntimeReport.verificationLines(v).forEach { print($0) }
+        if v.hasFailure {
             FileHandle.standardError.write(Data("dry-run failed verification\n".utf8))
             exit(1)
         }
         print("")
-        print("✓ runtime created")
-        print("✓ transport reachable")
-        print("✓ model exists")
-        print("✓ prompt loaded")
-        print("✓ fingerprint generated")
+        // Only checks that ran get a tick. A Claude dry run configures a
+        // runtime and loads a prompt; it does not establish that the provider
+        // answers or that this account may use this model, so it must not
+        // print those as verified.
+        RuntimeReport.dryRunSummaryLines(v).forEach { print($0) }
         print("")
         print("No LLM call was made.")
         exit(0)
@@ -120,25 +116,37 @@ do {
 // the wiring on the next `generate(...)` call. (See the long
 // comment in `attachMetadataCaptureFromAdapter` for the
 // existential-box pattern.)
-let poleGenerator = GenerationRuntimeTextGeneratingAdapter(
-    runtime: resolved.runtime,
-    systemPrompt: resolved.systemPrompt
-)
-// NOTE: `GenerationRuntimeTextGeneratingAdapter.systemPrompt` is currently a
-// stored-but-unread field — the bytes actually sent come from
-// `resolved.runtime`'s own prompt. Giving the Witness its own resolved runtime
-// is a separate fix (tracked as R3) and is deliberately not attempted here.
-// What changes now is only that a failed load stops the run instead of
-// silently passing "".
-let witnessPrompt: String?
-do {
-    witnessPrompt = profile.witnessEnabled ? try PromptProfile.witness.load() : nil
-} catch {
-    FileHandle.standardError.write(Data("● dialectic-session: \(error)\n".utf8))
-    exit(1)
-}
-let witnessGenerator: GenerationRuntimeTextGeneratingAdapter? = witnessPrompt.map {
-    GenerationRuntimeTextGeneratingAdapter(runtime: resolved.runtime, systemPrompt: $0)
+let poleGenerator = GenerationRuntimeTextGeneratingAdapter(runtime: resolved.runtime)
+
+// R3: the Witness gets its OWN resolved runtime, loaded with the Witness
+// profile. It previously wrapped the *pole* runtime and passed the Witness
+// prompt into the adapter's stored-but-unread `systemPrompt` field, so the
+// Witness reported one prompt and transmitted another — the pole's. The field
+// is gone; the prompt now lives in the runtime that sends it.
+//
+// Resolution is skipped entirely when the profile disables the Witness. A
+// disabled role must not load a prompt, resolve a runtime, or probe an
+// endpoint: doing so makes readiness depend on a component the configuration
+// says is not in use.
+let witnessGenerator: GenerationRuntimeTextGeneratingAdapter?
+if profile.witnessEnabled {
+    let witnessResolved: ResolvedRuntime
+    do {
+        witnessResolved = try RuntimeFactory.make(
+            runtimeName: opts.runtime,
+            model: opts.model,
+            promptProfile: .witness
+        )
+    } catch {
+        // The Witness is part of the requested configuration, so its failure
+        // fails the run closed rather than quietly degrading to a two-voice
+        // exchange the operator did not ask for.
+        FileHandle.standardError.write(Data("● dialectic-session: witness runtime: \(error)\n".utf8))
+        exit(1)
+    }
+    witnessGenerator = GenerationRuntimeTextGeneratingAdapter(runtime: witnessResolved.runtime)
+} else {
+    witnessGenerator = nil
 }
 
 print("● dialectic-session — profile=\(profile.rawValue) witness=\(profile.witnessEnabled) "
