@@ -99,7 +99,7 @@ public final class MLXSentenceEmbedder: SentenceEmbedder, Sendable {
             let tokens = tokenizer.encode(text: text)
             guard !tokens.isEmpty else {
                 // Deterministic finite fallback for input the tokenizer
-                // reduces to nothing (ADR-004 §3.1) — same shape of answer
+                // reduces to nothing (ADR-010 §3.1) — same shape of answer
                 // as CoreMLSentenceEmbedder's degenerate-norm path.
                 return Self.axisUnitVector(dimension: expectedDimension)
             }
@@ -142,7 +142,7 @@ public final class MLXSentenceEmbedder: SentenceEmbedder, Sendable {
         }
 
         // The pooler already normalized; re-normalize on the Swift side so
-        // the ADR-004 §3.1 unit-norm invariant never depends on upstream
+        // the ADR-010 §3.1 unit-norm invariant never depends on upstream
         // library behavior, with the axis fallback for degenerate vectors.
         let normalized = Self.l2Normalized(values) ?? Self.axisUnitVector(dimension: expectedDimension)
 

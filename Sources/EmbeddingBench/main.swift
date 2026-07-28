@@ -8,7 +8,7 @@ import Foundation
 // `MLXSentenceEmbedder`. Backend selection is argument parsing over concrete
 // conformers — the same "not a runtime-selection registry" convention as
 // SemanticEval (CLAUDE.md). `BenchmarkRunner` is unchanged either way
-// (ADR-004 §3.5 Gate 1: it never sees a backend-specific type).
+// (ADR-010 §3.5 Gate 1: it never sees a backend-specific type).
 //
 // Flags (all optional — bare invocation behaves exactly as it did in
 // Stage 3.2: try Core ML at Models/BGE-small-en-v1.5, else stub):

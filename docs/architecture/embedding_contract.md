@@ -29,7 +29,7 @@ This document is a *companion* to the ADRs, not a replacement:
 - [PRINCIPLES §6](../PRINCIPLES.md) — components communicate across protocol boundaries
 - [ADR-002 — Deterministic replay as the validation backbone](decision-log/ADR-002-deterministic-replay.md) — the pattern this contract follows
 - [ADR-003 — Runtime separation](decision-log/ADR-003-runtime-separation.md) — why MLX/ANNE stay out of `BCICore`
-- [ADR-004 — SentenceEmbedder backend contract](decision-log/ADR-004-sentence-embedder-backend-contract.md) — the *short normative reference* for this document. The ADR is the right artifact to cite from a PR review (`ADR-004 §3.5 Gate 1`); this document is the long-form spec the ADR ratifies.
+- [ADR-010 — SentenceEmbedder backend contract](decision-log/ADR-010-sentence-embedder-backend-contract.md) — the *short normative reference* for this document. The ADR is the right artifact to cite from a PR review (`ADR-010 §3.5 Gate 1`); this document is the long-form spec the ADR ratifies.
 
 **Document vs. ADR**: When the ADR and this document disagree, the
 ADR's §3 list is normative. The prose here explains the list, cites

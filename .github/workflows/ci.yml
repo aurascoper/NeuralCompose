@@ -39,6 +39,21 @@ jobs:
           test -f Tests/BCIEEGTests/Fixtures/reference_pipeline.json \
             || { echo "::error::Golden fixture missing — GoldenRecordingRegressionTests would skip vacuously"; exit 1; }
 
+      # CONTRIBUTING.md makes docs/architecture/decision-log/ the canonical
+      # location for architectural decisions, so a reference that resolves to no
+      # file — or to two — is a provenance defect, not a typo. ADR-004 was
+      # double-assigned for a year: the roadmap recorded it, a code review
+      # re-found it, and neither caused the fix.
+      #
+      # A direct python3 step rather than a job: the checker is stdlib-only and
+      # macos-26 ships python3, so this needs no setup-python and no new runner.
+      # Tests run first — a gate whose only evidence is that it never complained
+      # is not a gate.
+      - name: ADR reference integrity
+        run: |
+          python3 Tests/eval/test_adr_references.py
+          python3 Scripts/check_adr_references.py --mode all
+
       # Compiles every target (incl. BCILLM's MLX Metal kernels via the runner's
       # full Xcode) — the primary gate that the whole graph builds.
       - name: Build (all targets)

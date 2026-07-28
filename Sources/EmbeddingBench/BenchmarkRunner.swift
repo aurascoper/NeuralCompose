@@ -3,7 +3,7 @@ import Foundation
 
 /// Measures any `SentenceEmbedder` conformer. Deliberately generic — this
 /// file must never import CoreML, MLX, or any backend-specific type
-/// (ADR-004 §3.5 Gate 1). A future `CoreMLSentenceEmbedder` or
+/// (ADR-010 §3.5 Gate 1). A future `CoreMLSentenceEmbedder` or
 /// `MLXSentenceEmbedder` is measured through this exact same code path.
 enum BenchmarkRunner {
     static let batchSizes = [1, 8, 32, 128]

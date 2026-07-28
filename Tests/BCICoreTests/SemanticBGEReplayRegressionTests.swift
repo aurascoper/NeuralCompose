@@ -8,7 +8,7 @@ import CryptoKit
 ///     text -> CoreMLSentenceEmbedder -> Embedding -> RandomProjectionProjector -> coords
 ///
 /// A **separate file** from `SemanticReplayRegressionTests.swift` by design
-/// (ADR-004 §3.5 Gate 1 forbids editing that file for a backend
+/// (ADR-010 §3.5 Gate 1 forbids editing that file for a backend
 /// substitution) — structurally a duplicate, retargeted at
 /// `Tests/Fixtures/semantic_bge_small_v1.json`. The stub's replay stays
 /// frozen forever; this is independent evidence for a second backend.
