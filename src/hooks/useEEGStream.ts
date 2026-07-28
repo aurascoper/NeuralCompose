@@ -31,15 +31,22 @@ export function useEEGStream(): {
 } {
   const [buffer, setBuffer] = useState<EEGBuffer>(EMPTY);
   const [status, setStatus] = useState<EEGStreamStatus>('connecting');
+  // Wall-clock time the newest sample was RECEIVED (not flushed) — this is what
+  // staleness must be computed from. A socket can stay open while the server
+  // goes silent; flush time keeps ticking, receive time does not.
   const [lastUpdate, setLastUpdate] = useState<number>(0);
   const bufRef = useRef<EEGSample[]>([]);
   const receivedRef = useRef<number>(0);
+  const lastSampleAtRef = useRef<number>(0);
+  const flushedCountRef = useRef<number>(0);
   // Throttle re-render to ~30fps so React doesn't melt under 250Hz sample rate.
   const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     bufRef.current = [];
     receivedRef.current = 0;
+    lastSampleAtRef.current = 0;
+    flushedCountRef.current = 0;
     setBuffer(EMPTY);
     setStatus('connecting');
 
@@ -48,21 +55,25 @@ export function useEEGStream(): {
         // Bounded: trimmed to the newest EEG_BUFFER_SAMPLES once 2x is exceeded.
         bufRef.current = pushBounded(bufRef.current, sample, EEG_BUFFER_SAMPLES);
         receivedRef.current += 1;
+        lastSampleAtRef.current = Date.now();
       },
       (s) => setStatus(s),
     );
 
     // ~30fps renderer flush. Drops samples if the producer is faster; that's intentional.
+    // Skips entirely when nothing new arrived, so a silent stream stops
+    // producing state churn and lastUpdate honestly stops advancing.
     flushTimerRef.current = setInterval(() => {
+      if (receivedRef.current === flushedCountRef.current) return;
+      flushedCountRef.current = receivedRef.current;
       const samples = bufRef.current;
-      if (samples.length === 0) return;
       const channels = toChannelArrays(samples, EEG_BUFFER_SAMPLES);
       setBuffer({
         channels,
         latest: channels[0].length - 1,
         received: receivedRef.current,
       });
-      setLastUpdate(Date.now());
+      setLastUpdate(lastSampleAtRef.current);
     }, 33);
 
     return () => {
