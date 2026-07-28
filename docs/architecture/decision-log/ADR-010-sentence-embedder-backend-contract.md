@@ -1,4 +1,4 @@
-# ADR-004: SentenceEmbedder backend contract
+# ADR-010: SentenceEmbedder backend contract
 
 **Status**: Accepted
 **Date**: 2026-07-12
@@ -21,7 +21,7 @@ for a reviewer of a pull request, because it is 315 lines long and
 organized by scope (producer/artifact/system) rather than by invariant.
 
 Reviewers and future contributors need a short, normative reference
-that can be cited as `ADR-004 §3.5` from a PR comment, an audit, or a
+that can be cited as `ADR-010 §3.5` from a PR comment, an audit, or a
 code-review note. The contract document is the specification the ADR
 points at; the ADR is the document you cite.
 
@@ -133,7 +133,7 @@ implementation details into the rest of the app. Both must pass.
 document is 315 lines, organized by scope, and is the right artifact
 for someone *implementing* a backend. It is the wrong artifact for
 *citing* in a PR review ("violates §7.1" is more useful as "violates
-ADR-004 §3.5 Gate 1"). Splitting them keeps the ADR short and stable
+ADR-010 §3.5 Gate 1"). Splitting them keeps the ADR short and stable
 (the ADR's §3 list changes only when an invariant changes; the
 contract's prose can be edited to clarify without re-ratifying the
 invariants).
@@ -167,7 +167,7 @@ A future contributor adding a `SentenceEmbedder` conformer that:
   without going through a per-backend reference set.
 
 Each of those is a smell. The ADR's §3 list is the *checklist* the PR
-is judged against. "Violates ADR-004 §3.5 Gate 2" is a complete code-
+is judged against. "Violates ADR-010 §3.5 Gate 2" is a complete code-
 review note.
 
 ## When this rule does not apply

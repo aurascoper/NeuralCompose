@@ -578,7 +578,7 @@ toolkit, architectural spec, and codebase are useful on their own.
 - [`HARDWARE_SETUP.md`](HARDWARE_SETUP.md) · [`MODEL_SETUP.md`](MODEL_SETUP.md) · [`CALIBRATION.md`](CALIBRATION.md) · [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
 - [`SLEEP_CYCLE_DESIGN.md`](SLEEP_CYCLE_DESIGN.md) — full D1–D8 sleep architecture spec.
 - [`docs/Architecture.md`](docs/Architecture.md) · [`docs/Math.md`](docs/Math.md) · [`docs/Validation.md`](docs/Validation.md) · [`docs/Research.md`](docs/Research.md)
-- [`docs/architecture/embedding_contract.md`](docs/architecture/embedding_contract.md) — the `SentenceEmbedder` backend contract every conformer (stub, Core ML, future MLX) must satisfy; ratified by [ADR-004](docs/architecture/decision-log/ADR-004-sentence-embedder-backend-contract.md).
+- [`docs/architecture/embedding_contract.md`](docs/architecture/embedding_contract.md) — the `SentenceEmbedder` backend contract every conformer (stub, Core ML, future MLX) must satisfy; ratified by [ADR-010](docs/architecture/decision-log/ADR-010-sentence-embedder-backend-contract.md).
 
 ## Citation
 
