@@ -33,10 +33,29 @@ BANDS = {
 }
 
 _EPS = 1e-8
-# np.trapezoid is the numpy>=2.0 name; np.trapz is the numpy<2.0 name. This
-# environment pins numpy 1.26 (has only trapz); support both so the module is
-# portable if the calibration venv is later bumped to numpy 2.x.
-_trapz = getattr(np, "trapezoid", getattr(np, "trapz"))
+
+
+def _resolve_trapezoid(namespace):
+    """Pick the integrator NumPy actually exposes.
+
+    `trapezoid` is the numpy>=2.0 name and `trapz` the numpy<2.0 one. Resolving
+    it lazily is the whole point: the previous form was
+
+        getattr(np, "trapezoid", getattr(np, "trapz"))
+
+    and Python evaluates that default *before* the lookup it is a fallback for.
+    On numpy 2.x, which removed `trapz` outright, it raised `AttributeError` at
+    import — on precisely the version the fallback existed to support. Every
+    `Tests/eval` module reaching this file failed collection, which is how it
+    survived: nothing in CI imported it.
+    """
+    trapezoid = getattr(namespace, "trapezoid", None)
+    if trapezoid is not None:
+        return trapezoid
+    return namespace.trapz
+
+
+_trapz = _resolve_trapezoid(np)
 
 
 def band_power(freqs: np.ndarray, psd: np.ndarray, band: tuple[float, float]) -> float:

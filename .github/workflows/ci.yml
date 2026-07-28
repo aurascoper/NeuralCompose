@@ -79,3 +79,72 @@ jobs:
         # collision/flake risk on a headless runner. The OSC *decode* logic is
         # covered socket-free by MuseOSCDecoderTests / MindMonitorDecoderTests,
         # which still run. Run the socket integration test locally.
+
+  # Tests/eval had no CI at all before this job. Seven modules, and only
+  # test_adr_references.py ran (via the direct python3 step above) — the other
+  # six executed nowhere, which is how three failing assertions and an
+  # import-time crash survived in a green repository.
+  #
+  # pytest, not unittest, and the choice is forced rather than stylistic:
+  # six of the seven modules are bare `def test_*` with no `unittest.TestCase`,
+  # so `python -m unittest` collects ZERO from them, and `unittest discover`
+  # fails outright here (`Tests/eval` has no __init__.py). Either way the suite
+  # would report success while running nothing.
+  python-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          # scipy is required, not optional: three modules import it
+          # transitively and fail collection without it. pandas is a harness
+          # dependency of the session/channel-quality frames.
+          pip install pytest numpy scipy pandas
+
+      # A --filter or --ignore that matches nothing exits 0, and a collection
+      # error can silently shrink the suite. Assert the floor before running so
+      # a module that stops being collected fails loudly instead of vanishing.
+      - name: Assert Tests/eval is discoverable
+        run: |
+          python -m pytest Tests/eval --collect-only -q \
+            --ignore=Tests/eval/test_joint_embedding.py > /tmp/collect.txt 2>&1 || true
+          tail -1 /tmp/collect.txt
+          collected=$(grep -oE '^[0-9]+ tests? collected' /tmp/collect.txt | grep -oE '^[0-9]+' | head -1)
+          errors=$(grep -cE '^ERROR ' /tmp/collect.txt || true)
+          echo "discovered: Tests/eval=${collected:-0} collection_errors=${errors:-0}"
+          [ "${errors:-0}" -eq 0 ] \
+            || { echo "::error::${errors} module(s) failed to collect"; exit 1; }
+          # Floor sits below the current 63 so ordinary additions never trip it.
+          [ "${collected:-0}" -ge 55 ] \
+            || { echo "::error::Tests/eval collected ${collected:-0}, expected >= 55"; exit 1; }
+
+      - name: Test (eval suites)
+        run: |
+          # test_joint_embedding.py imports mlx (Apple Silicon only) and needs a
+          # converted model; it is the one module excluded, by name and reason.
+          python -m pytest Tests/eval -v \
+            --ignore=Tests/eval/test_joint_embedding.py
+
+      # NeuralComposeEEG is not on main yet — it arrives with lane B. Absent is
+      # expected and must be said out loud; present-but-empty is a defect, since
+      # a package whose tests silently collect nothing is the failure this whole
+      # job exists to prevent.
+      - name: Assert NeuralComposeEEG is absent or non-vacuous
+        run: |
+          if [ ! -d NeuralComposeEEG ]; then
+            echo "NeuralComposeEEG/ absent on this branch — expected until lane B integrates it"
+            exit 0
+          fi
+          echo "NeuralComposeEEG/ present — its suite must not be vacuous"
+          n=$(PYTHONPATH=NeuralComposeEEG/src python -m pytest NeuralComposeEEG/tests \
+                --collect-only -q 2>/dev/null \
+                | grep -oE '^[0-9]+ tests? collected' | grep -oE '^[0-9]+' | head -1)
+          echo "discovered: NeuralComposeEEG=${n:-0}"
+          [ "${n:-0}" -gt 0 ] \
+            || { echo "::error::NeuralComposeEEG/ is present but collected 0 tests"; exit 1; }
+          PYTHONPATH=NeuralComposeEEG/src python -m pytest NeuralComposeEEG/tests -v

@@ -55,9 +55,17 @@ def cohens_d(a, b):
     if len(a) < 2 or len(b) < 2:
         return float("nan")
     pooled_std = math.sqrt((a.var(ddof=1) + b.var(ddof=1)) / 2)
+    mean_difference = a.mean() - b.mean()
     if pooled_std == 0:
-        return 0.0
-    return float((a.mean() - b.mean()) / pooled_std)
+        # Zero pooled SD means both samples are constant. Returning 0.0 here
+        # reported "no effect" for the most extreme separation possible —
+        # cohens_d([1,1,1,1], [5,5,5,5]) was 0.0. The effect is unbounded, not
+        # absent, so the limit is signed infinity; identical constants are the
+        # only genuinely zero case.
+        if mean_difference == 0:
+            return 0.0
+        return float("inf") if mean_difference > 0 else float("-inf")
+    return float(mean_difference / pooled_std)
 
 
 def mann_whitney_u(a, b):
