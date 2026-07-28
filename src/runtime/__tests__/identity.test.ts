@@ -67,13 +67,13 @@ describe('classifyLocality', () => {
     expect(classifyLocality('http://127.0.0.1:8081', 'none')).toBe('unknown');
   });
   test('non-loopback endpoints are remote_service; garbage is unknown', () => {
-    expect(classifyLocality('http://100.105.8.22:8081', 'exact')).toBe('remote_service');
+    expect(classifyLocality('http://100.100.10.20:8081', 'exact')).toBe('remote_service');
     expect(classifyLocality('https://api.example.com/v1', 'exact')).toBe('remote_service');
     expect(classifyLocality('not a url', 'exact')).toBe('unknown');
   });
   test('endpointClass never exposes the raw URL', () => {
     expect(endpointClass('http://127.0.0.1:8081')).toBe('loopback-http');
-    expect(endpointClass('http://100.105.8.22:8081')).toBe('remote-http');
+    expect(endpointClass('http://100.100.10.20:8081')).toBe('remote-http');
   });
 });
 

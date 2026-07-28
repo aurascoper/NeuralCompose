@@ -7,6 +7,7 @@ import { apiClient } from '../api';
 import type { EEGSample } from '../types/api';
 import type { EEGStreamStatus } from '../api/ApiClient';
 import { EEG_BUFFER_SAMPLES } from '../config';
+import { pushBounded, toChannelArrays } from './eegBuffer';
 
 export interface EEGBuffer {
   // Per-channel rolling history, oldest → newest. Length === EEG_BUFFER_SAMPLES when full.
@@ -44,12 +45,9 @@ export function useEEGStream(): {
 
     const sub = apiClient.subscribeEEG(
       (sample) => {
-        bufRef.current.push(sample);
+        // Bounded: trimmed to the newest EEG_BUFFER_SAMPLES once 2x is exceeded.
+        bufRef.current = pushBounded(bufRef.current, sample, EEG_BUFFER_SAMPLES);
         receivedRef.current += 1;
-        // Cap memory: keep only the last 2x buffer in case flush is slow.
-        if (bufRef.current.length > EEG_BUFFER_SAMPLES * 2) {
-          bufRef.current = bufRef.current.slice(-EEG_BUFFER_SAMPLES);
-        }
       },
       (s) => setStatus(s),
     );
@@ -58,17 +56,10 @@ export function useEEGStream(): {
     flushTimerRef.current = setInterval(() => {
       const samples = bufRef.current;
       if (samples.length === 0) return;
-      const tail = samples.slice(-EEG_BUFFER_SAMPLES);
-      const channels: [number[], number[], number[], number[]] = [[], [], [], []];
-      for (const s of tail) {
-        channels[0].push(s.channels[0]);
-        channels[1].push(s.channels[1]);
-        channels[2].push(s.channels[2]);
-        channels[3].push(s.channels[3]);
-      }
+      const channels = toChannelArrays(samples, EEG_BUFFER_SAMPLES);
       setBuffer({
         channels,
-        latest: tail.length - 1,
+        latest: channels[0].length - 1,
         received: receivedRef.current,
       });
       setLastUpdate(Date.now());

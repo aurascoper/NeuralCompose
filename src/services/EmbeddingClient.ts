@@ -5,7 +5,7 @@
 
 import type { Embedding } from '../dialectic/types';
 
-export const EMBEDDING_URL = 'http://127.0.0.1:8082';
+export const EMBEDDING_URL = process.env.EXPO_PUBLIC_EMBEDDING_URL || 'http://127.0.0.1:8082';
 export const EMBEDDING_MODEL_PATH = '/data/data/com.termux/files/home/models/bge-small-en-v1.5-q8_0.gguf';
 
 export interface EmbeddingResult {

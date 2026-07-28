@@ -11,7 +11,7 @@ import { useDiagnostics } from '../hooks/useDiagnostics';
 import { usePipelineMode } from '../hooks/usePipelineMode';
 import { useNow, relativeTime } from '../hooks/useNow';
 import { colors, radius, spacing, typography } from '../theme';
-import { STALE } from '../config';
+import { STALE, USE_MOCK, SERVER_URL, CONFIG_ERROR } from '../config';
 
 export function OverviewScreen() {
   const insets = useSafeAreaInsets();
@@ -40,8 +40,27 @@ export function OverviewScreen() {
         />
       }
     >
-      <Text style={styles.heading}>Overview</Text>
-      <Text style={styles.subheading}>NeuralCompose pipeline status</Text>
+      <View style={styles.headingRow}>
+        <View>
+          <Text style={styles.heading}>Overview</Text>
+          <Text style={styles.subheading}>NeuralCompose pipeline status</Text>
+        </View>
+        {/* Client data-source pill. Tab headers are hidden, so this is the one
+            unmistakable MOCK/LIVE label. Distinct from the server-reported
+            pipeline mode below: this is what the PHONE is consuming. */}
+        <View style={[styles.sourcePill, USE_MOCK ? styles.sourcePillMock : CONFIG_ERROR ? styles.sourcePillError : styles.sourcePillLive]}>
+          <Text style={[styles.sourcePillText, USE_MOCK ? styles.sourcePillTextMock : CONFIG_ERROR ? styles.sourcePillTextError : styles.sourcePillTextLive]}>
+            {USE_MOCK ? 'MOCK DATA' : CONFIG_ERROR ? 'LIVE · NO ENDPOINT' : 'LIVE'}
+          </Text>
+          <Text style={styles.sourcePillDetail} numberOfLines={1}>
+            {USE_MOCK
+              ? 'fixtures on this phone'
+              : SERVER_URL
+                ? SERVER_URL.replace(/^https?:\/\//, '')
+                : 'set EXPO_PUBLIC_SERVER_URL'}
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.section}>
         <PrivacyBadge mode={mode.data} />
@@ -97,6 +116,23 @@ const styles = StyleSheet.create({
   container: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   heading: { color: colors.text, fontSize: typography.title, fontWeight: '700' },
   subheading: { color: colors.textMuted, fontSize: typography.caption, marginTop: -spacing.sm },
+  headingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
+  sourcePill: {
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    alignItems: 'flex-end',
+    maxWidth: 180,
+  },
+  sourcePillMock: { borderColor: colors.green, backgroundColor: colors.green + '22' },
+  sourcePillLive: { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
+  sourcePillError: { borderColor: colors.orange, backgroundColor: colors.orange + '22' },
+  sourcePillText: { fontSize: typography.micro, fontWeight: '700', letterSpacing: 1 },
+  sourcePillTextMock: { color: colors.green },
+  sourcePillTextLive: { color: colors.accent },
+  sourcePillTextError: { color: colors.orange },
+  sourcePillDetail: { color: colors.textMuted, fontSize: 9, fontVariant: ['tabular-nums'] },
   section: { gap: spacing.sm },
   sectionTitle: { color: colors.text, fontSize: typography.heading, fontWeight: '600' },
   diagHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
