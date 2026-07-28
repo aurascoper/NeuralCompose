@@ -10,7 +10,7 @@ import XCTest
 /// under plain `swift test` (no Xcode-built metallib required; MLX kernels
 /// only load when arrays are evaluated).
 ///
-/// The real-model path (load + encode + ADR-004 §3.1 invariants) is gated on
+/// The real-model path (load + encode + ADR-010 §3.1 invariants) is gated on
 /// `NEURALCOMPOSE_MLX_EMBEDDER_MODEL_DIR` and needs an Xcode-built test run —
 /// same gating convention as the MLX generation regression tests.
 final class MLXSentenceEmbedderTests: XCTestCase {
@@ -98,7 +98,7 @@ final class MLXSentenceEmbedderTests: XCTestCase {
         }
     }
 
-    // MARK: - Numeric invariants (ADR-004 §3.1)
+    // MARK: - Numeric invariants (ADR-010 §3.1)
 
     func testL2NormalizedProducesUnitNorm() {
         let normalized = MLXSentenceEmbedder.l2Normalized([3, 4])
@@ -143,7 +143,7 @@ final class MLXSentenceEmbedderTests: XCTestCase {
         for embedding in embeddings {
             XCTAssertEqual(embedding.values.count, embedder.dimension)
             XCTAssertEqual(embedding.modelID, embedder.modelID)
-            // Unit norm within 1e-4 (ADR-004 §2.1), finite everywhere —
+            // Unit norm within 1e-4 (ADR-010 §2.1), finite everywhere —
             // including for the empty string.
             XCTAssertTrue(embedding.values.allSatisfy(\.isFinite))
             let norm = embedding.values.reduce(Float(0)) { $0 + $1 * $1 }.squareRoot()

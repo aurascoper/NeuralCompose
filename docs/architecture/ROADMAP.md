@@ -109,12 +109,13 @@ specific tasks (files, PRs, tests) live in GitHub Issues.
   pipeline)
 
 ### Cross-cutting
-- `✓` Initial ADR set in `docs/architecture/decision-log/` (ADR-001
-  through ADR-005; note ADR-004 is currently double-assigned —
-  `ADR-004-privacy-first-acquisition.md` and
-  `ADR-004-sentence-embedder-backend-contract.md` both claim that
-  number, worth a rename/renumber pass since other docs may already
-  reference them by filename)
+- `✓` Initial ADR set in `docs/architecture/decision-log/`. ADR-004 was
+  double-assigned; resolved by renumbering the embedding contract to
+  ADR-010 and rewriting its citations. The intervening number is
+  reserved for generation-runtime semantics and lands with the runtime
+  it governs, so a numeric gap here is expected and is not an error.
+  `Scripts/check_adr_references.py` now enforces one file per number and
+  that every normative reference resolves.
 - `✓` `docs/architecture/PRINCIPLES.md` — engineering values that
   govern how new work is integrated
 - `□` Layered architecture diagram in the main README
