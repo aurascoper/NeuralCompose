@@ -208,3 +208,82 @@ short-circuits both.
 2. **No event-to-build self-attribution.** `DialecticalTurnEvent` carries no
    timestamp and no build identifier, so a log cannot independently attest which
    bundle produced it; attribution rests on filesystem metadata.
+
+## 6. Final-head acceptance — `abb0eea` (observed, packaged)
+
+Sections 1–5 stand. The `4c5e275` and `71c5c02` observations are historical
+records of the heads they name and are not revised here.
+
+### Artifact
+
+```
+HEAD                abb0eea71ca4da6c025664a3f16a554ef708a907   worktree clean
+executable sha256   2e283a40797e1780a7debde2f3466b9658a5ae264285c6084a25ba25090bd11d
+Info.plist sha256   bbbd77168cea02521a50e9ace249dbab8ea08b7ce16fb5aa257af512e98894d4
+codesign            --verify --deep --strict PASS · adhoc · TeamIdentifier not set
+```
+
+Re-verified byte-identical before and after every cell below. The `71c5c02`
+hashes in §1 remain that head's historical evidence.
+
+### The Commit J signal
+
+The same day-file spans both bundles, which makes the change directly visible:
+
+```
+written by 71c5c02   16 records   0 pole fingerprints
+written by abb0eea   12 records  12 pole fingerprints
+```
+
+Zero of sixteen before; twelve of twelve after. This is the durable app-side
+Claude provenance §5 predicted from source, now observed in the packaged app.
+
+### Cells
+
+| cell | result | evidence |
+|---|---|---|
+| Claude Focused | PASS | pole fp; `anthropic` / `claude-sonnet-5`; profile `wakingDialectical`; `witnessAttempted=false`; no Witness fp |
+| Claude Reflective | PASS | pole fp **and** Witness fp; Witness independently records profile `witness`; hashes differ; finding unvoiced |
+| Claude Contemplative | PASS | pole fp; `witnessAttempted=false`; no Witness fp |
+| Ollama Reflective regression | PASS | 4 turns, `ollama` / `qwen2.5:0.5b`, transport `ollama-http`; pole **and** Witness fp on every turn; hashes differ; unvoiced |
+| Configured-but-failing Claude | PASS | app launch confirmed via health-log advance; **zero** records, pole fps, Witness fps appended; no stale speech |
+| Claude Mirror | not established | see limitations |
+
+Prompt-hash collisions across all 12 new records: **0**. No provider
+substitution: requested equals resolved in every cell. No fabricated
+`modelDigest`. `spectralState: null` continues to disambiguate the stub
+`glossScalar 0.5` from an observed value.
+
+The failing-Claude cell is the load-bearing negative: its expected result is that
+nothing is written, so it was gated on independent evidence that the app ran
+(health-log delta) before a zero delta could be read as a pass.
+
+### Recorded limitations
+
+1. **Mirror operational path — not established.** `loopMode=mirror` with
+   `loopRunning=true` confirms selection and loop construction; no stage beyond
+   that leaves durable evidence. `AppViewModel.swift:1170` populates `turnCount`
+   and `lastTurnAt` only via `as? HypnagogicDialecticLoop`, so Mirror is
+   invisible to those counters, and `HypnagogicDialogueLoop.run()`'s catch
+   swallows listen/generate/speak failures without logging. A silent success and
+   a silent failure are indistinguishable from the artifacts that exist. Both
+   properties predate Commit J, and Mirror's loop takes `any TextGenerating`
+   with no concrete-type assumption — the same adapter produced twelve
+   fingerprinted turns in the same process. **Not attributable to Commit J.**
+2. **No event self-attestation.** `DialecticalTurnEvent` carries no timestamp
+   and no build identifier. Association of records to this head rests on the
+   frozen hash, the `loopMode` timeline in the health log, and the fingerprint
+   discontinuity — not on any single event.
+3. **Ollama records `promptProfile: custom`** where Claude now records the real
+   profile name. `makeOllama` uses the caller-supplied-bytes initializer, so the
+   hash is correct and provenance is sound; the record is simply less
+   self-describing. Post-merge cleanup.
+4. **Mode fidelity remains underpowered.** One to four turns per profile.
+5. **Spectral estimator absent** in a SwiftPM build; gloss pinned 0.5.
+
+### Not claimed
+
+Focused, Contemplative, and Mirror behavioural fidelity. Every knob that
+distinguishes those profiles governs sustained behaviour — silence runs,
+carry-forward, synthesis reluctance, cadence — and no session here is long
+enough to reach one. Nothing in this record is EEG evidence.
