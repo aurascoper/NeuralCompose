@@ -57,6 +57,46 @@ def test_cohens_d_large_effect_with_variance():
     assert abs(d) > 2.0
 
 
+def test_cohens_d_unequal_sizes_uses_df_weighted_pooling():
+    """Pooled variance must be weighted by degrees of freedom.
+
+    The unweighted (var_a + var_b) / 2 form coincides with the conventional
+    estimator only at equal n, and this function accepts arbitrary lengths — so
+    an unequal-n caller was silently dividing by the wrong denominator. Every
+    earlier test used equal groups, which is exactly why it survived.
+
+    This fixture is chosen so the two formulas disagree: n=3 with small variance
+    against n=9 with large variance, so df-weighting pulls the pooled estimate
+    toward the larger, noisier group.
+    """
+    a = [10.0, 10.5, 9.5]
+    b = [1.0, 5.0, 9.0, 2.0, 8.0, 3.0, 7.0, 4.0, 6.0]
+
+    va, vb = np.var(a, ddof=1), np.var(b, ddof=1)
+    unweighted = (np.mean(a) - np.mean(b)) / math.sqrt((va + vb) / 2)
+    weighted = (np.mean(a) - np.mean(b)) / math.sqrt(
+        ((len(a) - 1) * va + (len(b) - 1) * vb) / (len(a) + len(b) - 2))
+
+    assert not math.isclose(unweighted, weighted, rel_tol=0.05), \
+        "fixture must distinguish the two formulas"
+    assert cohens_d(a, b) == pytest.approx(weighted)
+    assert cohens_d(a, b) != pytest.approx(unweighted)
+
+
+def test_mann_whitney_method_is_explicit_not_inherited():
+    """Ties must not be scored with the exact distribution.
+
+    The implementation used to call SciPy without `method=`, inheriting `auto` —
+    a selection rule that has changed across releases and would move a reported
+    p-value between versions. With ties present, exact is invalid, so the
+    asymptotic approximation is required and the p-value must differ from the
+    tie-free case.
+    """
+    tied = mann_whitney_u([1, 2, 2, 3], [2, 4, 5, 6])
+    assert math.isfinite(tied["p_value"])
+    assert 0.0 <= tied["p_value"] <= 1.0
+
+
 def test_mann_whitney_u_disjoint():
     """Perfect separation at n=3 vs 3 gives p = 0.1, not p < 0.05.
 

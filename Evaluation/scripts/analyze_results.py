@@ -44,14 +44,27 @@ def cohens_d(a, b):
     a, b = np.array(a, dtype=float), np.array(b, dtype=float)
     if len(a) < 2 or len(b) < 2:
         return float("nan")
-    pooled_std = math.sqrt((a.var(ddof=1) + b.var(ddof=1)) / 2)
+    # Degrees-of-freedom-weighted pooled variance. The unweighted
+    # (var_a + var_b) / 2 form coincides with this only when the groups are the
+    # same size, and this function accepts arbitrary lengths — so every
+    # unequal-n caller was dividing by the wrong denominator.
+    n_a, n_b = len(a), len(b)
+    pooled_variance = (
+        (n_a - 1) * a.var(ddof=1) + (n_b - 1) * b.var(ddof=1)
+    ) / (n_a + n_b - 2)
+    pooled_std = math.sqrt(pooled_variance)
     mean_difference = a.mean() - b.mean()
     if pooled_std == 0:
-        # Zero pooled SD means both samples are constant. Returning 0.0 here
-        # reported "no effect" for the most extreme separation possible —
-        # cohens_d([1,1,1,1], [5,5,5,5]) was 0.0. The effect is unbounded, not
-        # absent, so the limit is signed infinity; identical constants are the
-        # only genuinely zero case.
+        # PROJECT POLICY, not a universal definition. With both samples constant
+        # the denominator is zero and Cohen's d is strictly undefined. We report
+        # the limiting value — signed infinity — because 0.0 claimed "no effect"
+        # for the most extreme separation representable, and nan would discard
+        # the direction. Identical constants are the one genuinely zero case.
+        #
+        # Callers that PERSIST this must convert at the boundary: JSON has no
+        # Infinity literal (`json.dumps` emits a bare `Infinity`, which strict
+        # parsers reject) and CSV has no convention at all. Decide on a
+        # representation before writing it, rather than assuming the reader copes.
         if mean_difference == 0:
             return 0.0
         return float("inf") if mean_difference > 0 else float("-inf")

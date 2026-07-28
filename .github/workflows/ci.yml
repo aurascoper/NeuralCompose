@@ -104,7 +104,17 @@ jobs:
           # scipy is required, not optional: three modules import it
           # transitively and fail collection without it. pandas is a harness
           # dependency of the session/channel-quality frames.
-          pip install pytest numpy scipy pandas
+          #
+          # Majors are bounded because this gate's semantics depend on them:
+          # the trapz/trapezoid fix is numpy-2 specific, and the Mann-Whitney
+          # contract depends on SciPy's exact/asymptotic behaviour. An
+          # unconstrained install would let a major bump change a p-value
+          # without any commit here.
+          pip install \
+            'pytest>=8,<9' \
+            'numpy>=2,<3' \
+            'scipy>=1.14,<2' \
+            'pandas>=2,<3'
 
       # A --filter or --ignore that matches nothing exits 0, and a collection
       # error can silently shrink the suite. Assert the floor before running so
