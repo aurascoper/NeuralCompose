@@ -1,602 +1,493 @@
 # NeuralCompose
 
-A privacy-first, fully on-device macOS prototype for **EEG-driven communication**
-and **sleep-cycle research**. A Muse headband streams brain signals through
-BrainFlow, a Core ML classifier on the Apple Neural Engine detects intent
-(jaw clench / blink / rest / select), and a local MLX LLM suggests the next
-word. **No cloud APIs. No telemetry. No network at runtime.**
+NeuralCompose is a privacy-oriented macOS research prototype for EEG-driven communication, signal visualization, semantic composition, and sleep-cycle experimentation.
+
+A Muse headband can feed four-channel EEG into a Swift pipeline for acquisition, windowing, signal-quality checks, intent classification, semantic visualization, text generation, and speech. The repository also includes deterministic synthetic and playback modes, offline evaluation tools, and experimental dialectical dialogue loops.
+
+> **Research prototype:** NeuralCompose is not a medical device and must not be used for diagnosis, treatment, safety-critical communication, or clinical decisions.
+
+## What runs where
+
+| Component | Default location |
+|---|---|
+| SwiftUI application and visualization | Mac |
+| EEG acquisition and preprocessing | Mac |
+| Core ML classifiers and embeddings | Mac / Apple Neural Engine when available |
+| MLX models | Mac / Apple Silicon GPU when configured |
+| Ollama generation | Configured Ollama server, commonly the same Mac |
+| Claude generation | Anthropic through the locally installed Claude Code CLI |
+| Interaction logs and research artifacts | Local filesystem |
+
+Most of the application can run without hardware, model weights, Ollama, Claude, or BrainFlow. The synthetic stream and deterministic fallbacks are the recommended first launch.
+
+Cloud generation is opt-in. Selecting the Claude runtime sends prompt text through the authenticated Claude Code CLI. NeuralCompose records the requested and resolved runtime identity so local and cloud execution are not presented as interchangeable.
 
 ## Live signal
 
 <p align="center">
-  <img src="Recordings/golden/report/raw_traces.png" width="49%" alt="2D depth-stacked EEG plotter, 4 channels over ~305s">
-  <img src="Recordings/golden/report/3d-workspace.png" width="49%" alt="3D SceneKit workspace, 4 electrode nodes driven by live RMS/band-power/classifier data">
+  <img src="Recordings/golden/report/raw_traces.png" width="49%" alt="Four-channel EEG traces from the golden recording">
+  <img src="Recordings/golden/report/3d-workspace.png" width="49%" alt="NeuralCompose 3D workspace">
 </p>
 
-Left: `EEGScalpPlotterView`, the 2D depth-stacked plotter, replaying the
-project's first **golden recording** — TP9/AF7/AF8/TP10 live from a Muse S.
-Right: `NeuralWorkspaceView`, the same session in 3D — node brightness tracks
-broadband RMS, elevation tracks theta-band power, edge tint and pulse track
-the live intent classifier's output.
+The committed golden recording contains TP9, AF7, AF8, and TP10 data from a Muse S. It supports deterministic regression tests of playback, windowing, feature extraction, channel health, and visualization behavior. See [`Recordings/golden/README.md`](Recordings/golden/README.md).
 
-| Channel | Contact | Clipping | RMS | Overall |
-|---|---|---|---|---|
-| TP9 | Excellent | 0.65% | 162.5 µV | Good |
-| AF7 | Excellent | 0.85% | 176.6 µV | Good |
-| AF8 | Excellent | 0.94% | 175.7 µV | Good |
-| TP10 | Excellent | 0.34% | 146.4 µV | Good |
+## Requirements
 
-98 blink-like transients and 19 EMG bursts detected across the narrated
-protocol (eyes open/closed, blinks, jaw clenches, and a deliberate
-electrode-lift on each channel in turn). Full report — [PSD](Recordings/golden/report/psd.png),
-[spectrogram](Recordings/golden/report/spectrogram.png),
-[rolling band power](Recordings/golden/report/band_power.png),
-[RMS timeline](Recordings/golden/report/rms_timeline.png) — and the raw
-recording's provenance: [`Recordings/golden/README.md`](Recordings/golden/README.md).
+### Minimum local build
 
-This recording also backs `Tests/BCIEEGTests/GoldenRecordingRegressionTests.swift`:
-every test run replays it deterministically (see [Playback & synchronization](#playback--synchronization-math)
-below) through the real windowing → feature-extraction → classifier →
-channel-health pipeline and checks the output against a committed reference.
+- macOS 14 or newer
+- Apple Silicon recommended
+- Git
+- Swift 6 toolchain
+- Xcode Command Line Tools
 
-> **On AF7:** an earlier validation session (`validate-muse-physiology.py`)
-> found AF7 saturated (~900 µV RMS) across 4 consecutive runs and read that
-> as a hardware defect. It wasn't — headband tautness was the actual cause;
-> once corrected, AF7 recorded as cleanly as the other three channels. Worth
-> remembering before writing off a "bad" channel as broken hardware.
+Install the command-line tools when necessary:
 
-## Project status (July 2026)
-
-| Status | Component |
-|--------|-----------|
-| ✅ | Native BrainFlow integration (BLE + BCIBridge) |
-| ✅ | Live Muse S acquisition (256 Hz, 4 channels) |
-| ✅ | Communication mode (intent → carousel → MLX LLM) |
-| ✅ | Phase B Sleep Validation Toolkit — 2D plotter + 3D live topography |
-| ✅ | Deterministic playback (`PlaybackEEGStream.normalized`) + CI regression against a golden recording |
-| ✅ | 3D workspace driven entirely by live classifier output (no manual controls) |
-| ✅ | Semantic embedding backend — `SentenceEmbedder` seam, golden replay, `EmbeddingBench` harness, and a real Core ML conversion of BGE-small-en-v1.5 (the CoreML-converted backend; the frozen Stage 3.4 leaderboard ranks all-MiniLM-L6-v2 #1 overall) |
-| ✅ | Stage 3.4 offline interaction science — complete and frozen: 17/17 embedding + 18/18 generation candidates terminal, RQ1 runtime equivalence confirmed (4/4 cross-runtime comparisons, cosine 1.000000), evidence checksummed under `Evaluation/stage_3_4/frozen/` — see `Evaluation/reports/STAGE_3_4_EXIT_REPORT.md` |
-| 🧪 | Stage 3.5 pipeline engineering (routing/cascades/policies) — pre-registered in `hypothesis_registry.json`, not started |
-| 🚧 | Sleep-stage classifier (4-class: Wake / N1 / N2_N3 / Uncertain_REM) |
-| 🚧 | Dream-session controller + session FSM |
-| 🚧 | LLM primer generation + dream-report analogy extraction |
-| 🧪 | Cognitive-incubation experiments (pre-registration pending) |
-
-## Architecture
-
-```
-                    ┌──────────────────────────────────────────────────────┐
-                    │                NeuralComposeApp                       │
-                    │  (SwiftUI: comms window, Phase B debug, menu-bar UI)  │
-                    └─────┬──────────────────────────┬──────────────────────┘
-                          │                          │ Cmd+Shift+D
-                          ▼                          ▼
-                ┌──────────────────┐        ┌─────────────────────────┐
-                │ TextComposition  │        │  SleepValidationView    │
-                │ Controller       │        │  (2D plotter, 3D scene) │
-                └────────┬─────────┘        └─────────────────────────┘
-                         ▼
-                ┌──────────────────┐    ┌──────────────────┐
-                │ IntentSmoother   │    │ EEGWindowing     │  (2s comms / 30s sleep)
-                │ (BCICore actor)  │    │ (BCICore actor)  │
-                └────────┬─────────┘    └────────┬─────────┘
-                         ▼                       │
-                ┌──────────────────┐             │
-                │ Core ML on ANE   │◄────────────┘
-                │ (BCIClassifier)  │
-                └────────┬─────────┘
-                         ▼
-                ┌──────────────────┐
-                │ EEGStreaming     │ ← BrainFlow / synthetic / playback
-                │  (BCIEEG)        │
-                └──────────────────┘
+```bash
+xcode-select --install
 ```
 
-**Module boundaries** (MLX isolation is load-bearing):
+Confirm the toolchain:
 
-- `BCICore` — pure-Swift models, protocols, FSMs, buffers. **No third-party deps.**
-- `BCIBridge` — Obj-C++ shim for BrainFlow (stub by default, gated by `BCI_BRAINFLOW_AVAILABLE`).
-- `BCIEEG` — `BrainFlowService`, `SyntheticEEGStream`, `PlaybackEEGStream`, `EEGScalpPlotterView`, `NeuralWorkspaceView`.
-- `BCIClassifier` — Core ML wrapper + deterministic mock (also the CI classifier); also hosts `CoreMLSentenceEmbedder` + `WordPieceTokenizer` for real semantic embeddings.
-- `BCILLM` — **MLX-Swift linked only here.** Adapter + stub + tokenizer.
-- `NeuralComposeApp` — SwiftUI views, Phase B debug window, menu-bar UI.
-- `EmbeddingBench` — sibling executable (not part of the app) that benchmarks any `SentenceEmbedder` conformer; knows nothing about Core ML or MLX.
-
-The app talks to `BCILLM` through `NextWordPredicting`, so there's exactly
-**one** MLX runtime copy in the linked binary.
-
-### Four-layer model
-
-The codebase is organized into four layers, named for *role* (not
-current contents) so they remain meaningful as the platform grows:
-
-```
-┌─────────────────────────────────────────────────────┐
-│                      Interface                      │
-│  SwiftUI · SceneKit · Plotters · Channel-health UI  │
-└────────────────────────▲────────────────────────────┘
-                         │ depends on
-┌────────────────────────┴────────────────────────────┐
-│                     Intelligence                    │
-│  DSP · Features · Classifier · Embeddings · Project │
-└────────────────────────▲────────────────────────────┘
-                         │ depends on
-┌────────────────────────┴────────────────────────────┐
-│                      Runtime                        │
-│  EEGStreaming · AsyncMulticastChannel · Supervisors │
-│  Recording · Diagnostics                            │
-└────────────────────────▲────────────────────────────┘
-                         │ depends on
-┌────────────────────────┴────────────────────────────┐
-│                  External Systems                   │
-│   Muse · BrainFlow · OSC · Playback · Synthetic     │
-└─────────────────────────────────────────────────────┘
-
-  ▼ data flows downward
+```bash
+swift --version
+xcode-select -p
 ```
 
-**External Systems** is whatever produces samples — the Muse over
-BrainFlow, a remote Muse over OSC, a recorded file in playback, a
-deterministic synthetic stream. The layer is named "External" rather
-than "Hardware" because playback and synthetic are not hardware; the
-shared property is "outside the process boundary of the analysis
-pipeline."
+### Full local feature build
 
-**Runtime** owns the streaming substrate: the single-owner
-`EEGStreaming` (see ADR-001), the `AsyncMulticastChannel` that
-distributes samples to multiple consumers, the supervisors that handle
-stalls and reconnects, the recording subsystem, and the transport
-diagnostics.
+Install the full Xcode application when using MLX GPU execution, Metal kernels, app signing, or Xcode-based builds.
 
-**Intelligence** is the analysis layer: feature extraction, the
-intent classifier, the sentence embedder (`SentenceEmbedder` protocol —
-`DeterministicSentenceEmbedder` stub by default, `CoreMLSentenceEmbedder`
-when a converted model is present under `Models/`), and the projection
-that turns a high-dimensional embedding into a 3D point. It does not
-know what produced the samples or what will render the output.
+After installing Xcode:
 
-**Interface** is everything the user sees: SwiftUI windows, the
-SceneKit 3D workspace, the 2D plotter, the privacy indicator, the
-channel-health badge. It consumes Intelligence outputs and never
-imports Core ML or MLX directly.
-
-The dependency direction is strictly downward: Interface depends on
-Intelligence, Intelligence depends on Runtime, Runtime depends on
-External Systems. A component that needs to know about a
-non-adjacent layer is a sign that either the data flow should be
-redesigned, or the missing protocol should be added at the layer
-boundary where the knowledge should live.
-
-See [`docs/architecture/PRINCIPLES.md`](docs/architecture/PRINCIPLES.md)
-for the engineering values these layers implement, and
-[`docs/architecture/decision-log/`](docs/architecture/decision-log/)
-for the specific architectural decisions recorded under those
-principles.
-
-## Playback & synchronization math
-
-Live acquisition is a noisy clock — inter-sample gaps jitter with radio
-conditions and OS scheduling (over BLE), or with network latency (a remote
-Muse streamed over OSC), so recorded timestamps never land on a perfect grid.
-`PlaybackEEGStream.normalized` resamples a recording onto an
-exact uniform grid before replay, via linear interpolation between the
-two nearest recorded samples $(t_a, x_a)$, $(t_b, x_b)$:
-
-$$x(t) = x_a + (x_b - x_a)\cdot\frac{t - t_a}{t_b - t_a}, \qquad t_a \le t \le t_b$$
-
-Two replays of the same file at the same target rate then produce
-byte-identical sample sequences, independent of the original jitter — the
-property the CI regression test depends on.
-
-Classifier confidence driving the 3D workspace's edge pulse is
-EMA-smoothed so an async prediction arrival doesn't visibly pop:
-
-$$\hat{c}_n = \hat{c}_{n-1} + \alpha\,(c_n - \hat{c}_{n-1}), \qquad \alpha = 0.15$$
-
-and node brightness is broadband RMS under a log compression so small
-changes stay visible without large ones saturating:
-
-$$I = \mathrm{clamp}\bigl(\log(1 + 0.05\cdot\mathrm{RMS}),\;0,\;1\bigr)$$
-
-Predictions and samples arrive on independent streams; if a prediction goes
-stale (no update for `classifierStaleThreshold` while samples keep
-flowing), intent-driven color/pulse dim rather than keep showing a
-confidently-colored but outdated classification.
-
-**Measured performance** (Apple Silicon, debug build): replaying the golden
-recording (77,966 samples / 305s) through the full windowing → features →
-classifier → channel-health → 3D-scene-checkpoint pipeline takes ~6.9s
-wall-clock — about 44× faster than real time, consistent with `.instant`
-pacing bypassing per-sample sleeps entirely. `NeuralWorkspaceView.recompute()`
-(the per-frame node/edge material update) costs ~0.42ms/call — at the
-view's 30Hz target refresh, that's ~1.3% of the frame budget, leaving
-headroom for a future embedding-projection node without a redesign.
-
-## Scientific motivation
-
-This is a platform, not a clinical or productivity tool. The aim is to build
-the on-device infrastructure that lets a small research team:
-
-1. Validate consumer-grade EEG against physiological expectations (alpha
-   rise on eyes-closed, blink transients, jaw-clench EMG contamination).
-2. Estimate sleep stage from 4 frontal channels (Muse S: TP9, AF7, AF8,
-   TP10 — no chin EMG, no EOG). A 4-class output is the honest upper bound.
-3. Test whether TMR cues during N2/SWS paired with LLM-generated dream
-   analysis improve creative problem solving — pre-registration required
-   before claiming any effect.
-4. Ship the platform regardless of (3): the validation toolkit and codebase
-   are useful contributions on their own.
-
-Established neuroscience (alpha dropout, AASM staging, TMR for declarative
-memory) is treated as established. Novel claims (LLM analogy extraction,
-insight improvement) are treated as unproven. Every claim in
-`SLEEP_CYCLE_DESIGN.md` carries a confidence rating.
-
-**Core signal-processing definitions** (full derivations in [`docs/Math.md`](docs/Math.md)):
-
-### EEG Representation
-
-$$
-\mathbf{X}(t) =
-\begin{bmatrix}
-x_{\mathrm{TP9}}(t)\\
-x_{\mathrm{AF7}}(t)\\
-x_{\mathrm{AF8}}(t)\\
-x_{\mathrm{TP10}}(t)
-\end{bmatrix}
-\in \mathbb{R}^{4 \times N}
-$$
-
-### Band Power
-
-$$
-P_b = \int_{f_1}^{f_2} \hat{S}_{xx}(f)\,df \approx \sum_i \hat{S}_{xx}(f_i)\,\Delta f
-$$
-
-### Alpha Dropout
-
-$$
-r_\alpha = \frac{P_\alpha^{\mathrm{baseline}}}{P_\alpha}
-$$
-
-### Embedding Similarity
-
-For unit-normalized embeddings,
-
-$$
-\cos(\hat{\mathbf{v}}_1, \hat{\mathbf{v}}_2) = \hat{\mathbf{v}}_1^\top \hat{\mathbf{v}}_2
-$$
-
-### Joint Embeddings
-
-The equation
-
-[
-\mathbf{z} =
-\frac{\operatorname{concat}(w_i,\mathbf{v}_i)}
-{\left|\operatorname{concat}(w_i,\mathbf{v}_i)\right|_2}
-]
-
-means:
-
-1. Multiply each embedding vector (\mathbf{v}_i) by its scalar weight (w_i).
-2. Concatenate the weighted vectors into one long vector.
-3. Compute its L2 norm.
-4. Normalize the concatenated vector to unit length.
-
-Assuming:
-
-* `weights = [w1, w2, ...]`
-* `vectors = [[...], [...], ...]`
-* all vectors are floating point arrays
-
----
-
-# Swift
-
-```swift
-func jointEmbedding(
-    weights: [Float],
-    vectors: [[Float]]
-) -> [Float] {
-    precondition(weights.count == vectors.count)
-
-    var concatenated: [Float] = []
-
-    for (w, v) in zip(weights, vectors) {
-        concatenated.append(contentsOf: v.map { $0 * w })
-    }
-
-    let norm = sqrt(concatenated.reduce(0) { $0 + $1 * $1 })
-
-    guard norm > 0 else {
-        return concatenated
-    }
-
-    return concatenated.map { $0 / norm }
-}
+```bash
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+xcodebuild -version
 ```
 
----
+Optional external systems:
 
-# C++
+- **BrainFlow** for direct Muse acquisition
+- **Ollama** for local HTTP generation
+- **Claude Code CLI** for the opt-in Anthropic runtime
+- Converted Core ML and MLX model artifacts under `Models/`
 
-```cpp
-#include <vector>
-#include <cmath>
-
-std::vector<float> jointEmbedding(
-    const std::vector<float>& weights,
-    const std::vector<std::vector<float>>& vectors)
-{
-    std::vector<float> z;
-
-    for (size_t i = 0; i < vectors.size(); ++i)
-        for (float x : vectors[i])
-            z.push_back(weights[i] * x);
-
-    float norm = 0.f;
-    for (float x : z)
-        norm += x * x;
-
-    norm = std::sqrt(norm);
-
-    if (norm > 0.f)
-        for (float& x : z)
-            x /= norm;
-
-    return z;
-}
-```
-
----
-
-# C
-
-```c
-#include <math.h>
-#include <stddef.h>
-
-void joint_embedding(
-    const float *weights,
-    const float *vectors[],
-    const size_t lengths[],
-    size_t n_vectors,
-    float *output)
-{
-    size_t idx = 0;
-
-    for (size_t i = 0; i < n_vectors; ++i)
-        for (size_t j = 0; j < lengths[i]; ++j)
-            output[idx++] = weights[i] * vectors[i][j];
-
-    float norm = 0.0f;
-
-    for (size_t i = 0; i < idx; ++i)
-        norm += output[i] * output[i];
-
-    norm = sqrtf(norm);
-
-    if (norm > 0.0f)
-        for (size_t i = 0; i < idx; ++i)
-            output[i] /= norm;
-}
-```
-
----
-
-# Python (NumPy)
-
-```python
-import numpy as np
-
-def joint_embedding(weights, vectors):
-    weighted = [
-        w * np.asarray(v, dtype=float)
-        for w, v in zip(weights, vectors)
-    ]
-
-    z = np.concatenate(weighted)
-
-    norm = np.linalg.norm(z)
-
-    if norm > 0:
-        z /= norm
-
-    return z
-```
-
----
-
-# Julia
-
-```julia
-using LinearAlgebra
-
-function joint_embedding(weights, vectors)
-    weighted = [
-        w .* v
-        for (w, v) in zip(weights, vectors)
-    ]
-
-    z = vcat(weighted...)
-
-    n = norm(z)
-
-    n == 0 && return z
-
-    return z ./ n
-end
-```
-
----
-
-# Rust
-
-```rust
-pub fn joint_embedding(
-    weights: &[f32],
-    vectors: &[Vec<f32>],
-) -> Vec<f32> {
-    assert_eq!(weights.len(), vectors.len());
-
-    let mut z = Vec::new();
-
-    for (w, v) in weights.iter().zip(vectors.iter()) {
-        for x in v {
-            z.push(w * x);
-        }
-    }
-
-    let norm = z
-        .iter()
-        .map(|x| x * x)
-        .sum::<f32>()
-        .sqrt();
-
-    if norm > 0.0 {
-        for x in &mut z {
-            *x /= norm;
-        }
-    }
-
-    z
-}
-```
-
----
-
-## Mathematical pseudocode
-
-All six implementations perform the same computation:
-
-```text
-z = []
-
-for each embedding i:
-    z.append(weight_i * embedding_i)
-
-norm = sqrt(sum(z²))
-
-if norm > 0:
-    z = z / norm
-
-return z
-```
-
-This formulation is directly applicable to your `SentenceEmbedder` abstraction in NeuralCompose. It also generalizes naturally to combining embeddings from multiple backends (e.g., BGE, E5, MiniLM, or future models) into a single normalized joint embedding while preserving cosine similarity semantics.
-
-
-### Decoder Stability
-
-$$
-D = \max_n r_n
-$$
-
-where $r_n$ is the repeat count for period $n$. Decoder stability
-additionally records loop period and repeat count.
-
-For complete derivations and notation, see [`docs/Math.md`](docs/Math.md) —
-including §11, the cross-project measurement primitives ($(\mathrm{PR}, \alpha)$
-eigenspectrum descriptors, aperiodic-adjusted spectral features via specparam,
-and the trajectory-novelty functional $N_{\mathrm{PR}}$) that tie the awake
-pipeline, the WorldModel JEPA spike, and the sleep study to one shared set of
-instruments — and its companion upgrades in [`docs/Research.md`](docs/Research.md).
-
-## Repository layout
-
-```
-NeuralCompose/
-├── Sources/
-│   ├── BCIBridge/        Obj-C++ shim for BrainFlow (stub by default)
-│   ├── BCICore/          pure-Swift models, protocols, FSMs, buffers
-│   ├── BCIEEG/           EEG streams, 2D plotter, 3D workspace (Phase B)
-│   ├── BCIClassifier/    Core ML wrapper + deterministic mock; CoreMLSentenceEmbedder
-│   ├── BCILLM/           MLX adapter + stub + tokenizer  ← only MLX target
-│   ├── NeuralComposeApp/ SwiftUI views, Phase B debug window
-│   └── EmbeddingBench/   benchmarks any SentenceEmbedder conformer (sibling executable)
-├── Tests/                unit + golden-recording + semantic-replay regression tests
-├── Scripts/
-│   ├── build.sh / run-synthetic.sh / run-muse-s.sh
-│   ├── record-golden.sh              # capture a new golden reference recording
-│   ├── analyze-eeg-session.py        # PSD/band-power/spectrogram/quality report for any recording
-│   ├── validate-muse-physiology.py   # live 5-condition acquisition sanity check
-│   └── convert-sentence-embedder.py  # HF sentence-embedding model -> Core ML (BGE/E5/MiniLM)
-├── Recordings/           per-session EEG (gitignored) + golden/ (committed reference + report)
-├── Benchmarks/           dated per-backend embedding benchmark JSON — historical record, never overwritten
-├── docs/                 long-form documentation
-├── SLEEP_CYCLE_DESIGN.md full D1–D8 sleep architecture spec
-└── HARDWARE_SETUP.md / MODEL_SETUP.md / CALIBRATION.md / TROUBLESHOOTING.md
-```
-
-## Quick start
-
-**Synthetic mode — no hardware, no models:**
+## Clone
 
 ```bash
 git clone https://github.com/aurascoper/NeuralCompose.git
 cd NeuralCompose
+```
+
+The commands below assume the repository root is the current directory.
+
+## Fastest local launch: synthetic mode
+
+Synthetic mode needs no Muse, BrainFlow installation, external model weights, Ollama daemon, or Claude login.
+
+```bash
 ./Scripts/build.sh
 ./Scripts/run-synthetic.sh
 ```
 
-**Live Muse S** (after BrainFlow is installed at `~/Developer/brainflow/`):
+`run-synthetic.sh` launches the SwiftPM executable with:
+
+```text
+NEURALCOMPOSE_BOARD_PROFILE=synthetic
+```
+
+You can also launch it directly:
 
 ```bash
-./Scripts/build.sh --with-brainflow
+NEURALCOMPOSE_BOARD_PROFILE=synthetic \
+  swift run -c debug NeuralCompose
+```
+
+## Build commands
+
+### Debug
+
+```bash
+./Scripts/build.sh
+```
+
+Equivalent SwiftPM command:
+
+```bash
+swift build -c debug
+```
+
+Bare executable:
+
+```bash
+.build/debug/NeuralCompose
+```
+
+### Release
+
+```bash
+./Scripts/build.sh --release
+```
+
+Bare executable:
+
+```bash
+.build/release/NeuralCompose
+```
+
+### Clean rebuild
+
+```bash
+swift package clean
+rm -rf .build
+./Scripts/build.sh
+```
+
+Removing `.build` also removes cached dependencies and packaged application bundles, so the next build takes longer.
+
+## Build a launchable macOS application bundle
+
+A bare SwiftPM executable is sufficient for synthetic development. Bluetooth, microphone, and speech-recognition paths should run through the packaged `.app`, because macOS privacy services read their usage descriptions from the bundle’s `Info.plist`.
+
+Build and package a debug application:
+
+```bash
+./Scripts/build.sh
+./Scripts/package-app-bundle.sh
+```
+
+The resulting executable is:
+
+```bash
+APP_BIN="$PWD/.build/NeuralCompose.app/Contents/MacOS/NeuralCompose"
+```
+
+Verify it:
+
+```bash
+test -x "$APP_BIN" && echo "NeuralCompose app executable is ready"
+codesign --verify --deep --strict "$PWD/.build/NeuralCompose.app"
+```
+
+Launch the packaged app directly so environment variables reach the process:
+
+```bash
+NEURALCOMPOSE_BOARD_PROFILE=synthetic "$APP_BIN"
+```
+
+Do not use `open NeuralCompose.app` when testing environment-selected runtimes; Launch Services does not reliably preserve shell environment variables.
+
+### Release application bundle
+
+```bash
+./Scripts/build.sh --release
+./Scripts/package-app-bundle.sh --release
+
+APP_BIN="$PWD/.build/NeuralCompose.app/Contents/MacOS/NeuralCompose"
+"$APP_BIN"
+```
+
+The packaging script applies an ad-hoc signature. Distribution outside the development Mac requires an Apple Developer signing, notarization, and release workflow that is not provided by the local script.
+
+## Select a generation runtime
+
+Set `APP_BIN` after packaging:
+
+```bash
+APP_BIN="$PWD/.build/NeuralCompose.app/Contents/MacOS/NeuralCompose"
+```
+
+### Claude through Claude Code
+
+Prerequisites:
+
+```bash
+claude --version
+claude login
+```
+
+Launch:
+
+```bash
+env \
+  NEURALCOMPOSE_RUNTIME=claude \
+  NEURALCOMPOSE_MODEL=claude-sonnet-5 \
+  "$APP_BIN"
+```
+
+This is a cloud path. The executable is local, but generation is brokered through the authenticated Claude Code service. If Claude is configured but cannot generate, the runtime fails closed rather than silently switching providers.
+
+### Ollama
+
+Install and start Ollama using its normal macOS installation, then pull the requested model:
+
+```bash
+ollama pull qwen2.5:0.5b
+ollama list
+```
+
+Launch:
+
+```bash
+env \
+  NEURALCOMPOSE_RUNTIME=ollama \
+  NEURALCOMPOSE_MODEL=qwen2.5:0.5b \
+  "$APP_BIN"
+```
+
+The runtime performs a bounded readiness check and requires the requested model to be available. A missing model disables the loop; it does not substitute Claude.
+
+### Runtime troubleshooting
+
+Check the executable and dependencies first:
+
+```bash
+printf 'APP_BIN=%s\n' "$APP_BIN"
+test -x "$APP_BIN"
+claude --version 2>/dev/null || true
+ollama list 2>/dev/null || true
+```
+
+Run the packaged process from a terminal to retain stderr and structured runtime diagnostics.
+
+## MLX and Metal kernels
+
+The ordinary SwiftPM build is sufficient for synthetic mode, deterministic tests, stub predictors, and most development. A real MLX GPU path needs Metal shaders compiled by the full Xcode toolchain.
+
+Build with Xcode:
+
+```bash
+./Scripts/build-xcode-mlx.sh
+```
+
+Build and run the MLX smoke path:
+
+```bash
+./Scripts/build-xcode-mlx.sh --smoke
+```
+
+Release configuration:
+
+```bash
+./Scripts/build-xcode-mlx.sh --release
+```
+
+The script writes Xcode products under:
+
+```text
+.build/xcode/Build/Products/
+```
+
+After an Xcode MLX build, package the normal SwiftPM app again when you need `.build/NeuralCompose.app`. `package-app-bundle.sh` searches the Xcode products for `mlx-swift_Cmlx.bundle` and includes it when a compiled `default.metallib` is available.
+
+If packaging reports:
+
+```text
+no mlx-swift_Cmlx.bundle with a metallib found
+```
+
+the app still launches, but the affected MLX spectral path falls back to its stub.
+
+## Muse and BrainFlow
+
+The default build compiles the BrainFlow bridge in stub mode. Direct Muse acquisition requires a compatible BrainFlow checkout or installation.
+
+The build script searches in this order:
+
+1. `--brainflow-path=<path>`
+2. `~/Developer/brainflow`
+3. `brew --prefix brainflow`
+
+Example:
+
+```bash
+./Scripts/build.sh \
+  --with-brainflow \
+  --brainflow-path="$HOME/Developer/brainflow"
+
+./Scripts/package-app-bundle.sh
+APP_BIN="$PWD/.build/NeuralCompose.app/Contents/MacOS/NeuralCompose"
+```
+
+Launch the provided Muse script when its assumptions match your installation:
+
+```bash
 ./Scripts/run-muse-s.sh
 ```
 
-**Phase B debug window** (`Cmd+Shift+D` in the running app) — live
-`EEGScalpPlotterView` (2D) and `NeuralWorkspaceView` (3D) tabs.
+Bluetooth access must be granted to the packaged application. A bare executable can be terminated by macOS privacy enforcement before the application can surface a normal error.
 
-**Replay the golden recording:**
+See [`HARDWARE_SETUP.md`](HARDWARE_SETUP.md) for board setup and [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) for acquisition failures.
+
+## Playback
+
+Launch a recorded session through the playback profile:
 
 ```bash
-python3 Scripts/analyze-eeg-session.py Recordings/golden/golden_20260710-141352.eeg.csv
+./Scripts/run-synthetic.sh \
+  --profile playback \
+  --recording Recordings/golden/golden_20260710-141352.eeg.csv
+```
+
+Analyze the golden recording:
+
+```bash
+python3 Scripts/analyze-eeg-session.py \
+  Recordings/golden/golden_20260710-141352.eeg.csv
+```
+
+## Tests
+
+Run all Swift tests:
+
+```bash
+swift test
+```
+
+Run the deterministic golden-recording regression:
+
+```bash
 swift test --filter GoldenRecordingRegressionTests
 ```
 
-## Experimental status & limitations
+Run app/runtime-focused suites:
 
-| Claim | Status |
-|-------|--------|
-| Live Muse S EEG acquisition through BrainFlow is reproducible on macOS | **Established** |
-| Per-channel RMS, alpha power, and blink detection are observable on consumer Muse hardware | **Established** |
-| Deterministic playback + CI regression against real hardware data | **Established** |
-| 4-class sleep staging from Muse S is achievable at research accuracy | **Plausible** — domain shift from PSG is the largest expected error source |
-| TMR cues + LLM dream analysis improves engineering insight | **Unproven** — the D8 pilot evaluation study (§14 crossover), pre-registration pending |
-| 5-class AASM sleep staging on Muse S | **Hardware-limited** — no chin EMG, atonia is the defining REM criterion |
+```bash
+swift test --filter NeuralComposeAppTests
+swift test --filter BCICloudBridgeTests
+swift test --filter DialecticSessionTests
+```
 
-The platform ships regardless of the unproven claims — the validation
-toolkit, architectural spec, and codebase are useful on their own.
+List discovered tests when validating CI filters:
 
-## Documentation
+```bash
+swift test list
+```
 
-- [`Recordings/golden/README.md`](Recordings/golden/README.md) — golden recording provenance, full report, plots.
-- [`HARDWARE_SETUP.md`](HARDWARE_SETUP.md) · [`MODEL_SETUP.md`](MODEL_SETUP.md) · [`CALIBRATION.md`](CALIBRATION.md) · [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
-- [`SLEEP_CYCLE_DESIGN.md`](SLEEP_CYCLE_DESIGN.md) — full D1–D8 sleep architecture spec.
-- [`docs/Architecture.md`](docs/Architecture.md) · [`docs/Math.md`](docs/Math.md) · [`docs/Validation.md`](docs/Validation.md) · [`docs/Research.md`](docs/Research.md)
-- [`docs/architecture/embedding_contract.md`](docs/architecture/embedding_contract.md) — the `SentenceEmbedder` backend contract every conformer (stub, Core ML, future MLX) must satisfy; ratified by [ADR-010](docs/architecture/decision-log/ADR-010-sentence-embedder-backend-contract.md).
+Run repository Python contracts when their dependencies are installed:
+
+```bash
+python3 -m pytest -q Tests/eval
+python3 -m unittest discover -s NeuralComposeEEG/tests -t .
+```
+
+Before committing:
+
+```bash
+git diff --check
+swift build
+```
+
+Some MLX, Core ML, live network, hardware, and operator-attended tests are intentionally environment-dependent. A green deterministic suite does not prove Muse connectivity, provider authentication, microphone authorization, or real model execution.
+
+## Useful environment variables
+
+| Variable | Purpose |
+|---|---|
+| `NEURALCOMPOSE_BOARD_PROFILE` | Selects `synthetic`, playback, OSC, or a supported live board profile |
+| `NEURALCOMPOSE_PLAYBACK_PATH` | Recording used by playback mode |
+| `NEURALCOMPOSE_RUNTIME` | Selects generation runtime, currently `claude` or `ollama` on the packaged runtime path |
+| `NEURALCOMPOSE_MODEL` | Requested model identity |
+| `NEURALCOMPOSE_INTERACTION_LOG` | Enables opt-in local interaction logging when supported by the selected path |
+
+Environment variables configure a launch; they are not durable application preferences. Start a new process after changing them.
+
+## Architecture
+
+```text
+NeuralComposeApp
+  ├── BCICore          pure-Swift models, protocols, actors, FSMs, buffers
+  ├── BCIEEG           synthetic, playback, OSC, BrainFlow, health, visualization
+  ├── BCIClassifier    Core ML classifier and sentence-embedding implementations
+  ├── BCILLM           isolated MLX runtime and deterministic fallbacks
+  ├── BCIVoice         speech recognition and synthesis seams
+  ├── BCICloudBridge   explicit opt-in generation egress
+  └── WorldModelDemo   synthetic-task research demo, separate from live EEG claims
+```
+
+Load-bearing boundaries:
+
+- `BCICore` owns portable interfaces and deterministic mechanisms.
+- MLX imports are isolated to `BCILLM`.
+- Cloud generation is isolated to `BCICloudBridge`.
+- The interface consumes resolved runtime and pipeline state rather than inventing provider or locality claims.
+- Synthetic research demos do not imply validation on physical EEG.
+
+See:
+
+- [`docs/Architecture.md`](docs/Architecture.md)
+- [`docs/architecture/PRINCIPLES.md`](docs/architecture/PRINCIPLES.md)
+- [`docs/architecture/decision-log/`](docs/architecture/decision-log/)
+- [`docs/Math.md`](docs/Math.md)
+- [`docs/Research.md`](docs/Research.md)
+
+## Repository layout
+
+```text
+NeuralCompose/
+├── Sources/
+│   ├── BCIBridge/
+│   ├── BCICore/
+│   ├── BCIEEG/
+│   ├── BCIClassifier/
+│   ├── BCILLM/
+│   ├── BCIVoice/
+│   ├── BCICloudBridge/
+│   ├── NeuralComposeApp/
+│   ├── DialecticSession/
+│   └── WorldModelDemo/
+├── Tests/
+├── Scripts/
+├── NeuralComposeEEG/
+├── Evaluation/
+├── Recordings/
+├── Models/
+├── WorldModel/
+├── docs/
+└── paper/
+```
+
+## Current evidence boundary
+
+Established engineering capabilities include deterministic playback, synthetic-mode operation, local pipeline instrumentation, real Muse recording workflows, Core ML integration, and runtime provenance mechanisms.
+
+The following remain research questions or environment-dependent capabilities:
+
+- reliable decoding of intended communication from consumer EEG;
+- research-grade sleep staging from four Muse channels;
+- sustained behavioral differences among dialogue profiles;
+- cognitive-incubation or dream-analysis benefits;
+- generalization of synthetic world-model findings to physical EEG;
+- production-quality accessibility or medical use.
+
+Documentation and telemetry should preserve the difference between an implemented pipeline, a successful local run, and scientific evidence.
+
+## Additional documentation
+
+- [`HARDWARE_SETUP.md`](HARDWARE_SETUP.md)
+- [`MODEL_SETUP.md`](MODEL_SETUP.md)
+- [`CALIBRATION.md`](CALIBRATION.md)
+- [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
+- [`SLEEP_CYCLE_DESIGN.md`](SLEEP_CYCLE_DESIGN.md)
+- [`Recordings/golden/README.md`](Recordings/golden/README.md)
 
 ## Citation
 
-A paper draft is in `paper/`. Suggested citation when published:
+A paper draft is available under `paper/`. Suggested citation when published:
 
-> Kinder, H. (2026). *An open-source, privacy-preserving platform for EEG-guided
-> cognitive incubation and dream-report analysis using consumer-grade
-> hardware.* In preparation.
+> Kinder, H. (2026). *An open-source, privacy-preserving platform for EEG-guided cognitive incubation and dream-report analysis using consumer-grade hardware.* In preparation.
 
 ## License
 
-Research prototype code. **Do not use NeuralCompose to make clinical or
-safety-critical decisions.** License terms: see [`LICENSE`](LICENSE) (MIT).
+MIT. See [`LICENSE`](LICENSE).
+
+Research prototype code. Do not use NeuralCompose to make clinical or safety-critical decisions.
 
 ## Acknowledgements
 
-- **BrainFlow** for the unified biosensor acquisition API.
-- **MLX-Swift** for the local on-device LLM runtime.
-- **Apple Neural Engine** for low-power Core ML inference.
-- The Muse headband community for open BLE protocol documentation.
-- The sleep-staging research community for the AASM standard.
+- BrainFlow for the unified biosensor acquisition API
+- MLX-Swift for Apple Silicon model execution
+- Apple Core ML and the Neural Engine
+- The Muse developer community
+- Open-source EEG and sleep-research communities
