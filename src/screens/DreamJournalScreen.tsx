@@ -52,6 +52,8 @@ export function DreamJournalScreen() {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState('');
   const [entries, setEntries] = useState<DreamEntry[]>([]);
+  // null = permission not yet resolved, false = denied, true = granted.
+  const [micGranted, setMicGranted] = useState<boolean | null>(null);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
   const now = useNow(1000);
@@ -69,6 +71,7 @@ export function DreamJournalScreen() {
     (async () => {
       try {
         const status = await AudioModule.requestRecordingPermissionsAsync();
+        setMicGranted(status.granted);
         if (!status.granted) {
           Alert.alert('Microphone access denied', 'Voice entries will not work without microphone permission. Text entries are still available.');
         }
@@ -146,7 +149,11 @@ export function DreamJournalScreen() {
   };
 
   const recording = recorderState.isRecording;
-  const canRecord = recorderState.canRecord;
+  // Gate the button on PERMISSION, not on recorderState.canRecord: canRecord
+  // only becomes true after prepareToRecordAsync(), which startRecording
+  // itself calls — gating on it made the button permanently disabled
+  // (chicken-and-egg found by the Gate 3 acceptance run on both platforms).
+  const canRecord = micGranted !== false;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
