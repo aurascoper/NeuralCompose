@@ -2,17 +2,23 @@
   "expo": {
     "name": "NeuralCompose Client",
     "slug": "neuralcompose-client",
+    "scheme": "neuralcompose",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aurascoper.neuralcompose"
+      "bundleIdentifier": "com.aurascoper.neuralcomposeclient",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "NeuralCompose records optional voice notes for your local dream journal. Audio stays on this device and is never uploaded.",
+        "NSLocalNetworkUsageDescription": "NeuralCompose connects to your own NeuralCompose server on your local network to display EEG monitoring data."
+      }
     },
     "android": {
       "package": "com.aurascoper.neuralcompose",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0E1116",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -36,7 +42,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "expo-asset"
     ]
   }
 }

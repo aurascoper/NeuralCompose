@@ -3,7 +3,7 @@
 // API: POST /inference with multipart form data (file, temperature, response_format).
 // When no STT is available, falls back to manual text injection (clearly labeled).
 
-export const STT_URL = 'http://127.0.0.1:8083';
+export const STT_URL = process.env.EXPO_PUBLIC_STT_URL || 'http://127.0.0.1:8083';
 
 export interface TranscriptionResult {
   text: string;

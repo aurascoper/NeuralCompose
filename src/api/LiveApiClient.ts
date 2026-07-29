@@ -13,9 +13,9 @@ import type {
   IntentPrediction,
   PipelineMode,
   StreamDiagnostics,
-  EEGSample,
 } from '../types/api';
 import { EEG_WS_URL, SERVER_URL } from '../config';
+import { decodeEEGFrame } from './wireFormat';
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${SERVER_URL}${path}`, {
@@ -66,11 +66,9 @@ export class LiveApiClient implements ApiClient {
         onStatus('open');
       };
       ws.onmessage = (ev) => {
-        try {
-          const sample = JSON.parse(String(ev.data)) as EEGSample;
+        // decodeEEGFrame validates shape and finiteness; malformed frames → [].
+        for (const sample of decodeEEGFrame(String(ev.data))) {
           onSample(sample);
-        } catch {
-          // Drop malformed frames.
         }
       };
       ws.onerror = () => onStatus('error');

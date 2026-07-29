@@ -73,14 +73,14 @@
 - **Known issues:** None documented. No SDK 57-specific regressions. The library is "dependency free" and "WebSocket API compatible", so it works against any RN version that has a working `WebSocket` global.
 - **Source:** [github.com/pladaria/reconnecting-websocket README](https://github.com/pladaria/reconnecting-websocket) · npm: `registry.npmjs.org/reconnecting-websocket` (4.4.0)
 
-## 8. Tailscale on Android + RN 0.86 + cleartext traffic for `http://100.105.x.x`
+## 8. Tailscale on Android + RN 0.86 + cleartext traffic for `http://100.x.y.z`
 
 **Direct, citable answers:**
 
 - **Tailscale 100.x "MagicDNS" IPs are normal CGNAT-style private IPs.** Android routes them through the Tailscale VPN interface; no special RN config is needed for the OS-level routing. React Native's `fetch` and `WebSocket` go through the same OkHttp socket layer that the rest of the OS uses, so VPN-routed traffic works out-of-the-box on Android 9+.
 - **HOWEVER: cleartext traffic (plain `http://`, no TLS) is BLOCKED by default on Android 9+.** Both the [React Native Networking docs](https://reactnative.dev/docs/network) and the [Expo build-properties docs](https://docs.expo.dev/versions/v57.0.0/sdk/build-properties/) confirm this. Quoting the Expo build-properties page verbatim:
   > `usesCleartextTraffic` (optional) `boolean` — Indicates whether the app intends to use cleartext network traffic. **For Android 8 and below, the default platform-specific value is `true`. For Android 9 and above, the default platform-specific value is `false`.**
-- **Therefore for `http://100.105.8.22:8081` on a Pixel 8a (Android 16, which is >9):** **YES, you must enable cleartext.** The cleanest way in SDK 57 is the `expo-build-properties` config plugin (this is the *only* mechanism — the old `expo.http` app.json key was removed in SDK 53):
+- **Therefore for `http://100.x.y.z:8081` on a Pixel 8a (Android 16, which is >9):** **YES, you must enable cleartext.** The cleanest way in SDK 57 is the `expo-build-properties` config plugin (this is the *only* mechanism — the old `expo.http` app.json key was removed in SDK 53):
 
   ```json
   // app.json
@@ -98,7 +98,7 @@
   ```
 
   Then run `npx expo prebuild --clean` (or `npx expo run:android` which triggers prebuild). The plugin writes `android:usesCleartextTraffic="true"` into the generated `AndroidManifest.xml`.
-- **Better alternative for production:** put a TLS terminator (Caddy/nginx) in front of your dev server and use `https://100.105.8.22:8443`. Then you don't need cleartext and you avoid the warning. For pure local dev on Tailscale, the cleartext flag is fine.
+- **Better alternative for production:** put a TLS terminator (Caddy/nginx) in front of your dev server and use `https://100.x.y.z:8443`. Then you don't need cleartext and you avoid the warning. For pure local dev on Tailscale, the cleartext flag is fine.
 - **Tailscale-specific gotcha (not in Expo docs, well-known):** Tailscale's `MagicDNS` resolves node names like `my-devbox.tailnet.ts.net` → `100.x` IP. Android's WebView (and some libraries' HttpURLConnection) resolves DNS through the VPN, so this works — but if you ever see "ERR_CLEARTEXT_NOT_PERMITTED" in logcat, that's the manifest flag missing, **not** a Tailscale problem.
 - **Source:** [Expo build-properties `usesCleartextTraffic`](https://docs.expo.dev/versions/v57.0.0/sdk/build-properties/) · [React Native Networking](https://reactnative.dev/docs/network)
 

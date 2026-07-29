@@ -15,7 +15,7 @@ import { ClassifierScreen } from './src/screens/ClassifierScreen';
 import { DreamJournalScreen } from './src/screens/DreamJournalScreen';
 import { DialecticSessionScreen } from './src/screens/DialecticSessionScreen';
 import { colors, spacing, typography } from './src/theme';
-import { USE_MOCK, SERVER_URL } from './src/config';
+import { USE_MOCK, SERVER_URL, CONFIG_ERROR } from './src/config';
 
 const Tab = createBottomTabNavigator();
 
@@ -56,11 +56,15 @@ export default function App() {
             headerTintColor: colors.text,
             headerRight: () => (
               <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>
-                  {USE_MOCK ? 'MOCK' : 'LIVE'}
+                <Text style={[styles.headerBadgeText, CONFIG_ERROR ? styles.headerBadgeError : null]}>
+                  {USE_MOCK ? 'MOCK' : CONFIG_ERROR ? 'LIVE · NO ENDPOINT' : 'LIVE'}
                 </Text>
                 <Text style={styles.headerBadgeUrl} numberOfLines={1}>
-                  {USE_MOCK ? 'fixtures' : SERVER_URL.replace(/^https?:\/\//, '')}
+                  {USE_MOCK
+                    ? 'fixtures'
+                    : SERVER_URL
+                      ? SERVER_URL.replace(/^https?:\/\//, '')
+                      : 'set EXPO_PUBLIC_SERVER_URL'}
                 </Text>
               </View>
             ),
@@ -141,6 +145,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
+  headerBadgeError: { color: colors.orange },
   headerBadgeUrl: {
     color: colors.textMuted,
     fontSize: 9,

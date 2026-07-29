@@ -7,9 +7,19 @@ import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EEGTrace } from '../components/EEGTrace';
 import { useEEGStream } from '../hooks/useEEGStream';
+import { presentStream, type StreamTone } from '../hooks/streamPresentation';
+import { useNow } from '../hooks/useNow';
+import { STALE } from '../config';
 import { colors, radius, spacing, typography } from '../theme';
 
 const CHANNELS = ['TP9', 'AF7', 'AF8', 'TP10'] as const;
+
+const TONE_COLORS: Record<StreamTone, string> = {
+  ok: colors.green,
+  stale: colors.orange,
+  connecting: colors.orange,
+  down: colors.red,
+};
 
 export function EEGScreen() {
   const insets = useSafeAreaInsets();
@@ -17,8 +27,12 @@ export function EEGScreen() {
   const traceWidth = width - spacing.lg * 2 - spacing.md * 2; // outer padding + card padding
   const traceHeight = 96;
   const { buffer, status, lastUpdate } = useEEGStream();
+  const now = useNow(1000);
 
-  const streamOk = status === 'open';
+  // Age of the newest RECEIVED sample — Infinity until the first one arrives.
+  const sampleAgeMs = lastUpdate > 0 ? Math.max(0, now - lastUpdate) : Infinity;
+  const view = presentStream(status, sampleAgeMs, STALE.channelSample);
+
   const connecting = status === 'connecting';
   const disconnected = status === 'closed' || status === 'error';
 
@@ -30,8 +44,8 @@ export function EEGScreen() {
       <View style={styles.header}>
         <Text style={styles.heading}>EEG Stream</Text>
         <View style={styles.statusPill}>
-          <View style={[styles.statusDot, { backgroundColor: streamOk ? colors.green : disconnected ? colors.red : colors.orange }]} />
-          <Text style={styles.statusText}>{status.toUpperCase()}</Text>
+          <View style={[styles.statusDot, { backgroundColor: TONE_COLORS[view.tone] }]} />
+          <Text style={styles.statusText}>{view.label}</Text>
         </View>
       </View>
 
@@ -41,9 +55,9 @@ export function EEGScreen() {
           : 'Waiting for first sample…'}
       </Text>
 
-      {disconnected ? (
-        <View style={styles.banner}>
-          <Text style={styles.bannerText}>Stream disconnected — showing last cached data</Text>
+      {view.banner ? (
+        <View style={[styles.banner, view.tone === 'stale' && styles.bannerStale]}>
+          <Text style={[styles.bannerText, view.tone === 'stale' && styles.bannerTextStale]}>{view.banner}</Text>
         </View>
       ) : null}
 
@@ -62,7 +76,7 @@ export function EEGScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          {lastUpdate > 0 ? `last frame ${Math.floor((Date.now() - lastUpdate) / 1000)}s ago · 5s window · ~30 fps render` : 'idle'}
+          {lastUpdate > 0 ? `last sample ${Math.floor(sampleAgeMs / 1000)}s ago · 5s window · ~30 fps render` : 'idle'}
         </Text>
       </View>
     </ScrollView>
@@ -96,6 +110,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   bannerText: { color: colors.red, fontSize: typography.caption, fontWeight: '600', textAlign: 'center' },
+  bannerStale: { backgroundColor: colors.orange + '22', borderColor: colors.orange },
+  bannerTextStale: { color: colors.orange },
   traceList: { gap: spacing.sm },
   footer: { alignItems: 'center' },
   footerText: { color: colors.textDim, fontSize: typography.micro, textAlign: 'center' },

@@ -16,9 +16,10 @@ cd ~/neuralcompose-client
 npx expo start
 ```
 
-Then open Expo Go on the Pixel and scan the QR code. The app launches in **MOCK**
-mode (the green pill in the top-right says `MOCK`) and renders all 5 screens with
-synthetic data — no M4 server needed.
+Then open Expo Go on the Pixel and scan the QR code (or press `i` for the iOS
+Simulator — see `docs/ios-client.md`). The app launches in **MOCK** mode (the
+green pill in the top-right says `MOCK`) and renders all 6 tabs with synthetic
+data — no M4 server needed.
 
 To cut over to the real M4 server, see **Tailscale cutover** below.
 
@@ -110,18 +111,19 @@ App.tsx                    # NavigationContainer + bottom tab navigator
 
 The M4 server is a separate PR — when it's up:
 
-1. **Confirm Tailscale routing from Termux:**
+1. **Confirm Tailscale routing from Termux** (substitute your M4's Tailnet IP or
+   MagicDNS name — never commit it):
    ```sh
    tailscale status              # should show the M4
-   curl http://100.105.8.22:8081/api/diagnostics
+   curl http://<m4-tailnet-host>:8081/api/diagnostics
    ```
    If the curl hangs, check `tailscale status` and `ip route` in Termux.
 
-2. **Edit `src/config.ts`:**
-   ```ts
-   export const USE_MOCK = false;
-   export const SERVER_URL = "http://100.105.8.22:8081";   // confirm port
-   export const EEG_WS_URL  = "ws://100.105.8.22:8081/api/eeg/stream";
+2. **Create `.env.local`** (gitignored — see `.env.example`):
+   ```sh
+   EXPO_PUBLIC_USE_MOCK=false
+   EXPO_PUBLIC_SERVER_URL=http://<m4-tailnet-host>:8081
+   # EXPO_PUBLIC_EEG_WS_URL is derived automatically (ws://…/api/eeg/stream)
    ```
 
 3. **Reload the app** (or restart Metro). The top-right pill flips from `MOCK` to
@@ -134,10 +136,14 @@ The M4 server is a separate PR — when it's up:
    - EEG → traces scroll, the 4 channels match TP9/AF7/AF8/TP10
    - Pipeline mode → matches the macOS app's mode banner
 
-5. **Cleartext traffic is already enabled** in `app.json` via `expo-build-properties`
-   with `usesCleartextTraffic: true`. The Tailscale 100.x IP is plain HTTP, and
-   Android 9+ blocks plain HTTP by default — this flag unblocks it for the dev
-   server. For production, terminate TLS in front of the M4 instead.
+5. **Cleartext traffic is already enabled on Android** in `app.json` via
+   `expo-build-properties` with `usesCleartextTraffic: true`. Tailscale 100.x IPs
+   are plain HTTP, and Android 9+ blocks plain HTTP by default — this flag
+   unblocks it for the dev server. **iOS has no equivalent flag here on purpose:**
+   App Transport Security blocks cleartext to non-localhost hosts, and this
+   project does not add `NSAllowsArbitraryLoads`. For iOS hardware, serve HTTPS
+   (e.g. `tailscale serve`) — see `docs/ios-client.md`. For production,
+   terminate TLS in front of the M4 on both platforms.
 
 ---
 
