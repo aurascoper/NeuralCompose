@@ -9,15 +9,32 @@ that material and anything that enters a pull-request record, an ADR, or a
 committed artifact — so the same log is never duplicated across branches
 and transcript text never becomes accidental source history.
 
-The mechanics already exist and are the normative implementation of this
-policy: `Scripts/quarantine_dialectic_corpus.py` (SHA-256 parse reports,
-metadata-only event streams, 9-field disposition blocks, written to the
-local `InteractionLogs/local-manifests/` directory outside the repository)
-and `Scripts/review_quarantined_dialectics.py` (bounded loopback review with
-whitelisted persisted keys). Raw captures never enter git; that invariant is
-audited, not assumed. (The full quarantine cascade documentation ships with
-its feature branch; this policy stands alone so it can land on `main`
-independently.)
+## Implementation status
+
+This document is the normative policy.
+
+A reference implementation currently exists on the
+`feat/local-dialectic-review` lineage, pinned at commit
+`c8731955f258d91db40bb31c7b79b25284b94d8e`:
+
+- `Scripts/quarantine_dialectic_corpus.py`
+- `Scripts/review_quarantined_dialectics.py`
+
+Those files are not yet present on `main`. Until that implementation lands,
+no PR may claim that main-branch automation enforced this policy; the
+privacy and citation rules themselves still apply manually.
+
+When the implementation lands, its tests must prove that raw transcript text
+and embeddings cannot enter the committed manifest surface.
+
+### The pinned reference implementation, described
+
+At the pinned commit, `quarantine_dialectic_corpus.py` produces SHA-256
+parse reports, metadata-only event streams, and 9-field disposition blocks,
+written to the local `InteractionLogs/local-manifests/` directory outside
+the repository; `review_quarantined_dialectics.py` performs bounded loopback
+review with whitelisted persisted keys. Raw captures never enter git; that
+invariant is audited, not assumed.
 
 ## Evidence classes — keep them separate
 
