@@ -113,9 +113,11 @@ def main() -> None:
                      help="fraction of trajectories using the heuristic waypoint-seeking policy")
     ap.add_argument("--val-fraction", type=float, default=0.2)
     ap.add_argument("--out-dir", type=Path, default=Path(__file__).resolve().parent / "data")
+    ap.add_argument("--unbounded", action="store_true",
+                    help="remove arena walls (preregistered node 7 follow-up; see env.py)")
     args = ap.parse_args()
 
-    env = ParticleNavigatorEnv(EnvConfig())
+    env = ParticleNavigatorEnv(EnvConfig(bounded=not args.unbounded))
     states, actions, n_heuristic = generate_trajectories(
         env, args.n_trajectories, args.horizon, args.seed, args.policy_mix
     )

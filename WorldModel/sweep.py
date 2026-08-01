@@ -142,6 +142,8 @@ def main() -> None:
     ap.add_argument("--max-episode-steps", type=int, default=50)
     ap.add_argument("--goal-tolerance", type=float, default=GOAL_TOLERANCE)
     ap.add_argument("--max-accel", type=float, default=EnvConfig().max_accel)
+    ap.add_argument("--unbounded", action="store_true",
+                    help="remove arena walls; must match how the checkpoint was trained")
 
     ap.add_argument("--horizon", type=int, default=MPCConfig().horizon)
     ap.add_argument("--num-candidates", type=int, default=MPCConfig().num_candidates)
@@ -200,7 +202,7 @@ def main() -> None:
     for p in model.parameters():
         p.requires_grad_(False)
 
-    env = ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel))
+    env = ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel, bounded=not args.unbounded))
 
     print(f"sweep.py: device={device} checkpoint={args.checkpoint}")
     print(f"  config: {config}")

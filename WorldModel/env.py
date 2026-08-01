@@ -35,6 +35,23 @@ class EnvConfig:
     # keeps collisions informative (nonzero post-bounce velocity) rather than
     # a degenerate "stick to the wall" absorbing state.
     restitution: float = 0.6
+    # Preregistered follow-up to ledger node 7. Default True keeps the
+    # historical bounded box exactly.
+    #
+    # The wall reflection (`vel = -vel * restitution`) is the one genuinely
+    # nonlinear, non-additive part of these dynamics, and the identifiability
+    # results that motivated the SIGReg arm assume stationary additive-noise
+    # transitions (arXiv 2605.26379 §3.1/§3.1.1). Setting this False removes
+    # the reflection so the null can be attributed to the objective or to the
+    # environment rather than left confounded between them.
+    #
+    # Honest scope: removing the walls removes the REFLECTION nonlinearity.
+    # It does not turn this into an Ornstein-Uhlenbeck process -- the
+    # dynamics remain a deterministic double integrator with an accel clip
+    # and a speed cap, and there is no mean reversion or process noise. This
+    # tests the specific nonlinearity that was flagged, not full membership
+    # in the paper's world class.
+    bounded: bool = True
 
 
 class ParticleNavigatorEnv:
@@ -61,7 +78,7 @@ class ParticleNavigatorEnv:
             vel = vel * (c.max_speed / speed)
 
         new_pos = pos + vel * c.dt
-        for dim in range(2):
+        for dim in range(2) if c.bounded else ():
             if new_pos[dim] > c.arena_half_extent:
                 new_pos[dim] = c.arena_half_extent
                 vel[dim] = -vel[dim] * c.restitution

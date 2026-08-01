@@ -239,3 +239,56 @@ Entry template:
   doing all the work while varying ±1.9 across cases. Before another objective is tried, the success
   criterion needs resolution in the regime the arms actually occupy — otherwise the next A/B is unfalsifiable
   in the same way.
+
+---
+
+## 8 — Preregistered arena test: the null is not the environment (2026-08-01, commit <pending>)
+- Category: Benchmark
+- Hypothesis: node 7's preregistered explanation for its own null — SIGReg failed to move control because
+  `ParticleNavigatorEnv`'s wall reflection (`vel = -vel * restitution`, restitution 0.6) is nonlinear and
+  non-additive, putting the dynamics outside the world class (arXiv 2605.26379 §3.1/§3.1.1) whose
+  identifiability results motivated the arm. Remove the walls and SIGReg should convert its representation
+  advantage into control.
+- Prediction: SIGReg gains control success in the unbounded arena; VICReg does not, or gains less.
+- Implementation: `env.py` `EnvConfig.bounded` (default True; the wall loop becomes
+  `for dim in range(2) if c.bounded else ()`), threaded as `--unbounded` through `dataset.py`, `sweep.py`,
+  `mpc.py`. Default-off, so every existing path is bit-identical. Fresh dataset generated under the
+  unbounded env, both arms retrained on it (75 epochs, seed 0), both swept. Two arms only — no VISReg, no
+  alignment lever — so the environment is the single changed variable versus node 7.
+  Honest scope, recorded in `env.py`: removing the walls removes the REFLECTION nonlinearity. It does **not**
+  produce an Ornstein–Uhlenbeck process — the dynamics stay a deterministic double integrator with an accel
+  clip and speed cap, with no mean reversion and no process noise.
+- Evidence:
+  - Unbounded training: VICReg val `inv` 0.0567, SIGReg **0.0063** (9×). Rollout drift now far better than
+    chance on BOTH arms (3.72 vs random 7.46; 3.99 vs 7.50) — removing the walls made the dynamics much more
+    predictable, as expected.
+  - Control: VICReg **4/35 (11.4%)**, mean_final_distance 1.7298; SIGReg **0/35 (0.0%)**, 1.3611.
+  - Case-level paired (n=7 independent cases; five seeds within a case vary only MPPI candidate draws and are
+    NOT independent environments): mean Δ final_distance (SIGReg − VICReg) = **−0.369**, sd 1.996, se 0.754,
+    **t = −0.49**, SIGReg closer on 3/7 cases. No effect.
+  - **All four VICReg successes come from one case** (`large_c` 4/5). Every other case is 0/5 for both arms.
+- Decision: **The preregistered hypothesis is REFUTED.** The node 7 null was not caused by the wall
+  nonlinearity. SIGReg scores 0/35 in both arenas, and in the unbounded arena it is 9× better at one-step
+  prediction while being *worse* on literal success than VICReg. Two consequences:
+  (1) The prediction-vs-control dissociation is now much stronger than node 7 showed. In node 7 the improving
+  metric was the forward rollout; here BOTH arms have healthy better-than-chance rollouts and 9× separation
+  in prediction error, and control does not follow either. **One-step prediction quality and rollout quality
+  are close to decoupled from control success in this harness.** That is the fifth instance of the pattern
+  and the most direct one — it points at the planner/metric, not the objective.
+  (2) The n=35 paired t-statistics in node 7 were overstated, as suspected. Node 7's best arm showed t=−1.87
+  over 35 trials; the correct unit (n=7 cases) gives t=−0.49 here with a per-case sd of 2.0 against a mean of
+  0.37. **Report case-level paired differences from now on; never treat seeds within a case as independent.**
+- Next question: benchmark repair, before any further objective work. The unbounded arena did buy *some*
+  resolution (VICReg 0/35 → 4/35), confirming the bounded box contributed to the floor — but it is one case
+  out of seven, which still cannot discriminate between arms. Design a preregistered control measure with
+  resolution in the regime the arms actually occupy (the per-case final distances span 0.10–4.84), then
+  re-examine.
+  **VISReg (arXiv 2606.02572) is deliberately NOT run yet.** Its symmetric scale term
+  `mean_j (1 − sigma_j)²` targets exactly the inflation node 7 found — and its authors motivate it by
+  SIGReg's "vanishing gradients under collapse" and failure to decouple scale from shape. But SIGReg already
+  pinned scale here (norm ratio 1.20 → 0.98), and neither collapse nor residual scale drift was the observed
+  blocker, so VISReg would most likely become the *sixth* representation-side improvement this benchmark
+  cannot resolve. It also cannot help with the Theorem 5.4 obstruction: an isotropic objective leaves the
+  orthogonal gauge maximally unconstrained (`z ~ N(0,I)` ⟹ `Rz ~ N(0,I)`), so it can never establish that the
+  online and target encoders share a frame. Correct order: repair the benchmark, then run
+  {symmetric-scale-only, SIGReg, VISReg} so "scale stabilization" and "full distribution shape" are separable.

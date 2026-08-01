@@ -461,6 +461,8 @@ def main() -> None:
     ap.add_argument("--episodes", type=int, default=50)
     ap.add_argument("--max-episode-steps", type=int, default=50)
     ap.add_argument("--max-accel", type=float, default=EnvConfig().max_accel)
+    ap.add_argument("--unbounded", action="store_true",
+                    help="remove arena walls; must match how the checkpoint was trained")
     ap.add_argument("--goal-tolerance", type=float, default=GOAL_TOLERANCE)
     ap.add_argument("--min-goal-distance", type=float, default=0.5)
     ap.add_argument("--seed", type=int, default=0)
@@ -496,7 +498,7 @@ def main() -> None:
     for p in model.parameters():
         p.requires_grad_(False)
 
-    env = ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel))
+    env = ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel, bounded=not args.unbounded))
 
     print(f"mpc.py: device={device} checkpoint={args.checkpoint}")
     print(f"  config: {config}")
