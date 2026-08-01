@@ -41,7 +41,7 @@ import torch.optim as optim
 
 from dataloader import DEFAULT_DATA_DIR, TrajectoryDataset, make_dataloader, resolve_device
 from env import ACTION_DIM, STATE_DIM
-from loss import VICRegConfig, vicreg_loss
+from loss import SIGRegConfig, VICRegConfig, sigreg_loss, vicreg_loss
 from models import JEPAConfig, JEPAModule
 
 DEFAULT_CHECKPOINT = Path(__file__).resolve().parent / "checkpoints" / "jepa.pt"
@@ -60,9 +60,10 @@ class TrainConfig:
 def run_epoch(
     model: JEPAModule,
     loader,
-    vicreg_config: VICRegConfig,
+    vicreg_config: VICRegConfig | SIGRegConfig,
     device: torch.device,
     optimizer: optim.Optimizer | None = None,
+    loss_fn=vicreg_loss,
 ) -> dict[str, float]:
     """One pass over `loader`. Trains (backward + EMA update) if
     `optimizer` is given, otherwise runs a no_grad validation pass.
@@ -77,7 +78,10 @@ def run_epoch(
     # with (LayerNorm carries no running buffers, see models.py) and is
     # never part of this loop's backward pass.
 
-    totals = {"loss": 0.0, "inv": 0.0, "var": 0.0, "cov": 0.0, "std_target_mean": 0.0}
+    # Built from the first batch's returned keys rather than hardcoded, so
+    # the SIGReg arm's extra `sigreg` term is aggregated without either
+    # objective having to carry a placeholder for the other's terms.
+    totals: dict[str, float] = {}
     n_batches = 0
 
     grad_context = torch.enable_grad() if training else torch.no_grad()
@@ -102,13 +106,15 @@ def run_epoch(
 
             z_pred = model.forward_online(s_t, a_t)
             z_target = model.forward_target(s_next)
-            losses = vicreg_loss(z_pred, z_target, vicreg_config)
+            losses = loss_fn(z_pred, z_target, vicreg_config)
 
             if training:
                 losses["loss"].backward()
                 optimizer.step()
                 model.update_target_ema()
 
+            if not totals:
+                totals = {key: 0.0 for key in losses}
             for key in totals:
                 totals[key] += losses[key].item()
             n_batches += 1
@@ -194,6 +200,16 @@ def main() -> None:
     ap.add_argument("--cov-weight", type=float, default=VICRegConfig().cov_weight)
     ap.add_argument("--gamma", type=float, default=VICRegConfig().gamma)
     ap.add_argument("--eps", type=float, default=VICRegConfig().eps)
+    ap.add_argument(
+        "--objective",
+        choices=["vicreg", "sigreg"],
+        default="vicreg",
+        help="representation objective; vicreg is the historical default",
+    )
+    ap.add_argument("--sig-weight", type=float, default=SIGRegConfig().sig_weight)
+    ap.add_argument("--sig-projections", type=int, default=SIGRegConfig().n_projections)
+    ap.add_argument("--sig-frequencies", type=int, default=SIGRegConfig().n_frequencies)
+    ap.add_argument("--sig-t-max", type=float, default=SIGRegConfig().t_max)
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -206,13 +222,30 @@ def main() -> None:
         rollout_n_trajectories=args.rollout_trajectories,
     )
     jepa_config = JEPAConfig(latent_dim=args.latent_dim, hidden_dim=args.hidden_dim, ema_tau=args.ema_tau)
-    vicreg_config = VICRegConfig(
-        inv_weight=args.inv_weight,
-        var_weight=args.var_weight,
-        cov_weight=args.cov_weight,
-        gamma=args.gamma,
-        eps=args.eps,
-    )
+    # Objective A/B (see WorldModel/README.md). The VICReg branch is the
+    # unchanged default so an unflagged run reproduces the historical
+    # baseline exactly; --objective sigreg is the only registered variable.
+    vicreg_config: VICRegConfig | SIGRegConfig
+    if args.objective == "sigreg":
+        loss_fn = sigreg_loss
+        vicreg_config = SIGRegConfig(
+            inv_weight=args.inv_weight,
+            sig_weight=args.sig_weight,
+            n_projections=args.sig_projections,
+            n_frequencies=args.sig_frequencies,
+            t_max=args.sig_t_max,
+            gamma=args.gamma,
+            eps=args.eps,
+        )
+    else:
+        loss_fn = vicreg_loss
+        vicreg_config = VICRegConfig(
+            inv_weight=args.inv_weight,
+            var_weight=args.var_weight,
+            cov_weight=args.cov_weight,
+            gamma=args.gamma,
+            eps=args.eps,
+        )
     device = resolve_device()
 
     train_npz = args.data_dir / "train.npz"
@@ -238,8 +271,12 @@ def main() -> None:
 
     val_metrics: dict[str, float] = {}
     for epoch in range(1, train_config.epochs + 1):
-        train_metrics = run_epoch(model, train_loader, vicreg_config, device, optimizer=optimizer)
-        val_metrics = run_epoch(model, val_loader, vicreg_config, device, optimizer=None)
+        train_metrics = run_epoch(
+            model, train_loader, vicreg_config, device, optimizer=optimizer, loss_fn=loss_fn
+        )
+        val_metrics = run_epoch(
+            model, val_loader, vicreg_config, device, optimizer=None, loss_fn=loss_fn
+        )
 
         print(
             f"epoch {epoch:3d}/{train_config.epochs}  "
@@ -257,6 +294,7 @@ def main() -> None:
         {
             "model_state_dict": model.state_dict(),
             "jepa_config": asdict(jepa_config),
+            "objective": args.objective,
             "vicreg_config": asdict(vicreg_config),
             "epochs_trained": train_config.epochs,
             "final_val_std_target_mean": val_metrics["std_target_mean"],

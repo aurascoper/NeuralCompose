@@ -160,6 +160,11 @@ def main() -> None:
     )
     ap.add_argument("--min-cost-scale", type=float, default=MPCConfig().min_cost_scale)
     ap.add_argument(
+        "--goal-latent-from-online-encoder",
+        action="store_true",
+        help="Arm B: encode z_goal with the online encoder so it shares a geometry with z_start",
+    )
+    ap.add_argument(
         "--normalize-running-cost-by-horizon",
         action=argparse.BooleanOptionalAction,
         default=MPCConfig().normalize_running_cost_by_horizon,
@@ -183,6 +188,7 @@ def main() -> None:
         adaptive_temperature=args.adaptive_temperature,
         min_cost_scale=args.min_cost_scale,
         normalize_running_cost_by_horizon=args.normalize_running_cost_by_horizon,
+        goal_latent_from_online_encoder=args.goal_latent_from_online_encoder,
     )
     seeds = parse_seeds(args.seeds)
     device = resolve_device()

@@ -175,3 +175,67 @@ Entry template:
   symlog, specparam periodic+aperiodic, 1/f-flatten} — do any improve BOTH forward metrics AND chi? {specparam,
   1/f-flatten} still need the specparam front-end (Math §11.2). Provisional: raw z-scored power may already be the
   right encoder input for forward dynamics.
+
+---
+
+## 7 — Objective A/B: SIGReg vs VICReg, with an encoder-alignment arm (2026-08-01, commit <pending>)
+- Category: Benchmark
+- Hypothesis: the ceiling is the training objective. LeJEPA/Laya (arXiv 2511.08544; Laya arXiv 2603.16281)
+  replace heuristic anti-collapse terms with **SIGReg** — a sketched isotropic-Gaussian regularizer — and the
+  identifiability paper (Klindt, LeCun & Balestriero, arXiv 2605.26379) argues an isotropic latent makes
+  Euclidean geometry meaningful, which is what a distance-based planner needs. Swap VICReg's var+cov for
+  SIGReg, hold everything else fixed, and `mpc_success` should move.
+- Prediction (preregistered, before running): if SIGReg does **not** move `mpc_success`, the first hypothesis
+  is that `ParticleNavigatorEnv` falls outside the paper's world class — §3.1/§3.1.1 assume stationary,
+  additive-noise transitions (Ornstein–Uhlenbeck for Gaussian latents), and our walls reflect velocity with
+  `restitution=0.6`, which is neither. That is a better-shaped null than "didn't work."
+- Implementation: `loss.py` (+`SIGRegConfig`, `sigreg_loss`, `epps_pulley_statistic`: Epps–Pulley
+  goodness-of-fit on random 1-D projections per Cramér–Wold, O(batch·proj·freq) — linear in batch, unlike the
+  O(batch²) pairwise form; directions resampled every call so no fixed basis can be gamed). `train.py`
+  (`--objective {vicreg,sigreg}`, dispatch, lazy metric aggregation). Invariance term unchanged on both arms —
+  it is the prediction objective, not anti-collapse machinery; var/cov are still computed under SIGReg as
+  pure diagnostics. **Arm B** (`mpc.py` `goal_latent_from_online_encoder`, default OFF; `sweep.py`
+  passthrough) encodes z_goal with the online encoder instead of `target_encoder`. `env.py`, `dataset.py`,
+  `dataloader.py`, `models.py` untouched; unflagged runs are bit-identical to the historical baseline.
+- **Correction to the motivating argument, recorded so it is not inherited.** Theorem 5.4 (Optimal Latent
+  Planning) requires `ℓ(Rz,a)=ℓ(z,a)` for *all* `R∈O(n)`. Our cost is a distance to an anchor
+  (`Σ‖z−z_goal‖` + `‖z_H−z_goal‖²`), which is **not** invariant under rotating `z` alone — it is equivariant
+  in the *pair*. The natural rescue (both sides encoded, so `Q` cancels) also fails as written, because
+  z_start uses the online `encoder` and z_goal uses `target_encoder`; under EMA those are two different maps.
+  Arm B exists precisely to make them one map. **The theorem was never established to cover this planner**;
+  the experiment is empirical, not theorem-backed.
+- Evidence: 75 epochs, seed 0, MPS; sweeps = 7 `HARD_CASES` × seeds {0,1,2,3,4} = 35 paired trials per arm.
+  - Training side, SIGReg genuinely better: val `inv` 0.0671 → **0.0145** (4.6×); 20-step rollout drift
+    6.4044 (vs random 6.2363, **worse than chance**) → 5.9988 (vs random 6.8152, **better than chance**);
+    rollout norm ratio 1.20 → **0.98**. Zero collapse warnings on either arm. The norm ratio is the
+    mechanism: `relu(gamma − std)` is identically zero once std > 1, so VICReg exerts no downward pressure
+    on scale and the latent inflates; SIGReg pins the distribution. A ×3-scaled batch scores worst of all
+    fixtures under SIGReg (0.513 vs 0.004 for N(0,I)) — VICReg's hinge cannot express this at all.
+  - Control side, **null across every arm**: 0/35 literal successes for all four. Baseline reproduces the
+    historical anchor (0/35, mean_final_distance 1.2854 vs 1.2509; ESS 197.4 vs 207.1/512).
+  - mean_final_distance: VICReg 1.2854 → SIGReg **1.2017** (Δ −0.084, beats base 22/35, t=−0.60) →
+    VICReg+aligned 1.3053 (Δ +0.020, t=+2.02) → SIGReg+aligned **1.0603** (Δ −0.225, 24/35, t=−1.87).
+  - **The means are misleading and the per-case table says so.** SIGReg is bimodal, not uniformly better:
+    corner_pn_to_np 2.211→0.639, large_b 0.547→0.234, large_a 0.830→0.463 (large gains) but
+    corner_np_to_pn 1.623→2.362, corner_nn_to_pp 1.056→1.588, corner_pp_to_nn 2.055→2.542 (large losses).
+    4 cases improve, 3 degrade. Further, the entire A+B gain over A is **one case** (corner_nn_to_pp
+    1.588→0.611); every other case is within ~0.01. And the t-stats are not trustworthy: 5 seeds within a
+    case are correlated, so effective n ≈ 7, not 35 — VICReg+aligned's "significant" t=+2.02 on a +0.02
+    effect is the reductio.
+- Decision: **REJECT for promotion; KEEP the code behind a default-OFF flag.** SIGReg does not move the
+  control metric, and its mean-distance edge is not robust under per-case inspection. This is the **fourth**
+  time this benchmark has caught a change that improves a representation/forward metric while control does
+  not follow (cf. node 6's chi-vs-rollout dissociation) — and the first where the improving metric was the
+  *forward rollout* itself, which is a stronger version of the same trap. Arm B alone does essentially
+  nothing under VICReg (all cases within ~0.01), consistent with the prediction that encoder alignment can
+  only matter once the geometry is isotropic; but the SIGReg+alignment interaction rests on a single case and
+  is not evidence.
+- Next question: two, and the second may matter more.
+  (1) The preregistered follow-up: run an **unbounded-arena variant** (no walls, no restitution) so the
+  dynamics sit inside the additive-noise class. If SIGReg moves control there and not here, the null is about
+  the environment, not the objective.
+  (2) **The benchmark is at its floor and cannot discriminate.** Every arm and both historical anchors score
+  0/35 or 1/35; a metric that returns 0 for every condition carries no signal, and mean_final_distance is
+  doing all the work while varying ±1.9 across cases. Before another objective is tried, the success
+  criterion needs resolution in the regime the arms actually occupy — otherwise the next A/B is unfalsifiable
+  in the same way.

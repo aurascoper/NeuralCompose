@@ -172,6 +172,20 @@ class MPCConfig:
     # Optional, off by default -- see module docstring. Not validated
     # together with state_cost_weight/terminal_cost_weight yet.
     normalize_running_cost_by_horizon: bool = False
+    # Arm B of the objective A/B. Default False preserves the historical
+    # behavior exactly (z_goal from `target_encoder`, see module docstring).
+    #
+    # Why the arm exists: the cost is a distance to an anchor, so it is
+    # preserved under a rotation only when BOTH sides are rotated by the
+    # same map. z_start comes from the online `encoder` and z_goal from
+    # `target_encoder`; under EMA those are two different maps, so the
+    # rotations cancel only as far as the encoders have converged. Encoding
+    # the anchor with the online encoder makes them one map by construction.
+    #
+    # This moves ONLY the comparison anchor. z_start still seeds the rollout
+    # from `encoder`, so the predictor is never fed a geometry it was not
+    # trained to receive -- the failure the module docstring warns about.
+    goal_latent_from_online_encoder: bool = False
 
 
 def sample_candidate_actions(
@@ -358,7 +372,10 @@ def run_episode(
     if policy == "mpc":
         assert model is not None
         goal_state = torch.from_numpy(goal).unsqueeze(0).to(device)
-        goal_latent = model.forward_target(goal_state).squeeze(0)
+        if config.goal_latent_from_online_encoder:
+            goal_latent = model.encoder(goal_state).squeeze(0)
+        else:
+            goal_latent = model.forward_target(goal_state).squeeze(0)
 
     prev_action = None
     latencies: list[float] = []
