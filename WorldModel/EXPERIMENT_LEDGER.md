@@ -242,7 +242,7 @@ Entry template:
 
 ---
 
-## 8 — Preregistered arena test: the null is not the environment (2026-08-01, commit <pending>)
+## 8 — Preregistered arena test: the null is not the environment (2026-08-01, commit 90df662)
 - Category: Benchmark
 - Hypothesis: node 7's preregistered explanation for its own null — SIGReg failed to move control because
   `ParticleNavigatorEnv`'s wall reflection (`vel = -vel * restitution`, restitution 0.6) is nonlinear and
