@@ -1,0 +1,50 @@
+[
+  {
+    "schema_version": "nc-research-decision-register-v0",
+    "topic": "SRT interpretive signal — 1A retrospective pre-generation predictability",
+    "pass": 1,
+    "owner": "science",
+    "registered_question": "Can heard text plus frozen turn context, read before any generation call, predict the candidate divergence the dialectic loop later produces?",
+    "decision_it_can_change": "Whether a pre-generation interpretive signal is worth investigating further at all. It cannot change dialectic routing, generation policy, or any runtime behaviour.",
+    "required_data_gate": "D2",
+    "falsification_criterion": "Retire when a hidden-state linear probe fails to beat the ordinary sentence-embedding ridge baseline on held-out session-level splits by a preregistered margin on Spearman correlation and high-tension AUROC, or when the advantage is unstable across sessions, provider versions, or extraction layers. The target is observed_candidate_tension, a loop-conditioned proxy; predicting it establishes expected divergence of this loop and never that an input is objectively ambiguous.",
+    "implementation_status": "study_only",
+    "runtime_dependency_authorized": false
+  },
+  {
+    "schema_version": "nc-research-decision-register-v0",
+    "topic": "SRT interpretive signal — 1B diagnostic validity and the ignorance-misroute safety gate",
+    "pass": 1,
+    "owner": "science",
+    "registered_question": "Does the signal separate interpretive plurality from model ignorance, across the strata ClearSingleInterpretation, InterpretivePlurality, ClarificationRequired, KnowledgeInsufficient, FalsePremise and NormativeConflict, on a sealed human-labelled corpus?",
+    "decision_it_can_change": "Whether acting on such a signal could ever be safe. A 1A pass without a 1B pass authorizes nothing.",
+    "required_data_gate": "D2",
+    "falsification_criterion": "Retire when KnowledgeInsufficient or FalsePremise items route to dialectical elaboration above the preregistered error ceiling, or when stratum separation is at or near chance on held-out data. Existing turn records carry no authoritative labels and cannot satisfy this gate; a separately sealed corpus is required. A signal that separates contested from neutral text while conflating ignorance with plurality is treated as a failure, not a partial success, because it would hold the dialogue open exactly where the model is least entitled to speak.",
+    "implementation_status": "study_only",
+    "runtime_dependency_authorized": false
+  },
+  {
+    "schema_version": "nc-research-decision-register-v0",
+    "topic": "SRT interpretive signal — 1C conditional third-party adapter comparator",
+    "pass": 2,
+    "owner": "engineering",
+    "registered_question": "Do the SRT adapter's read-only side channels add incremental predictive value over a raw hidden-state linear probe on the same frozen backbone, split and extraction inputs, at acceptable latency and memory cost?",
+    "decision_it_can_change": "Whether a third-party adapter is worth pinning as a research artifact. It cannot authorize a dependency, a download into any build graph, or FiLM injection.",
+    "required_data_gate": "D2",
+    "falsification_criterion": "Retire when the adapter shows no incremental gain over the linear probe beyond the preregistered margin, or when its cost is disproportionate to that gain. Runs only if 1A shows signal and 1B shows a safe target. A non-strict adapter load counts as evidence only when the receipt enumerates every expected, loaded, missing and unexpected key; strict=False succeeding is not proof the intended adapter executed. The vendor disclaims these channels as hallucination detectors, so no truth, faithfulness, mental-state or consciousness claim may cite this entry.",
+    "implementation_status": "deferred",
+    "runtime_dependency_authorized": false
+  },
+  {
+    "schema_version": "nc-research-decision-register-v0",
+    "topic": "SRT interpretive signal — 2 discourse-aware retrieval reranking ablation",
+    "pass": 2,
+    "owner": "science",
+    "registered_question": "Does an interpretive reranking channel improve retrieval over the frozen hybrid baseline of semantic, lexical, entity and temporal signals, without raising the unsafe false-neighbour rate?",
+    "decision_it_can_change": "Whether a second interpretive index merits a separately preregistered evaluation. It cannot change the primary semantic index, its profile identity, or any index schema.",
+    "required_data_gate": "D2",
+    "falsification_criterion": "Retire when MRR and nDCG deltas against the frozen baseline fall within the preregistered noise band, or when the unsafe false-neighbour rate, current-versus-superseded confusion, or proposal-versus-authority confusion worsens. Blocked until embedding-space identity is enforceable at runtime: cosine similarity presently compares vectors on dimension alone, so two distinct same-dimension spaces mix silently. The interpretive vector never shares a pgvector column or index identity with the ordinary semantic embedding.",
+    "implementation_status": "deferred",
+    "runtime_dependency_authorized": false
+  }
+]
