@@ -178,7 +178,7 @@ Entry template:
 
 ---
 
-## 7 — Objective A/B: SIGReg vs VICReg, with an encoder-alignment arm (2026-08-01, commit <pending>)
+## 7 — Objective A/B: SIGReg vs VICReg, with an encoder-alignment arm (2026-08-01, commit 208cbcd)
 - Category: Benchmark
 - Hypothesis: the ceiling is the training objective. LeJEPA/Laya (arXiv 2511.08544; Laya arXiv 2603.16281)
   replace heuristic anti-collapse terms with **SIGReg** — a sketched isotropic-Gaussian regularizer — and the
