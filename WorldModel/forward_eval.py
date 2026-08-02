@@ -147,14 +147,33 @@ def _rankme(Z: torch.Tensor, eps: float = 1e-7) -> float:
 
 
 def _alpha_req(Z: torch.Tensor, eps: float = 1e-12) -> float:
-    """Agrawal 2022: power-law slope of the covariance eigenspectrum (log-log fit)."""
+    """Agrawal 2022: power-law slope of the covariance eigenspectrum (log-log fit).
+
+    The fit is a closed-form OLS slope, not `torch.linalg.lstsq`. On a design
+    matrix of [log(rank), 1] the two are the same estimator, but lstsq's LAPACK
+    path is NOT bit-reproducible: on fixed input it returned two distinct values
+    across six calls, differing in the last ULP (…3686 vs …3690). Isolated by
+    repeating each step on one fixed Z — `Zc.T @ Zc` and `eigvalsh` were both
+    byte-identical, lstsq alone varied.
+
+    That single ULP was enough to fail `smoke_test`'s exact-JSON determinism
+    assertion, which compares two `evaluate()` runs. The assertion is right and
+    worth keeping strict; the estimator was the defect. Fixing the source rather
+    than loosening the check keeps the gate able to catch real non-determinism —
+    an unseeded RNG or a dict-ordering change would still trip it.
+    """
     Zc = (Z - Z.mean(0, keepdim=True)).double()
     cov = (Zc.T @ Zc) / max(1, len(Z) - 1)
     eig = torch.linalg.eigvalsh(cov).flip(0).clamp_min(eps)  # descending
-    ranks = torch.arange(1, len(eig) + 1, dtype=torch.float64)
-    A = torch.stack([torch.log(ranks), torch.ones_like(ranks)], dim=1)
-    sol = torch.linalg.lstsq(A, torch.log(eig).unsqueeze(1)).solution
-    return float(-sol[0, 0])
+    x = torch.log(torch.arange(1, len(eig) + 1, dtype=torch.float64))
+    y = torch.log(eig)
+    dx = x - x.mean()
+    # Degenerate only at len(eig) == 1, where dx is all-zero and the numerator
+    # vanishes too; the clamp keeps that case finite (slope 0) instead of nan,
+    # which smoke_test's isfinite assertion would otherwise reject.
+    denom = (dx * dx).sum().clamp_min(1e-300)
+    slope = (dx * (y - y.mean())).sum() / denom
+    return float(-slope)
 
 
 def _vicreg_terms(Z: torch.Tensor, eps: float = 1e-4) -> tuple[float, float]:
@@ -442,6 +461,22 @@ def evaluate(
 
 def smoke_test() -> None:
     """Tiny, fast, deterministic run; assert every metric is sane."""
+    # Named assertion for the one estimator that has actually broken the
+    # whole-panel determinism check below. `torch.linalg.lstsq`'s LAPACK path
+    # returned two values differing in the last ULP on fixed input, which is
+    # invisible in the panel comparison except as an opaque "non-deterministic".
+    # Assert it directly so a regression points at the estimator, not the panel.
+    #
+    # The shape matters and is not arbitrary. lstsq's non-determinism here is
+    # shape-dependent, not intermittent: measured over 256 repeats it is stable
+    # at (64,16), (128,8) and (256,16), and reliably yields two distinct values
+    # at (384,64) and (512,32). A first draft of this assertion used (256,16)
+    # and passed with lstsq restored — i.e. it would have shipped without
+    # testing anything. (512,32) is also `evaluate()`'s own default shape.
+    _z = torch.randn(512, 32, generator=torch.Generator().manual_seed(0))
+    assert len({_alpha_req(_z) for _ in range(16)}) == 1, \
+        "alpha_req is not deterministic on fixed input — check the OLS fit"
+
     a = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
                  rollout_len=4, mpc_episodes=6, mpc_horizon=4, device=torch.device("cpu"), verbose=False)
     b = evaluate(n=64, mode="signal", seed=0, epochs=3, latent_dim=16, rollout_traj=8,
