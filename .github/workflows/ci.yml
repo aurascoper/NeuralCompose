@@ -19,7 +19,15 @@ jobs:
     # version guard below fails fast if the runner ever regresses.
     runs-on: macos-26
     steps:
+      # fetch-depth: 0 because the ledger gate resolves the commit SHAs that
+      # ledger nodes pin. The default depth of 1 leaves every historical SHA
+      # unresolvable, which would make that check inert (it degrades to
+      # warnings rather than lying, but it stops catching anything). Measured:
+      # a depth-1 checkout of this repository cannot resolve node 1's two real
+      # pins. Full history is cheap here — ~300 commits, single-digit MB.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Swift version
         run: |
@@ -53,6 +61,21 @@ jobs:
         run: |
           python3 Tests/eval/test_adr_references.py
           python3 Scripts/check_adr_references.py --mode all
+
+      # Same reasoning one lane over. EXPERIMENT_LEDGER nodes are cited by
+      # number, and a bare number silently borrows this ledger's namespace —
+      # "node 33" is a dialectic-session node, referenced 14 times and
+      # qualified exactly once. It also resolves the commit SHAs nodes pin, so
+      # an entry can no longer point at a commit that was never pushed. That is
+      # the half of the citation problem a machine can check; whether a node
+      # contains the numbers attributed to it stays a review question.
+      #
+      # Tests first, same rule as above. See
+      # docs/architecture/experiment-ledger-citation-integrity.md.
+      - name: Ledger citation integrity
+        run: |
+          python3 Tests/eval/test_ledger_references.py
+          python3 Scripts/check_ledger_references.py --mode hard
 
       # Compiles every target (incl. BCILLM's MLX Metal kernels via the runner's
       # full Xcode) — the primary gate that the whole graph builds.

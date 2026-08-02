@@ -62,6 +62,7 @@ from eeg_jepa import (  # noqa: E402
     resolve_device,
     train_jepa,
 )
+from frame_diagnostic import frame_diagnostic  # noqa: E402
 import random  # noqa: E402
 from synthetic_1f import (  # noqa: E402
     generate,
@@ -318,6 +319,16 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
     zg = _encode_states(model, goals, train_mean, train_std, device, use_target=True,
                         log_features=log_features, log_epsilon=log_epsilon, symlog=symlog)
 
+    # z0 is ONLINE and zg is TARGET, while goals[i] differs from starts[i] in
+    # `pos` alone -- so encoder disagreement enters the cost as a near-constant
+    # offset the planner cannot reduce by acting. Measured here because starts
+    # and goals are already matched by construction. See frame_diagnostic.py.
+    def _enc(states, use_target: bool = False):
+        return _encode_states(model, states, train_mean, train_std, device, use_target,
+                              log_features=log_features, log_epsilon=log_epsilon, symlog=symlog)
+
+    frame = frame_diagnostic(_enc, starts, goals)
+
     successes, rand_successes, dists = 0, 0, []
     for i in range(n_episodes):
         plan = _cem_plan(model, z0[i], zg[i], device, horizon=horizon, cem_iters=cem_iters,
@@ -338,6 +349,7 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
         "success_rate": successes / n_episodes,
         "mean_final_distance": float(np.mean(dists)),
         "random_baseline_success": rand_successes / n_episodes,
+        "frame": frame,
     }
 
 
