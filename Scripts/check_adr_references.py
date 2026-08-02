@@ -46,6 +46,12 @@ HARD_ROOTS: Tuple[Path, ...] = (
     Path("Tests"),
     Path("Scripts"),
     Path("docs/architecture"),
+    # WorldModel/ cites ADR-005 and ADR-006 in eight places (README.md,
+    # EEG_INTEGRATION_DESIGN.md, export_coreml.py) and was covered by no root
+    # list, so a renumbered or removed ADR would have gone unnoticed there.
+    # Normative rather than advisory: ADR-006 is jepa-transition-capture, which
+    # this directory implements.
+    Path("WorldModel"),
 )
 
 ADVISORY_ROOTS: Tuple[Path, ...] = (

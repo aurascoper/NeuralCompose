@@ -38,11 +38,30 @@ precise about why.
 `check_adr_references.py` scans `HARD_ROOTS` and `ADVISORY_ROOTS`. A commit
 message is never in either. The motivating defect was gap B.
 
-There is also a plain coverage hole in gap A: `HARD_ROOTS` is
+There was also a plain coverage hole in gap A, now closed: `HARD_ROOTS` was
 `Sources`, `Tests`, `Scripts`, `docs/architecture`, and `ADVISORY_ROOTS` is
-`README.md`, `docs/reviews`, `Evaluation/reports`. **`WorldModel/` is in
-neither**, so the entire experiment lane — including the ledger — is currently
-unscanned even for ADR references.
+`README.md`, `docs/reviews`, `Evaluation/reports`. **`WorldModel/` was in
+neither**, so the entire experiment lane — including the ledger — was unscanned
+even for ADR references, despite citing ADR-005 and ADR-006 in eight places
+(`README.md`, `EEG_INTEGRATION_DESIGN.md`, `export_coreml.py`).
+
+`WorldModel/` is now in `HARD_ROOTS`. Normative rather than advisory, because
+ADR-006 is *jepa-transition-capture*, which that directory implements. Adding it
+produces **zero findings** on the current tree — all eight references are
+canonical and both ADRs exist — so the gate stays green.
+
+That zero was checked for vacuity rather than trusted. A probe file placed under
+`WorldModel/`, citing one nonexistent three-digit ADR number and one malformed
+two-digit one, yields **0 findings without** the root and **2 with** it
+(`ADR_REFERENCE_MISSING`, `ADR_REFERENCE_MALFORMED`), so the new coverage
+demonstrably scans. Probe removed; tree clean. The 16 tests in
+`Tests/eval/test_adr_references.py` still pass.
+
+(The literal tokens are deliberately not reproduced here. Writing them into a
+document under `docs/architecture` — itself a `HARD_ROOTS` entry — makes the
+checker flag this file, which is exactly what happened on the first attempt at
+this paragraph and is why `HARD_SCAN_EXCLUSIONS` exists for the checker's own
+source. A prose description costs nothing and keeps this document scanned.)
 
 ## What is proposed
 
@@ -126,8 +145,11 @@ disabled, and then catches nothing at all.
 1. Land advisory-only, not wired into CI. Warnings, exit 0.
 2. Fix the twelve `node 33` references (one word each), then flip to `--mode hard`
    in `.github/workflows/ci.yml` beside the existing ADR line.
-3. Add `WorldModel/` to `check_adr_references.py`'s roots — a separate, smaller
-   change that closes the gap-A coverage hole for ADR references too.
+3. ~~Add `WorldModel/` to `check_adr_references.py`'s roots.~~ **Done** — zero
+   findings, non-vacuity probed, existing tests pass. This is the one part of
+   this proposal that is not advisory: it changes what an existing required gate
+   covers, so it is a reasonable thing to split into its own PR if you would
+   rather land it independently of the prototype.
 4. Gap B needs a decision (below) before it can be enforced.
 
 ## Open questions for review
