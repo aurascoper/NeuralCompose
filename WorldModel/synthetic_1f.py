@@ -48,9 +48,21 @@ def _render_state(z: dict[str, float], t: int) -> dict[str, Any]:
     theta = base * BANDS["theta"] ** (-z["chi"])
     alpha = base * BANDS["alpha"] ** (-z["chi"]) + z["peak_amp"]
     beta = base * BANDS["beta"] ** (-z["chi"])
-    # Two "electrode" channels carry the task factors, so pos/vel are also observable.
-    c0 = alpha * (1.0 + 0.10 * z["pos"])
-    c1 = beta * (1.0 + 0.10 * z["vel"])
+    # Two "electrode" channels carry the task factors, so pos/vel are also
+    # observable. ADDITIVE and independent of the 1/f carrier, since the earlier
+    # multiplicative form defeated that stated intent: c0 = alpha*(1 + 0.10*pos)
+    # left pos at 0.845% of c0's variance and vel at 0.0106% of c1's (node 19),
+    # with 8.2:1 carrier leverage, so the encoder learned the held factors
+    # (peak_amp 0.997, chi 0.950) and left vel at 0.033 (node 18). It also made
+    # the nuisance impossible to perturb without destroying the task signal --
+    # the minimum jitter depth that removed the free-prediction subsidy already
+    # injected noise the size of the entire pos modulation (node 20).
+    #
+    # No gain constant here, deliberately: JEPATransitionDataset z-scores every
+    # feature on train statistics, so any gain divides straight back out. The
+    # 1.0 is a DC offset for positivity and is removed by the same z-scoring.
+    c0 = 1.0 + z["pos"]
+    c1 = 1.0 + z["vel"]
     return {
         "timestamp": 1_700_000_000.0 + t,
         "alphaPower": alpha,
