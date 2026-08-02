@@ -75,6 +75,9 @@ from synthetic_1f import (  # noqa: E402
 )
 
 FACTOR_NAMES = ["pos", "vel", "chi", "peak_amp", "offset"]
+# action[2] is the mode bit. `_step` never reads it, so it is a NEGATIVE CONTROL:
+# a probe that "recovers" it is fitting noise and its other numbers mean nothing.
+ACTION_NAMES = ["ax", "ay", "mode_bit"]
 
 
 def _seed_everything(seed: int) -> None:
@@ -135,6 +138,44 @@ def _factor_recovery(Z: torch.Tensor, factors: np.ndarray, seed: int) -> dict[st
         pred = Xte @ w
         ss_res = float(((factors[te, k] - pred) ** 2).sum())
         ss_tot = float(((factors[te, k] - factors[te, k].mean()) ** 2).sum())
+        out[name] = 1.0 - ss_res / ss_tot if ss_tot > 1e-12 else 0.0
+    return out
+
+
+def _action_recovery(
+    Z_pre: torch.Tensor, Z_post: torch.Tensor, actions: np.ndarray, seed: int
+) -> dict[str, float]:
+    """Held-out linear-probe R^2 for each action dimension from (z_pre, z_post).
+
+    How much of WHICH ACTION WAS TAKEN survives into the representation. The
+    panel measured how well the latent recovers the state factors, but control
+    depends on the action channel and nothing scored it — so ten nodes of
+    representation work optimised metrics dominated by `chi`, `peak_amp` and
+    `offset`, which are per-trajectory CONSTANTS, while the action channel went
+    unmeasured (node 17).
+
+    Read against two anchors that come free with it:
+      * `mode_bit` is action[2], which `_step` never reads. It MUST come out at
+        or below zero. A positive value means the probe is fitting noise.
+      * the same probe on the TRUE (pre, post) states recovers `ay` at R^2 =
+        1.000 exactly — the algebra makes it linear — so the ceiling is known
+        and any shortfall is the representation's, not the probe's.
+    """
+    X = np.concatenate([Z_pre.double().numpy(), Z_post.double().numpy()], axis=1)
+    rng = np.random.default_rng(seed)
+    idx = rng.permutation(len(X))
+    cut = max(1, int(0.8 * len(X)))
+    tr, te = idx[:cut], idx[cut:]
+    if len(te) == 0:
+        te = tr
+    Xtr = np.concatenate([X[tr], np.ones((len(tr), 1))], axis=1)
+    Xte = np.concatenate([X[te], np.ones((len(te), 1))], axis=1)
+    out: dict[str, float] = {}
+    for k, name in enumerate(ACTION_NAMES):
+        w, *_ = np.linalg.lstsq(Xtr, actions[tr, k], rcond=None)
+        pred = Xte @ w
+        ss_res = float(((actions[te, k] - pred) ** 2).sum())
+        ss_tot = float(((actions[te, k] - actions[te, k].mean()) ** 2).sum())
         out[name] = 1.0 - ss_res / ss_tot if ss_tot > 1e-12 else 0.0
     return out
 
@@ -498,6 +539,7 @@ def evaluate(
         )
 
         factors = _read_factors(records)
+        action_vectors = np.array([r["actionVector"] for r in records], dtype=np.float64)
         Z_pre, Z_post = _encode_all(model, dataset, device)
         var_term, cov_term = _vicreg_terms(Z_pre)
         alignment, uniformity = _alignment_uniformity(Z_pre, Z_post)
@@ -523,6 +565,7 @@ def evaluate(
             "rollout_error": rollout,
             "mpc_success": mpc,
             "factor_recovery": _factor_recovery(Z_pre, factors, seed),
+            "action_recovery": _action_recovery(Z_pre, Z_post, action_vectors, seed),
             "rankme": _rankme(Z_pre),
             "alpha_req": _alpha_req(Z_pre),
             "vicreg_var": var_term,
@@ -587,6 +630,16 @@ def smoke_test() -> None:
     assert a["vicreg_var"] >= 0.0
     # The chi probe exists and is reported (the information-destruction detector).
     assert "chi" in a["factor_recovery"]
+
+    # The action probe's negative control. action[2] is the mode bit and `_step`
+    # never reads it, so it carries no information about the transition. If a
+    # probe recovers it, the probe is fitting noise and its ax/ay numbers are
+    # meaningless -- which is the only way this metric can silently lie.
+    ar = a["action_recovery"]
+    assert set(ar) == set(ACTION_NAMES), ar
+    assert all(np.isfinite(v) for v in ar.values()), ar
+    assert ar["mode_bit"] <= 0.05, \
+        f"action probe recovered the unused mode bit (R^2={ar['mode_bit']:.3f}) — it is fitting noise"
 
     # The log-features (node-33) arm must stay finite end-to-end — a log(0) or a
     # train/rollout input-space mismatch would surface here as NaN/inf.
