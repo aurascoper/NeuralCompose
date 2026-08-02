@@ -319,8 +319,8 @@ def _cem_plan(model, z0_lat, zg_lat, device, *, horizon, cem_iters, n_samples, e
 
 @torch.no_grad()
 def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon=6,
-                 cem_iters=3, n_samples=64, elite_frac=0.2, mode="signal", seed=2,
-                 goal_offset=0.4, goal_tol=0.15, baseline_reps=100,
+                 cem_iters=3, n_samples=64, elite_frac=0.2, mode="signal",
+                 episode_seed=2, goal_offset=0.4, goal_tol=0.15, baseline_reps=100,
                  log_features: bool = False,
                  log_epsilon: float = 1e-6, symlog: bool = False) -> dict[str, Any]:
     """Goal-conditioned latent MPC/CEM planning success. Per episode: sample a start
@@ -329,9 +329,13 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
     true final pos reached the goal. A random-action policy is the baseline — the
     JEPA-planned success rate beating it is the signal that the latent dynamics are
     useful for control. Returns success_rate, mean_final_distance, random_baseline."""
-    rng = random.Random(seed)
-    gen = torch.Generator()
-    gen.manual_seed(seed + 7)
+    # The episode set, the baseline draws and the planner's sampling noise all
+    # derive from `episode_seed` and NOTHING else. Previously `evaluate()` passed
+    # `seed = model_seed + 2`, so every model seed scored a DIFFERENT episode set:
+    # "which episodes" was confounded with "which model", and the between-set
+    # difficulty spread (sd 0.0853, measured) was being read as model variance.
+    # The benchmark's episodes are a property of the benchmark, not of the run.
+    rng = random.Random(episode_seed)
     starts = [_sample_latent(rng) for _ in range(n_episodes)]
     goal_pos = [starts[i]["pos"] + rng.uniform(-goal_offset, goal_offset) for i in range(n_episodes)]
     goals = [{**starts[i], "pos": goal_pos[i]} for i in range(n_episodes)]
@@ -352,7 +356,18 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
 
     successes, dists = 0, []
     rand_per_episode: list[float] = []
+    start_dists: list[float] = []
+    log_ratios: list[float] = []
     for i in range(n_episodes):
+        # A generator PER EPISODE, seeded from the episode identity alone. A
+        # single generator consumed sequentially made the planning noise on
+        # episode i depend on how many draws episodes 0..i-1 had taken, which is
+        # a function of n_samples * cem_iters * horizon. Any arm that touched a
+        # CEM knob therefore got different noise on the SAME episode, silently
+        # defeating pairing even with the episode set fixed. Nothing in the panel
+        # would have revealed it.
+        gen = torch.Generator()
+        gen.manual_seed(episode_seed * 1_000_003 + i)
         plan = _cem_plan(model, z0[i], zg[i], device, horizon=horizon, cem_iters=cem_iters,
                          n_samples=n_samples, elite_frac=elite_frac, gen=gen)
         z = dict(starts[i])
@@ -362,6 +377,24 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
         dists.append(d)
         if d < goal_tol:
             successes += 1
+        # Paired continuous endpoint: log(d_final / d_start), per episode.
+        #
+        # `success_rate` thresholds a continuous distance at goal_tol=0.15 and
+        # throws away everything else. Simulating a 10% distance improvement
+        # with shared episode difficulty, power at n=20 is 17.7% for a paired
+        # continuous statistic against 0.5% for paired binary; at n=200 it is
+        # 85.1% against 23.4%. The distance is already computed and returned --
+        # it simply was not the adjudicator.
+        #
+        # The RATIO, not the difference: episodes differ enormously in how far
+        # the goal starts, so a raw difference is dominated by episode
+        # difficulty. The log makes "halved the distance" the same effect size
+        # wherever it happens, which is what pairing needs. Both terms are
+        # clamped because goal_offset can draw a start essentially on top of
+        # its goal, and log(0) would take the whole panel with it.
+        d0 = max(abs(starts[i]["pos"] - goal_pos[i]), 1e-6)
+        start_dists.append(d0)
+        log_ratios.append(math.log(max(d, 1e-6) / d0))
     # The random baseline is estimated AFTER the model arm, over
     # `baseline_reps` rollouts per episode rather than one. It touches no
     # encoder, no predictor and no CEM — only `_step` with uniform actions —
@@ -400,6 +433,18 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
         "random_baseline_stderr": rand_se,
         "random_baseline_reps": baseline_reps,
         "random_baseline_per_episode": rand_per_episode,
+        # Primary candidate for the repaired benchmark. Reported alongside
+        # success_rate rather than replacing it -- adopting it as THE adjudicator
+        # is a separate, pre-registered decision, and switching endpoints while
+        # also changing the episode set would confound the two.
+        # Per-episode finals, so a downstream paired analysis can compute EITHER
+        # endpoint exactly instead of approximating the binary one from the two
+        # marginal rates. Without this the paired binary sd has to be guessed.
+        "final_distance_per_episode": dists,
+        "log_distance_ratio_mean": float(np.mean(log_ratios)),
+        "log_distance_ratio_per_episode": log_ratios,
+        "start_distance_per_episode": start_dists,
+        "episode_seed": episode_seed,
         "frame": frame,
     }
 
@@ -463,7 +508,7 @@ def evaluate(
         )
         mpc = _mpc_success(
             model, dataset.mean, dataset.std, device,
-            n_episodes=mpc_episodes, horizon=mpc_horizon, mode=mode, seed=seed + 2,
+            n_episodes=mpc_episodes, horizon=mpc_horizon, mode=mode,
             cem_iters=mpc_cem_iters, n_samples=mpc_n_samples, elite_frac=mpc_elite_frac,
             log_features=log_features, log_epsilon=log_epsilon, symlog=symlog,
         )
