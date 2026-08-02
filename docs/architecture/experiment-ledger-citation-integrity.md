@@ -86,18 +86,32 @@ PR's commits.
 
 ## What the prototype finds, run on this tree
 
-**Tree scan** — 12 findings, all the same defect:
+**Tree scan** — 12 findings on first run, all the same defect:
 
 ```
 WorldModel/EXPERIMENT_LEDGER.md:147,181,183,185,190,194,195,206,207,208,233,234
   [LEDGER_NODE_REFERENCE_MISSING] bare 'node 33' does not resolve in this ledger
 ```
 
-Node 33 is a dialectic-session node from a different numbering space. It is
-referenced 13 times and qualified as *"dialectic node 33"* exactly once, at
-line 149 — which the checker correctly does **not** flag. So the ledger already
-half-observes the rule; the checker just makes the other twelve explicit. Every
-one is a one-word fix.
+Node 33 is a dialectic-session node from a different numbering space. It was
+referenced 14 times and qualified as *"dialectic node 33"* exactly once, at
+line 149 — which the checker correctly did **not** flag. So the ledger already
+half-observed the rule.
+
+**Now fixed.** All thirteen bare references carry the `dialectic` qualifier, and
+the scan reports **0 findings in both advisory and hard mode**.
+
+Note 12 findings but 13 occurrences: line 208 contains two, and the dedup key is
+`(severity, code, path, line, message)` — no column — so identical findings on
+one line collapse into one. `check_adr_references.py` behaves the same way. Not
+wrong, but "12 findings" and "12 occurrences" are different claims and only the
+first was measured.
+
+The edit inserted the qualifier and nothing else. Verified by word-diff: every
+changed hunk is an insertion of `dialectic`, with no claim, number, date, or
+other wording altered. This is still a retrospective edit to a durable evidence
+record — justified here as disambiguating a citation rather than restating a
+result, but worth naming rather than performing silently.
 
 **Commit-message scan** — run against the two commits on this branch:
 
@@ -143,8 +157,11 @@ disabled, and then catches nothing at all.
 ## Proposed adoption
 
 1. Land advisory-only, not wired into CI. Warnings, exit 0.
-2. Fix the twelve `node 33` references (one word each), then flip to `--mode hard`
-   in `.github/workflows/ci.yml` beside the existing ADR line.
+2. ~~Fix the `node 33` references, then flip to `--mode hard`.~~ **Half done** —
+   the references are qualified and the checker now passes in hard mode, so the
+   blocker is cleared. The CI wiring itself is deliberately **not** done here:
+   adding a second required gate is a standing-cost decision, and the open
+   questions below should be settled first.
 3. ~~Add `WorldModel/` to `check_adr_references.py`'s roots.~~ **Done** — zero
    findings, non-vacuity probed, existing tests pass. This is the one part of
    this proposal that is not advisory: it changes what an existing required gate
