@@ -295,7 +295,7 @@ Entry template:
 
 ---
 
-## 9 — Benchmark repair: the planner is the binding constraint, not the objective (2026-08-01, commit <pending>)
+## 9 — Benchmark repair: the planner is the binding constraint, not the objective (2026-08-01, commit 60433e8)
 - Category: Test
 - Hypothesis: node 8 left the control benchmark unable to discriminate — every objective arm scored 0/35 and
   five consecutive representation improvements moved it not at all. Before another objective is tried, find
