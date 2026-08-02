@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import tempfile
 from pathlib import Path
@@ -319,7 +320,8 @@ def _cem_plan(model, z0_lat, zg_lat, device, *, horizon, cem_iters, n_samples, e
 @torch.no_grad()
 def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon=6,
                  cem_iters=3, n_samples=64, elite_frac=0.2, mode="signal", seed=2,
-                 goal_offset=0.4, goal_tol=0.15, log_features: bool = False,
+                 goal_offset=0.4, goal_tol=0.15, baseline_reps=100,
+                 log_features: bool = False,
                  log_epsilon: float = 1e-6, symlog: bool = False) -> dict[str, Any]:
     """Goal-conditioned latent MPC/CEM planning success. Per episode: sample a start
     state + a goal `pos`, plan with CEM (the JEPA predictor as forward model), then
@@ -348,7 +350,8 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
 
     frame = frame_diagnostic(_enc, starts, goals)
 
-    successes, rand_successes, dists = 0, 0, []
+    successes, dists = 0, []
+    rand_per_episode: list[float] = []
     for i in range(n_episodes):
         plan = _cem_plan(model, z0[i], zg[i], device, horizon=horizon, cem_iters=cem_iters,
                          n_samples=n_samples, elite_frac=elite_frac, gen=gen)
@@ -359,15 +362,44 @@ def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon
         dists.append(d)
         if d < goal_tol:
             successes += 1
-        z = dict(starts[i])
-        for h in range(horizon):
-            z = _step(z, [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0), float(h % 2)], mode)
-        if abs(z["pos"] - goal_pos[i]) < goal_tol:
-            rand_successes += 1
+    # The random baseline is estimated AFTER the model arm, over
+    # `baseline_reps` rollouts per episode rather than one. It touches no
+    # encoder, no predictor and no CEM — only `_step` with uniform actions —
+    # so its cost is env steps alone and precision here is nearly free.
+    #
+    # Estimating it at one draw per episode made a scalar with a binomial
+    # standard error of ~0.10 at n=20 the thing every arm was compared
+    # against, and re-drawing it per seed injected that sampling noise into
+    # every comparison as if it were model variance. The 0.15-0.45 swing
+    # recorded in ledger node 14 needs no model explanation: five draws from
+    # Binomial(20, 0.30) have a median range of 0.25.
+    #
+    # Kept episode-paired rather than moved to an independent episode set:
+    # what a paired comparison needs is P(random succeeds | THIS episode),
+    # and per-episode rates are returned so a later paired analysis can use
+    # them as a difficulty covariate instead of re-deriving them.
+    for i in range(n_episodes):
+        hits = 0
+        for _ in range(baseline_reps):
+            z = dict(starts[i])
+            for h in range(horizon):
+                z = _step(z, [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0), float(h % 2)], mode)
+            if abs(z["pos"] - goal_pos[i]) < goal_tol:
+                hits += 1
+        rand_per_episode.append(hits / baseline_reps)
+    rand_mean = float(np.mean(rand_per_episode))
+    # SE of the mean over episodes, so a reader can see the pin held rather
+    # than take it on faith.
+    rand_se = float(np.std(rand_per_episode, ddof=1) / math.sqrt(n_episodes)) \
+        if n_episodes > 1 else float("nan")
+
     return {
         "success_rate": successes / n_episodes,
         "mean_final_distance": float(np.mean(dists)),
-        "random_baseline_success": rand_successes / n_episodes,
+        "random_baseline_success": rand_mean,
+        "random_baseline_stderr": rand_se,
+        "random_baseline_reps": baseline_reps,
+        "random_baseline_per_episode": rand_per_episode,
         "frame": frame,
     }
 
