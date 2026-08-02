@@ -124,6 +124,35 @@ from train import DEFAULT_CHECKPOINT
 
 GOAL_TOLERANCE = 0.1  # matches dataset.py's WAYPOINT_REACHED_DIST
 
+# Reference-policy gains (ledger node 9). Deliberately a plain PD on TRUE
+# state, not a tuned competitor: its only job is to establish what the task
+# admits, so that a planner's score can be read against a known ceiling
+# instead of against nothing.
+#
+# Why this exists: through node 8 every objective arm scored 0/35, and that
+# number was ambiguous between "the task is not achievable in 50 steps" and
+# "the planner is failing." It is the second. This controller reaches 7/7 of
+# HARD_CASES in 21-33 steps, stably across gains -- so a 0/35 from latent MPC
+# is a planner result, not a task property. Without a reference policy in the
+# harness that distinction cannot be read off any metric.
+ORACLE_KP = 2.0
+ORACLE_KD = 2.0
+
+
+def oracle_action(state: np.ndarray, goal: np.ndarray, max_accel: float) -> np.ndarray:
+    """Proportional-derivative controller on true position/velocity.
+
+    Not part of any learned path and not an ablation of one -- it consumes
+    `env.py`'s own `[x,y,vx,vy]` directly, so it is an upper reference for
+    the harness rather than a baseline a latent planner could be credited
+    for beating. `kd` damps the approach so the particle does not sail
+    through the tolerance ball at full speed.
+    """
+    error = goal[:2] - state[:2]
+    return np.clip(
+        ORACLE_KP * error - ORACLE_KD * state[2:], -max_accel, max_accel
+    ).astype(np.float32)
+
 
 @dataclass(frozen=True)
 class MPCConfig:
@@ -365,7 +394,7 @@ def run_episode(
     per entry; a caller can reconstruct it exactly by replaying
     `env.step` over the recorded actions, since `step` is stateless.
     """
-    assert policy in ("mpc", "zero", "random")
+    assert policy in ("mpc", "zero", "random", "oracle")
 
     state = start_state.copy()
     goal_latent = None
@@ -384,8 +413,12 @@ def run_episode(
     reached = False
     steps_used = 0
 
+    initial_distance = float(np.linalg.norm(start_state[:2] - goal[:2]))
+    best_distance = initial_distance
+
     for step in range(max_steps):
         distance_to_goal = float(np.linalg.norm(state[:2] - goal[:2]))
+        best_distance = min(best_distance, distance_to_goal)
         if distance_to_goal < goal_tolerance:
             reached = True
             break
@@ -405,6 +438,8 @@ def run_episode(
             action = action_t.cpu().numpy()
         elif policy == "zero":
             action = np.zeros(ACTION_DIM, dtype=np.float32)
+        elif policy == "oracle":
+            action = oracle_action(state, goal, env.config.max_accel)
         else:  # "random"
             action = _sample_random_action(rng, env.config.max_accel)
 
@@ -420,10 +455,31 @@ def run_episode(
     if not reached and float(np.linalg.norm(state[:2] - goal[:2])) < goal_tolerance:
         reached = True
 
+    final_distance = float(np.linalg.norm(state[:2] - goal[:2]))
+    best_distance = min(best_distance, final_distance)
+
     result = {
         "reached": reached,
         "steps_used": steps_used,
-        "final_distance": float(np.linalg.norm(state[:2] - goal[:2])),
+        "final_distance": final_distance,
+        # Graded measures (ledger node 9). `reached` alone gave every arm the
+        # same score, so it could not rank two policies that both fall short.
+        #
+        # `best_distance` is the closest approach, not the last position:
+        # a planner that arrives and then sails past is genuinely better than
+        # one that never arrives, and `final_distance` scores them the same.
+        #
+        # `normalized_progress` is scaled by the case's own starting distance
+        # so cases spanning 1.70-2.26 units are commensurable: 1.0 means the
+        # goal was touched, 0.0 no closer than the start, negative means the
+        # policy moved away.
+        "initial_distance": initial_distance,
+        "best_distance": best_distance,
+        "normalized_progress": (
+            (initial_distance - best_distance) / initial_distance
+            if initial_distance > 0
+            else 0.0
+        ),
         "latencies": latencies,
         "diagnostics": diagnostics,
     }

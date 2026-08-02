@@ -71,6 +71,7 @@ def run_sweep(
     max_episode_steps: int,
     goal_tolerance: float,
     device: torch.device,
+    policy: str = "mpc",
 ) -> list[dict]:
     """One row per (case, seed). `rng` only feeds candidate sampling
     (start/goal are fixed by HARD_CASES), so varying seed varies the MPPI
@@ -84,7 +85,7 @@ def run_sweep(
             torch.manual_seed(seed)
             rng = np.random.default_rng(seed)
             result = run_episode(
-                env, model, "mpc", start, goal, config,
+                env, model, policy, start, goal, config,
                 max_episode_steps, goal_tolerance, device, rng,
             )
             ess = (
@@ -98,6 +99,8 @@ def run_sweep(
                     "seed": seed,
                     "reached": result["reached"],
                     "final_distance": result["final_distance"],
+                    "best_distance": result["best_distance"],
+                    "normalized_progress": result["normalized_progress"],
                     "mean_ess": ess,
                 }
             )
@@ -133,6 +136,10 @@ def print_report(rows: list[dict], num_candidates: int) -> None:
         f"mean_final_distance={float(np.mean([r['final_distance'] for r in rows])):.4f}, "
         f"mean_ess={float(np.mean([r['mean_ess'] for r in rows])):.1f}/{num_candidates}"
     )
+    print(
+        f"Graded:    mean_best_distance={float(np.mean([r['best_distance'] for r in rows])):.4f}, "
+        f"mean_normalized_progress={float(np.mean([r['normalized_progress'] for r in rows])):.4f}"
+    )
 
 
 def main() -> None:
@@ -142,6 +149,8 @@ def main() -> None:
     ap.add_argument("--max-episode-steps", type=int, default=50)
     ap.add_argument("--goal-tolerance", type=float, default=GOAL_TOLERANCE)
     ap.add_argument("--max-accel", type=float, default=EnvConfig().max_accel)
+    ap.add_argument("--policy", choices=["mpc", "oracle", "random", "zero"], default="mpc",
+                    help="oracle/random/zero are reference policies, not competitors")
     ap.add_argument("--unbounded", action="store_true",
                     help="remove arena walls; must match how the checkpoint was trained")
 
@@ -209,7 +218,8 @@ def main() -> None:
     print(f"  {len(HARD_CASES)} cases x {len(seeds)} seeds = {len(HARD_CASES) * len(seeds)} trials")
     print()
 
-    rows = run_sweep(model, env, config, seeds, args.max_episode_steps, args.goal_tolerance, device)
+    rows = run_sweep(model, env, config, seeds, args.max_episode_steps,
+                     args.goal_tolerance, device, policy=args.policy)
     print_report(rows, config.num_candidates)
 
 

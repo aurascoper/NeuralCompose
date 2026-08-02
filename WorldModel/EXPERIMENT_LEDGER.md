@@ -292,3 +292,53 @@ Entry template:
   orthogonal gauge maximally unconstrained (`z ~ N(0,I)` ⟹ `Rz ~ N(0,I)`), so it can never establish that the
   online and target encoders share a frame. Correct order: repair the benchmark, then run
   {symmetric-scale-only, SIGReg, VISReg} so "scale stabilization" and "full distribution shape" are separable.
+
+---
+
+## 9 — Benchmark repair: the planner is the binding constraint, not the objective (2026-08-01, commit <pending>)
+- Category: Test
+- Hypothesis: node 8 left the control benchmark unable to discriminate — every objective arm scored 0/35 and
+  five consecutive representation improvements moved it not at all. Before another objective is tried, find
+  out whether `reached` is measuring anything.
+- Prediction: the binary criterion lacks resolution near the achievable ceiling, and a graded measure will
+  separate arms that the binary collapses to zero.
+- Implementation: `mpc.py` — `oracle_action` (PD on TRUE state, `ORACLE_KP=ORACLE_KD=2.0`) plus
+  `policy="oracle"`; `best_distance` / `initial_distance` / `normalized_progress` added to `run_episode`'s
+  result. `sweep.py` — `--policy`, graded metrics in rows and in the aggregate line.
+  `benchmark_reference.py` (new) — runs oracle/random/zero/mpc over the same `HARD_CASES` and **rejects the
+  measure** (exit 1) if the oracle fails to separate from random/zero. Case-level aggregation throughout, per
+  node 8. All additions are default-off or additive: the unflagged `sweep.py` path still reports
+  `0/35, mean_final_distance=1.2854`, identical to node 7.
+- Evidence:
+  - **The prediction was wrong about the diagnosis, and the truth is worse.** A two-line PD controller reaches
+    **7/7 cases in 21–33 of the 50 available steps**, stably across gains {(1.0,1.5),(2.0,2.0),(3.0,2.5)}.
+    The task is not near any ceiling — it is trivially feasible, and latent MPC scores 0/35 on something a
+    reference controller solves with 17 steps to spare. `0/35` was never "no resolution near the ceiling";
+    it was "the planner fails."
+  - Measure validation (bounded, VICReg ckpt), case-level: oracle `reached` 1.000 / progress **0.961**;
+    mpc 0.000 / **0.392**; random 0.000 / **0.233**; zero 0.000 / **0.000**. The binary collapses three of
+    four policies to zero; `normalized_progress` orders all four correctly. Measure accepted.
+  - **mpc sits at 21.8% of the usable oracle-to-random span.**
+  - Applied to the objective arms, case level (n=7): BOUNDED mean Δ (SIGReg − VICReg) = **+0.081**, sd 0.327,
+    **t=+0.66**, better on 4/7. UNBOUNDED **+0.047**, sd 0.522, **t=+0.24**, better on 4/7. Both null.
+  - Per-case swings dwarf the arm difference: SIGReg ranges +0.694 to −0.270 (bounded) and +0.713 to −0.749
+    (unbounded). Case identity explains far more than objective choice.
+  - Sanity checks that the measure behaves: oracle scores identically in both arenas (0.961 — it goes straight
+    to the goal and never touches a wall), while random drops 0.233 → 0.121 unbounded (reflections were
+    accidentally returning it toward the goal).
+- Decision: **Benchmark repaired and the repair changed the conclusion.** The measure now demonstrably
+  discriminates, and with resolution restored the objectives *still* do not differ — so this is now an
+  informative null rather than a floor artifact. The binding constraint is the **planner**: it captures about
+  a fifth of what the task admits, and closing that gap is not something any representation objective can do.
+  Five representation-side improvements produced no control movement because control was never
+  representation-limited here.
+  Note the binary criterion is not itself broken — it cleanly separates oracle from everything else. Its
+  defect is narrower: it cannot rank policies that all fall short, which is the entire regime the arms occupy.
+- Next question: the objective line is **closed** until the planner is addressed; running
+  {symmetric-scale-only, SIGReg, VISReg} now would measure a component that is not limiting. The open
+  question is why MPPI over a latent that rolls out better than chance still captures only ~20% of the span —
+  candidate explanations, in the order I would test them: (1) the horizon-10 budget cannot represent a ~22-step
+  maneuver, so no candidate sequence in the batch ever encodes the solution; (2) the latent distance is too
+  weak a proxy to rank candidates (the standing `r≈0.63`); (3) the cost's goal anchor is in a different
+  frame from the rollout (the node 7 obstruction, still unresolved and untouched by any isotropic objective).
+  (1) is cheap and testable immediately by sweeping horizon against the oracle's 21–33-step solution times.
