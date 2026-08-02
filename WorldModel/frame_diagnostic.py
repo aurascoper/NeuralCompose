@@ -109,12 +109,6 @@ except ModuleNotFoundError:  # pragma: no cover - exercised where torch is absen
     _sys.path.insert(0, str(_Path(__file__).resolve().parent))
     import _tensor_shim as torch  # type: ignore[no-redef]
 
-# Relative floor for calling a Frobenius norm "zero". Guarding on `> 0` alone
-# lets 1e-14 through and turns the residual ratio into 0/0, which then prints a
-# plausible-looking number instead of announcing itself.
-_REL_EPS = 1e-8
-
-
 def _procrustes(a: torch.Tensor, b: torch.Tensor) -> tuple[float, float, float]:
     """Best orthogonal alignment of `a` onto `b`, both (n, d), already centered.
 
@@ -193,7 +187,28 @@ def frame_diagnostic(
     before, after, gap = _procrustes(centered_online, centered_target)
 
     scale = float(torch.linalg.norm(centered_online)) + float(torch.linalg.norm(centered_target))
-    degenerate = before <= _REL_EPS * max(scale, 1e-30)
+
+    # Degeneracy detection, two signals, neither a tuned constant.
+    #
+    # (a) The INVARIANT. R = I is always feasible, so after <= before is
+    #     guaranteed. A computed after > before is mathematically impossible and
+    #     therefore proves the computation is noise-dominated. This needs no
+    #     threshold and holds at any precision.
+    # (b) A dtype-aware relative floor. sqrt(finfo.eps) is the usual scale at
+    #     which a difference of large similar quantities stops carrying signal:
+    #     ~1.5e-8 for float64, ~3.5e-4 for float32.
+    #
+    # An earlier version used a fixed _REL_EPS = 1e-8 relative floor. Measured
+    # against real torch on a pure translation: before = 6.6e-6 with
+    # scale = 91.8, so the floor sat at 9.2e-7 and did not fire, after > before,
+    # and the ratio came out 4.48 -- an impossible value reported as a finding.
+    # It had passed under the pure-Python shim only because that shim's
+    # float64 centering cancelled to ~1e-14, which made the fixed floor look
+    # adequate. The constant was calibrated to an artifact of the test harness.
+    eps = float(torch.finfo(getattr(centered_online, 'dtype', None)).eps)
+    floor = (eps ** 0.5) * max(scale, 1e-30)
+    degenerate = before <= floor or after > before * (1.0 + 1e-6)
+
     residual_ratio = float("nan") if degenerate else (after / before)
     rotation_gap = float("nan") if degenerate else gap
 

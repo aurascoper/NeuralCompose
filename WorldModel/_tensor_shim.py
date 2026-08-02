@@ -119,6 +119,14 @@ def randn(*shape, generator=None):
     return Tensor([[r.gauss(0, 1) for _ in range(shape[1])] for _ in range(shape[0])])
 
 
+class _Finfo:
+    # float64 throughout this shim.
+    eps = 2.220446049250313e-16
+
+
+def finfo(dtype=None): return _Finfo()
+
+
 def eye(d): return Tensor([[1.0 if i==j else 0.0 for j in range(d)] for i in range(d)])
 
 

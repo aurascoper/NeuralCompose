@@ -41,6 +41,60 @@ class FrameDiagnosticSelfTest(unittest.TestCase):
         frame_diagnostic._self_test()
 
 
+class Float32DegeneracyTests(unittest.TestCase):
+    """Regression for a failure the pure-Python shim could not surface.
+
+    The degeneracy guard was originally a fixed relative floor, `_REL_EPS =
+    1e-8`. Under the shim that looked adequate, because its float64 centering
+    of a pure translation cancelled to ~1e-14 so the floor fired. Under real
+    torch (float32 by default) the same case leaves before = 6.6e-06 against
+    scale = 91.8, the floor sat at 9.2e-07 and never fired, and the ratio came
+    out 4.48 -- an arithmetically impossible value reported as a finding.
+
+    The constant had been calibrated to an artifact of the test harness. The
+    guard is now the guaranteed invariant itself (after <= before, since R = I
+    is always feasible) plus a dtype-aware sqrt(finfo.eps) floor.
+
+    Skips where torch is absent, and says so, rather than passing vacuously
+    under the shim -- which is the exact failure mode being regressed.
+    """
+
+    def setUp(self) -> None:
+        if frame_diagnostic.torch.__name__ == "_tensor_shim":
+            self.skipTest("needs real torch: the shim is float64 and cannot "
+                          "reproduce the float32 case this regresses")
+
+    def test_float32_pure_translation_reports_nan(self) -> None:
+        torch = frame_diagnostic.torch
+        torch.manual_seed(0)
+        base = torch.randn(64, 32)
+        offset = torch.randn(1, 32) * 3.0
+
+        def encode(states, use_target: bool = False):
+            z = states[0]
+            return z + offset if use_target else z
+
+        out = frame_diagnostic.frame_diagnostic(encode, [base], [base + 0.05])
+        r = out["procrustes_residual_ratio"]
+        self.assertNotEqual(r, r, f"float32 pure translation must report nan, got {r}")
+        self.assertGreater(out["centroid_gap"], 1.0,
+                           "the translation must still be visible in centroid_gap")
+
+    def test_invariant_holds_in_float32_across_perturbations(self) -> None:
+        torch = frame_diagnostic.torch
+        torch.manual_seed(1)
+        base = torch.randn(64, 32)
+        for i in range(25):
+            g = torch.Generator().manual_seed(500 + i)
+            pert = torch.randn(32, 32, generator=g) * (0.01 * (1 + i % 10))
+            out = frame_diagnostic.frame_diagnostic(
+                lambda s, use_target=False, p=pert: s[0] + s[0] @ p if use_target else s[0],
+                [base], [base + 0.05])
+            r = out["procrustes_residual_ratio"]
+            self.assertTrue(r != r or r <= 1.0 + 1e-6,
+                            f"perturbation {i}: residual ratio {r} > 1 is impossible")
+
+
 class RotationMagnitudeTests(unittest.TestCase):
     """Pins the one new mathematical claim in the module docstring.
 
