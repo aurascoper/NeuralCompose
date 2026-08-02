@@ -592,7 +592,21 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
-            "format": "neuralcompose.eeg-jepa.v1",
+            # v2 adds target_encoder_state_dict. v1 omitted it, and __init__
+            # deep-copies the target from the encoder AT CONSTRUCTION — before
+            # any load. So a v1 restore leaves the target at its RANDOM
+            # INITIALIZATION: measured, it is byte-identical to the fresh init
+            # (0.00e+00), 2.04 away from the loaded online encoder and 0.39 from
+            # the trained target it should have been.
+            #
+            # That is worse than the "target == online" this was previously
+            # documented as, here and in frame_diagnostic.py and ledger node 14.
+            # target == online holds only if you construct and never load, which
+            # is not what using a checkpoint means. A v1-restored model plans
+            # toward goal latents from an UNTRAINED network — not a lossy
+            # restore, and not the one-frame arm either, but a third thing that
+            # was never an experimental condition at all.
+            "format": "neuralcompose.eeg-jepa.v2",
             "config": asdict(config),
             "state_feature_names": dataset.state_feature_names,
             "action_dim": dataset.action_dim,
@@ -604,6 +618,12 @@ def main() -> None:
             "normalization_log_epsilon": dataset.log_epsilon,
             "encoder_state_dict": model.encoder.state_dict(),
             "predictor_state_dict": model.predictor.state_dict(),
+            # The EMA target is a distinct set of weights, not a derivable one:
+            # update_target_ema mixes at tau=0.99 every step, so it lags the
+            # online encoder by a trajectory that cannot be recovered from the
+            # final online weights. (train.py has no equivalent defect — it
+            # saves model.state_dict(), which already covers every submodule.)
+            "target_encoder_state_dict": model.target_encoder.state_dict(),
             "final_loss": history[-1],
         },
         args.output,

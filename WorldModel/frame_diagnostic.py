@@ -72,14 +72,24 @@ CROSS-ARM PREDICTION (registered): if the gauge story holds, SIGReg arms show a
 ratio at or above VICReg arms, because better isotropy means a freer rotation.
 A LOWER SIGReg ratio falsifies the mechanism.
 
-NOTE ON CHECKPOINTS: this cannot be run from a saved checkpoint.
-`eeg_jepa.py`'s torch.save (:593) persists `encoder_state_dict` and
-`predictor_state_dict` only -- `target_encoder_state_dict` is written nowhere in
-this repo -- and `EEGJEPAModule.__init__` rebuilds the target as
-`copy.deepcopy(self.encoder)` (:327). A checkpoint-loaded model therefore has
-target_encoder == encoder EXACTLY and would report zero mismatch: a false
-negative that reads like a clean result. It must run against a live in-memory
-model, i.e. inside the process that trained it.
+NOTE ON CHECKPOINTS: run this against a live in-memory model, i.e. inside the
+process that trained it.
+
+`eeg_jepa.py` checkpoints are now format v2 and DO persist
+`target_encoder_state_dict`, so a v2 restore is exact. Format **v1** did not,
+and `EEGJEPAModule.__init__` deep-copies the target from the encoder AT
+CONSTRUCTION, before any load — so a v1 restore leaves the target at its RANDOM
+INITIALIZATION.
+
+CORRECTION (2026-08-02): an earlier version of this note, and ledger node 14,
+said a checkpoint-loaded model has `target_encoder == encoder` exactly and would
+report zero mismatch. That is wrong. Measured on a v1 restore, the target is
+byte-identical to the fresh random init (0.00e+00), 2.04 from the loaded online
+encoder and 0.39 from the trained target. `target == encoder` holds only if you
+construct and never load. A v1-restored model plans toward goal latents from an
+UNTRAINED network — not the one-frame arm, and not any condition that was ever
+run. Node 14's numbers are unaffected: `forward_eval.py` contains no
+`torch.load` and trains in-process.
 
 PROVENANCE NOTE: an earlier commit of this file attributed the motivating null
 ("prediction error 4.6x lower, rollout norm ratio 1.20 -> 0.98, control 0/35")
