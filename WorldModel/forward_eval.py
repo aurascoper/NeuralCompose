@@ -318,7 +318,7 @@ def _cem_plan(model, z0_lat, zg_lat, device, *, horizon, cem_iters, n_samples, e
 
 
 @torch.no_grad()
-def _mpc_success(model, train_mean, train_std, device, *, n_episodes=20, horizon=6,
+def _mpc_success(model, train_mean, train_std, device, *, n_episodes=200, horizon=6,
                  cem_iters=3, n_samples=64, elite_frac=0.2, mode="signal",
                  episode_seed=2, goal_offset=0.4, goal_tol=0.15, baseline_reps=100,
                  log_features: bool = False,
@@ -458,7 +458,7 @@ def evaluate(
     batch_size: int = 64,
     rollout_traj: int = 32,
     rollout_len: int = 8,
-    mpc_episodes: int = 20,
+    mpc_episodes: int = 200,
     mpc_horizon: int = 6,
     mpc_cem_iters: int = 3,
     mpc_n_samples: int = 64,
