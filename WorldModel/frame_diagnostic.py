@@ -95,7 +95,19 @@ from __future__ import annotations
 import math
 from typing import Any, Callable
 
-import torch
+try:
+    import torch
+except ModuleNotFoundError:  # pragma: no cover - exercised where torch is absent
+    # Falls back to a pure-Python stand-in so _self_test() runs anywhere,
+    # including CI. It verifies the algorithm, NOT torch-specific behaviour
+    # (SVD sign conventions, float32 accumulation), so a green run here does not
+    # discharge the need to run against real torch before trusting a production
+    # number. Real torch always wins when it is importable.
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    _sys.path.insert(0, str(_Path(__file__).resolve().parent))
+    import _tensor_shim as torch  # type: ignore[no-redef]
 
 # Relative floor for calling a Frobenius norm "zero". Guarding on `> 0` alone
 # lets 1e-14 through and turns the residual ratio into 0/0, which then prints a
