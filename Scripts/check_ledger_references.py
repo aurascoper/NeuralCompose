@@ -162,6 +162,24 @@ def _read_text(path: Path) -> Optional[str]:
         return None
 
 
+def _is_shallow(root: Path) -> bool:
+    """True if this is a shallow clone, where absence proves nothing.
+
+    actions/checkout defaults to fetch-depth 1. In that tree every historical
+    SHA fails to resolve, so an unguarded existence check reports every pinned
+    commit as missing -- confidently, and wrongly. Measured on this repository:
+    a depth-1 checkout turns node 1's two real pins into two hard errors.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--is-shallow-repository"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.stdout.strip() == "true"
+
+
 def _commit_exists(root: Path, sha: str) -> Optional[bool]:
     """True/False if resolvable; None if git itself is unavailable.
 
@@ -207,6 +225,7 @@ def _build_registry(
     check_commits: bool,
 ) -> Tuple[LedgerRegistry, List[Finding]]:
     findings: List[Finding] = []
+    shallow = _is_shallow(root) if check_commits else False
     by_ledger: Dict[Path, Dict[int, Tuple[NodeDefinition, ...]]] = {}
 
     for ledger in sorted(root.glob(LEDGER_GLOB)):
@@ -268,7 +287,19 @@ def _build_registry(
             if check_commits:
                 for sha in shas:
                     exists = _commit_exists(root, sha)
-                    if exists is None:
+                    if shallow and exists is False:
+                        findings.append(Finding(
+                            severity="warning",
+                            code="LEDGER_COMMIT_UNVERIFIABLE_SHALLOW",
+                            path=relative,
+                            line=line_number,
+                            message=(
+                                f"node {number} pins {sha}; cannot verify in a "
+                                "shallow checkout (set fetch-depth: 0 to make "
+                                "this check meaningful)"
+                            ),
+                        ))
+                    elif exists is None:
                         findings.append(Finding(
                             severity="warning",
                             code="LEDGER_COMMIT_UNCHECKED",
@@ -421,7 +452,18 @@ def audit_commit_message(
                 if len(sha) < 7:
                     continue
                 exists = _commit_exists(root, sha)
-                if exists is False:
+                if exists is False and _is_shallow(root):
+                    out.append(Finding(
+                        severity="warning",
+                        code="COMMIT_SHA_UNVERIFIABLE_SHALLOW",
+                        path=relative,
+                        line=line_number,
+                        message=(
+                            f"message cites {sha}; cannot verify in a shallow "
+                            "checkout (set fetch-depth: 0)"
+                        ),
+                    ))
+                elif exists is False:
                     out.append(Finding(
                         severity=severity,
                         code="COMMIT_SHA_UNRESOLVABLE",
