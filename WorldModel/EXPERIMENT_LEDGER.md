@@ -6,10 +6,20 @@ captures *why* the work happened, not just *what* changed. A **negative result i
 
 Sequence: **Integrate → Benchmark → Optimize → Stop.** The loop resumes from the last entry below.
 
+**`Harness:` is mandatory and is not decoration.** Node 26 was drafted comparing a
+rho measured on `ParticleNavigatorEnv`/`mpc.py` against one measured on
+`synthetic_1f`/`forward_eval.py`, and read as though the two spoke to each other.
+They do not: different env, encoder, task and planner. The vocabulary matched at
+every level except the code underneath, because both lines independently built an
+oracle and independently repaired their benchmark. **A node may not compare a
+number against one from a different `Harness:` line without saying so in the same
+sentence.** A third harness (real EEG) is planned, so this will recur.
+
 Entry template:
 ```
 ## <n> — <short title>  (<date>, commit <sha>)
 - Category: Integrate | Benchmark | Test | Optimize | Document
+- Harness: <env> / <eval entry point> / <planner>
 - Hypothesis:
 - Prediction:
 - Implementation:      (files touched; provenance: ported-from / reason / differences)
@@ -144,7 +154,7 @@ Entry template:
   beyond the current default need a `transform` param threaded through the dataset/`evaluate()` path — {log-band-power,
   specparam, 1/f-flatten} require the specparam front-end (Math §11.2); the A/B iteration builds that seam.
 
-## 6 — Transform A/B, arm 1: log-band-power into the encoder (node 33) (2026-07-20, commit <pending>)
+## 6 — Transform A/B, arm 1: log-band-power into the encoder (dialectic node 33) (2026-07-20, commit <pending>)
 - Category: Benchmark
 - Hypothesis: (dialectic node 33) feed the JEPA encoder **log-compressed** 1/f spectral state — the log-band-power
   transform applied at the `JEPATransitionDataset` seam — instead of raw z-scored power, and it improves the forward
@@ -176,169 +186,396 @@ Entry template:
   1/f-flatten} still need the specparam front-end (Math §11.2). Provisional: raw z-scored power may already be the
   right encoder input for forward dynamics.
 
----
+## 7 — Transform A/B, arm 2 audit: "standardize" is the baseline, not a treatment (2026-07-21, commit <pending>)
+- Category: Document
+- Hypothesis: the "standardize" arm listed in dialectic node 33's remaining set is a distinct input-space transform to A/B like `log_features`.
+- Prediction: n/a — a code audit, not an experiment; the outcome is either a distinct transform to build or a redundancy to retire.
+- Implementation: audited the normalization seam `JEPATransitionDataset` (`WorldModel/eeg_jepa.py`). `__init__` (:57) defaults `normalize=True`; with no `mean`/`std` supplied it computes per-feature train stats (`mean = all_states.mean(0)`, `std = all_states.std(0).clamp_min(1e-6)`, :114-115); `__getitem__` z-scores and clamps to `clip_sigma=8.0` (:226). There is no un-standardized path. So the `log_features=OFF` baseline that dialectic node 33 calls "raw z-scored" IS standardization.
+- Evidence: the default dataset already subtracts the per-feature train mean and divides by the per-feature train std (a `state_dim` vector), which is exactly a z-score standardization; a separate "standardize" arm adds nothing over the control.
+- Decision: DROP "standardize" as an A/B arm — it is the control, not a treatment. Dialectic node 33's provisional ("raw z-scored power may already be the right encoder input for forward dynamics") therefore stands as the standing result: standardization is already in force and is the baseline every arm is measured against. No code change; documentation only, so no smoke-test needed.
+- Next question: the next genuinely-distinct, buildable arm is `symlog` — `sign(x) * log1p(|x|)` — a signed log that, unlike `log_features`, handles the negative z-scored values without an epsilon floor and compresses large-magnitude outliers symmetrically. Integrate it at the `JEPATransitionDataset` seam (mirror the `log_features` threading through `evaluate()`'s three dataset constructions) and A/B {symlog off/on} x {signal, nuisance} x seeds. Remaining after: specparam + 1/f-flatten (still blocked on the specparam front-end, Math §11.2).
 
-## 7 — Objective A/B: SIGReg vs VICReg, with an encoder-alignment arm (2026-08-01, commit 208cbcd)
+## 8 — Transform A/B, arm 3: symlog into the encoder (node 7 follow-through) (2026-07-21, commit <pending>)
+- Category: Integrate
+- Hypothesis: symlog — `sign(x) * log1p(|x|)` — log-compresses the heavy-tailed powers like `log_features` but, because `log1p(0)=0`, avoids the epsilon-floor artifact where a zero/near-dead channel maps to `log(1e-6) ~= -13.8`, a large negative outlier the z-score amplifies. If dialectic node 33's rollout/MPC harm came from those epsilon outliers (not from log-compression per se), symlog may recover the chi benefit WITHOUT the forward-metric harm.
+- Prediction: (measured next fire) symlog improves or matches chi vs the standardized baseline while keeping rollout+MPC at least as good as baseline — the pass condition. If it degrades rollout/MPC like `log_features` did, the harm is intrinsic to log-compression, not the epsilon floor.
+- Implementation: added `symlog` to `JEPATransitionDataset` (`WorldModel/eeg_jepa.py`) as a mutually-exclusive-with-`log_features` transform applied pre-normalization (`sign * log1p` on pre/post windows; stats then computed in symlog-space so `__getitem__` normalizes the transformed windows). Threaded `symlog` through `evaluate()` and ALL THREE dataset constructions (train, `_multi_step_rollout`, `_encode_states`/MPC) so train/rollout/MPC share ONE input space. Added `--symlog` CLI + `config.symlog` in the panel + a smoke assertion that the symlog path stays finite end-to-end. `WorldModel/`-only, two files. Smoke test passes with the symlog arm exercised.
+- Evidence: `venv/bin/python WorldModel/forward_eval.py --smoke-test` passes with symlog=True run finite (pred_err/chi/rollout all finite); full A/B pending (launched to background this fire).
+- Decision: PENDING — Benchmark next fire. A/B {symlog off/on} x {signal, nuisance} x seeds {0,1,2}, n=384, 22 epochs, CPU. Keep symlog ONLY if it improves rollout+MPC without degrading chi (same rule as dialectic node 33).
+- Next question: compare symlog's A/B against dialectic node 33's `log_features` numbers (rollout 0.0079 -> 0.0108 WORSE, chi 0.950 -> 0.987 BETTER). Does symlog's zero-preserving log recover the chi gain without the rollout/MPC harm?
+
+## 9 — Transform A/B, arm 3 benchmark: symlog is forward-metric-neutral (2026-07-21, commit <pending>)
 - Category: Benchmark
-- Hypothesis: the ceiling is the training objective. LeJEPA/Laya (arXiv 2511.08544; Laya arXiv 2603.16281)
-  replace heuristic anti-collapse terms with **SIGReg** — a sketched isotropic-Gaussian regularizer — and the
-  identifiability paper (Klindt, LeCun & Balestriero, arXiv 2605.26379) argues an isotropic latent makes
-  Euclidean geometry meaningful, which is what a distance-based planner needs. Swap VICReg's var+cov for
-  SIGReg, hold everything else fixed, and `mpc_success` should move.
-- Prediction (preregistered, before running): if SIGReg does **not** move `mpc_success`, the first hypothesis
-  is that `ParticleNavigatorEnv` falls outside the paper's world class — §3.1/§3.1.1 assume stationary,
-  additive-noise transitions (Ornstein–Uhlenbeck for Gaussian latents), and our walls reflect velocity with
-  `restitution=0.6`, which is neither. That is a better-shaped null than "didn't work."
-- Implementation: `loss.py` (+`SIGRegConfig`, `sigreg_loss`, `epps_pulley_statistic`: Epps–Pulley
-  goodness-of-fit on random 1-D projections per Cramér–Wold, O(batch·proj·freq) — linear in batch, unlike the
-  O(batch²) pairwise form; directions resampled every call so no fixed basis can be gamed). `train.py`
-  (`--objective {vicreg,sigreg}`, dispatch, lazy metric aggregation). Invariance term unchanged on both arms —
-  it is the prediction objective, not anti-collapse machinery; var/cov are still computed under SIGReg as
-  pure diagnostics. **Arm B** (`mpc.py` `goal_latent_from_online_encoder`, default OFF; `sweep.py`
-  passthrough) encodes z_goal with the online encoder instead of `target_encoder`. `env.py`, `dataset.py`,
-  `dataloader.py`, `models.py` untouched; unflagged runs are bit-identical to the historical baseline.
-- **Correction to the motivating argument, recorded so it is not inherited.** Theorem 5.4 (Optimal Latent
-  Planning) requires `ℓ(Rz,a)=ℓ(z,a)` for *all* `R∈O(n)`. Our cost is a distance to an anchor
-  (`Σ‖z−z_goal‖` + `‖z_H−z_goal‖²`), which is **not** invariant under rotating `z` alone — it is equivariant
-  in the *pair*. The natural rescue (both sides encoded, so `Q` cancels) also fails as written, because
-  z_start uses the online `encoder` and z_goal uses `target_encoder`; under EMA those are two different maps.
-  Arm B exists precisely to make them one map. **The theorem was never established to cover this planner**;
-  the experiment is empirical, not theorem-backed.
-- Evidence: 75 epochs, seed 0, MPS; sweeps = 7 `HARD_CASES` × seeds {0,1,2,3,4} = 35 paired trials per arm.
-  - Training side, SIGReg genuinely better: val `inv` 0.0671 → **0.0145** (4.6×); 20-step rollout drift
-    6.4044 (vs random 6.2363, **worse than chance**) → 5.9988 (vs random 6.8152, **better than chance**);
-    rollout norm ratio 1.20 → **0.98**. Zero collapse warnings on either arm. The norm ratio is the
-    mechanism: `relu(gamma − std)` is identically zero once std > 1, so VICReg exerts no downward pressure
-    on scale and the latent inflates; SIGReg pins the distribution. A ×3-scaled batch scores worst of all
-    fixtures under SIGReg (0.513 vs 0.004 for N(0,I)) — VICReg's hinge cannot express this at all.
-  - Control side, **null across every arm**: 0/35 literal successes for all four. Baseline reproduces the
-    historical anchor (0/35, mean_final_distance 1.2854 vs 1.2509; ESS 197.4 vs 207.1/512).
-  - mean_final_distance: VICReg 1.2854 → SIGReg **1.2017** (Δ −0.084, beats base 22/35, t=−0.60) →
-    VICReg+aligned 1.3053 (Δ +0.020, t=+2.02) → SIGReg+aligned **1.0603** (Δ −0.225, 24/35, t=−1.87).
-  - **The means are misleading and the per-case table says so.** SIGReg is bimodal, not uniformly better:
-    corner_pn_to_np 2.211→0.639, large_b 0.547→0.234, large_a 0.830→0.463 (large gains) but
-    corner_np_to_pn 1.623→2.362, corner_nn_to_pp 1.056→1.588, corner_pp_to_nn 2.055→2.542 (large losses).
-    4 cases improve, 3 degrade. Further, the entire A+B gain over A is **one case** (corner_nn_to_pp
-    1.588→0.611); every other case is within ~0.01. And the t-stats are not trustworthy: 5 seeds within a
-    case are correlated, so effective n ≈ 7, not 35 — VICReg+aligned's "significant" t=+2.02 on a +0.02
-    effect is the reductio.
-- Decision: **REJECT for promotion; KEEP the code behind a default-OFF flag.** SIGReg does not move the
-  control metric, and its mean-distance edge is not robust under per-case inspection. This is the **fourth**
-  time this benchmark has caught a change that improves a representation/forward metric while control does
-  not follow (cf. node 6's chi-vs-rollout dissociation) — and the first where the improving metric was the
-  *forward rollout* itself, which is a stronger version of the same trap. Arm B alone does essentially
-  nothing under VICReg (all cases within ~0.01), consistent with the prediction that encoder alignment can
-  only matter once the geometry is isotropic; but the SIGReg+alignment interaction rests on a single case and
-  is not evidence.
-- Next question: two, and the second may matter more.
-  (1) The preregistered follow-up: run an **unbounded-arena variant** (no walls, no restitution) so the
-  dynamics sit inside the additive-noise class. If SIGReg moves control there and not here, the null is about
-  the environment, not the objective.
-  (2) **The benchmark is at its floor and cannot discriminate.** Every arm and both historical anchors score
-  0/35 or 1/35; a metric that returns 0 for every condition carries no signal, and mean_final_distance is
-  doing all the work while varying ±1.9 across cases. Before another objective is tried, the success
-  criterion needs resolution in the regime the arms actually occupy — otherwise the next A/B is unfalsifiable
-  in the same way.
+- Hypothesis: (node 8) symlog recovers log_features' chi gain WITHOUT its rollout/MPC harm, because `log1p(0)=0` removes the epsilon-floor outlier that `log_features` created at dead channels.
+- Prediction: symlog improves-or-matches chi while keeping rollout+MPC at least as good as the standardized baseline.
+- Implementation: ran {symlog off/on} x {signal, nuisance} x seeds {0,1,2}, n=384, 22 epochs, CPU (background nohup, 12 cells).
+- Evidence (pooled OFF -> ON, +/- is seed pstdev):
+  - rollout_mean 0.0120+/-0.0022 -> 0.0122+/-0.0015 (delta +0.0002 — an order of magnitude BELOW the +/-0.0022 seed noise: NO significant change; NOT the +37% harm log_features caused).
+  - mpc_success 0.342+/-0.151 -> 0.358+/-0.137 (delta +0.017, within the large +/-0.15 noise — directionally up, not significant).
+  - chi 0.9501+/-0.0026 -> 0.9545+/-0.0055 (delta +0.0044; chi is the tightest metric — a small consistent gain).
+  Contrast with dialectic node 33 log_features: rollout +37% WORSE, MPC worse. symlog's forward-metric harm is GONE.
+- Decision: DO NOT PROMOTE — symlog stays default OFF, but for a DIFFERENT reason than log_features: not because it harms the forward metrics (it does not — they are flat within noise) but because it does not clearly IMPROVE them (the keep-bar). Chi-only improvement is insufficient (dialectic node 33's lesson: the forward metrics are the objective, not the linear probe). The node-8 hypothesis is CONFIRMED: the epsilon floor was the source of log_features' rollout harm — removing it (symlog) drops the rollout degradation from +37% to ~0.
+- Next question: two arms remain — specparam (periodic+aperiodic) and 1/f-flatten — both blocked on the specparam front-end (Math §11.2), a larger build than a one-line transform. Accumulating result across arms: standardize = baseline (node 7), log_features = reject (dialectic node 33), symlog = neutral (node 9) — NO input-space transform has yet improved the forward metrics over the standardized baseline, strengthening dialectic node 33's provisional "raw z-scored power is already the right encoder input for forward dynamics." Decide next fire: build the specparam front-end, or declare the transform-A/B line converged (raw z-score wins) and pivot.
 
----
+## 10 — Pivot to MPC: expose CEM knobs (user redirect) (2026-07-21, commit <pending>)
+- Category: Integrate
+- Hypothesis: (user redirect, live overnight comm) the transform-A/B line has converged — no input-space transform beats raw z-score (nodes 7/33/9) — so pivot to the WEAKEST forward metric: MPC success barely beats random (~0.34 vs ~0.33). Hypothesis: this is partly a PLANNER-BUDGET limit — the CEM defaults (cem_iters=3, n_samples=64) under-search the action space, so more CEM iterations/samples should lift success WITHOUT touching the predictor.
+- Prediction: raising cem_iters and n_samples improves mpc_success (more planning compute finds better action sequences), up to the ceiling set by predictor quality.
+- Implementation: exposed the CEM knobs (mpc_cem_iters, mpc_n_samples, mpc_elite_frac) through evaluate() and the CLI (they were hardcoded in _mpc_success at 3/64/0.2); added them to the config panel for provenance. WorldModel/forward_eval.py only. Smoke test passes (defaults unchanged).
+- Evidence: single-seed sanity (n=128, 10 episodes, 8 epochs, signal): base (3/64) MPC=0.300 vs rand 0.200; tuned (cem_iters=8, n_samples=192) MPC=0.400 vs rand 0.200 — +0.10 from more planning budget, same predictor. Directionally promising but noisy (1 seed, small n).
+- Decision: PENDING — proper A/B next fire. Launched a background CEM sweep {default (3/64) vs tuned (8/192)} x {signal, nuisance} x seeds {0,1,2}, n=384, 22 epochs. Keep the tuned CEM as the MPC-eval default ONLY if it lifts mpc_success beyond seed noise without hurting rollout/chi.
+- Next question: does the CEM-budget lift survive multi-seed at full scale? If yes, the MPC weakness was under-planning (cheap fix — more CEM budget). If the lift vanishes at scale, the ceiling is the PREDICTOR's latent dynamics, not the planner — which redirects to predictor quality (longer training / better encoder), a bigger lever.
 
-## 8 — Preregistered arena test: the null is not the environment (2026-08-01, commit 90df662)
+## 11 — MPC CEM-budget sweep: the planner is NOT the bottleneck (2026-07-21, commit <pending>)
 - Category: Benchmark
-- Hypothesis: node 7's preregistered explanation for its own null — SIGReg failed to move control because
-  `ParticleNavigatorEnv`'s wall reflection (`vel = -vel * restitution`, restitution 0.6) is nonlinear and
-  non-additive, putting the dynamics outside the world class (arXiv 2605.26379 §3.1/§3.1.1) whose
-  identifiability results motivated the arm. Remove the walls and SIGReg should convert its representation
-  advantage into control.
-- Prediction: SIGReg gains control success in the unbounded arena; VICReg does not, or gains less.
-- Implementation: `env.py` `EnvConfig.bounded` (default True; the wall loop becomes
-  `for dim in range(2) if c.bounded else ()`), threaded as `--unbounded` through `dataset.py`, `sweep.py`,
-  `mpc.py`. Default-off, so every existing path is bit-identical. Fresh dataset generated under the
-  unbounded env, both arms retrained on it (75 epochs, seed 0), both swept. Two arms only — no VISReg, no
-  alignment lever — so the environment is the single changed variable versus node 7.
-  Honest scope, recorded in `env.py`: removing the walls removes the REFLECTION nonlinearity. It does **not**
-  produce an Ornstein–Uhlenbeck process — the dynamics stay a deterministic double integrator with an accel
-  clip and speed cap, with no mean reversion and no process noise.
+- Hypothesis: (node 10) more CEM budget (cem_iters 3->8, n_samples 64->192) lifts mpc_success — the barely-beats-random MPC is under-planning.
+- Prediction: tuned CEM improves mpc_success beyond seed noise (single-seed sanity had shown 0.30 -> 0.40).
+- Implementation: A/B {default(3,64) vs tuned(8,192)} x {signal, nuisance} x seeds {0,1,2}, n=384, 22 epochs (background, 12 cells).
+- Evidence: mpc_success default=0.342+/-0.151 vs tuned=0.325+/-0.144 (delta -0.017, WITHIN the +/-0.15 seed noise — NO lift; if anything marginally down). rollout/chi unchanged (CEM knobs do not touch training). random_baseline=0.292, so BOTH configs beat random by only ~0.03-0.05. Per (mode,seed) the tuned plans are nearly identical to default (e.g. signal-seed1 = 0.55 for both) — more budget finds the SAME plans. The single-seed 0.30 -> 0.40 sanity was NOISE.
+- Decision: REJECT the CEM-budget hypothesis — keep the default CEM (3/64). The planner is NOT the bottleneck; the CEM already extracts near-optimal plans from the predictor. The MPC ceiling (~0.34, barely above 0.29 random) is the PREDICTOR's latent-dynamics accuracy, not planning compute. A negative result that correctly redirects the lever.
+- Next question: does PREDICTOR quality lift MPC? Test a bounded predictor-capacity/training A/B — e.g. epochs 22 -> 44 and/or latent_dim 32 -> 64 — measured on mpc_success. If MPC rises with predictor quality, the latent forward model was under-trained/under-capacity for control. If it stays flat, the synthetic_1f control task may be near its achievable ceiling given the JEPA objective (which optimizes representation, not control) — a deeper design question to ledger, not build (per the stop rule).
+
+## 12 — Predictor-quality sweep: MORE capacity/training HURTS control (2026-07-21, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 11) the MPC ceiling is the predictor's latent-dynamics accuracy, so a bigger + longer-trained predictor (epochs 22->44, latent_dim 32->64) should lift mpc_success.
+- Prediction: pushed predictor improves mpc_success (better latent dynamics -> better plans reach goals).
+- Implementation: A/B {default(22ep,32d) vs pushed(44ep,64d)} x {signal,nuisance} x seeds{0,1,2}, n=384 (background, 12 cells).
+- Evidence: REFUTED and REVERSED. mpc_success 0.342+/-0.151 -> 0.292+/-0.134 (delta -0.050 — pushed lands EXACTLY at the 0.2917 random baseline: control collapses to chance). rollout_mean 0.0120 -> 0.0478 (+0.0358, ~4x WORSE forward error). chi 0.9501 -> 0.9744 (+0.024, BETTER static factor recovery). So a bigger/longer predictor improves the STATIC linear probe (chi) but DEGRADES the forward dynamics (rollout 4x) and control (MPC to chance) — the same dissociation as dialectic node 33's log_features. Confound: epochs and latent_dim moved together; the 4x rollout jump points at latent_dim=64 (a bigger latent is harder to roll out accurately) more than the extra epochs.
+- Decision: REJECT the naive capacity/training lever — keep default (22ep, 32d). Pushing predictor capacity does NOT fix the MPC; it collapses control to chance while polishing the representation. THIRD time the forward-eval has caught a change that helps a static/representation metric but hurts forward dynamics+control (log_features dialectic node 33, predictor-capacity node 12; symlog node 9 was the neutral case).
+- Next question (STOP-and-DEFINE, per the loop stop rule): NO knob in the current design — input transform (nodes 7/9/33), planner budget (node 11), predictor capacity/training (node 12) — lifts control above ~0.34 (barely > 0.29 chance), while every representation-improving change leaves control flat or hurts it. The ceiling is the OBJECTIVE: the JEPA/VICReg loss optimizes representation quality, NOT forward-dynamics-for-control. Fixing control needs a different training signal (an explicit multi-step latent-prediction / model-based-control loss) — a DESIGN decision for the user, not an autonomous overnight build. ONE clean bounded follow-up remains that is not a new-objective build: decouple the confound (epochs-only 44/32 vs latent-only 22/64) to confirm latent_dim is the control-killer. Do that once, then declare the knob-tuning line CONVERGED and park.
+
+## 13 — Decoupling: epochs and latent_dim hit DIFFERENT metrics (corrects node 12) (2026-07-21, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 12) the 4x rollout jump in the pushed predictor was driven by latent_dim=64; isolate epochs-only vs latent-only to confirm.
+- Prediction: latent_only(64d) shows the 4x rollout blow-up AND the MPC collapse; epochs_only(32d) stays near default.
+- Implementation: A/B {epochs_only(44,32) vs latent_only(22,64)} x {signal,nuisance} x seeds{0,1,2}, n=384, vs the node-12 default(22,32) anchor (mpc 0.342, rollout 0.0120, chi 0.9501).
+- Evidence — a clean TRIPLE DISSOCIATION that REFUTES node 12's attribution:
+  - epochs_only(44,32): rollout 0.0120 -> 0.0494 (4x WORSE) but mpc 0.342 -> 0.333 (UNCHANGED), chi ~flat (0.947).
+  - latent_only(22,64): rollout 0.0120 -> 0.0105 (UNCHANGED) but mpc 0.342 -> 0.217 (CRASHES to BELOW the 0.292 random baseline), chi 0.950 -> 0.970 (BETTER).
+  So MORE EPOCHS blows up the rollout metric (multi-step prediction overfits) while control is robust to it; the BIGGER LATENT crashes control (MPC below chance) while leaving rollout fine and chi better. Node 12's "the 4x rollout fingers latent_dim" was WRONG — the 4x rollout was EPOCHS; the MPC collapse was LATENT_DIM.
+- Decision: KEEP default (22ep, 32d) — confirmed optimal among the knobs. Two findings: (1) rollout_error and mpc_success are driven by DIFFERENT knobs and are NOT interchangeable proxies — rollout can worsen 4x with zero control effect (epochs), and control can crash with zero rollout effect (latent). (2) latent_dim -> MPC harm WITH rollout flat and chi up is the sharpest representation-vs-control dissociation yet: a higher-dim latent is a BETTER representation (chi) and an equally-good 1-step predictor (rollout) yet a WORSE substrate for goal-conditioned planning — the goal-latent distance geometry degrades with dimension even as the encoding improves.
+- Next question: NONE that is a bounded build — the knob-tuning line is CONVERGED. Across nodes 7-13, no input transform, planner budget, predictor epochs, or latent dim improves control above ~0.34 (barely > 0.29 chance); every representation-improving change is neutral-to-harmful for control. The ceiling is (a) the JEPA objective (optimizes representation, not control) and (b) the goal-latent-distance planning geometry. Both fixes are DESIGN decisions for the user — a model-based-control training signal, and/or a control-aware goal metric — explicitly NOT autonomous overnight builds (per the stop rule; coupled-spaces/hyperbolic also OUT). PARK the WorldModel knob line here; the morning owner picks the next objective.
+
+## Review clarifications (PR #22 code-review, 2026-07-21)
+Two reviewers verified the delivered synthetic A/Bs are sound (symlog threaded identically into train/rollout/MPC-encode; stats computed in-space; mutual-exclusion enforced; CEM knobs effective). Fixes applied from the review:
+- Finding A (provenance, MEDIUM): added `mpc_elite_frac` to the `forward_eval.py` config panel — node 10 claimed all three CEM knobs were logged for provenance but `elite_frac` was missing. The node-11 sweep held it at the 0.2 default, so those numbers are unaffected; the gap only meant a future elite_frac arm would be indistinguishable in the panel.
+- Finding B (latent trap, MEDIUM): added `--symlog` to the real-data trainer `eeg_jepa.py` (+ threaded into the train and val constructions) — it had `--log-features` but not `--symlog`, so a future real-EEG symlog A/B through that entry point would have silently trained the baseline. `forward_eval.py` (the synthetic path this branch actually ran) was already complete, so no delivered result is affected.
+- Finding C (accuracy, no code change): symlog is applied to the raw NON-NEGATIVE power windows (pre-normalization), so `sign(x)=+1` and `symlog == log1p` here; the "handles negative z-scored values" phrasing in node 8 is moot for this feature space. The REAL and delivered distinction from `log_features` is the absent epsilon floor (`log1p(0)=0` vs `log(1e-6)=-13.8`), so the node-8/9 conclusion stands unchanged.
+
+## 14 — Frame mismatch is real, enormous, and NOT the cause of the control null (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: `_mpc_success` plans across two encoders — `z0` from the ONLINE encoder (`forward_eval.py:317`), `zg` from the TARGET encoder (`:319`) — while the goal state differs from the start state in `pos` ALONE (`:316`, at most `goal_offset=0.4`). If those two maps, tied only by an EMA at `tau=0.99`, disagree by more than a 0.4 position shift moves the latent, then the planner's cost is dominated by a constant offset it cannot reduce by acting, and control cannot improve however good the predictor gets. Sub-hypothesis: an isotropic objective leaves the rotational gauge maximally free (for orthogonal R, `z ~ N(0,I)` implies `Rz ~ N(0,I)`), so the disagreement should be largely ROTATIONAL.
+- Prediction (pre-registered in `frame_diagnostic.py` before any number existed, and in commit 8533ea8): `mismatch_to_displacement_ratio > 1.0` means the frame offset exceeds the entire goal signal; `< 0.3` rejects the hypothesis. `procrustes_residual_ratio < 0.2` means mostly rotational (the free gauge); `> 0.5` means rotation is NOT the mechanism.
+- Implementation: `WorldModel/frame_diagnostic.py` + a 12-line hook in `_mpc_success` that reuses the SAME `_encode_states` path the planner uses, on the SAME matched start/goal pairs. Cannot run from a checkpoint — `torch.save` (`eeg_jepa.py:593`) persists `encoder_state_dict` and `predictor_state_dict` only, and `__init__` rebuilds the target as `copy.deepcopy(self.encoder)`, so a loaded model reports zero mismatch: a false negative reading as a clean result. Run config: `n=384, epochs=22, mode=signal, latent_dim {32,64}, seeds {0..4}`, torch 2.13.0+cpu, 12 threads. 10 runs.
+- Evidence — the hypothesis is CONFIRMED as geometry and REFUTED as cause:
+  - **Ratio A/B: median 70.64 (32d) and 86.68 (64d), range 27.96–120.57 across all 10 runs.** The step-0 cost is ~70x the goal signal it is supposed to read. Threshold was 1.0; exceeded by one to two orders of magnitude in every single run.
+  - **`procrustes_residual_ratio` 0.956–0.976 (median 0.970 / 0.962).** Threshold for "rotational" was < 0.2; observed > 0.5 everywhere. **The gauge sub-hypothesis is FALSIFIED.** `rotation_from_identity` is 0.574–0.665, so the frames ARE rotated by ~70–80 degrees — but rotating does not reduce the residual, so rotation is present and is not the cause.
+  - **`centroid_gap` 0.83–2.51 against total mismatch 1.26–3.09: ~75–80% of the disagreement is a pure TRANSLATION** between the two encoders' outputs, which is what an EMA-lagged mean produces. SIGReg and VISReg constrain rotational gauge and distribution shape; NEITHER addresses a mean offset. The registered cross-arm prediction (SIGReg ratio >= VICReg ratio) is therefore moot, not merely unmet.
+  - **Remedy test (EXPLORATORY, not pre-registered): encoding the goal with the ONLINE encoder drives A/B to 0 by construction and does NOT rescue control.** 32d: 0.350+/-0.114 -> 0.360+/-0.116, paired delta +0.010 (2/5 up, 2/5 down). 64d: 0.300+/-0.084 -> 0.370+/-0.075, paired delta +0.070 (4/5 up, 0/5 down) — inside the +/-0.084 seed spread, and landing at 0.370 against a random baseline of 0.350, i.e. still chance.
+  - **The benchmark cannot resolve this.** `random_baseline_success` ranges **0.15 to 0.45 across five seeds** at `mpc_episodes=20`, while every arm sits at ~0.35. A chance baseline swinging +/-0.15 cannot resolve a 0.07 effect. This is measurement, not preference.
+- Decision: **REJECT frame mismatch as the explanation for the control null, and KEEP the diagnostic.** The mismatch is real and large, so `_encode_states`' two-encoder split is a genuine defect in the planner's geometry — but removing it entirely leaves control at chance, so it is not the binding constraint. Also **DROP the isotropy/gauge line as a route to control**: the disagreement is a translation, and no isotropic regularizer addresses translations. This is the fourth time (nodes 9, 11, 12, 13) a representation-side change has been measured and found not to reach control, and the first where the mechanism was measured precisely enough to be excluded rather than merely not-supported.
+- Next question: NOT another objective. **The benchmark's resolving power is now the blocker, and it is measured rather than asserted** — a random baseline varying 0.15–0.45 at n=20 episodes cannot adjudicate any regularizer. Repair that first, specified blind (using only the existing MSE baseline and the zero/random policies, never a candidate arm) and required to separate zero from random from MSE on existing data before adoption. A scale-only vs SIGReg vs VISReg comparison run on this benchmark as it stands would be unfalsifiable in exactly the way this node was almost allowed to be.
+
+## Corrections to node 14 (2026-08-02)
+
+- **Correction A (factual, does not change node 14's result).** Node 14's Implementation section says a checkpoint-loaded model "reports zero mismatch: a false negative reading as a clean result", on the grounds that `target_encoder == encoder`. That is wrong, and the truth is worse. `EEGJEPAModule.__init__` deep-copies the target from the encoder **at construction, before any load**, so a format-v1 restore leaves the target at its RANDOM INITIALIZATION. Measured: after loading `encoder_state_dict` into a fresh module, the target is byte-identical to that module's own random init (0.00e+00), **2.04** away from the loaded online encoder and **0.39** from the trained target it should have been. `target == encoder` holds only if you construct and never load, which is not what using a checkpoint means. A v1-restored model plans toward goal latents produced by an **untrained** network — not the one-frame remedy arm, and not any condition that was ever run.
+- **Node 14's measurements stand.** `forward_eval.py` contains no `torch.load`; it trains in-process via `train_jepa`, so nothing it reported came from a restored checkpoint. Only the parenthetical account of the hazard was wrong.
+- **Consequence for the benchmark repair.** The registered acceptance criterion — that the repair must separate zero from random from MSE *on existing data* — cannot be run against v1 checkpoints at all. It would be scoring an untrained goal encoder. `eeg_jepa.py` now writes format **v2** with `target_encoder_state_dict`; a v2 restore is exact (verified: max parameter difference 0.00e+00 against the original target). Acceptance runs must use v2 checkpoints or run in-process.
+- **Correction B (measurement, refines node 14's "0.15 to 0.45" reading).** That swing was attributed to the episode-limited binomial noise of estimating the baseline at one draw per episode. Decomposed, it is roughly **half** that and half genuine episode-set difficulty, because `starts` and `goal_pos` are redrawn from `random.Random(seed)` so each seed scores a different episode set. Holding the episode set fixed and varying only the random draw: sd **0.0750** at reps=1, **0.0054** at reps=100, **0.0022** at reps=500. Varying the episode set with reps pinned at 100: sd **0.0853**, essentially the original spread. So raising reps removes one half for the price of env steps — the baseline touches no encoder, predictor or CEM — and decoupling the episode seed from the model seed is required for the other half.
+
+## Corrections to node 14, part 2 (2026-08-02)
+
+- **Node 14's `success_rate` values are superseded, deliberately.** Per-episode CEM generators change the planner's sampling noise, so the recorded 32d/64d rates no longer reproduce. The EPISODE SET for model-seed 0 is unchanged — `evaluate()` previously passed `seed = model_seed + 2` and the new fixed `episode_seed` is 2 — but every seed now scores that same set, where before each scored its own. Node 14's *conclusions* are untouched: the frame ratio, the Procrustes residual and the one-frame remedy were all measured within a run, not across seeds.
+- **The baseline is now a constant.** Across 10 runs (2 latent dims x 5 seeds) `random_baseline_success` is 0.303 for every one, against 0.254-0.483 before. It is a property of the episode set, as it should be, and no longer contributes anything to arm-vs-baseline comparisons.
+- **The per-episode CEM generator is not cosmetic.** A single generator consumed sequentially made the planning noise on episode i depend on the draws taken by episodes 0..i-1, i.e. on `n_samples * cem_iters * horizon`. Any arm touching a CEM knob got different noise on the same episode. Nodes 10 and 11 swept exactly those knobs. That sweep was therefore not the paired comparison it appeared to be — it is not necessarily wrong, but its "within seed noise" reading rested on an assumption that did not hold.
+- **The continuous endpoint helps, by less than predicted.** Measured paired, ld32 vs ld64 on identical episodes and identical planner noise: mean |t| of 0.62 for the per-episode binary against 0.88 for per-episode `log(d_final/d_start)`, a factor of **1.43**, implying median n for |t|=2 of ~248 versus ~154. A power simulation had suggested nearer 3-4x. Only 3-8 of 20 pairs are discordant, which is why the binary endpoint is weak and is the mechanism the simulation got roughly right while overstating the size. Both endpoints are now returned per episode so this can be recomputed rather than re-derived.
+- **`log_distance_ratio_mean` is reported, NOT adopted as the adjudicator.** Switching the primary endpoint in the same change that repins the episode set would confound the two. Adoption is a separate pre-registered decision, and it still has to clear the blind criterion: separate zero from random from MSE on existing data.
+
+## 15 — Benchmark repair: what it bought, and the power claim it refuted (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 14) the control benchmark cannot resolve a 0.07 effect because its chance baseline swings 0.15-0.45 across five seeds. Repairing the noise sources — persist the EMA target, pin the baseline, fix the episode set, give each episode its own planner stream, adopt a paired continuous endpoint, raise n — should make it able to adjudicate.
+- Prediction: each repair removes an identified noise source, and |t| for a real effect then grows as sqrt(n).
+- Implementation: `eeg_jepa.py` checkpoint format v2; `forward_eval.py` `baseline_reps` (100), `episode_seed` (2, replacing a `seed` that tracked the model seed), a `torch.Generator` per episode, per-episode `log(d_final/d_start)` and `final_distance_per_episode`, `n_episodes` 20 -> 200.
 - Evidence:
-  - Unbounded training: VICReg val `inv` 0.0567, SIGReg **0.0063** (9×). Rollout drift now far better than
-    chance on BOTH arms (3.72 vs random 7.46; 3.99 vs 7.50) — removing the walls made the dynamics much more
-    predictable, as expected.
-  - Control: VICReg **4/35 (11.4%)**, mean_final_distance 1.7298; SIGReg **0/35 (0.0%)**, 1.3611.
-  - Case-level paired (n=7 independent cases; five seeds within a case vary only MPPI candidate draws and are
-    NOT independent environments): mean Δ final_distance (SIGReg − VICReg) = **−0.369**, sd 1.996, se 0.754,
-    **t = −0.49**, SIGReg closer on 3/7 cases. No effect.
-  - **All four VICReg successes come from one case** (`large_c` 4/5). Every other case is 0/5 for both arms.
-- Decision: **The preregistered hypothesis is REFUTED.** The node 7 null was not caused by the wall
-  nonlinearity. SIGReg scores 0/35 in both arenas, and in the unbounded arena it is 9× better at one-step
-  prediction while being *worse* on literal success than VICReg. Two consequences:
-  (1) The prediction-vs-control dissociation is now much stronger than node 7 showed. In node 7 the improving
-  metric was the forward rollout; here BOTH arms have healthy better-than-chance rollouts and 9× separation
-  in prediction error, and control does not follow either. **One-step prediction quality and rollout quality
-  are close to decoupled from control success in this harness.** That is the fifth instance of the pattern
-  and the most direct one — it points at the planner/metric, not the objective.
-  (2) The n=35 paired t-statistics in node 7 were overstated, as suspected. Node 7's best arm showed t=−1.87
-  over 35 trials; the correct unit (n=7 cases) gives t=−0.49 here with a per-case sd of 2.0 against a mean of
-  0.37. **Report case-level paired differences from now on; never treat seeds within a case as independent.**
-- Next question: benchmark repair, before any further objective work. The unbounded arena did buy *some*
-  resolution (VICReg 0/35 → 4/35), confirming the bounded box contributed to the floor — but it is one case
-  out of seven, which still cannot discriminate between arms. Design a preregistered control measure with
-  resolution in the regime the arms actually occupy (the per-case final distances span 0.10–4.84), then
-  re-examine.
-  **VISReg (arXiv 2606.02572) is deliberately NOT run yet.** Its symmetric scale term
-  `mean_j (1 − sigma_j)²` targets exactly the inflation node 7 found — and its authors motivate it by
-  SIGReg's "vanishing gradients under collapse" and failure to decouple scale from shape. But SIGReg already
-  pinned scale here (norm ratio 1.20 → 0.98), and neither collapse nor residual scale drift was the observed
-  blocker, so VISReg would most likely become the *sixth* representation-side improvement this benchmark
-  cannot resolve. It also cannot help with the Theorem 5.4 obstruction: an isotropic objective leaves the
-  orthogonal gauge maximally unconstrained (`z ~ N(0,I)` ⟹ `Rz ~ N(0,I)`), so it can never establish that the
-  online and target encoders share a frame. Correct order: repair the benchmark, then run
-  {symmetric-scale-only, SIGReg, VISReg} so "scale stabilization" and "full distribution shape" are separable.
+  - **Noise sources removed, measured.** Baseline sampling sd **0.0750 -> 0.0054** at reps=100. Baseline across 10 runs (2 latent dims x 5 seeds) **0.254-0.483 -> 0.303 for every run**. Episode sets across seeds **5 distinct -> 1, byte-identical**. `random_baseline_stderr` **0.0761 -> 0.0250** at n=200, against a sqrt(10)=3.16 prediction and a measured factor of 3.04.
+  - **Cost is nil.** Wall clock is flat at ~1.1s from n=20 to n=200; the run is dominated by training, not by the MPC block. n was never a compute decision.
+  - **THE POWER CLAIM IN THE PREVIOUS ENTRY IS REFUTED.** That entry reported "median n for |t|=2: binary ~248, log-ratio ~154", extrapolated from a paired ld32-vs-ld64 comparison at n=20. Scaling n directly shows |t| does NOT grow — 0.88, 0.21, 0.81, 0.54 at n = 20, 50, 100, 200. That is the null distribution: ld32 vs ld64 has no real effect, so no n reaches |t|=2 and a required-n extrapolated from it is meaningless. The 1.43x sensitivity RATIO at fixed n stands (it compares two endpoints on identical data); the required-n figures do not.
+  - **Against a KNOWN effect (2 epochs vs 22), the endpoints separate sharply.** log-ratio |t| = 0.43, 0.80, 0.76, **1.48** at n = 20, 50, 100, 200, tracking its sqrt(n) prediction of 0.43, 0.69, 0.97, 1.38. Binary |t| = 0.94, 0.63, 0.62, **0.68** — flat. Thresholding at `goal_tol` destroys the effect, so **more episodes buy the binary endpoint nothing at any n**.
+  - **The repaired benchmark is still underpowered.** At n=200, against a deliberately large effect (an eleven-fold difference in training), the continuous endpoint reaches only |t| = 1.48. Extrapolating on the sqrt(n) behaviour it does exhibit, |t|=2 needs n ~ 365; on 3 seeds that estimate is itself noisy.
+- Decision: **KEEP all six repairs** — every one removes a measured noise source and n=200 is free. **DO NOT declare the benchmark repaired.** It can now adjudicate a large effect at n~400; it cannot adjudicate the 0.07-scale effects the objective A/B line cares about, and raising n alone will not get there because the binary endpoint does not respond to n. Adopting `log_distance_ratio_mean` as the adjudicator is now a prerequisite rather than an option, and remains a separate pre-registered decision that must still clear the blind criterion.
+- Next question: the ceiling is now `goal_tol` and the horizon, not the sample size. A success criterion that discards the distance it is computed from cannot be fixed by more episodes. Before any regularizer A/B: decide the adjudicating endpoint under the blind criterion, and re-examine whether `goal_tol=0.15` at `horizon=6` leaves any resolvable signal at all. Also outstanding — nodes 10 and 11 swept CEM knobs under the shared-generator defect, so their paired reading did not hold; re-running them is cheap and would either confirm "the planner is not the bottleneck" on sound footing or overturn it.
+
+## 16 — CEM-budget sweep re-run on the repaired benchmark: node 11 confirmed, its point estimate refuted, and a worse finding underneath (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 15) nodes 10 and 11 swept CEM knobs under the shared-generator defect — one `torch.Generator` consumed sequentially, so planning noise on episode i depended on `n_samples * cem_iters * horizon`. Any arm changing a budget knob got different noise on the same episode, so node 11's "within seed noise" reading rested on a comparison that was not paired. Re-run it with per-episode generators, a fixed episode set, n=200 and the continuous endpoint.
+- Prediction: node 11's conclusion (more budget does not lift control) either survives on sound footing or is overturned.
+- Implementation: `default(cem_iters=3, n_samples=64)` vs `tuned(8, 192)`, x {signal, nuisance}, seeds 0-4, `n=384`, 22 epochs, latent_dim 32, `episode_seed=2`, `n_episodes=200`. Trivial-policy controls (zero-action and random-action) computed on the same episode construction.
+- Evidence:
+  - **Node 11's CONCLUSION SURVIVES.** More CEM budget does not lift control: 0/5 seeds reach paired |t| = 2 on either endpoint in either mode. Mean paired |t| for signal is 0.86 binary / 0.48 log; for nuisance 0.85 / 0.89.
+  - **But its seed spread was 14x too wide, and its POINT ESTIMATE HAD THE WRONG SIGN.** Node 11 reported default 0.342+/-0.151 vs tuned 0.325+/-0.144, delta **-0.017** — tuned slightly worse. Repaired: signal default **0.335+/-0.011** vs tuned **0.360+/-0.016**, delta **+0.025**; nuisance 0.337+/-0.023 vs 0.354+/-0.025, delta **+0.017**. The +/-0.15 that node 11 called seed noise was mostly the benchmark's own defects, and the direction it reported was noise. A conclusion can be right while every number supporting it is not.
+  - **THE PLANNER ENDS FARTHER FROM THE GOAL THAN IT STARTED.** `log(d_final/d_start)` is POSITIVE in all 20 runs: signal +0.108 (default) / +0.082 (tuned), nuisance +0.128 / +0.097. Mean final distance is ~9-14% GREATER than the starting distance.
+  - **And it is worse than doing nothing.** Zero-action on the same episodes gives +0.034 (signal) / +0.029 (nuisance); random-action +0.046 / +0.060. Paired per-episode, planner minus zero-action is positive in **6/6** mode x seed comparisons (deltas +0.055 to +0.155, sign test p ~ 0.03), though only 1/6 individually clears |t| = 2. Same direction against random-action, 6/6.
+- Decision: **KEEP node 11's decision (reject the CEM-budget lever) and REPLACE its evidence.** The lever genuinely does not work, now measured with a seed spread of +/-0.011 rather than +/-0.15. **REFRAME the open question.** Nodes 11-15 asked why the planner fails to beat chance; that framing is too generous. On the distance endpoint it is consistently worse than taking no action at all, which is not what an uninformative planner looks like — an uninformative planner scores like the zero policy. Something is systematically pointing it away from the goal.
+- Next question: this is a directional defect, not a power problem, and it is cheap to localise. Candidates, in order: (a) the goal latent, already known from node 14 to sit ~70x further from the start latent than the goal displacement warrants, so the cost gradient may point almost anywhere; (b) sign or axis convention between the latent displacement and the action applied in `_step`; (c) the predictor's rollout diverging over `horizon=6` so the minimised cost is computed on a state that does not correspond to the executed trajectory. Test (b) first — it is a one-line check and would explain the sign exactly. NOTE that node 14's one-frame remedy did NOT fix control, so (a) alone is not sufficient.
+
+## 17 — The control defect localised: the predictor under-represents the action by ~3.5x (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 16) the planner is worse than the zero policy, so something is systematically pointing it away from the goal. Node 16 named a sign/axis convention between the latent displacement and the action applied in `_step` as the cheapest discriminating test.
+- Prediction: if a sign error exists, the displacement the planner produces is anti-correlated with the displacement it needs.
+- Implementation: read `_step` and `generate` for convention; computed the EXACT reachable set (the dynamics are linear in the actions, so the reachable interval is base +/- sum of per-action-coefficient magnitudes); ran the trained planner on the fixed 200-episode set and compared needed against produced displacement; measured predictor sensitivity to action versus state in latent space and against the true env.
+- Evidence:
+  - **The convention is consistent and there is NO sign error.** `generate` records the action that produced the transition (`_step(z, action, mode)` -> `post`), so training sees the true mapping. Measured on 200 episodes: correlation(needed displacement, produced displacement) = **+0.0375**, sign agreement **45.5%** against a 50% +/- 7% chance interval. A sign error would give strong negative correlation. **Candidate (b) from node 16 is REFUTED.**
+  - **The task is feasible; this is not a reachability problem.** Action authority is a half-width of **0.459** (median) against a median **0.207** to be closed, and the goal is reachable within `goal_tol` in **200/200** episodes in both modes. Uncontrolled drift is only 0.077-0.112.
+  - **The planner uses ~16% of the authority it has.** Mean |produced| **0.0734** against mean |needed| **0.2224** and a reachable half-width of 0.459.
+  - **ROOT CAUSE: the action barely exists in latent space.** Full action swing (-1 -> +1) moves the predicted latent **0.1378** while different states are **2.2613** apart — the action is **6.1%** of the state signal. In the TRUE env the same swing moves `pos` by 0.1200 against a state sd of 0.5640 — **21.3%**. The predictor therefore **under-represents the action by ~3.5x**, and in the true env actions beat drift 5.66x. There is ample control authority; it is attenuated on the way into the latent.
+- Decision: **REJECT node 16's "systematically pointing it away" reframing, and REPLACE it.** The planner is not adversarial, it is uninformative — and an uninformative planner that still ACTS scores worse than the zero policy, because uncorrelated displacement added to a position increases expected distance. That fully accounts for node 16's "worse than doing nothing" with no directional defect. Node 16's claim that "an uninformative planner scores like the zero policy" was wrong: that holds only for a planner emitting zero actions. The MEASUREMENT in node 16 stands; the inference drawn from it does not.
+- This also reconciles the whole nodes 6-16 arc. Every representation-side change was measured against metrics dominated by the per-trajectory factors (`chi`, `peak_amp`, `offset`), which are constants and easy to encode. `pos` — the only variable control acts on — is the one the encoder represents weakly (node 13: latent-to-position r ~ 0.63). Improving `chi` recovery while `pos` stays weakly encoded improves the panel and cannot improve control. The planner was never the bottleneck (node 11, confirmed in node 16), the objective was not the bottleneck (node 14), and the frame offset was not sufficient (node 14) — the ACTION CHANNEL is.
+- Next question: this is a training-signal problem, not a planner, objective or benchmark problem. The one-step JEPA target gives the action a 6% footprint in a latent whose variance is dominated by frozen per-trajectory factors. Bounded, ordered candidates: (a) train the predictor on MULTI-STEP transitions so the action's compounded effect is visible in the target; (b) scale the action's authority per step (`DT`, or an action gain) so one step carries a larger footprint; (c) an action-conditioned auxiliary loss that requires the latent to predict the action from a (pre, post) pair — a direct measurement of how much action information the representation retains, and a candidate for the panel regardless. Test (c) FIRST: it is diagnostic rather than corrective, it needs no retraining of anything else, and it converts "the action is 6% of the signal" into a number the panel reports every run.
+
+## 18 — Action-conditioned probe: the representation retains NO recoverable action information (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 17) the action is under-represented in latent space — the predictor moves only 6.1% of the state signal across the full action range against 21.3% in the true env. A held-out linear probe recovering the action from a (z_pre, z_post) pair should therefore score well below its true-state ceiling.
+- Prediction: latent action recovery is positive but far below the ceiling.
+- Implementation: `_action_recovery` in `forward_eval.py` — held-out linear-probe R^2 per action dimension from `[z_pre, z_post]`, 80/20 split with a bias column, matching `_factor_recovery`. Added to the panel. Two controls come free: `action[2]` is the mode bit, which `_step` never reads, so it MUST score at or below zero; and the same probe on the TRUE (pre, post) states gives the ceiling.
+- Evidence — **the prediction was too generous. Recovery is not low, it is absent.**
+  - **Ceiling, from the true states:** `ay` **R^2 = 1.0000** (exact — the algebra is linear: `ay = (pos' - pos - vel'*DT) / (0.5*DT)`), `ax` 0.7096 (short of 1.0 only because `decay` depends on `chi`, making `vel*decay` a product a linear probe cannot form).
+  - **From the latent pair: `ax` -0.1676, `ay` -0.1199.** Negative R^2 is worse than predicting the mean — the representation carries **nothing** a linear probe can use. Not the ~6% node 17 implied; zero.
+  - **Both controls behave.** `mode_bit` -0.2600 (latent) and -0.0547 (true state), i.e. unrecoverable as it must be. `z_pre` alone, which cannot see the transition, gives -0.1183 / -0.0845.
+  - **THE MECHANISM IS THE ENCODER, AND `vel` IS THE SHARPEST NUMBER IN THIS LEDGER.** Factor recovery: `peak_amp` **0.9971**, `chi` **0.9498**, `offset` 0.6856, `pos` 0.6537, **`vel` 0.0326**. The three near-perfect factors are per-trajectory CONSTANTS. The two that EVOLVE are the two worst, and `vel` — the channel `ax` acts through — is at zero. `ax` is therefore unrecoverable in principle: recovering it needs `vel` and `vel'`, and neither is encoded.
+  - **For `pos` the arithmetic is just as decisive.** R^2 0.6537 against sd 0.5812 leaves an encoder residual of **0.342**, while the one-step action effect on `pos` is **0.120** — a signal-to-noise ratio of **0.35**. The action's fingerprint is a third the size of the encoder's own noise on the only variable it can move.
+- Decision: **ADOPT `action_recovery` into the panel permanently**, with the `mode_bit` negative control asserted in `smoke_test` — mutation-checked: leaking the target makes `mode_bit` score 1.000 and the assertion fires. **REPLACE node 17's "under-represents by ~3.5x" with "does not represent at all".** Node 17 measured the PREDICTOR's response to an action it receives as an explicit input; this measures whether the ENCODED TRANSITION retains which action was taken. The second is the load-bearing quantity and it is zero, which also means node 17's 6.1% predictor response is fitting noise rather than a weak signal.
+- This closes the nodes 6-17 arc. Control was never reachable from any representation-side change, because the encoder discards the action's effect and encodes the frozen per-trajectory factors nearly perfectly instead. Every panel metric that improved was measuring the constants. `vel` at R^2 = 0.033 was visible in every run since node 3 and was never read as a control result.
+- Next question: this is now a `_render_state` / encoder-capacity question, not a planner, objective, benchmark or predictor question. Ordered and bounded: (a) check whether `vel` is even present in the rendered observation — if the spectral window at a fixed `t` does not carry velocity, no encoder can recover it and the task is unobservable rather than hard, which would be a generator defect and would retire the entire control line as specified; (b) if it IS present, raise the encoder's capacity for the evolving factors, e.g. by feeding a two-window stack so a difference is representable; (c) only then revisit multi-step training targets. Test (a) FIRST — it is a read of `_render_state` plus one probe, and it decides whether the remaining candidates are worth anything.
+
+## 19 — Channel ablation: ax is inert, ay is harmful, and the generator explains both (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 18) the representation retains no recoverable action information. Ablating the CEM action space should separate the channels. **H1** (velocity is the missing variable): zeroing `ax` costs nothing and `ax` alone performs like random. **H2** (horizon/authority is binding): both ablations degrade and neither matches full.
+- Prediction: REGISTERED BEFORE RUNNING — discriminator is |A - FULL| against |B - FULL|; H1 predicts the first small and the second large, H2 predicts both comparable.
+- Implementation: in `_cem_plan`'s returned plan, zero column 0 (`ay_only`) or column 1 (`ax_only`). 200 fixed episodes, `episode_seed=2`, per-episode generators, no retraining. Plus an EXACT optimal controller — the dynamics are linear in the actions, so the optimum is a clamped linear solve — in full / ay-only / ax-only variants, as a reachability ceiling.
+- Evidence:
+
+  | arm | log(d_f/d_0) | vs FULL | success |
+  |---|---|---|---|
+  | MPC full | +0.0886 | — | 35.0% |
+  | MPC ay_only (ax=0) | +0.0971 | **+0.0086** | 36.5% |
+  | MPC ax_only (ay=0) | +0.0374 | **-0.0512** | 33.5% |
+  | random | +0.0402 | -0.0483 | 34.5% |
+  | zero | +0.0341 | -0.0545 | 37.0% |
+  | ORACLE full | -11.11 | | **100.0%** |
+  | ORACLE ay_only | -8.72 | | **91.5%** |
+  | ORACLE ax_only | -4.52 | | **73.5%** |
+
+  - **H1 CONFIRMED, H2 REFUTED.** |A - FULL| = 0.0086 against |B - FULL| = 0.0512, a six-fold separation. Removing `ax` costs nothing, so `ax` was already inert; `ax` alone lands on random/zero. The channels separate, so horizon/authority is not the binding constraint.
+  - **THE DEFICIT IS REPRESENTATIONAL, NOT REACHABILITY — the pre-registered discriminator.** `ax` alone is worth **73.5%** success to an exact controller. `ax` alone is worth **33.5%** to MPC, which is below the 37.0% of doing nothing. The authority exists and the planner cannot use it.
+  - **NEW: all of MPC's harm is in `ay`, the channel it CAN partly see.** `ay_only` reproduces full MPC (+0.0971 vs +0.0886); `ax_only` collapses to the zero policy (+0.0374 vs +0.0341). So MPC only ever acts through `ay`, and those actions are uncorrelated with need (node 17: r = +0.04), which is strictly worse than not acting. Both channels fail, for different reasons: `ax` is unrepresentable (`vel` R^2 = 0.033), `ay` is representable but at SNR 0.35 so the choices are noise.
+  - **Zero-action beats MPC on BOTH endpoints** — 37.0% vs 35.0% success, +0.0341 vs +0.0886 log-ratio.
+- **THE GENERATOR EXPLAINS IT** (finding contributed by review; verified here independently). `_render_state` does carry velocity — `c1 = beta * (1.0 + 0.10 * z["vel"])` — but as a 10% modulation on `beta = 10^offset * 21^(-chi)`. Variance decomposition over 4000 samples: `c0` task share **0.845%**, `c1` task share **0.0106%** — `pos` gets an ~80x larger share than `vel`. (Review reported 1.15% and 0.05% by a different freeze-point; magnitudes differ, conclusion identical.) And `chi`/`peak_amp`/`offset` are held constant per trajectory, so predicting them at t+1 is exact and free. The JEPA loss is therefore minimised by encoding the nuisance, and VICReg's variance term rewards the directions carrying the most batch variance — which are the held factors. **Node 18's `vel` R^2 = 0.033 is not a training failure; it is the correct behaviour of a working objective on a generator that made the task variable 0.01% of the signal.**
+- **Velocity is not destroyed.** `vel = 10 * (c1 / betaPower - 1)` exactly — max error 2e-15 over 4000 samples. It is a ratio of two observed channels: nonlinear, hence invisible to the linear probe that caps at R^2 = 0.033, but trivially within an MLP's reach. Nothing prevents the encoder learning it; nothing rewards it.
+- Decision: **CLOSE the representation-objective line as specified.** No representation objective can encode a variable the generator made 0.01% of the observed variance while paying a variance penalty for ignoring the other 99.99%. This is a generator design fault, not an encoder, planner, objective or benchmark fault. Nodes 6-18 were measuring the wrong thing correctly.
+- Next question: repair the generator, under node-14 blind discipline. Two candidates, NOT equivalent: **(1)** raise the velocity modulation depth — cheapest, but it is a knob, and tuning it until an arm wins is unfalsifiable; **(2)** let `chi`/`offset` vary within-trajectory — removes the free-prediction subsidy that makes the nuisance attractive without touching velocity's coefficient, and changes what the objective is REWARDED for rather than what it is SHOWN. Prefer (2). Either way: specify using only oracle/random/zero, never a candidate arm, and require the repaired generator to reproduce the existing ladder ordering (oracle > ay-oracle > ax-oracle > zero ~ random ~ MPC) before any arm is rerun. Add to the acceptance gate an assertion that a probe on the RAW observation recovers `vel` above a floor, so a future generator edit cannot silently reintroduce this.
+
+## 20 — Generator repair attempt: within-transition nuisance jitter FAILS, structurally (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 19) `chi`/`peak_amp`/`offset` are held constant per transition, so predicting them at t+1 is exact and free; the JEPA loss is therefore minimised by encoding the nuisance. Jittering `chi`/`offset` between the pre- and post-window should remove that subsidy WITHOUT touching velocity's coefficient — changing what the objective is REWARDED for rather than what it is SHOWN. Node 19 preferred this over raising the velocity depth precisely because the latter is a knob that could be tuned until an arm wins.
+- Prediction: acceptance criteria G1-G4 registered BEFORE implementing. Jitter depth fixed at **0.10 — the constant `_render_state` already uses for the pos/vel modulation**, chosen by symmetry with the file's own value, explicitly not tuned. Registered rule: FAIL any gate = revert, do not adjust the constant.
+- Implementation: `_jitter_held` perturbing `chi` and `offset` multiplicatively for RENDERING ONLY, drawn independently for the pre- and post-windows. `_step` untouched, so dynamics, reachable set and the exact oracle are identical. `peak_amp` deliberately left fixed, matching node 19's scope.
+- Evidence:
+  - **All four gates PASSED.** G1a `vel = 10*(c1/betaPower - 1)` exact to 2.33e-15 (jitter cancels in the ratio, as predicted). G1b raw-observation linear probe recovers `vel` at R^2 0.3605 (>= 0.30; was 0.386). G2 ladder bit-identical — ORACLE full 100.0% > ay 91.5% > ax 73.5% > zero 37.0% ~ random 34.5%. G3 `alphaPower` post-from-pre fell 1.000 -> 0.9709 (< 0.99). G4 `chi` still recoverable at 0.6653 (> 0.50).
+  - **And the outcome was a clear REGRESSION.** Paired, 3 seeds each, identical apart from the constant:
+
+    | metric | jitter=0 | jitter=0.10 | delta |
+    |---|---|---|---|
+    | `pos` | +0.6065 | +0.3118 | **-0.2947** |
+    | `vel` | +0.0227 | -0.0280 | -0.0508 |
+    | `chi` | +0.9566 | +0.9306 | -0.0260 |
+    | `peak_amp` | +0.9947 | +0.9814 | -0.0133 |
+    | `ax` | -0.0467 | -0.3264 | -0.2797 |
+    | `ay` | -0.2305 | -0.4947 | -0.2642 |
+
+    It degraded the TASK factors by 10-20x more than the NUISANCE factors — the exact inverse of its intent. `pos` halved; `chi` and `peak_amp` barely moved.
+  - **MECHANISM: the task factors are multiplicative modulations ON the nuisance carriers.** `c0 = alpha * (1 + 0.10*pos)` with `alpha = f(chi, peak_amp, offset)`. Carrier sd is **0.220**; the entire `pos` contribution is **0.0270** — a leverage of **8.2 : 1**. Perturbing the carrier by 10% injects 0.0259, i.e. **96% of the whole task signal**. The intervention put noise directly into the channel carrying the signal.
+  - **NO USABLE DEPTH EXISTS — this is structural, not mistuned.** Sweeping depth against G3 and against the injected-noise-to-task-signal ratio: 0.01 -> R^2 0.9997 (G3 fails), noise 0.10x; 0.05 -> 0.9932 (fails), 0.48x; 0.10 -> 0.9731 (passes), 0.96x; 0.20 -> 0.8953 (passes), 1.97x. **The minimum depth that removes the subsidy already injects noise the size of the entire task signal.** There is no window.
+- Decision: **REVERTED, per the registered rule, without adjusting the constant.** `synthetic_1f.py` is unchanged on main; this node is the record. **REJECT node 19's preferred repair (2) — not as mistuned but as structurally unavailable**, and note that its stated advantage over repair (1) does not survive: raising the velocity depth improves SNR directly, whereas jittering the carrier degrades it, so (1) is now the better of the two even though it remains a knob.
+- **THE GATE DESIGN WAS INSUFFICIENT, and that is the transferable lesson.** G1-G4 verified that the information is present in the raw observation and that the control task is unchanged. Neither is the same as "a model can still learn it". A repair can pass every raw-signal check and still halve what the encoder recovers. **Add G5 to any future generator change: factor recovery for `pos` and `vel` under the INCUMBENT objective must not degrade.** Training the incumbent is permitted under the blind rule — node 14 excludes candidate arms, not the existing baseline — and G5 would have caught this before the outcome measurement.
+- Next question: the fault is the generator's STRUCTURE, not its constants. Task factors are small multiplicative modulations riding on large nuisance carriers, so any perturbation of the carrier is amplified 8.2x relative to the signal, and any attempt to suppress the nuisance suppresses the task with it. The candidate is therefore structural: give `pos` and `vel` their OWN additive observation channels, independent of `alpha`/`beta`, so the task signal is not a rounding error on a nuisance carrier and the two can be perturbed independently. That is a larger change than either node-19 candidate and needs its own pre-registration, including G5.
+
+## 21 — Additive task channels: the representation is fully repaired and control does NOT follow (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 20) the fault is the generator's STRUCTURE. Task factors were small multiplicative modulations riding on large nuisance carriers, so the signal was a rounding error and the nuisance could not be perturbed without destroying it. Giving `pos`/`vel` their own additive channels, independent of `alpha`/`beta`, should let the encoder represent them and the planner use them.
+- Prediction: G1-G5 registered BEFORE implementing, **including G5, the gate node 20 was missing**.
+- Implementation: `_render_state` only — `c0 = alpha*(1 + 0.10*pos)` becomes `c0 = 1.0 + pos`, likewise `c1` for `vel`. `_step` untouched. **No tunable constant introduced**: `JEPATransitionDataset` z-scores every feature on train statistics, so any gain divides straight back out; the `1.0` is a DC offset for positivity that the same z-scoring removes. Restores `_render_state`'s own stated intent — its comment already claimed these two channels carry the task factors.
+- Evidence — **every gate passed, the representation is transformed, and control is unmoved.**
+  - **G1** raw-observation probe: `pos` R^2 **1.0000**, `vel` **1.0000** (>0.99). **G2** oracle ladder BIT-IDENTICAL — 100.0 / 91.5 / 73.5 / 37.0 / 34.5 — confirming dynamics untouched. **G4** `chi` still recoverable at 0.6849. **G3** as declared: `alphaPower` post-from-pre remains 1.000, the free-prediction subsidy is NOT addressed by this change and must not later be called new.
+  - **G5 (the new gate) passes by a wide margin**, 3 seeds:
+
+    | factor | node 20 baseline | after | |
+    |---|---|---|---|
+    | `pos` | 0.6065 | **0.9824** | task |
+    | `vel` | 0.0227 | **0.9740** | task |
+    | `chi` | 0.9566 | 0.7660 | nuisance |
+    | `peak_amp` | 0.9947 | 0.8859 | nuisance |
+
+    The encoder inverted its priorities exactly as intended: task factors up, nuisance down. `vel` went from unencoded to near-perfect.
+  - **Action recovery is transformed.** `ax` **-0.1676 -> +0.8309**, `ay` **-0.1199 -> +0.3709**, with `mode_bit` still at -0.2807, so the negative control holds. Node 18's "no recoverable action information" is fully resolved. The `ay` < `ax` asymmetry is expected: `ay` moves `pos` by `0.5*ay*DT = 0.05*ay` while `ax` moves `vel` by `ax*DT = 0.1*ax`, a larger share of `vel`'s range.
+  - **The frame offset improved 16x without being targeted.** Node 14's A/B ratio **70.6 -> 4.25**, `centroid_gap` 1.10 -> 1.34, `procrustes_residual` 0.97 (unchanged, still non-rotational).
+  - **AND CONTROL DID NOT MOVE.** `mpc_success` **0.353 +/- 0.034** against a random baseline of **0.361**; log-ratio **+0.0582** against zero-action's **+0.0341**. Still at chance, still worse than doing nothing.
+  - **The planner remains uninformative on a representation that now contains what it needs.** correlation(needed, produced) **-0.0206** (node 17: +0.0375), sign agreement **49.0%** (45.5%), and it still produces **0.069** of the **0.222** displacement required — 31%, essentially unchanged from node 17's 33%.
+- Decision: **KEEP the repair.** It passed every pre-registered gate, fixed a real and measured defect, and made the benchmark's task factors observable as its own comment always claimed. **But nodes 17-19's diagnosis is now NECESSARY BUT NOT SUFFICIENT.** The action channel was genuinely broken and is genuinely fixed; control did not follow. The bottleneck is downstream of the representation.
+- **This is the third defect found, fixed, and followed by no change in control** — the frame offset (node 14, remedied, no effect), the benchmark's resolving power (node 15, repaired, still underpowered), and now the action channel (nodes 17-19, repaired, no effect). Each was real. None was binding. That pattern is itself the finding: the control failure is not a single broken component.
+- Next question: the remaining untested link is the PREDICTOR'S MULTI-STEP ROLLOUT, and it now has evidence rather than suspicion. Measured after the repair, rollout error compounds **11.3x to 17.4x** from h=1 to h=8 (1-step 0.0010-0.0016 -> h=8 0.0173-0.0290) while `horizon=6`. A CEM plan feeds the predictor its own output for six steps, so the cost being minimised is computed on a state that may not correspond to the trajectory actually executed. Test it directly and cheaply: score the CEM against a rollout that uses the TRUE env instead of the predictor, on the same episodes and plans. If control jumps, the predictor's rollout is the bottleneck; if it does not, the fault is in the cost or the goal latent, not the forward model.
+
+## 22 — The control failure is an INTERACTION: neither the forward model nor the frame fixes anything alone (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 21) the representation is now fully repaired — `pos` 0.98, `vel` 0.97, `ax` 0.83 — and control is still at chance, so the bottleneck is downstream. Rollout error compounds 11.3x-17.4x from h=1 to h=8 while `horizon=6`, so the predictor's multi-step rollout was the named suspect: a CEM plan may be scored on a state that does not match the trajectory executed.
+- Prediction: replace `_cem_plan`'s latent rollout with a rollout through the TRUE env, same episodes, same CEM structure, same per-episode generators. If control jumps, the forward model is the bottleneck; if not, the fault is in the cost or the goal latent.
+- Implementation: a fast batched encoder replacing `_encode_states` (which writes JSONL per call, far too slow for ~38k encodes) — **verified against `_encode_states` to 9.5e-07 before use**. `episode_seed=2`, n=200, NS=64, IT=3, EF=0.2, horizon 6.
+- Evidence:
+  - **The forward model is NOT the bottleneck.** Perfect dynamics with the incumbent latent cost: **35.0% -> 37.5%**, against zero-action's 37.0%. Replacing the predictor with the true environment buys nothing.
+  - **The COST is where the gap lives.** Perfect dynamics with a true-position cost: **93.5%**, log-ratio **-4.2251**. So the executed trajectory can reach the goal; minimising `||enc(s_H) - z_goal||^2` simply does not correspond to minimising `|pos_H - goal|`.
+  - **The frame offset is why** — node 14's A/B ratio is still **4.25** post-repair, above its own registered >1.0 threshold, so the offset still exceeds the goal signal fourfold.
+  - **AND IT IS AN INTERACTION. Neither fix does anything alone:**
+
+    | | goal via TARGET encoder | goal via ONLINE encoder |
+    |---|---|---|
+    | **predictor rollout** | 35.5% | **35.0%** |
+    | **true-env rollout** | 37.5% | **76.0%** |
+
+    (predictor rows 3 seeds; true-env rows seed 0, n=200 episodes.) Fixing the frame alone: 35.5% -> 35.0%, nothing. Fixing the dynamics alone: 35.5% -> 37.5%, nothing. **Both together: 76.0%**, two-thirds of the way to the 93.5% ceiling.
+- Decision: **The control failure has THREE necessary conditions and no sufficient one.** A representation that carries the task and the action (node 21), a goal latent produced by the SAME encoder as the start, and a forward model accurate enough over the planning horizon. Fixing any one leaves control at chance, which is precisely why nodes 6-21 produced null after null while each individual diagnosis was correct.
+- **This resolves node 14 retrospectively.** Its one-frame remedy was tested and found to do nothing — correctly measured, and the right conclusion given what was then known. It did nothing because the representation was broken (`pos` 0.65, `vel` 0.033, action unrecoverable) AND the predictor rollout was inadequate. The remedy was necessary all along and could not show it alone. **No single-variable experiment could have found this**, and the ledger ran seventeen of them.
+- Next question: the deployable configuration still fails — under the predictor rollout the one-frame goal changes nothing (35.5% -> 35.0%), so shipping the frame fix alone would be pointless. The remaining gap is the predictor's multi-step accuracy, now the ONLY untreated condition and no longer a suspect among several. Bounded and ordered: (a) train the predictor on multi-step rollouts rather than single transitions, so h=6 error is optimised rather than inherited from h=1; (b) re-measure the 2x2 — the honest gate is that predictor+one-frame must approach the 76% that true-env+one-frame achieves, not merely beat chance; (c) only if (a) fails, revisit whether latent-space MPC is the right architecture, which is a design decision for the user rather than an autonomous build, per the node-13 stop rule.
+
+## 23 — Multi-step predictor training: it WORKS, and control still does not move (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 22) the control failure has three jointly-necessary conditions and only the predictor's multi-step accuracy is untreated. Training the predictor on K-step rollouts should reduce compounding error, and with the one-frame goal the deployable configuration should approach the 76% that true-env + one-frame achieved.
+- Prediction: M1-M5 registered before implementing, with M5 (multi-step error must improve) as the point of the change and node 22's 76% as the outcome gate. Registered rule: fail any gate = revert, do not tune K and retry.
+- **BLOCKER FOUND FIRST, and it is a finding in its own right: the corpus contains NO TRAJECTORIES.** `generate()` samples a fresh state per record (`synthetic_1f.py:104`), so record i's post window is unrelated to record i+1's pre window. There was no multi-step ground truth anywhere in the data — nothing to train a multi-step predictor against and nothing to validate one on. Node 22's named next test was not runnable as specified. Implementation therefore needed two changes: `generate(..., trajectory_length=K)` emitting linked records with `trajectoryId`/`stepIndex`, and `train_jepa(..., rollout_steps=K)` rolling the predictor K times on its own output and scoring only the K-th latent.
+- Evidence:
+  - **M1 PASS** — `generate(64,"signal",0)` byte-identical to the pre-change generator, hash `8f74f84ac5aaebe2`. The defaults are the incumbent, so the comparison is a flag flip.
+  - **M2 PASS** — with K=8, post==pre WITHIN a trajectory and NOT across a boundary, both directions asserted.
+  - **M3 PASS** — oracle ladder bit-identical, 100.0 / 91.5 / 73.5 / 37.0 / 34.5.
+  - **M5 PASS, decisively — the mechanism works.** h=8 rollout error **0.02311 -> 0.00546**, a 4.2x reduction against the node-21 baseline and **5.7x** against the trajectory corpus at K=1.
+  - **M4 FAIL.** `pos` recovery **0.9725** against a registered floor of 0.9824. Attributed rather than excused, by separating the two changes:
+
+    | corpus | K | pos | vel | h=8 |
+    |---|---|---|---|---|
+    | single-transition (node-21 baseline) | 1 | 0.9824 | 0.9740 | 0.02311 |
+    | trajectory | 1 | 0.9818 | 0.9709 | 0.03116 |
+    | trajectory | 6 | **0.9725** | **0.9896** | **0.00546** |
+
+    The corpus change costs essentially nothing; the multi-step LOSS trades -0.009 `pos` for +0.019 `vel` and the 5.7x rollout gain. A trade, not a regression — but M4 was registered as a hard floor and it was not met.
+  - **AND NODE 22's OUTCOME GATE FAILS.** Deployable configuration, predictor rollout, 3 seeds: TARGET goal **36.3%**, ONLINE goal (one-frame) **36.3%**, against zero-action's 37.0% and a gate of "approach 76%". Cutting rollout error 5.7x moved control by nothing, and the one-frame goal is still worth zero under the predictor.
+- Decision: **REVERTED per the registered rule, without tuning K.** `synthetic_1f.py` and `eeg_jepa.py` are unchanged on main; this node is the record. Reverting is also right on the merits: the change adds a corpus mode and two parameters for no demonstrated benefit, and node 20 set the precedent.
+- **NODE 22's THREE-CONDITION MODEL IS NOW IN DOUBT.** It predicted that treating the last untreated condition would approach 76%. The condition was treated — measurably, 5.7x — and control did not move. Two readings remain and they are distinguishable: either (a) the residual gap between 0.00546 rollout error and the true env's exact zero is still decisive, in which case control is a near-discontinuous function of forward-model error and the 76% arm was only ever reachable with perfect dynamics; or (b) the three-condition model is incomplete and a fourth condition is unidentified. Node 22's 2x2 cannot separate these because its true-env arm used EXACT dynamics, not merely better ones.
+- Next question: **measure control as a function of rollout error directly**, rather than adding another candidate fix. Interpolate between the learned predictor and the true env — e.g. roll the true env but inject calibrated noise at each step, sweeping the injected magnitude across the range spanned by 0.00546 (multi-step trained), 0.0231 (incumbent) and 0 (exact). If control collapses somewhere between 0 and 0.00546, reading (a) holds and the requirement is a far more accurate forward model than any training change here will deliver — which is itself a design finding about latent-space MPC. If control stays flat until the error is large, reading (b) holds and there is a fourth condition still unfound. This is one sweep with no new model and it adjudicates a question five nodes have now circled.
+
+## 24 — The fourth condition is RANK PRESERVATION, and MSE does not deliver it (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 23) node 22's three-condition model predicted that treating the forward model would approach 76%; it was treated (rollout error cut 5.7x) and control did not move. Two readings remained: **(a)** the residual gap between 0.00546 and exact zero is still decisive, so control is near-discontinuous in forward-model error; **(b)** a fourth condition is unidentified. Node 22's 2x2 could not separate them because its true-env arm used EXACT dynamics, not merely better ones.
+- Prediction: sweep control against INJECTED latent error on an otherwise-perfect rollout, spanning the measured error levels. If control collapses below 0.00546, (a) holds. If it degrades gracefully, (b) holds.
+- Implementation: true-env rollout, one-frame goal, Gaussian noise added to the encoded final latent at swept magnitude. Per-dimension sd converted to the reported MSE scale, and to a latent distance as `sqrt(d * MSE)` with d=32, against the measured goal signal.
+- Evidence:
+  - **Latent goal signal:** median `||enc(start) - enc(goal)||` = **0.5303**. The incumbent's rollout error corresponds to a latent distance of **0.860 — 1.62x the entire goal signal**; the multi-step-trained model's to **0.418 = 0.79x**.
+  - **READING (a) IS REFUTED. Control degrades gracefully:**
+
+    | noise sd | equiv MSE | error/signal | success |
+    |---|---|---|---|
+    | 0.000 | 0 | 0.00 | 80.5% |
+    | 0.040 | 0.00160 | 0.43 | 81.0% |
+    | **0.074** | **0.00548** | 0.79 | **77.0%** (multi-step level) |
+    | 0.100 | 0.01000 | 1.07 | 72.0% |
+    | **0.152** | **0.02311** | 1.62 | **65.0%** (incumbent level) |
+    | 0.250 | 0.06250 | 2.67 | 59.0% |
+
+    At the INCUMBENT's own error magnitude, random error still yields **65.0%** — where the real predictor yields **35.0%**. Magnitude is not the explanation. Even error 2.67x the goal signal leaves control at 59%.
+  - **THE FOURTH CONDITION IS RANK PRESERVATION.** Over 120 episodes x 64 candidates: Spearman(predictor cost, true LATENT cost) = **+0.389** median, but Spearman(predictor cost, true POSITION cost) = **-0.018** median — zero. The predictor ranks candidates acceptably in latent space and its ranking is uncorrelated with the objective that decides success. Only **60.8%** of episodes reach even rho > 0.3 against the latent cost.
+  - **Why injected noise is benign and the predictor is not:** random noise perturbs each candidate INDEPENDENTLY, so the ordering survives in expectation and the CEM's elite set stays informative. A predictor whose error is structured — concentrated in the 31 latent directions that do not encode position, while the one direction that does is swamped — destroys the ordering at ANY MSE. The two failure modes are not comparable by magnitude, which is precisely why five nodes of accuracy-improving repairs changed nothing.
+- Decision: **REJECT "improve the forward model's accuracy" as a route to control**, and with it the framing that has driven nodes 19-23. MSE over a 32-dimensional latent rewards average accuracy across dimensions dominated by the frozen factors; the planner needs correct ORDERING along the single direction that encodes position. Accuracy is neither necessary nor sufficient for that — 65% from noisy-but-rank-preserving, 35% from accurate-but-rank-destroying, at the same error magnitude.
+- **This vindicates node 13's parked conclusion, three years of nodes later.** Node 13 named "a control-aware goal metric" as one of two fixes and explicitly reserved it as a DESIGN decision for the user rather than an autonomous build. Nodes 14-23 pursued the other branch — representation, benchmark, frame, action channel, forward model — found five real defects, fixed four, and moved control by nothing. The measured reason is now on record.
+- Next question: this is a design decision, not a bounded build, and per the node-13 stop rule it belongs to the user. The measured requirement is a training signal that optimises RANKING with respect to the control objective rather than reconstruction error in latent space — e.g. a contrastive or ranking loss over candidate rollouts, or a cost anchored on a decoded task variable rather than on full-latent distance. One bounded thing IS available first and should precede any of it: verify the remaining link by measuring Spearman(true latent cost, true position cost) directly. Node 22 showed the true latent cost yields 76%, so that correlation should be substantial; if it is NOT, the latent cost is a weaker proxy than node 22 implied and the goal metric is the defect rather than the predictor's use of it.
+
+## 25 — The goal metric is ALSO a defect: the latent cost ranks at rho = 0.25 at its best (2026-08-02, commit <pending>)
+- Category: Benchmark
+- Hypothesis: (node 24) the bounded check before any design decision — node 22 showed the TRUE latent cost yields 76%, so Spearman(true latent cost, true position cost) should be substantial. If it is NOT, the goal metric is the defect rather than the predictor's use of it.
+- Prediction: substantial correlation, given 76% success.
+- Implementation: 150 episodes x 64 random candidates x 3 seeds, TRUE-env rollouts so no predictor is involved. Spearman within each episode between `||enc(s_H) - z_goal||^2` and `|pos_H - goal|`, for both goal encodings.
+- Evidence — **the prediction was wrong; the metric is weak even at its best**:
+
+  | goal latent | median rho | mean rho | rho > 0.5 | rho < 0 | node 22 success |
+  |---|---|---|---|---|---|
+  | one-frame (online goal) | **0.2514** | 0.2735 | 22.4% | 17.8% | 76.0% |
+  | incumbent (target goal) | 0.1570 | **0.0744** | 26.7% | **41.3%** | 37.5% |
+  | predictor cost (node 24) | **-0.018** | — | — | — | 35.0% |
+
+  - **The latent metric is a WEAK proxy at its best.** Even one-frame reaches only rho = 0.25. It still yields 76% because the CEM needs only to find a good candidate among 64, and a rho of 0.25 enriches the elite set enough — but the metric is not measuring what success measures.
+  - **The two-encoder frame does not merely weaken the ranking, it INVERTS it.** With the target-encoded goal, mean rho collapses to 0.074 and **41.3% of episodes have NEGATIVE correlation** — in four episodes in ten the incumbent cost ranks candidates backwards. That is the mechanism behind node 22's 76% vs 37.5%, and it is worse than "a weaker signal": it is a signal with the wrong sign nearly half the time.
+- Decision: **THERE ARE TWO INDEPENDENT COST DEFECTS, not one.** (i) the latent distance is a weak proxy for the control objective, rho ~ 0.25 at best, and (ii) the predictor destroys even that, rho -0.018. Node 24 correctly rejected forward-model ACCURACY as the lever and named rank preservation; this refines it. **A perfectly rank-preserving predictor on this metric would cap near 76%, not the 93.5% ceiling.** The remaining ~17.5 points are the goal metric's own weakness and no forward-model change can recover them.
+- **The complete measured chain, ceiling downward:** true position cost 93.5% -> true latent cost, one frame (rho 0.25) 76.0% -> true latent cost, two frames (rho 0.074, 41% inverted) 37.5% -> predictor cost (rho -0.018) 35.0%. Each step is a measured loss with a named cause.
+- Next question: unchanged in kind and now fully specified. This is the design decision node 13 reserved for the user, and both halves of it now have numbers. A control-aware goal metric must lift rho from 0.25; a rank-preserving training signal must stop the predictor driving it to zero. **They are separable and should be attempted separately**, since fixing only the predictor caps at 76% and fixing only the metric leaves the predictor destroying it. The one-frame goal is a prerequisite for either — it is free, it removes a 41.3% sign inversion, and nodes 22 and 25 both show it is necessary though not sufficient.
 
 ---
 
-## 9 — Benchmark repair: the planner is the binding constraint, not the objective (2026-08-01, commit 60433e8)
-- Category: Test
-- Hypothesis: node 8 left the control benchmark unable to discriminate — every objective arm scored 0/35 and
-  five consecutive representation improvements moved it not at all. Before another objective is tried, find
-  out whether `reached` is measuring anything.
-- Prediction: the binary criterion lacks resolution near the achievable ceiling, and a graded measure will
-  separate arms that the binary collapses to zero.
-- Implementation: `mpc.py` — `oracle_action` (PD on TRUE state, `ORACLE_KP=ORACLE_KD=2.0`) plus
-  `policy="oracle"`; `best_distance` / `initial_distance` / `normalized_progress` added to `run_episode`'s
-  result. `sweep.py` — `--policy`, graded metrics in rows and in the aggregate line.
-  `benchmark_reference.py` (new) — runs oracle/random/zero/mpc over the same `HARD_CASES` and **rejects the
-  measure** (exit 1) if the oracle fails to separate from random/zero. Case-level aggregation throughout, per
-  node 8. All additions are default-off or additive: the unflagged `sweep.py` path still reports
-  `0/35, mean_final_distance=1.2854`, identical to node 7.
-- Evidence:
-  - **The prediction was wrong about the diagnosis, and the truth is worse.** A two-line PD controller reaches
-    **7/7 cases in 21–33 of the 50 available steps**, stably across gains {(1.0,1.5),(2.0,2.0),(3.0,2.5)}.
-    The task is not near any ceiling — it is trivially feasible, and latent MPC scores 0/35 on something a
-    reference controller solves with 17 steps to spare. `0/35` was never "no resolution near the ceiling";
-    it was "the planner fails."
-  - Measure validation (bounded, VICReg ckpt), case-level: oracle `reached` 1.000 / progress **0.961**;
-    mpc 0.000 / **0.392**; random 0.000 / **0.233**; zero 0.000 / **0.000**. The binary collapses three of
-    four policies to zero; `normalized_progress` orders all four correctly. Measure accepted.
-  - **mpc sits at 21.8% of the usable oracle-to-random span.**
-  - Applied to the objective arms, case level (n=7): BOUNDED mean Δ (SIGReg − VICReg) = **+0.081**, sd 0.327,
-    **t=+0.66**, better on 4/7. UNBOUNDED **+0.047**, sd 0.522, **t=+0.24**, better on 4/7. Both null.
-  - Per-case swings dwarf the arm difference: SIGReg ranges +0.694 to −0.270 (bounded) and +0.713 to −0.749
-    (unbounded). Case identity explains far more than objective choice.
-  - Sanity checks that the measure behaves: oracle scores identically in both arenas (0.961 — it goes straight
-    to the goal and never touches a wall), while random drops 0.233 → 0.121 unbounded (reflections were
-    accidentally returning it toward the goal).
-- Decision: **Benchmark repaired and the repair changed the conclusion.** The measure now demonstrably
-  discriminates, and with resolution restored the objectives *still* do not differ — so this is now an
-  informative null rather than a floor artifact. The binding constraint is the **planner**: it captures about
-  a fifth of what the task admits, and closing that gap is not something any representation objective can do.
-  Five representation-side improvements produced no control movement because control was never
-  representation-limited here.
-  Note the binary criterion is not itself broken — it cleanly separates oracle from everything else. Its
-  defect is narrower: it cannot rank policies that all fall short, which is the entire regime the arms occupy.
-- Next question: the objective line is **closed** until the planner is addressed; running
-  {symmetric-scale-only, SIGReg, VISReg} now would measure a component that is not limiting. The open
-  question is why MPPI over a latent that rolls out better than chance still captures only ~20% of the span —
-  candidate explanations, in the order I would test them: (1) the horizon-10 budget cannot represent a ~22-step
-  maneuver, so no candidate sequence in the batch ever encodes the solution; (2) the latent distance is too
-  weak a proxy to rank candidates (the standing `r≈0.63`); (3) the cost's goal anchor is in a different
-  frame from the rollout (the node 7 obstruction, still unresolved and untouched by any isotropic objective).
-  (1) is cheap and testable immediately by sweeping horizon against the oracle's 21–33-step solution times.
+## 26 — RETRACTED BEFORE COMMIT: a cross-harness comparison, and the branch that produced it (2026-08-03, commit <pending>)
+- Category: Document
+- Harness: n/a — this node is about two harnesses being conflated
+- Hypothesis: a draft node 26 claimed to resolve node 25's branch (i). It reported that a
+  nonlinear head on a frozen latent reads `rho = 0.938` where the incumbent
+  `norm(z - z_goal)` reads `0.43`, and set that against node 25's `rho ~ 0.25` — concluding
+  the goal metric's FORM is the defect and the representation is adequate.
+- Prediction: two were registered before the run and both were wrong, which is the only part
+  of the draft worth keeping. Reviewer predicted `rho 0.8-0.9` for a learned head; operator
+  revised to `~0.4` after seeing a LINEAR head at `+0.483`, on the argument that the latent
+  lacked velocity. The MLP reached `+0.938`. The linear result measured **linear
+  decodability**, not information content — a robustness check was the only thing that caught
+  it before it was reported as a conclusion.
+- Implementation: **the defect.** Every number in the draft came from `ParticleNavigatorEnv` +
+  `mpc.py` (MPPI, `HARD_CASES`, the PD reference controller) on checkpoints trained on that
+  env. Node 25 measured on `synthetic_1f` + `forward_eval.py` (CEM, 150 episodes x 64
+  candidates). Different env, encoder, task and planner. `rho 0.938` and `rho 0.25` were never
+  comparable and the draft's central sentence set them side by side.
+- Evidence — how a conflation survived two careful readers:
+  - `grep` over this ledger, nodes 0-25: `synthetic_1f` 14, `forward_eval` 14, `cem_iters` 8;
+    `ParticleNavigator` **0**, `mpc.py` **0**, `sweep.py` **0**, `HARD_CASES` **0**, `MPPI` **0**.
+  - **Both lines independently built an oracle and independently repaired their benchmark.**
+    Line A: node 19's action-channel ablation ladder (ORACLE full 100%) and node 15's
+    `log(d_final/d_start)` with per-episode generators. Line B: a PD controller reaching 7/7 in
+    21-33 of 50 steps, and a graded `normalized_progress` validated against oracle/random/zero.
+    The vocabulary matched at every level except the code underneath, which is precisely why
+    neither reader caught it from the prose.
+  - **The tell was present and was explained away.** A review correction moved the true-state
+    control input from 5-d to 6-d. A 6-d state of position/velocity/goal is TWO-dimensional;
+    `synthetic_1f`'s `pos` and `vel` are scalars. The dimensionality mismatch was pointing at a
+    harness mismatch and was filed as an arithmetic slip instead.
+  - **A numbering collision had the same root.** This branch forked at `611b07e` when the
+    ledger genuinely ended at node 6, then appended its own 7, 8, 9 while `origin/main`
+    independently reached 25. The mismatch was flagged three times and each time adjudicated
+    between two machines rather than against their shared upstream, which was one `git fetch`
+    away throughout.
+- Decision: **RETRACT the draft; do not re-file it silently.** The MEASUREMENT is real and the
+  method is sound — it simply measures Line B, where node 25's question was never asked.
+  **Line B (`ParticleNavigatorEnv`/MPPI) is CLOSED**, and not because Line A duplicated its
+  instruments: node 21 repaired the representation completely (`pos`/`vel` R^2 1.0000) and
+  control did not move, so an objective change cannot be the lever on either line. This
+  branch's nodes 7-9 (a SIGReg/VICReg objective A/B, an unbounded-arena test, and a benchmark
+  repair) are **dropped rather than renumbered** — renumbering them into this sequence would
+  make them read as continuous with Line A, which is the same misreading the draft made.
+  - **Two independent convergences are worth keeping.** Line B's objective A/B found
+    representation metrics improving while control stayed flat, which is node 21's finding by a
+    different route on a different env. And Line B hit the rotational-gauge obstruction between
+    the online and target encoders (a goal-anchored L2 is not O(n)-invariant when the two
+    latents come from different maps) — the same defect node 14 measured as ~75-80% pure
+    translation from the EMA lag.
+  - **A tested SIGReg implementation exists** (Epps-Pulley on random 1-D projections, 18
+    regressions) on `research/worldmodel-sigreg-ab`. `origin/main` has none while this ledger
+    discusses SIGReg 3x and VISReg 2x. It is deliberately NOT ported: node 14 parked objectives
+    for a resolving-power reason that node 16 has since removed, but node 21 supplies a better
+    one. If the cost defects are fixed and the objective question reopens, it is there.
+- Next question: node 25's branch (i) is **still open on Line A** and this is the right
+  instrument for it — a nonlinear head on the frozen `forward_eval` latent, regressing true
+  cost-to-go, against the incumbent `norm(z - z_goal)`. **Register the prediction first and
+  expect it may not replicate:** `synthetic_1f`'s latent is dominated by held per-trajectory
+  nuisance factors (`chi`, `peak_amp`, `offset`) in a way `ParticleNavigatorEnv`'s is not, so a
+  head may recover far less there. A null would be informative — it would say the two lines
+  differ in whether the goal-relevant structure is nonlinearly present, which is a fact about
+  the generators worth having. The `Harness:` field added to the template above is the gate for
+  the failure this node records.
