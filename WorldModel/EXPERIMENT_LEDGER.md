@@ -15,6 +15,12 @@ oracle and independently repaired their benchmark. **A node may not compare a
 number against one from a different `Harness:` line without saying so in the same
 sentence.** A third harness (real EEG) is planned, so this will recur.
 
+**Harness of nodes 0-25.** All twenty-six predate the `Harness:` field and all are
+`synthetic_1f` / `forward_eval.py` / CEM. This is a recorded fact, not an inference
+per node: a term audit at 0a53620 over the whole ledger counted `synthetic_1f` 14,
+`forward_eval` 14, `cem_iters` 8, against `ParticleNavigator` 0, `mpc.py` 0,
+`sweep.py` 0, `HARD_CASES` 0, `MPPI` 0. Per-node declarations begin at node 27.
+
 Entry template:
 ```
 ## <n> — <short title>  (<date>, commit <sha>)
