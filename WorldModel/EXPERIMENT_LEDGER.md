@@ -593,7 +593,7 @@ Two reviewers verified the delivered synthetic A/Bs are sound (symlog threaded i
 
 ---
 
-## 27 — Characterization: epochs and latent_dim move frame alignment and goal geometry SEPARATELY (2026-08-03, commit <pending>)
+## 27 — Characterization: epochs and latent_dim move frame alignment and goal geometry SEPARATELY (2026-08-03, commit a43469a)
 - Category: Benchmark
 - Harness: synthetic_1f / forward_eval.py + frame_diagnostic.py / CEM-era encode path (no planner; TRUE-env rollouts)
 - Provenance: trained in-process, n=384, mode=signal, epochs {8, 22, 30} x latent_dim {32, 64} x seeds {0,1,2} (18 runs); frame diagnostic over 200 start/goal pairs, goal_offset 0.4; rho over 60 episodes x 64 candidates, horizon 6.
