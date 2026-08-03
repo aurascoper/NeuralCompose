@@ -590,3 +590,75 @@ Two reviewers verified the delivered synthetic A/Bs are sound (symlog threaded i
   differ in whether the goal-relevant structure is nonlinearly present, which is a fact about
   the generators worth having. The `Harness:` field added to the template above is the gate for
   the failure this node records.
+
+---
+
+## 27 — Characterization: epochs and latent_dim move frame alignment and goal geometry SEPARATELY (2026-08-03, commit <pending>)
+- Category: Benchmark
+- Harness: synthetic_1f / forward_eval.py + frame_diagnostic.py / CEM-era encode path (no planner; TRUE-env rollouts)
+- Provenance: trained in-process, n=384, mode=signal, epochs {8, 22, 30} x latent_dim {32, 64} x seeds {0,1,2} (18 runs); frame diagnostic over 200 start/goal pairs, goal_offset 0.4; rho over 60 episodes x 64 candidates, horizon 6.
+- Hypothesis: node 25's `rho ~ 0.25` and its 41.3% two-frame inversion could not be reproduced
+  (a fresh run read one-frame **0.668**, two-frame **0.648**, 2.0% inverted, `mismatch_to_displacement_ratio`
+  **0.381**). Two candidate levers were proposed: training maturity, and `latent_dim` per node 13.
+  Framed as a CHARACTERIZATION of this harness, not a reproduction — node 25 records no provenance,
+  so matching its numbers could never identify its config.
+- Prediction: **two were registered before the run and BOTH held, on different axes** — the cleanest
+  prediction record in this ledger, most of which records a wrong one.
+  - **Reviewer:** ratio falls monotonically with epochs and one-frame rho rises monotonically with it.
+  - **Operator:** `latent_dim` moves one-frame rho while leaving the ratio roughly flat (node 13's
+    dissociation), and epochs move neither much. The second clause was WRONG; epochs move both.
+- Evidence:
+
+  | epochs | ldim | ratio | centroid_gap | 1f mean | 1f med | 1f neg | 2f mean | 2f neg |
+  |---|---|---|---|---|---|---|---|---|
+  | 8 | 32 | 1.231 | 0.457 | 0.377 | 0.364 | 8.9% | 0.307 | 18.3% |
+  | 8 | 64 | 1.319 | 0.705 | 0.326 | 0.328 | 13.9% | 0.262 | 22.8% |
+  | 22 | 32 | 0.440 | 0.093 | 0.565 | 0.567 | 2.2% | 0.558 | 2.8% |
+  | 22 | 64 | 0.434 | 0.116 | 0.471 | 0.485 | 6.7% | 0.447 | 8.9% |
+  | 30 | 32 | **0.397** | 0.094 | **0.638** | 0.681 | 0.6% | 0.621 | 1.1% |
+  | 30 | 64 | 0.389 | 0.113 | 0.524 | 0.549 | 5.6% | 0.503 | 8.3% |
+
+  - **Epochs move both, monotonically at both latent_dim.** Ratio 1.231 -> 0.440 -> 0.397; one-frame
+    rho 0.377 -> 0.565 -> 0.638.
+  - **`latent_dim` moves ONLY the goal geometry, and the separation is an order of magnitude.** At 22
+    epochs, 32->64 changes the ratio by **-1.4%** and one-frame rho by **-16.6%**; at 30 epochs,
+    **-2.0%** against **-17.9%**. Node 13's dissociation, reproduced on a second instrument.
+  - **The maturity curve is FLAT by 22 epochs.** 8->22 is 2.75x the gradient steps and buys 2.8x on the
+    ratio; 22->30 is 1.36x and buys 1.11x. **Maturity therefore cannot close a 10x gap anywhere in the
+    mature range** — the EMA time constant at tau=0.99 is ~100 steps and every cell here is thousands
+    of steps past it.
+  - **The `latent_dim` penalty GROWS with training**, which node 13 does not state: the one-frame gap
+    between ldim 32 and 64 is 0.051 at 8 epochs, 0.094 at 22, 0.114 at 30. The larger latent does not
+    catch up; it falls further behind. Invisible in any single-epoch comparison.
+  - **`centroid_gap` plateaus while the ratio keeps falling.** 0.457 -> 0.093 -> 0.094 against ratio
+    1.231 -> 0.440 -> 0.397. Translation converges by 22 epochs, so the ratio's continued improvement
+    past that is NON-translational — and node 14 measured the mismatch as ~75-80% pure translation, so
+    what maturity is still working on after 22 epochs is the remaining 20-25%.
+  - **The `latent_dim` effect on the ratio flips sign at 8 epochs**: **+7.1%** (1.231 -> 1.319) against
+    -1.4% and -2.0% at 22 and 30. State the dissociation as "flat to within noise at >= 22 epochs, sign
+    inconsistent at 8" — a reader extrapolating it to short training would be extrapolating past data.
+- **OPEN AND UNEXPLAINED: node 21's ratio is inconsistent with this characterization.** Node 21 reports
+  **4.25** post-repair; a 22-epoch / ldim-32 run — Line A's own cited standard, same harness, same
+  repaired generator — reads **0.440** here. That is a factor of ten inside a single line, and the flat
+  maturity curve above rules out training length as the explanation anywhere in the mature range.
+  Either node 21's checkpoint departed substantially from the standard config, or a parameter outside
+  this sweep differs, or that measurement needs review. **Node 21 records no provenance either**, so it
+  cannot be settled from the ledger — the second instance of the gap `Provenance:` was added to close,
+  found by the first work done under the rule.
+- **Node 25 is CONSISTENT WITH a node-21-era checkpoint, and is not identified.** The frame penalty
+  (two-frame minus one-frame negative rate) tracks the ratio: +9.4/+8.9pp at ratio ~1.2-1.3,
+  +0.6/+2.2pp at ~0.44, +0.5/+2.7pp at ~0.39. Node 25's penalty is **+23.5pp** (41.3% against 17.8%),
+  which extrapolates to a ratio of roughly **2-4** — a bracket containing node 21's 4.25. Six noisy
+  points and no established functional form: this is a BRACKET, not a fit, and consistency is not
+  identification. Node 25's provenance is unrecorded and no amount of matching recovers it.
+- Decision: **KEEP as characterization.** Two levers, separable, with `latent_dim` specific to goal
+  geometry and epochs general but saturating. `n=384` is crossed off the residual list (it matches Line
+  A's standard and was used here); remaining candidates for the node-21 discrepancy are learning rate,
+  `ema_tau`, batch size and mode.
+- Next question: **test `ema_tau` first.** It targets the ratio directly, it is one parameter, and it is
+  the only candidate whose mechanism is specifically frame alignment rather than general training
+  quality — a tau above 0.99 slows target tracking and should raise the ratio without much touching
+  one-frame rho. If tau alone reaches ~4 at 22 epochs, the residual is identified. **Cheaper first:**
+  any surviving Line A checkpoint on the GPD answers both open questions outright, since the v2 format
+  persists `config` (`eeg_jepa.py:609-619`). That check short-circuits node 21's ratio and node 25's
+  rho together.
