@@ -11,6 +11,12 @@ three times and each time adjudicated between two machines instead of against
 their shared upstream, which was one `git fetch` away. Writing onto a stale
 tail becomes impossible rather than merely discouraged.
 
+**Provenance.** Every new node must declare `Provenance:` — which checkpoint or
+"trained in-process", plus the config that fixes the number. Node 25 records
+`150 x 64 x 3 seeds, TRUE-env rollouts` and nothing about WHICH MODEL, so its
+rho 0.25 cannot be reproduced and cannot be used as anyone's baseline. A number
+without its provenance is not a measurement, it is an anecdote.
+
 **Harness.** Every node must declare `Harness:`. A draft node 26 compared a
 rho measured on `ParticleNavigatorEnv`/`mpc.py` against one from
 `synthetic_1f`/`forward_eval.py` and read as though they spoke to each other.
@@ -116,11 +122,12 @@ def main() -> int:
     for number, body in sorted(local_nodes.items()):
         if number <= highest_base:
             continue
-        if "- Harness:" not in body:
-            failures.append(
-                f"node {number} does not declare `Harness:` (required for nodes "
-                f"after {highest_base}; earlier ones predate the rule)"
-            )
+        for field in ("Harness", "Provenance"):
+            if f"- {field}:" not in body:
+                failures.append(
+                    f"node {number} does not declare `{field}:` (required for nodes "
+                    f"after {highest_base}; earlier ones predate the rule)"
+                )
 
     if failures:
         print("ledger integrity: FAILED")

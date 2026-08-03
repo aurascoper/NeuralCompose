@@ -26,6 +26,7 @@ Entry template:
 ## <n> — <short title>  (<date>, commit <sha>)
 - Category: Integrate | Benchmark | Test | Optimize | Document
 - Harness: <env> / <eval entry point> / <planner>
+- Provenance: <checkpoint id | trained in-process> / <config that fixes the number>
 - Hypothesis:
 - Prediction:
 - Implementation:      (files touched; provenance: ported-from / reason / differences)

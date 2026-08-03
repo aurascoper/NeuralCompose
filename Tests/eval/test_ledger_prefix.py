@@ -103,10 +103,21 @@ def test_rejects_a_new_node_without_a_harness(tmp_path: Path) -> None:
     assert _run_gate(appended, tmp_path) == 1
 
 
+def test_rejects_a_new_node_without_provenance(tmp_path: Path) -> None:
+    """Node 25 is the standing proof: it records episode counts and seeds but
+    not which model, so its rho 0.25 cannot be reproduced or cited."""
+    appended = BASE_PREFIX + (
+        "\n---\n\n## 2 — New work (2026-01-03, commit c)\n"
+        "- Category: Benchmark\n- Harness: e / f / g\n- Hypothesis: z\n"
+    )
+    assert _run_gate(appended, tmp_path) == 1
+
+
 def test_rejects_a_duplicate_node_number(tmp_path: Path) -> None:
     duped = BASE_PREFIX + (
         "\n---\n\n## 1 — Duplicate (2026-01-03, commit c)\n"
-        "- Category: Benchmark\n- Harness: e / f / g\n- Hypothesis: z\n"
+        "- Category: Benchmark\n- Harness: e / f / g\n"
+        "- Provenance: ckpt-x / epochs=30\n- Hypothesis: z\n"
     )
     assert _run_gate(duped, tmp_path) == 1
 
@@ -123,6 +134,7 @@ def test_accepts_a_correctly_extended_ledger(tmp_path: Path) -> None:
     extended = BASE_PREFIX + (
         "\n---\n\n## 2 — New work (2026-01-03, commit c)\n"
         "- Category: Benchmark\n- Harness: synthetic_1f / forward_eval.py / CEM\n"
+        "- Provenance: trained in-process / n=512 epochs=30 latent_dim=32 seed=0\n"
         "- Hypothesis: z\n"
     )
     assert _run_gate(extended, tmp_path) == 0
