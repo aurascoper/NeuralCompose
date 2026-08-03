@@ -525,6 +525,10 @@ Two reviewers verified the delivered synthetic A/Bs are sound (symlog threaded i
 ## 26 — RETRACTED BEFORE COMMIT: a cross-harness comparison, and the branch that produced it (2026-08-03, commit <pending>)
 - Category: Document
 - Harness: n/a — this node is about two harnesses being conflated
+- Provenance: n/a — retracts rather than reports. The retracted draft's own
+  provenance was `ParticleNavigatorEnv` checkpoints trained in-process at
+  n=2000 trajectories / 75 epochs / latent_dim=32 / seed=0, which is exactly
+  the field whose absence from node 25 makes that comparison unrecoverable.
 - Hypothesis: a draft node 26 claimed to resolve node 25's branch (i). It reported that a
   nonlinear head on a frozen latent reads `rho = 0.938` where the incumbent
   `norm(z - z_goal)` reads `0.43`, and set that against node 25's `rho ~ 0.25` — concluding
