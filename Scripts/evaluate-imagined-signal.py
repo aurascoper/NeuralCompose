@@ -45,7 +45,7 @@ import numpy as np
 import pandas as pd
 from scipy import signal
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import GroupKFold, StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
@@ -229,29 +229,61 @@ def trial_features(trial: Trial) -> np.ndarray:
     return np.array(feats, dtype=np.float64)
 
 
-def evaluate(trials: list[Trial], folds: int, seed: int) -> dict:
-    X = np.vstack([trial_features(t) for t in trials])
-    y = np.array([t.target for t in trials])
-    classes, counts = np.unique(y, return_counts=True)
-    class_counts = dict(zip(classes.tolist(), counts.tolist()))
+def time_blocks(trials: list[Trial], n_blocks: int) -> np.ndarray:
+    """Contiguous acquisition-time blocks, used as CV groups.
 
-    skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
+    Trials arrive in acquisition order within a session. Grouping by contiguous
+    runs — rather than shuffling — is what keeps a fold's test trials from being
+    temporally neighboured by their own training data.
+    """
+    order = np.lexsort(([t.trial_index for t in trials],
+                        [t.session_id for t in trials]))
+    groups = np.empty(len(trials), dtype=int)
+    groups[order] = np.floor(np.arange(len(trials)) * n_blocks / len(trials)).astype(int)
+    return groups
+
+
+def _cv_score(X, y, splitter, split_args) -> tuple[float, list[float], list, list]:
     fold_scores: list[float] = []
-    all_true: list[str] = []
-    all_pred: list[str] = []
-    for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X, y)):
+    all_true: list = []
+    all_pred: list = []
+    for train_idx, test_idx in splitter.split(*split_args):
         pipe = Pipeline([
             ("scaler", StandardScaler()),
             ("svm", LinearSVC(C=1.0, dual="auto", max_iter=5000)),
         ])
         pipe.fit(X[train_idx], y[train_idx])
         pred = pipe.predict(X[test_idx])
-        score = balanced_accuracy_score(y[test_idx], pred)
-        fold_scores.append(score)
+        fold_scores.append(balanced_accuracy_score(y[test_idx], pred))
         all_true.extend(y[test_idx].tolist())
         all_pred.extend(pred.tolist())
+    return float(np.mean(fold_scores)), fold_scores, all_true, all_pred
 
-    mean = float(np.mean(fold_scores))
+
+def evaluate(trials: list[Trial], folds: int, seed: int) -> dict:
+    X = np.vstack([trial_features(t) for t in trials])
+    y = np.array([t.target for t in trials])
+    classes, counts = np.unique(y, return_counts=True)
+    class_counts = dict(zip(classes.tolist(), counts.tolist()))
+
+    # Blocked, not shuffled. StratifiedKFold(shuffle=True) scatters temporally
+    # adjacent trials across train and test, so anything drifting slowly within a
+    # session — impedance, electrode temperature, alertness, headband slip — is
+    # partially learnable rather than held out, and the classifier can score above
+    # chance without decoding imagined speech at all. Whole contiguous runs are
+    # held out together instead. Same defect, and same fix, as the eyes-open/closed
+    # block confound in validate-muse-physiology.py; see
+    # docs/reviews/time-leakage-2026-08-06.md.
+    groups = time_blocks(trials, folds)
+    gkf = GroupKFold(n_splits=folds)
+    mean, fold_scores, all_true, all_pred = _cv_score(X, y, gkf, (X, y, groups))
+
+    # Time-index control on the SAME folds: trial position as the only feature.
+    # A gate that does not check this cannot tell decoding from drift — it is the
+    # same instrument as the alpha time-index baseline, pointed at the same risk.
+    t_index = np.arange(len(trials), dtype=float).reshape(-1, 1)
+    time_mean, _, _, _ = _cv_score(t_index, y, gkf, (t_index, y, groups))
+
     sd = float(np.std(fold_scores, ddof=1)) if len(fold_scores) > 1 else 0.0
     # Wilson 95% CI on the pooled accuracy.
     n = len(all_true)
@@ -267,6 +299,9 @@ def evaluate(trials: list[Trial], folds: int, seed: int) -> dict:
 
     return {
         "balanced_accuracy_mean": mean,
+        "time_index_balanced_accuracy": time_mean,
+        "beats_time_index": bool(mean > time_mean),
+        "cv": f"GroupKFold({folds}) on contiguous acquisition blocks",
         "balanced_accuracy_sd": sd,
         "fold_scores": fold_scores,
         "wilson_ci_95": (ci_low, ci_high),
@@ -291,7 +326,7 @@ def print_report(sessions: list[Path], trials: list[Trial], result: dict, args) 
     for cls, n in sorted(result["class_counts"].items()):
         print(f"    {cls:>8s}: {n}")
     print(f"Feature dim:       {result['n_features']}  ({len(BANDS)} bands × per-channel log-power)")
-    print(f"CV folds:          {args.folds} (stratified, seed={args.seed})")
+    print(f"CV folds:          {args.folds} ({result['cv']})")
     print()
     print(f"Per-fold balanced accuracy:")
     for i, s in enumerate(result["fold_scores"]):
@@ -312,16 +347,23 @@ def print_report(sessions: list[Path], trials: list[Trial], result: dict, args) 
     # Gate evaluation.
     min_count = min(result["class_counts"].values()) if result["class_counts"] else 0
     bacc = result["balanced_accuracy_mean"]
+    time_bacc = result["time_index_balanced_accuracy"]
     bacc_ok = bacc >= GATE_BALANCED_ACCURACY
     count_ok = min_count >= GATE_MIN_PER_CLASS
+    time_ok = result["beats_time_index"]
 
     print(f"Pre-registration gate:")
     print(f"    balanced_accuracy ≥ {GATE_BALANCED_ACCURACY:.2f}: "
           f"{bacc:.4f}  {'✓' if bacc_ok else '✗'}")
     print(f"    min trials/class  ≥ {GATE_MIN_PER_CLASS}:    "
           f"{min_count}  {'✓' if count_ok else '✗'}")
+    print(f"    beats time-index baseline:    "
+          f"{bacc:.4f} vs {time_bacc:.4f}  {'✓' if time_ok else '✗'}")
+    if not time_ok:
+        print("      ** trial position predicts the label as well as the EEG does.")
+        print("         Whatever this is measuring, it is not imagined speech.")
     print()
-    if bacc_ok and count_ok:
+    if bacc_ok and count_ok and time_ok:
         print("[PRE-REGISTRATION GATE PASSED]")
         return True
     else:
@@ -329,7 +371,79 @@ def print_report(sessions: list[Path], trials: list[Trial], result: dict, args) 
         return False
 
 
+def _drift_trials(n=160, fs=256.0, run_len=4, seed=0) -> list[Trial]:
+    """Trials whose only structure is drift + the run structure of a shuffled order.
+
+    This is the real leak, not a caricature of it. Trial order is a 50/50 shuffle
+    (as ImaginedSpeechProtocol.buildTrialOrder produces), which by chance yields
+    RUNS of same-class trials. Amplitude drifts monotonically with acquisition
+    position and carries no class information whatsoever.
+
+    Within one run, the drift value is nearly constant and identifies that run —
+    and the run identifies the class. So a shuffled split, which puts a trial's
+    immediate neighbours in the training set, can read the label off the drift.
+    A blocked split holds whole runs out together and cannot.
+    """
+    rng = np.random.default_rng(seed)
+    labels: list[str] = []
+    while len(labels) < n:
+        lab = "yes" if len(labels) // run_len % 2 == 0 else "no"
+        labels.extend([lab] * run_len)
+    labels = labels[:n]
+    rng.shuffle(labels)   # keeps the 50/50 balance, keeps runs by chance
+    trials = []
+    for i, lab in enumerate(labels):
+        amp = 10.0 * (1.0 + 0.05 * i)           # depends on POSITION, never on lab
+        ch = rng.normal(0.0, amp, (4, int(fs)))
+        trials.append(Trial(session_id="synthetic", trial_index=i, target=lab,
+                            channels=ch, sample_rate=fs))
+    return trials
+
+
+def demo() -> int:
+    """Self-check, no hardware: ./evaluate-imagined-signal.py --self-check
+
+    NOTE what this does and does not assert. It asserts the gate rejects data with
+    no class signal. It does NOT assert that the old shuffled-fold evaluator
+    inflated the score, because that could not be demonstrated — see the measured
+    non-result printed below and docs/reviews/time-leakage-2026-08-06.md.
+    """
+    ok = True
+    for seed in range(4):
+        trials = _drift_trials(seed=seed)
+        X = np.vstack([trial_features(t) for t in trials])
+        y = np.array([t.target for t in trials])
+        groups = time_blocks(trials, 5)
+
+        blocked, *_ = _cv_score(X, y, GroupKFold(n_splits=5), (X, y, groups))
+        t_index = np.arange(len(trials), dtype=float).reshape(-1, 1)
+        time_only, *_ = _cv_score(t_index, y, GroupKFold(n_splits=5), (t_index, y, groups))
+        leaky, *_ = _cv_score(X, y, StratifiedKFold(5, shuffle=True, random_state=1337), (X, y))
+
+        # The property that matters: no class signal in, no pass out.
+        assert not (blocked >= GATE_BALANCED_ACCURACY and blocked > time_only), (
+            f"seed {seed}: drift-only data passed the gate — "
+            f"blocked={blocked:.4f} time-index={time_only:.4f}")
+        if leaky >= GATE_BALANCED_ACCURACY:
+            ok = False
+            print(f"  seed {seed}: shuffled CV DID clear the gate ({leaky:.4f}) — "
+                  "the leak reproduces after all; update the review doc")
+        print(f"  seed {seed}: blocked={blocked:.4f} time-index={time_only:.4f} "
+              f"shuffled={leaky:.4f}")
+
+    print("self-check ok — drift-only data is rejected by the gate.")
+    if ok:
+        print("Measured non-result: shuffled CV did NOT clear the 0.65 gate on drift-only "
+              "data either. LinearSVC on 16 global band-power features has too little "
+              "capacity to exploit fold-local structure, so no inflation was demonstrated. "
+              "GroupKFold is kept as the conservative design, not as a fix for a measured "
+              "defect.")
+    return 0
+
+
 def main() -> int:
+    if "--self-check" in sys.argv:
+        return demo()
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("paths", nargs="*", type=Path,

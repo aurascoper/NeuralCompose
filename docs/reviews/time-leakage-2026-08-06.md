@@ -1,8 +1,10 @@
 # Time leakage in two EEG evaluations — 2026-08-06
 
-Two places where a measurement cannot separate signal from elapsed time. One is fixed in
-this change; the other is documented here and still open. They are the same disease, and
-the open one is the more urgent because it is **currently gating a decision**.
+Two places where a design cannot separate signal from elapsed time. One was a real defect,
+measured and fixed. The other looked like the same disease and did not survive measurement.
+
+That asymmetry is the point of the document. Both were argued from the same reasoning; only
+one of them reproduced when a synthetic check was pointed at it.
 
 ## 1. Muse physiological validation — FIXED
 
@@ -28,7 +30,12 @@ missed.
 The 2026-07-10 results (TP9 2.98×, TP10 3.88×) were collected under the old protocol and
 are now annotated in `docs/Validation.md` as provisional pending re-collection.
 
-## 2. Imagined-speech pre-registration gate — OPEN
+## 2. Imagined-speech CV — CHANGED, but the leak did not reproduce
+
+**Correction to the first draft of this document.** It stated that the 0.65 gate is
+"inflated by an unknown amount" and that a pre-registered threshold evaluated with a
+leaky estimator is void. The first half of that is not supported by measurement, and
+this section is rewritten accordingly.
 
 `Scripts/evaluate-imagined-signal.py:238`:
 
@@ -42,34 +49,62 @@ data. Anything that drifts slowly within a session — impedance, electrode temp
 alertness, headband slip — is then partially learnable rather than held out, and a
 classifier can score above chance without decoding anything about imagined speech.
 
-**Why this is the urgent one.** It feeds the pre-registration gate at `:10`:
+### What was measured
 
-```
-PASS iff balanced_accuracy >= 0.65 AND min(class_count) >= 50
-```
+Synthetic trials with **no class signal at all**: amplitude drifts monotonically with
+acquisition position, labels are a 50/50 shuffle (the order
+`ImaginedSpeechProtocol.buildTrialOrder` actually produces), which by chance yields runs
+of same-class trials. If shuffled folds leak, this is the data that should show it — a
+trial's immediate neighbours sit in the training set at nearly the same drift level.
 
-That threshold was pinned in advance precisely so Track B could not be promoted on a soft
-judgement (see `CLAUDE.md`, Track B pre-registration gate). But the number being compared
-against it is inflated by an unknown amount. A pre-registered threshold evaluated with a
-leaky estimator is not a pre-registered threshold. **Any balanced accuracy reported by
-this script today is provisional and must not be used to promote Track B past
-experimental.**
+Four seeds, `--self-check`:
 
-### Fix owed
+| seed | blocked (GroupKFold) | time-index only | **shuffled (old design)** |
+| --- | --- | --- | --- |
+| 0 | 0.4688 | 0.5250 | 0.4375 |
+| 1 | 0.4914 | 0.5000 | 0.4500 |
+| 2 | 0.4571 | 0.5000 | 0.5000 |
+| 3 | 0.4912 | 0.5000 | 0.5750 |
 
-- Replace the shuffled `StratifiedKFold` with block-aware splitting — `GroupKFold` (or
-  `StratifiedGroupKFold`) with groups derived from acquisition-time blocks, so whole
-  contiguous runs of trials are held out together rather than interleaved.
-- Add a **time-index control on the same folds**: train and score the identical pipeline
-  on trial index alone. Report both numbers; gate on the label-based score exceeding the
-  time-only score, exactly as the alpha gate now does. This is the piece that converts
-  "we think the CV is clean" into something the script checks.
-- Trial order in `Sources/BCIEEG/Calibration/ImaginedSpeechProtocol.swift:199-208` is
-  already a seeded shuffle, not strict alternation, and the seed is recorded to
-  `metadata.json` — so the acquisition side is sound and only the evaluator needs work.
+**The shuffled evaluator did not clear the 0.65 gate on drift-only data.** It sat at
+chance, like the blocked one. The reason is capacity: `LinearSVC` on 16 global band-power
+features cannot exploit fold-local structure — it has no way to memorise a
+drift-level → label association for interleaved runs. Shuffled-CV leakage is real for
+high-capacity estimators; it was not demonstrated for this one.
 
-Not fixed in this change because it was scoped to the Muse validation protocol. Recorded
-here so it does not survive only as a line in a plan's exclusions section.
+A second construction, with labels deliberately correlated with acquisition position
+(long same-class runs), also failed to pass: blocked 0.4656, time-index 0.5250. Blocked CV
+holds out contiguous drift ranges the model has never seen, so it is inherently robust to
+this failure mode.
+
+**So the claim that the 0.65 threshold is inflated is withdrawn.** No measurement here
+supports it. The prior draft asserted it from the design smell alone — the same move as
+citing 0.883, one section down.
+
+### What changed anyway, and why
+
+- `GroupKFold` on contiguous acquisition blocks replaces `StratifiedKFold(shuffle=True)`.
+  Kept as the **conservative design**, not as a fix for a measured defect: shuffled folds
+  over time-ordered trials remain bad practice, the swap costs nothing, and it forecloses
+  the failure mode if the estimator is ever given more capacity.
+- A **time-index control on the same folds** now runs alongside: the identical pipeline
+  trained on trial position alone. Both numbers print, and the gate requires the EEG score
+  to exceed the time-only score. On the evidence above this is currently redundant with
+  blocked CV — it is cheap insurance, and it makes the check explicit rather than implicit
+  in the splitter choice.
+- `--self-check` asserts only what reproduces: drift-only data does not pass the gate. It
+  prints the shuffled number every run, and says so loudly if the leak ever *does* appear,
+  so this non-result is re-tested rather than remembered.
+
+Trial order in `Sources/BCIEEG/Calibration/ImaginedSpeechProtocol.swift:199-208` is a
+seeded shuffle with the seed recorded to `metadata.json`; the acquisition side was already
+sound.
+
+### What remains true
+
+Any balanced accuracy this script reports is still from **zero real sessions** — Track B
+has no collected corpus. The gate has never been evaluated against data. That, not
+leakage, is what stands between Track B and a defensible result.
 
 ## Note on provenance
 
@@ -80,5 +115,9 @@ as prose and was carried forward as established fact, load-bearing for a design 
 The nearest values on disk (`Scripts/dream_extraction.py:335`, rho 0.8827/0.8857) are a
 different metric on a different analysis, already annotated there as small-n artifacts.
 
-Both fixes above stand on defects visible in the source, and the first is demonstrated by
+Both changes above stand on defects visible in the source, and the first is demonstrated by
 a runnable regression. Neither needs 0.883, and it should not be cited again.
+
+The §2 correction is the same error caught one step earlier: "the gate is inflated by an
+unknown amount" was asserted from a design smell, in a document written to warn against
+exactly that. It was withdrawn because the check was run, and the check disagreed.

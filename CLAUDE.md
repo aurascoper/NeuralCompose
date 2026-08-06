@@ -2,6 +2,14 @@
 
 Privacy-first, fully on-device macOS prototype for **EEG-driven communication**. A Muse headband streams brain signals through BrainFlow, a Core ML classifier on the Apple Neural Engine detects intent (jaw clench / blink / rest / select), and a local MLX LLM suggests next words. The user "types" by letting a cycling 3-token carousel highlight a candidate, then committing with a brain-signal selection. **No network at runtime. No cloud. No telemetry.**
 
+**The app is macOS; the EEG validation scripts are not.** `Scripts/validate-muse-physiology.py`
+runs on Linux as-is — the PyPI `brainflow` wheel bundles Linux `.so`s including
+`libMuseLib.so` and `libBrainFlowBluetooth.so`, so a BLE Muse session needs only
+`pip install brainflow`, no source build. The `DYLD_LIBRARY_PATH` block at the top of that
+script is guarded by `os.path.isdir` and skips harmlessly off-macOS. Don't route a
+validation session to a Mac on the strength of the line above; only the Swift/Core ML/MLX
+half needs one.
+
 ## Stack
 - Swift 6.0, macOS 14+, SwiftPM (no Xcode project needed for the default build)
 - Deps: `mlx-swift` (≥0.21.2), `mlx-swift-examples` (≥2.21.0), `swift-transformers` (≥0.1.20). **Linked only into `BCILLM`** — single MLX runtime in the linked binary.
