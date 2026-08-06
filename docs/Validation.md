@@ -23,13 +23,33 @@ and is recorded with a segment label.
 
 | # | Condition | Duration | What the user does | Expected signature |
 |---|-----------|----------|-------------------|-------------------|
-| 1 | Eyes open | 30 s | Look at a fixed point, relax | Low alpha, more beta |
-| 2 | Eyes closed | 30 s | Close eyes gently, same relaxation | Alpha power rises ≥ 1.5× vs eyes-open |
-| 3 | Blinks | 5 s | Blink deliberately, ~5 in 5 s | Frontal transient ≥ 40 µV in AF7/AF8 |
-| 4 | Jaw clench | 5 s | Clench hard, release, 3 cycles | Broadband > 20 Hz energy rise ≥ 2× baseline |
-| 5 | Head turn | 10 s | Turn head left/right slowly | Low-frequency swing ≥ 30 µV in TP9/TP10 |
+| 1–4 | Eyes open / closed, **ABBA** | 4 × 15 s | Open, closed, closed, open | Alpha power rises ≥ 1.5× vs eyes-open **and** beats the time-index baseline |
+| 5 | Blinks | 5 s | Blink deliberately, ~5 in 5 s | Frontal transient ≥ 40 µV in AF7/AF8 |
+| 6 | Jaw clench | 5 s | Clench hard, release, 3 cycles | Broadband > 20 Hz energy rise ≥ 2× baseline |
+| 7 | Head turn | 10 s | Turn head left/right slowly | Low-frequency swing ≥ 30 µV in TP9/TP10 |
 
-Each condition is event-tagged in the recorded CSV. Total runtime ~80 s + analysis.
+Each condition is event-tagged in the recorded CSV (`open1`, `closed1`, `closed2`,
+`open2`, then `blink`/`clench`/`turn`). Total runtime ~80 s + analysis.
+
+### Why the alpha contrast is counterbalanced
+
+The protocol originally ran one 30 s eyes-open block followed by one 30 s eyes-closed
+block, always in that order. Condition was therefore perfectly confounded with elapsed
+time: impedance settling, electrode warming, and drowsiness onset all push
+`alpha_closed / alpha_open` in the same direction as real alpha, and no analysis of that
+recording can separate them.
+
+Four blocks in `open, closed, closed, open` order put both conditions at the same mean
+position in the session (2.5), so a linear drift subtracts out of the ratio. The first
+2 s of every block is discarded — occipital alpha needs ~1–2 s to rise after eye closure —
+symmetrically across both conditions, so the discard is not itself a thumb on the scale.
+
+ABBA cancels a *linear* trend exactly, and electrode settling is usually curved. The
+residual that curvature leaves behind is what the **time-index baseline** measures: the
+identical statistic computed on the same blocks relabelled by position alone (blocks 1–2
+vs 3–4), which under ABBA is orthogonal to condition. A channel passes only if the
+condition ratio clears 1.5× **and** exceeds the time-index ratio. Both numbers are
+reported per channel, pass or fail.
 
 ## Pass Criteria
 
@@ -38,7 +58,7 @@ The script computes per-channel statistics and produces a pass/fail verdict:
 | Check | Pass criterion | Why |
 |-------|---------------|-----|
 | Contact quality (RMS 2–200 µV, all 4 channels) | all 4 in range | Disconnected channel: RMS < 2 µV. Saturated front-end: RMS > 200 µV. |
-| Alpha rise on eyes-closed | best channel ≥ 1.5× | Canonical EEG signature. |
+| Alpha rise on eyes-closed | best channel ≥ 1.5× **and** > its time-index ratio | Canonical EEG signature, gated so a session-long drift cannot report as alpha. |
 | Blink transient | AF7 or AF8 max ≥ 40 µV | Normal-blink amplitude, not the literature's 150 µV for forced blinks. |
 | Jaw clench broadband | best channel ≥ 2× baseline | EMG contamination is broadband; 13–30 Hz is one slice of it. |
 | Head turn motion | best channel ≥ 30 µV swing | Slow turns produce 30–80 µV; the 100 µV literature threshold is for jerky turns. |
@@ -46,6 +66,22 @@ The script computes per-channel statistics and produces a pass/fail verdict:
 A 4/5 pass indicates a working acquisition pipeline. A 5/5 pass indicates a clean session with no false readings.
 
 ## Current Results (2026-07-10)
+
+> **Collected under the old sequential protocol.** Every figure below comes from the
+> `open → closed` ordering described above, in which condition is confounded with block
+> order. The TP9/TP10 alpha rises are large enough to be plausible on their face, but they
+> are **not demonstrated** until re-collected under ABBA with the time-index baseline
+> reported. Treat them as provisional; do not cite them as evidence the acquisition
+> pipeline resolves alpha.
+>
+> **On the "0.883" figure:** the drift concern was argued for some time from a claim that
+> *time-index alone classifies open vs closed at 0.883*. **That measurement has no
+> preserved artifact.** It is not in any recording, script output, or log in this repo; it
+> entered a working session as prose and was carried forward as established. The nearest
+> values on disk — `Scripts/dream_extraction.py:335`, rho 0.8827/0.8857 — are a different
+> metric on a different analysis, already annotated there as small-n artifacts. **Do not
+> re-cite 0.883.** The redesign stands on the design defect, which is visible in the
+> source and reproduced by the `--self-check` regression, not on that number.
 
 Single participant, single session, Muse S on the head, 80-second protocol:
 

@@ -59,13 +59,42 @@ BF_LIB = os.path.expanduser("~/Developer/brainflow/compiled")
 if os.path.isdir(BF_LIB):
     os.environ["DYLD_LIBRARY_PATH"] = BF_LIB + ":" + os.environ.get("DYLD_LIBRARY_PATH", "")
 
-from brainflow.board_shim import BoardShim, BoardIds, BrainFlowInputParams  # noqa: E402
+try:
+    from brainflow.board_shim import BoardShim, BoardIds, BrainFlowInputParams  # noqa: E402
+except ImportError:  # --self-check analyses synthetic arrays and needs no hardware lib
+    BoardShim = BoardIds = BrainFlowInputParams = None
 
 # --- Configuration ---------------------------------------------------------
 
 SAMPLE_RATE = 256          # Muse S native
-SEG_OPEN = 30.0            # seconds, eyes open
-SEG_CLOSED = 30.0          # seconds, eyes closed
+
+# Alpha contrast: four counterbalanced blocks, not one open then one closed.
+#
+# Number the blocks by position 1-4. Under ABBA the open blocks sit at 1 and 4
+# (mean position 2.5) and the closed at 2 and 3 (also 2.5), so both conditions
+# occupy the same average point in the session and a LINEAR drift — impedance
+# settling, gel warming, drowsiness onset — subtracts out of the ratio. Under the
+# old `open, closed` every bit of drift landed on `closed` and was indistinguishable
+# from alpha. Under ABAB the closed mean is still one position later, leaving a
+# residual that always points the same way.
+#
+# ABBA cancels a linear trend EXACTLY, and electrode settling is usually curved —
+# fast, then flattening. Under a convex or concave trend, equal mean position is not
+# sufficient: a residual survives whose sign depends on which way the curve bends
+# (decaying settling biases the ratio conservatively, saturating warming biases it
+# the wrong way). Measuring that leftover is what the time-index baseline in
+# analyze() is for. The two are not redundant — this constant removes the bulk,
+# that gate measures what curvature left behind.
+BLOCK_SECONDS = 15.0                                  # 4 x 15 s = same 60 s of alpha data
+ALPHA_BLOCK_ORDER = ['open', 'closed', 'closed', 'open']
+
+# Occipital alpha takes ~1-2 s to rise after eye closure. Including the build-up
+# biases closed blocks downward and makes the ratio sensitive to block length.
+# Trimmed from the START OF EVERY BLOCK, open and closed alike — trimming both
+# conditions symmetrically is what keeps the discard from being its own thumb on
+# the scale.
+BLOCK_EDGE_DISCARD_S = 2.0
+
 SEG_BLINK = 5.0            # seconds, blink deliberately
 SEG_CLENCH = 8.0           # seconds, jaw clench (3s clench, 1s release, 2 cycles = 8s)
 SEG_TURN = 10.0            # seconds, head turn
@@ -84,7 +113,17 @@ BLINK_DETECTION_UV = 40.0        # normal gentle blinks are 50-100 µV; aggressi
 HEAD_TURN_UV = 30.0              # slow turns are 30-80 µV; jerky is 100+
 CLENCH_BETA_RATIO = 2.0          # true EMG bursts are broadband >50 Hz, but 13-30 should rise
 CLENCH_BROADBAND_RATIO = 1.5      # 30-100 Hz broadband rise; EMG is broadband, single-band tests miss it
-MIN_VALID_SAMPLES = SEG_OPEN * SAMPLE_RATE * 0.8   # 80% of expected
+
+# The condition ratio must also beat the drift the time-index baseline measures.
+# A multiplier, not a bare `>`, because the residual ABBA leaves behind is
+# empirical — it depends on how this unit's electrodes settle — and only real
+# sessions can say how noisy the estimate is. This is the calibration knob.
+TIME_BASELINE_MARGIN = 1.0
+
+# 80% of expected. Derives from BLOCK_SECONDS, NOT the old 30 s segment length:
+# pinning it to a stale longer duration would leave the check 2x loose and it
+# would pass on every truncated block it was written to catch.
+MIN_VALID_SAMPLES = BLOCK_SECONDS * SAMPLE_RATE * 0.8
 
 
 # --- Utilities -------------------------------------------------------------
@@ -150,6 +189,10 @@ class Recorder:
     def __init__(self):
         self.board = None
         self.started_at = None
+        # Cue onset is logged separately from block start. Without both, the 2 s
+        # edge discard is a magic constant no later reader can audit: "user was
+        # told to close their eyes" and "samples began" are 3+ seconds apart.
+        self.marks = []
 
     def connect(self):
         params = BrainFlowInputParams()
@@ -171,6 +214,7 @@ class Recorder:
 
     def segment(self, duration, label, prompt):
         """Record one segment with a real-time prompt to the user."""
+        cue_unix = time.time()
         print(f"\n>>> {label}: {prompt}")
         for remaining in [3, 2, 1]:
             print(f"    starting in {remaining}...")
@@ -178,6 +222,7 @@ class Recorder:
         n_samples = int(duration * SAMPLE_RATE)
         # Drain current buffer
         self.board.get_current_board_data(n_samples)
+        block_start_unix = time.time()
         # Wait for the duration
         time.sleep(duration + 0.2)
         data = self.board.get_current_board_data(int((duration + 5) * SAMPLE_RATE))
@@ -186,6 +231,13 @@ class Recorder:
         # Take the last n_samples
         if n_cols > n_samples:
             data = data[:, -n_samples:]
+        self.marks.append({
+            "label": label, "block_index": len(self.marks) + 1,
+            "cue_unix": cue_unix, "block_start_unix": block_start_unix,
+            "cue_to_start_s": block_start_unix - cue_unix,
+            "duration_s": duration, "n_samples": int(data.shape[1]),
+            "short_block": data.shape[1] < MIN_VALID_SAMPLES,
+        })
         return data
 
     def disconnect(self):
@@ -199,28 +251,71 @@ class Recorder:
 
 # --- Analysis --------------------------------------------------------------
 
-def analyze(data_open, data_closed, data_blink, data_clench, data_turn):
+def trim_block_edge(block):
+    """Drop BLOCK_EDGE_DISCARD_S from the front of one block (alpha build-up)."""
+    n = int(BLOCK_EDGE_DISCARD_S * SAMPLE_RATE)
+    return block[:, n:] if block.shape[1] > n else block
+
+
+def alpha_ratio(blocks_hi, blocks_lo, ch_idx):
+    """Alpha power in one group of blocks over another, for a single channel."""
+    x_hi = np.concatenate([b[ch_idx, :] for b in blocks_hi]).astype(np.float64)
+    x_lo = np.concatenate([b[ch_idx, :] for b in blocks_lo]).astype(np.float64)
+    p_hi = bandpower(x_hi, SAMPLE_RATE, ALPHA_BAND)
+    p_lo = bandpower(x_lo, SAMPLE_RATE, ALPHA_BAND)
+    return p_hi / max(p_lo, 1e-9)
+
+
+def analyze(alpha_blocks, data_blink, data_clench, data_turn):
+    """alpha_blocks: the four ABBA blocks in TIME ORDER, labelled by ALPHA_BLOCK_ORDER."""
     results = {}
 
     # Channel order in BrainFlow: ch0=package_num, ch1=TP9, ch2=AF7, ch3=AF8, ch4=TP10, ch5=AUX, ch6=ts
     def extract(data, ch_idx):
         return data[ch_idx, :].astype(np.float64)
 
-    # 1. Alpha power ratio eyes-closed / eyes-open, per channel
+    trimmed = [trim_block_edge(b) for b in alpha_blocks]
+    open_blocks = [b for b, lab in zip(trimmed, ALPHA_BLOCK_ORDER) if lab == 'open']
+    closed_blocks = [b for b, lab in zip(trimmed, ALPHA_BLOCK_ORDER) if lab == 'closed']
+    # Relabelled by POSITION alone, ignoring condition. Under ABBA this split is
+    # orthogonal to the real labels, so it measures pure drift and nothing else.
+    first_half, second_half = trimmed[:2], trimmed[2:]
+
+    # Sections 3 and 5 below want contiguous open/closed arrays; the untrimmed
+    # concatenation is right there since they are baselines, not the contrast.
+    data_open = np.concatenate(
+        [b for b, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER) if lab == 'open'], axis=1)
+    data_closed = np.concatenate(
+        [b for b, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER) if lab == 'closed'], axis=1)
+
+    # 1. Alpha power ratio eyes-closed / eyes-open, per channel, against drift
     print("\n--- 1. Alpha power (8-13 Hz) per channel ---")
+    print(f"  blocks: {' '.join(ALPHA_BLOCK_ORDER)} @ {BLOCK_SECONDS:.0f}s, "
+          f"first {BLOCK_EDGE_DISCARD_S:.0f}s of each discarded")
     alpha_ratios = {}
+    time_ratios = {}
+    alpha_pass_by_ch = {}
     for i, ch_idx in enumerate(EEG_CHANNELS):
-        x_open = extract(data_open, ch_idx)
-        x_closed = extract(data_closed, ch_idx)
-        p_open = bandpower(x_open, SAMPLE_RATE, ALPHA_BAND)
-        p_closed = bandpower(x_closed, SAMPLE_RATE, ALPHA_BAND)
-        ratio = p_closed / max(p_open, 1e-9)
-        alpha_ratios[CHANNEL_NAMES[i]] = ratio
-        print(f"  {CHANNEL_NAMES[i]:>5}: open={p_open:>10.2f}  closed={p_closed:>10.2f}  ratio={ratio:.2f}")
+        r_cond = alpha_ratio(closed_blocks, open_blocks, ch_idx)
+        r_time = alpha_ratio(second_half, first_half, ch_idx)
+        alpha_ratios[CHANNEL_NAMES[i]] = r_cond
+        time_ratios[CHANNEL_NAMES[i]] = r_time
+        # Both gates: big enough, AND bigger than the drift on the same data.
+        alpha_pass_by_ch[CHANNEL_NAMES[i]] = (
+            r_cond >= ALPHA_RATIO_THRESHOLD and r_cond > r_time * TIME_BASELINE_MARGIN)
+        verdict = 'PASS' if alpha_pass_by_ch[CHANNEL_NAMES[i]] else (
+            'drift' if r_cond >= ALPHA_RATIO_THRESHOLD else 'fail')
+        print(f"  {CHANNEL_NAMES[i]:>5}: condition={r_cond:>6.2f}  "
+              f"time-index={r_time:>6.2f}  {verdict}")
     results['alpha_ratios'] = alpha_ratios
-    best_ratio = max(alpha_ratios.values())
-    results['best_alpha_ratio'] = best_ratio
-    results['alpha_pass'] = best_ratio >= ALPHA_RATIO_THRESHOLD
+    results['alpha_time_index_ratios'] = time_ratios
+    results['alpha_pass_by_channel'] = alpha_pass_by_ch
+    results['best_alpha_ratio'] = max(alpha_ratios.values())
+    results['worst_time_index_ratio'] = max(time_ratios.values())
+    results['alpha_pass'] = any(alpha_pass_by_ch.values())
+    if not results['alpha_pass'] and results['best_alpha_ratio'] >= ALPHA_RATIO_THRESHOLD:
+        print("  ** alpha ratio cleared 1.5x but did NOT beat the time-index baseline.")
+        print("     A drift across the session explains it as well as eye closure does.")
 
     # 2. Blink detection: max abs value in AF7/AF8 during blink window
     print("\n--- 2. Blink transient detection (frontal channels) ---")
@@ -320,7 +415,7 @@ def analyze(data_open, data_closed, data_blink, data_clench, data_turn):
     print("=" * 60)
     checks = [
         ("Contact quality (RMS 2-200 µV)",      results['contact_pass']),
-        ("Alpha rise on eyes-closed (>=1.5x)",   results['alpha_pass']),
+        ("Alpha rise on eyes-closed (>=1.5x, beats time-index)", results['alpha_pass']),
         ("Blink transient (>=40 µV AF7/AF8)",    results['blink_pass']),
         ("Jaw clench beta (>=2x baseline)",      results['clench_pass']),
         ("Head turn artifact (>=30 µV swing)",   results['turn_pass']),
@@ -398,10 +493,16 @@ def main():
         sys.exit(130)
     signal.signal(signal.SIGINT, stop)
 
-    data_open = rec.segment(SEG_OPEN, "EYES OPEN",
-                            "Open eyes. Look at a fixed point. Relax face/jaw.")
-    data_closed = rec.segment(SEG_CLOSED, "EYES CLOSED",
-                              "Close eyes gently. Same relaxation. Don't squint.")
+    prompts = {
+        'open': "Open eyes. Look at a fixed point. Relax face/jaw.",
+        'closed': "Close eyes gently. Same relaxation. Don't squint.",
+    }
+    alpha_blocks = []
+    for n, lab in enumerate(ALPHA_BLOCK_ORDER, start=1):
+        alpha_blocks.append(rec.segment(
+            BLOCK_SECONDS, f"BLOCK {n}/{len(ALPHA_BLOCK_ORDER)} — EYES {lab.upper()}",
+            prompts[lab]))
+
     data_blink = rec.segment(SEG_BLINK, "BLINK",
                              "Blink deliberately, ~5 blinks over 5 seconds.")
     data_clench = rec.segment(SEG_CLENCH, "JAW CLENCH",
@@ -413,12 +514,19 @@ def main():
 
     # Save raw CSV (column-major: ch0..ch6, samples along axis 1)
     print(f"\nSaving raw data to {out_csv}")
-    all_data = np.concatenate([data_open, data_closed, data_blink, data_clench, data_turn], axis=1)
+    all_data = np.concatenate(alpha_blocks + [data_blink, data_clench, data_turn], axis=1)
     header = "package_num,TP9,AF7,AF8,TP10,AUX_R,timestamp,segment\n"
-    # Annotate segment per row
-    seg_labels = (['open'] * data_open.shape[1] +
-                  ['closed'] * data_closed.shape[1] +
-                  ['blink'] * data_blink.shape[1] +
+    # Annotate segment per row. Blocks are numbered (open1, closed1, closed2,
+    # open2) so the ABBA position survives into the CSV — a bare open/closed
+    # would throw away exactly what the counterbalancing bought. The downstream
+    # consumer (convert_muse_validation_recordings.py:58) passes this column
+    # through verbatim, so the new labels are additive, not breaking.
+    seen = {}
+    seg_labels = []
+    for blk, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER):
+        seen[lab] = seen.get(lab, 0) + 1
+        seg_labels += [f"{lab}{seen[lab]}"] * blk.shape[1]
+    seg_labels += (['blink'] * data_blink.shape[1] +
                   ['clench'] * data_clench.shape[1] +
                   ['turn'] * data_turn.shape[1])
     rows = []
@@ -431,14 +539,20 @@ def main():
         f.write('\n'.join(rows) + '\n')
 
     # Analyze
-    results, rc = analyze(data_open, data_closed, data_blink, data_clench, data_turn)
+    results, rc = analyze(alpha_blocks, data_blink, data_clench, data_turn)
+    results['block_marks'] = rec.marks
+    results['block_order'] = ALPHA_BLOCK_ORDER
 
     # ASCII spectrograms (eyes open vs eyes closed) for visual confirmation
+    af7_open = np.concatenate(
+        [b[2, :] for b, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER) if lab == 'open'])
+    af7_closed = np.concatenate(
+        [b[2, :] for b, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER) if lab == 'closed'])
     print("\n--- 6. AF7 spectrogram: eyes open vs eyes closed ---")
-    print(ascii_spectrogram(data_open[2, :].astype(np.float64), SAMPLE_RATE,
-                            title="AF7 EYES OPEN (last 30s)", width=60, height=14))
-    print(ascii_spectrogram(data_closed[2, :].astype(np.float64), SAMPLE_RATE,
-                            title="AF7 EYES CLOSED (30s)", width=60, height=14))
+    print(ascii_spectrogram(af7_open.astype(np.float64), SAMPLE_RATE,
+                            title="AF7 EYES OPEN (both blocks)", width=60, height=14))
+    print(ascii_spectrogram(af7_closed.astype(np.float64), SAMPLE_RATE,
+                            title="AF7 EYES CLOSED (both blocks)", width=60, height=14))
 
     # Save summary
     with open(out_json, 'w') as f:
@@ -448,9 +562,73 @@ def main():
     return rc
 
 
+def _synth_blocks(alpha_gain=1.0, drift_per_block=1.0, seed=0):
+    """Four synthetic ABBA blocks. alpha_gain multiplies 10 Hz amplitude on the
+    CLOSED blocks; drift_per_block multiplies broadband amplitude by position,
+    ignoring condition entirely."""
+    rng = np.random.default_rng(seed)
+    n = int(BLOCK_SECONDS * SAMPLE_RATE)
+    t = np.arange(n) / SAMPLE_RATE
+    blocks = []
+    for pos, lab in enumerate(ALPHA_BLOCK_ORDER):
+        sig = rng.normal(0.0, 10.0, n)
+        if lab == 'closed':
+            sig = sig + alpha_gain * 10.0 * np.sin(2 * np.pi * 10.0 * t)
+        sig = sig * (drift_per_block ** pos)
+        block = np.zeros((7, n))
+        for ch in EEG_CHANNELS:
+            block[ch, :] = sig + rng.normal(0.0, 1.0, n)
+        blocks.append(block)
+    return blocks
+
+
+def _old_protocol_ratio(blocks, ch_idx):
+    """The statistic the OLD script computed: blocks 1-2 as 'open', 3-4 as
+    'closed' — i.e. the sequential order it recorded in, with no edge trim."""
+    return alpha_ratio(blocks[2:], blocks[:2], ch_idx)
+
+
+def demo():
+    """Self-check. Runs without brainflow or hardware: python3 <this> --self-check"""
+    ch = EEG_CHANNELS[0]
+
+    # (a) Real alpha, no drift -> condition ratio high, time ratio ~1, PASSES.
+    b = [trim_block_edge(x) for x in _synth_blocks(alpha_gain=1.0, drift_per_block=1.0)]
+    r_cond = alpha_ratio(b[1:3], [b[0], b[3]], ch)
+    r_time = alpha_ratio(b[2:], b[:2], ch)
+    assert r_cond >= ALPHA_RATIO_THRESHOLD, f"(a) alpha not detected: {r_cond:.2f}"
+    assert r_cond > r_time * TIME_BASELINE_MARGIN, f"(a) {r_cond:.2f} !> {r_time:.2f}"
+
+    # (b) Pure drift, no alpha. The new gate must fail -- AND the old design,
+    #     on this identical array, must PASS. Without the second assertion this
+    #     only proves the new gate works, not that it catches anything the old
+    #     one missed, which is the entire claim the redesign rests on.
+    raw = _synth_blocks(alpha_gain=0.0, drift_per_block=1.6)
+    d = [trim_block_edge(x) for x in raw]
+    r_cond = alpha_ratio(d[1:3], [d[0], d[3]], ch)
+    r_time = alpha_ratio(d[2:], d[:2], ch)
+    assert not (r_cond >= ALPHA_RATIO_THRESHOLD and r_cond > r_time * TIME_BASELINE_MARGIN), \
+        f"(b) new gate passed pure drift: cond={r_cond:.2f} time={r_time:.2f}"
+    r_old = _old_protocol_ratio(raw, ch)
+    assert r_old >= ALPHA_RATIO_THRESHOLD, \
+        f"(b) old protocol did not report a pass on pure drift ({r_old:.2f}); " \
+        "the regression this change exists to fix is not being exercised"
+
+    # (c) Alpha AND drift -> condition must still beat time-index.
+    m = [trim_block_edge(x) for x in _synth_blocks(alpha_gain=2.0, drift_per_block=1.2)]
+    r_cond = alpha_ratio(m[1:3], [m[0], m[3]], ch)
+    r_time = alpha_ratio(m[2:], m[:2], ch)
+    assert r_cond >= ALPHA_RATIO_THRESHOLD and r_cond > r_time * TIME_BASELINE_MARGIN, \
+        f"(c) real alpha lost to drift: cond={r_cond:.2f} time={r_time:.2f}"
+
+    print(f"self-check ok — pure drift: old protocol reports {r_old:.2f}x (PASS), "
+          f"new gate rejects it")
+    return 0
+
+
 if __name__ == "__main__":
     try:
-        sys.exit(main())
+        sys.exit(demo() if "--self-check" in sys.argv else main())
     except Exception as e:
         import traceback
         traceback.print_exc()
