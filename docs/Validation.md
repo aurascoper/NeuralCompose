@@ -67,12 +67,16 @@ A 4/5 pass indicates a working acquisition pipeline. A 5/5 pass indicates a clea
 
 ## Current Results (2026-07-10)
 
-> **Collected under the old sequential protocol.** Every figure below comes from the
-> `open → closed` ordering described above, in which condition is confounded with block
-> order. The TP9/TP10 alpha rises are large enough to be plausible on their face, but they
-> are **not demonstrated** until re-collected under ABBA with the time-index baseline
-> reported. Treat them as provisional; do not cite them as evidence the acquisition
-> pipeline resolves alpha.
+> **On synthetic data containing zero alpha and pure drift, the old design reports 7.11×
+> against a 1.5× threshold** — passing by nearly five times the margin on a signal that is
+> not there. That is the regression asserted in `validate-muse-physiology.py --self-check`,
+> and it is the measure of how little the old protocol constrained.
+>
+> Every figure below was collected under that protocol: the `open → closed` ordering, in
+> which condition is confounded with block order. The TP9/TP10 alpha rises are large enough
+> to be plausible on their face, but they are **not demonstrated** until re-collected under
+> ABBA with the time-index baseline reported. Treat them as provisional; do not cite them
+> as evidence the acquisition pipeline resolves alpha.
 >
 > **On the "0.883" figure:** the drift concern was argued for some time from a claim that
 > *time-index alone classifies open vs closed at 0.883*. **That measurement has no
