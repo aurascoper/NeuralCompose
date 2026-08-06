@@ -36,3 +36,4 @@ Design/Verification/Runtime artifact taxonomy — it contains the
 | [embedding-model-survey.md](embedding-model-survey.md) | 3.0 | Survey (this commit) |
 | [methodology-review_v1.md](methodology-review_v1.md) | 3.4/3.5 | Review (superseded by v2) |
 | [methodology-review_v2.md](methodology-review_v2.md) | 3.4/3.5 | Review (this commit) |
+| [eyes-open-closed-step0-preregistration_v1.md](eyes-open-closed-step0-preregistration_v1.md) | EEG Step 0 | Pre-registration (frozen before post-selection session 1) |

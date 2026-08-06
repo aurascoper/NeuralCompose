@@ -52,6 +52,7 @@ import time
 import json
 import signal
 import datetime
+import argparse
 import numpy as np
 
 # Set up BrainFlow before import
@@ -86,7 +87,13 @@ SAMPLE_RATE = 256          # Muse S native
 # analyze() is for. The two are not redundant — this constant removes the bulk,
 # that gate measures what curvature left behind.
 BLOCK_SECONDS = 15.0                                  # 4 x 15 s = same 60 s of alpha data
-ALPHA_BLOCK_ORDER = ['open', 'closed', 'closed', 'open']
+BLOCK_ORDERS = {
+    'ABBA': ['open', 'closed', 'closed', 'open'],
+    'BAAB': ['closed', 'open', 'open', 'closed'],
+}
+# Synthetic controls remain pinned to ABBA. Live acquisition passes its selected
+# order explicitly so alternating sessions never changes the fixtures.
+ALPHA_BLOCK_ORDER = BLOCK_ORDERS['ABBA']
 
 # Occipital alpha takes ~1-2 s to rise after eye closure. Including the build-up
 # biases closed blocks downward and makes the ratio sensitive to block length.
@@ -113,6 +120,8 @@ BLINK_DETECTION_UV = 40.0        # normal gentle blinks are 50-100 µV; aggressi
 HEAD_TURN_UV = 30.0              # slow turns are 30-80 µV; jerky is 100+
 CLENCH_BETA_RATIO = 2.0          # true EMG bursts are broadband >50 Hz, but 13-30 should rise
 CLENCH_BROADBAND_RATIO = 1.5      # 30-100 Hz broadband rise; EMG is broadband, single-band tests miss it
+CONTACT_RMS_MIN_UV = 2.0
+CONTACT_RMS_MAX_UV = 200.0
 
 # The condition ratio must also beat the drift the time-index baseline measures.
 # A multiplier, not a bare `>`, because the residual ABBA leaves behind is
@@ -120,13 +129,73 @@ CLENCH_BROADBAND_RATIO = 1.5      # 30-100 Hz broadband rise; EMG is broadband, 
 # sessions can say how noisy the estimate is. This is the calibration knob.
 TIME_BASELINE_MARGIN = 1.0
 
-# 80% of expected. Derives from BLOCK_SECONDS, NOT the old 30 s segment length:
-# pinning it to a stale longer duration would leave the check 2x loose and it
-# would pass on every truncated block it was written to catch.
-MIN_VALID_SAMPLES = BLOCK_SECONDS * SAMPLE_RATE * 0.8
+# Temporal permutation baseline. Ten seeds matches the paper's protocol. The
+# 3x collapse bound is conservative: theory gives B/4, roughly 11-32x for the
+# analysis bandwidths used here.
+SHUFFLE_SEEDS = 10
+SHUFFLE_COLLAPSE_FACTOR = 3.0
+
+# Require 80% of each segment's expected samples. The duration must remain
+# segment-specific: alpha, blink, clench, and turn intentionally differ.
+MIN_VALID_FRACTION = 0.8
 
 
 # --- Utilities -------------------------------------------------------------
+
+def is_short_segment(n_samples, duration):
+    return n_samples < duration * SAMPLE_RATE * MIN_VALID_FRACTION
+
+
+def classify_contact(rms):
+    saturated = [ch for ch in CHANNEL_NAMES
+                 if np.isfinite(rms[ch]) and rms[ch] > CONTACT_RMS_MAX_UV]
+    dead = [ch for ch in CHANNEL_NAMES
+            if not np.isfinite(rms[ch]) or rms[ch] < CONTACT_RMS_MIN_UV]
+    healthy = [ch for ch in CHANNEL_NAMES
+               if CONTACT_RMS_MIN_UV <= rms[ch] <= CONTACT_RMS_MAX_UV]
+    return healthy, saturated, dead
+
+
+def contact_check_record(rms):
+    healthy, saturated, dead = classify_contact(rms)
+    return {
+        'rms_uv': {
+            name: float(rms[name]) if np.isfinite(rms[name]) else None
+            for name in CHANNEL_NAMES
+        },
+        'healthy': healthy,
+        'saturated': saturated,
+        'dead': dead,
+        'passed': not saturated and not dead,
+    }
+
+
+def alpha_block_contact_records(alpha_blocks, block_order):
+    records = []
+    for block_index, (block, label) in enumerate(
+            zip(alpha_blocks, block_order), start=1):
+        rms = {
+            name: float(np.sqrt(np.mean(block[ch_idx, :].astype(np.float64) ** 2)))
+            for name, ch_idx in zip(CHANNEL_NAMES, EEG_CHANNELS)
+        }
+        record = contact_check_record(rms)
+        record.update(block_index=block_index, label=label)
+        records.append(record)
+    return records
+
+
+def new_contact_preflight():
+    return {
+        'status': 'not_run_noninteractive',
+        'override_used': False,
+        'classification_thresholds_uv': {
+            'minimum_inclusive': CONTACT_RMS_MIN_UV,
+            'maximum_inclusive': CONTACT_RMS_MAX_UV,
+        },
+        'checks': [],
+        'final_check': None,
+    }
+
 
 def bandpower(signal_1d, fs, band):
     """Welch-like simple periodogram power in band (Hz^2 * count)."""
@@ -186,9 +255,10 @@ def ascii_spectrogram(signal_1d, fs, title="", width=60, height=14, fmax=40):
 # --- Recording ------------------------------------------------------------
 
 class Recorder:
-    def __init__(self):
+    def __init__(self, require_segment_ack=False):
         self.board = None
         self.started_at = None
+        self.require_segment_ack = require_segment_ack
         # Cue onset is logged separately from block start. Without both, the 2 s
         # edge discard is a magic constant no later reader can audit: "user was
         # told to close their eyes" and "samples began" are 3+ seconds apart.
@@ -202,7 +272,10 @@ class Recorder:
         # architecturally identical. Change BoardIds.MUSE_S_BOARD -> MUSE_2_BOARD
         # when running this script on a Muse 2.
         self.board = BoardShim(BoardIds.MUSE_S_BOARD, params)
-        BoardShim.enable_dev_board_logger()
+        if os.environ.get("NC_BRAINFLOW_DEV_LOG", "1") == "0":
+            BoardShim.disable_board_logger()
+        else:
+            BoardShim.enable_dev_board_logger()
         print("Scanning for Muse S (board 39)...")
         self.board.prepare_session()
         print(f"Connected. ID: {self.board.get_board_id()}")
@@ -215,9 +288,19 @@ class Recorder:
     def segment(self, duration, label, prompt):
         """Record one segment with a real-time prompt to the user."""
         cue_unix = time.time()
-        print(f"\n>>> {label}: {prompt}")
+        print("\a\n" + "=" * 60)
+        print(f">>> {label}: {prompt}")
+        print("=" * 60, flush=True)
+        if self.require_segment_ack:
+            try:
+                input("Adopt that state now, then press ENTER to start the countdown...")
+            except EOFError as exc:
+                raise RuntimeError(
+                    "Interactive segment confirmation requires a TTY; "
+                    "use NC_VALIDATE_NONINTERACTIVE=1 only for attended automation"
+                ) from exc
         for remaining in [3, 2, 1]:
-            print(f"    starting in {remaining}...")
+            print(f"    starting in {remaining}...", flush=True)
             time.sleep(1.0)
         n_samples = int(duration * SAMPLE_RATE)
         # Drain current buffer
@@ -236,9 +319,22 @@ class Recorder:
             "cue_unix": cue_unix, "block_start_unix": block_start_unix,
             "cue_to_start_s": block_start_unix - cue_unix,
             "duration_s": duration, "n_samples": int(data.shape[1]),
-            "short_block": data.shape[1] < MIN_VALID_SAMPLES,
+            "short_block": is_short_segment(data.shape[1], duration),
         })
         return data
+
+    def contact_snapshot(self, duration=2.0):
+        """Measure live channel RMS before committing to the timed protocol."""
+        n_samples = int(duration * SAMPLE_RATE)
+        self.board.get_current_board_data(n_samples)
+        time.sleep(duration + 0.2)
+        data = self.board.get_current_board_data(n_samples)
+        if data.shape[1] == 0:
+            return {name: float('nan') for name in CHANNEL_NAMES}
+        return {
+            name: float(np.sqrt(np.mean(data[ch_idx, :].astype(np.float64) ** 2)))
+            for name, ch_idx in zip(CHANNEL_NAMES, EEG_CHANNELS)
+        }
 
     def disconnect(self):
         if self.board:
@@ -266,17 +362,57 @@ def alpha_ratio(blocks_hi, blocks_lo, ch_idx):
     return p_hi / max(p_lo, 1e-9)
 
 
-def analyze(alpha_blocks, data_blink, data_clench, data_turn):
-    """alpha_blocks: the four ABBA blocks in TIME ORDER, labelled by ALPHA_BLOCK_ORDER."""
+def shuffle_blocks(blocks, seed):
+    """Permute retained samples independently within each block and channel."""
+    rng = np.random.default_rng(seed)
+    shuffled = []
+    for block in blocks:
+        out = block.copy()
+        for ch_idx in EEG_CHANNELS:
+            out[ch_idx, :] = rng.permutation(block[ch_idx, :])
+        # If a cross-channel measure is added, share one permutation within
+        # each block instead so the shuffle preserves inter-channel structure.
+        shuffled.append(out)
+    return shuffled
+
+
+def shuffle_ratio_diagnostics(trimmed, block_order):
+    """Return report-only shuffled condition and time-index ratios by channel."""
+    condition = {name: [] for name in CHANNEL_NAMES}
+    time_index = {name: [] for name in CHANNEL_NAMES}
+    for seed in range(SHUFFLE_SEEDS):
+        shuffled = shuffle_blocks(trimmed, seed)
+        shuffled_open = [b for b, lab in zip(shuffled, block_order) if lab == 'open']
+        shuffled_closed = [b for b, lab in zip(shuffled, block_order) if lab == 'closed']
+        first_half, second_half = shuffled[:2], shuffled[2:]
+        for name, ch_idx in zip(CHANNEL_NAMES, EEG_CHANNELS):
+            condition[name].append(alpha_ratio(shuffled_closed, shuffled_open, ch_idx))
+            time_index[name].append(alpha_ratio(second_half, first_half, ch_idx))
+    return condition, time_index
+
+
+def analyze(alpha_blocks, data_blink, data_clench, data_turn,
+            contact_preflight=None, block_order=ALPHA_BLOCK_ORDER):
+    """Analyze four counterbalanced alpha blocks in acquisition order."""
     results = {}
+    if contact_preflight is not None:
+        results['contact_preflight'] = contact_preflight
+    block_contact = alpha_block_contact_records(alpha_blocks, block_order)
+    results['alpha_block_contact'] = {
+        'classification_thresholds_uv': {
+            'minimum_inclusive': CONTACT_RMS_MIN_UV,
+            'maximum_inclusive': CONTACT_RMS_MAX_UV,
+        },
+        'blocks': block_contact,
+    }
 
     # Channel order in BrainFlow: ch0=package_num, ch1=TP9, ch2=AF7, ch3=AF8, ch4=TP10, ch5=AUX, ch6=ts
     def extract(data, ch_idx):
         return data[ch_idx, :].astype(np.float64)
 
     trimmed = [trim_block_edge(b) for b in alpha_blocks]
-    open_blocks = [b for b, lab in zip(trimmed, ALPHA_BLOCK_ORDER) if lab == 'open']
-    closed_blocks = [b for b, lab in zip(trimmed, ALPHA_BLOCK_ORDER) if lab == 'closed']
+    open_blocks = [b for b, lab in zip(trimmed, block_order) if lab == 'open']
+    closed_blocks = [b for b, lab in zip(trimmed, block_order) if lab == 'closed']
     # Relabelled by POSITION alone, ignoring condition. Under ABBA this split is
     # orthogonal to the real labels, so it measures pure drift and nothing else.
     first_half, second_half = trimmed[:2], trimmed[2:]
@@ -284,13 +420,13 @@ def analyze(alpha_blocks, data_blink, data_clench, data_turn):
     # Sections 3 and 5 below want contiguous open/closed arrays; the untrimmed
     # concatenation is right there since they are baselines, not the contrast.
     data_open = np.concatenate(
-        [b for b, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER) if lab == 'open'], axis=1)
+        [b for b, lab in zip(alpha_blocks, block_order) if lab == 'open'], axis=1)
     data_closed = np.concatenate(
-        [b for b, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER) if lab == 'closed'], axis=1)
+        [b for b, lab in zip(alpha_blocks, block_order) if lab == 'closed'], axis=1)
 
     # 1. Alpha power ratio eyes-closed / eyes-open, per channel, against drift
     print("\n--- 1. Alpha power (8-13 Hz) per channel ---")
-    print(f"  blocks: {' '.join(ALPHA_BLOCK_ORDER)} @ {BLOCK_SECONDS:.0f}s, "
+    print(f"  blocks: {' '.join(block_order)} @ {BLOCK_SECONDS:.0f}s, "
           f"first {BLOCK_EDGE_DISCARD_S:.0f}s of each discarded")
     alpha_ratios = {}
     time_ratios = {}
@@ -316,6 +452,13 @@ def analyze(alpha_blocks, data_blink, data_clench, data_turn):
     if not results['alpha_pass'] and results['best_alpha_ratio'] >= ALPHA_RATIO_THRESHOLD:
         print("  ** alpha ratio cleared 1.5x but did NOT beat the time-index baseline.")
         print("     A drift across the session explains it as well as eye closure does.")
+
+    shuffled_condition, shuffled_time = shuffle_ratio_diagnostics(trimmed, block_order)
+    results['alpha_shuffle_seeds'] = SHUFFLE_SEEDS
+    results['alpha_shuffle_collapse_factor'] = SHUFFLE_COLLAPSE_FACTOR
+    results['alpha_shuffle_condition_ratios'] = shuffled_condition
+    results['alpha_shuffle_time_index_ratios'] = shuffled_time
+    results['alpha_shuffle_gate'] = 'report_only'
 
     # 2. Blink detection: max abs value in AF7/AF8 during blink window
     print("\n--- 2. Blink transient detection (frontal channels) ---")
@@ -393,9 +536,7 @@ def analyze(alpha_blocks, data_blink, data_clench, data_turn):
     # For saturated channels we expect RMS ~ 577 µV (uniformly distributed
     # in [-1000, 1000]); report them as a separate diagnostic flag so a
     # future session can re-fit the headband.
-    saturated = [ch for ch in CHANNEL_NAMES if rms[ch] > 200.0]
-    dead = [ch for ch in CHANNEL_NAMES if rms[ch] < 2.0]
-    healthy = [ch for ch in CHANNEL_NAMES if 2.0 <= rms[ch] <= 200.0]
+    healthy, saturated, dead = classify_contact(rms)
     rms_ok = (len(saturated) == 0 and len(dead) == 0)
     results['contact_pass'] = rms_ok
     results['contact_saturated'] = saturated
@@ -424,6 +565,39 @@ def analyze(alpha_blocks, data_blink, data_clench, data_turn):
     for name, ok in checks:
         marker = "PASS" if ok else "FAIL"
         print(f"  [{marker}] {name}")
+    if contact_preflight is None:
+        print("\n  Contact preflight: NOT RECORDED (legacy or analysis-only input)")
+    else:
+        thresholds = contact_preflight['classification_thresholds_uv']
+        print(f"\n  Contact preflight: {contact_preflight['status']} "
+              f"(override={contact_preflight['override_used']}, "
+              f"checks={len(contact_preflight['checks'])}, "
+              f"healthy={thresholds['minimum_inclusive']:.1f}-"
+              f"{thresholds['maximum_inclusive']:.1f} uV inclusive)")
+        final_check = contact_preflight['final_check']
+        if final_check is not None:
+            for name in CHANNEL_NAMES:
+                state = ("healthy" if name in final_check['healthy'] else
+                         "SATURATED" if name in final_check['saturated'] else "DEAD")
+                value = final_check['rms_uv'][name]
+                value_text = "missing" if value is None else f"{value:.1f} uV"
+                print(f"    {name:>5}: {value_text:>10}  {state}")
+    print("\n  Per-block alpha contact:")
+    for block in block_contact:
+        states = []
+        for name in CHANNEL_NAMES:
+            state = ("healthy" if name in block['healthy'] else
+                     "SATURATED" if name in block['saturated'] else "DEAD")
+            value = block['rms_uv'][name]
+            value_text = "missing" if value is None else f"{value:.1f}uV"
+            states.append(f"{name}={value_text}/{state}")
+        print(f"    block {block['block_index']} {block['label']}: " + ", ".join(states))
+    print("\n  Temporal-shuffle diagnostics (report only; one ratio per seed):")
+    for name in CHANNEL_NAMES:
+        cond = ', '.join(f"{value:.2f}" for value in shuffled_condition[name])
+        time_values = ', '.join(f"{value:.2f}" for value in shuffled_time[name])
+        print(f"  {name:>5} condition:  [{cond}]")
+        print(f"        time-index: [{time_values}]")
     print()
     if n_pass == 5:
         verdict = "DEFINITIVE — Muse is on your head and producing physiological EEG."
@@ -445,7 +619,7 @@ def analyze(alpha_blocks, data_blink, data_clench, data_turn):
 
 # --- Main ------------------------------------------------------------------
 
-def main():
+def main(block_order):
     out_dir = os.path.expanduser("~/Developer/NeuralCompose/Recordings")
     os.makedirs(out_dir, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -458,6 +632,7 @@ def main():
     print("=" * 60)
     print()
     print("PROTOCOL")
+    print(f"  Alpha block order: {' '.join(block_order)}")
     print("  Total time: ~80 s. Keep the Muse on your head the whole time.")
     print("  Prompted on screen for each segment.")
     print()
@@ -479,28 +654,54 @@ def main():
             return 2
     print()
 
-    rec = Recorder()
+    rec = Recorder(require_segment_ack=(
+        os.environ.get("NC_VALIDATE_NONINTERACTIVE") != "1"))
     try:
         rec.connect()
     except Exception as e:
         print(f"FAILED to connect: {e}")
         return 2
 
-    # Ctrl-C to abort
+    # Install cleanup before any interactive contact checks.
     def stop(*_):
         print("\nAborted.")
         rec.disconnect()
         sys.exit(130)
     signal.signal(signal.SIGINT, stop)
 
+    contact_preflight = new_contact_preflight()
+    if rec.require_segment_ack:
+        while True:
+            rms = rec.contact_snapshot()
+            check = contact_check_record(rms)
+            contact_preflight['checks'].append(check)
+            contact_preflight['final_check'] = check
+            print("\nLive contact snapshot:")
+            for name in CHANNEL_NAMES:
+                state = ("healthy" if name in check['healthy'] else
+                         "SATURATED" if name in check['saturated'] else "DEAD")
+                print(f"  {name:>5}: {rms[name]:7.1f} uV  {state}")
+            if check['passed']:
+                input("All channels are in range. Press ENTER to begin the protocol...")
+                contact_preflight['status'] = 'passed'
+                break
+            response = input(
+                "Reseat the flagged contacts, then press ENTER to recheck; "
+                "type RUN to continue anyway: ")
+            if response.strip().lower() == "run":
+                print("Proceeding with an explicit contact-quality override.")
+                contact_preflight['status'] = 'overridden'
+                contact_preflight['override_used'] = True
+                break
+
     prompts = {
         'open': "Open eyes. Look at a fixed point. Relax face/jaw.",
         'closed': "Close eyes gently. Same relaxation. Don't squint.",
     }
     alpha_blocks = []
-    for n, lab in enumerate(ALPHA_BLOCK_ORDER, start=1):
+    for n, lab in enumerate(block_order, start=1):
         alpha_blocks.append(rec.segment(
-            BLOCK_SECONDS, f"BLOCK {n}/{len(ALPHA_BLOCK_ORDER)} — EYES {lab.upper()}",
+            BLOCK_SECONDS, f"BLOCK {n}/{len(block_order)} — EYES {lab.upper()}",
             prompts[lab]))
 
     data_blink = rec.segment(SEG_BLINK, "BLINK",
@@ -523,7 +724,7 @@ def main():
     # through verbatim, so the new labels are additive, not breaking.
     seen = {}
     seg_labels = []
-    for blk, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER):
+    for blk, lab in zip(alpha_blocks, block_order):
         seen[lab] = seen.get(lab, 0) + 1
         seg_labels += [f"{lab}{seen[lab]}"] * blk.shape[1]
     seg_labels += (['blink'] * data_blink.shape[1] +
@@ -539,15 +740,17 @@ def main():
         f.write('\n'.join(rows) + '\n')
 
     # Analyze
-    results, rc = analyze(alpha_blocks, data_blink, data_clench, data_turn)
+    results, rc = analyze(
+        alpha_blocks, data_blink, data_clench, data_turn,
+        contact_preflight=contact_preflight, block_order=block_order)
     results['block_marks'] = rec.marks
-    results['block_order'] = ALPHA_BLOCK_ORDER
+    results['block_order'] = block_order
 
     # ASCII spectrograms (eyes open vs eyes closed) for visual confirmation
     af7_open = np.concatenate(
-        [b[2, :] for b, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER) if lab == 'open'])
+        [b[2, :] for b, lab in zip(alpha_blocks, block_order) if lab == 'open'])
     af7_closed = np.concatenate(
-        [b[2, :] for b, lab in zip(alpha_blocks, ALPHA_BLOCK_ORDER) if lab == 'closed'])
+        [b[2, :] for b, lab in zip(alpha_blocks, block_order) if lab == 'closed'])
     print("\n--- 6. AF7 spectrogram: eyes open vs eyes closed ---")
     print(ascii_spectrogram(af7_open.astype(np.float64), SAMPLE_RATE,
                             title="AF7 EYES OPEN (both blocks)", width=60, height=14))
@@ -592,8 +795,53 @@ def demo():
     """Self-check. Runs without brainflow or hardware: python3 <this> --self-check"""
     ch = EEG_CHANNELS[0]
 
+    # Segment completeness follows each segment's own duration, not the longer
+    # alpha-block duration.
+    assert not is_short_segment(int(SEG_BLINK * SAMPLE_RATE), SEG_BLINK)
+    assert not is_short_segment(int(SEG_CLENCH * SAMPLE_RATE), SEG_CLENCH)
+    assert not is_short_segment(int(SEG_TURN * SAMPLE_RATE), SEG_TURN)
+    assert is_short_segment(int(SEG_BLINK * SAMPLE_RATE * 0.79), SEG_BLINK)
+    contact_record = contact_check_record({
+        'TP9': 20.0, 'AF7': 201.0, 'AF8': 2.0, 'TP10': 1.9})
+    assert contact_record == {
+        'rms_uv': {'TP9': 20.0, 'AF7': 201.0, 'AF8': 2.0, 'TP10': 1.9},
+        'healthy': ['TP9', 'AF8'],
+        'saturated': ['AF7'],
+        'dead': ['TP10'],
+        'passed': False,
+    }
+    missing_record = contact_check_record({
+        'TP9': float('nan'), 'AF7': 20.0, 'AF8': 20.0, 'TP10': 20.0})
+    assert missing_record['rms_uv']['TP9'] is None
+    assert missing_record['dead'] == ['TP9']
+    json.dumps(missing_record, allow_nan=False)
+    preflight = new_contact_preflight()
+    assert preflight['status'] == 'not_run_noninteractive'
+    assert preflight['override_used'] is False
+    assert preflight['classification_thresholds_uv'] == {
+        'minimum_inclusive': 2.0,
+        'maximum_inclusive': 200.0,
+    }
+    assert BLOCK_ORDERS[parse_args(['--order', 'BAAB']).order] == \
+        ['closed', 'open', 'open', 'closed']
+    contact_blocks = [np.zeros((7, 8)) for _ in range(4)]
+    for block in contact_blocks:
+        block[1, :] = 20.0
+        block[2, :] = 250.0
+        block[3, :] = 1.0
+        block[4, :] = 100.0
+    block_records = alpha_block_contact_records(contact_blocks, BLOCK_ORDERS['BAAB'])
+    assert [record['label'] for record in block_records] == \
+        ['closed', 'open', 'open', 'closed']
+    assert block_records[0]['healthy'] == ['TP9', 'TP10']
+    assert block_records[0]['saturated'] == ['AF7']
+    assert block_records[0]['dead'] == ['AF8']
+
     # (a) Real alpha, no drift -> condition ratio high, time ratio ~1, PASSES.
-    b = [trim_block_edge(x) for x in _synth_blocks(alpha_gain=1.0, drift_per_block=1.0)]
+    # The modest gain isolates spectral structure without smuggling a near-gate
+    # broadband amplitude contrast into the fixture. Its d1 tightness is a
+    # consequence of that mechanism-focused fixture, not a tuned target.
+    b = [trim_block_edge(x) for x in _synth_blocks(alpha_gain=0.3, drift_per_block=1.0)]
     r_cond = alpha_ratio(b[1:3], [b[0], b[3]], ch)
     r_time = alpha_ratio(b[2:], b[:2], ch)
     assert r_cond >= ALPHA_RATIO_THRESHOLD, f"(a) alpha not detected: {r_cond:.2f}"
@@ -621,14 +869,70 @@ def demo():
     assert r_cond >= ALPHA_RATIO_THRESHOLD and r_cond > r_time * TIME_BASELINE_MARGIN, \
         f"(c) real alpha lost to drift: cond={r_cond:.2f} time={r_time:.2f}"
 
+    # (d) Shuffle the exact post-trim arrays passed to bandpower(). It must
+    #     destroy within-block spectral structure without erasing a between-
+    #     block amplitude effect.
+    alpha_blocks = b
+    drift_blocks = [trim_block_edge(x) for x in _synth_blocks(
+        alpha_gain=0.0, drift_per_block=1.6)]
+    for seed in range(SHUFFLE_SEEDS):
+        shuffled_alpha = shuffle_blocks(alpha_blocks, seed)
+        shuffled_drift = shuffle_blocks(drift_blocks, seed)
+
+        # (d3) Sampling is without replacement, independently per block/channel.
+        for original, shuffled in zip(alpha_blocks, shuffled_alpha):
+            for ch_idx in EEG_CHANNELS:
+                assert np.array_equal(np.sort(shuffled[ch_idx]), np.sort(original[ch_idx])), \
+                    f"(d3) seed {seed} channel {ch_idx} is not a permutation"
+        for original, shuffled in zip(drift_blocks, shuffled_drift):
+            for ch_idx in EEG_CHANNELS:
+                assert np.array_equal(np.sort(shuffled[ch_idx]), np.sort(original[ch_idx])), \
+                    f"(d3) drift seed {seed} channel {ch_idx} is not a permutation"
+
+        for name, ch_idx in zip(CHANNEL_NAMES, EEG_CHANNELS):
+            true_condition = alpha_ratio(
+                [alpha_blocks[1], alpha_blocks[2]],
+                [alpha_blocks[0], alpha_blocks[3]], ch_idx)
+            shuffled_condition = alpha_ratio(
+                [shuffled_alpha[1], shuffled_alpha[2]],
+                [shuffled_alpha[0], shuffled_alpha[3]], ch_idx)
+            assert shuffled_condition - 1 < \
+                (true_condition - 1) / SHUFFLE_COLLAPSE_FACTOR, \
+                f"(d1) seed {seed} {name} spectral excess survived: " \
+                f"true={true_condition:.2f} shuffled={shuffled_condition:.2f}"
+            assert shuffled_condition < ALPHA_RATIO_THRESHOLD, \
+                f"(d1) seed {seed} {name} shuffled condition passed gate: " \
+                f"{shuffled_condition:.2f}"
+
+            true_time = alpha_ratio(drift_blocks[2:], drift_blocks[:2], ch_idx)
+            shuffled_time = alpha_ratio(shuffled_drift[2:], shuffled_drift[:2], ch_idx)
+            assert shuffled_time - 1 > \
+                (true_time - 1) / SHUFFLE_COLLAPSE_FACTOR, \
+                f"(d2) seed {seed} {name} amplitude excess collapsed: " \
+                f"true={true_time:.2f} shuffled={shuffled_time:.2f}"
+
+    # (d4) A seed identifies one exact permutation and therefore one result.
+    repeat_a = shuffle_blocks(alpha_blocks, 0)
+    repeat_b = shuffle_blocks(alpha_blocks, 0)
+    assert all(np.array_equal(a, b) for a, b in zip(repeat_a, repeat_b)), \
+        "(d4) identical seeds produced different permutations"
+
     print(f"self-check ok — pure drift: old protocol reports {r_old:.2f}x (PASS), "
-          f"new gate rejects it")
+          f"new gate rejects it; {SHUFFLE_SEEDS} shuffle seeds pass d1-d4")
     return 0
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--self-check', action='store_true')
+    parser.add_argument('--order', choices=sorted(BLOCK_ORDERS), default='ABBA')
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":
     try:
-        sys.exit(demo() if "--self-check" in sys.argv else main())
+        args = parse_args(sys.argv[1:])
+        sys.exit(demo() if args.self_check else main(BLOCK_ORDERS[args.order]))
     except Exception as e:
         import traceback
         traceback.print_exc()
