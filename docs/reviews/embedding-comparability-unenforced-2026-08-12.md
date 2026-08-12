@@ -135,7 +135,44 @@ it makes `nil` the cheap, honest default rather than a compromise: the primitive
 declines to answer a question it was never the right operation for, and the
 caller that actually needs an answer asks a differently-named one.
 
-Note the naming: there is no `EmbeddingProfileTerms` type in either repo —
-searched both `crates/` and `Sources/`. The concept lives under
-`embedding_space_identity` / `IndexEntryKey` / `shares_index`, and Swift has no
-equivalent at all today.
+### Where the machinery actually lives
+
+A correction to an earlier draft of this section, which said no
+`EmbeddingProfileTerms` type existed. That was true of the two repos searched
+(`neuralcompose-client-native/crates/` and `NeuralCompose/Sources/`) and **false
+of the workspace**: it is in a third repo, `neural-memory-server`, at
+`crates/neural-memory-domain/src/terms.rs:444`.
+
+It is the richest form of the idea. Its own doc comment says the field set
+"mirrors `neuralcompose-mobile-core`'s `embedding_space_identity`
+(`model_pack.rs:305`)", and it seals:
+
+```
+model_family, model_revision, weight_sha256 (sorted), tokenizer_sha256 (sorted),
+dimensions, pooling, normalization, task_instruction
+```
+
+— "change any of them and the vectors mean something else, however similar the
+text." Digests are sorted before sealing because shard listing order is noise.
+
+**And it settles the operation question outright**, in a passage worth quoting
+rather than paraphrasing:
+
+> **The backend is absent, and that is the point.** A CPU run and an NPU run of
+> the same model produce vectors in the same space or they do not, and that is a
+> question to be *measured*, not asserted by stamping a different identity on
+> them. Putting the backend here would fork the space by declaration and make
+> the measurement unaskable. Where the vector came from belongs on the runtime
+> variant; whether the two may share an index is what conformance decides.
+
+So the third option is not a proposal. It is the position this workspace already
+took, deliberately, and wrote down: **identity declares the space; conformance
+measures whether two things share one.** `cosineSimilarity` is neither, which is
+why handing it a cross-space pair has no good answer — and why `nil` is the
+honest one.
+
+The gap is that all of this is Rust. Swift has no counterpart to
+`EmbeddingProfileTerms`, `embedding_space_identity`, `IndexEntryKey` or
+`shares_index`, and its `Embedding` carries a bare `modelID` string that nothing
+checks. The enforcement machinery exists in the workspace, just not in the
+language where the 32 call sites are.
