@@ -48,16 +48,30 @@ provenance from the first element and **silently skips** members of a differing
 dimension. A centroid averaged over an unannounced subset is still a plausible
 vector, and every similarity measured against it afterwards is plausible too.
 
-## Reachability
+## Reachability — latent, and checked rather than assumed
 
-Not currently reachable in the shipped app, as far as this review can tell: one
-embedder is constructed per session, so every `Embedding` in a dialectic turn
-shares a `modelID`. The exposure is real but latent, and it grows the moment a
-second backend exists — which ADR-010 is explicitly about, having named
+Not reachable in the shipped app: one embedder is constructed per session, so
+every `Embedding` in a dialectic turn shares a `modelID`.
+
+**`SemanticEval` was the obvious counterexample and it does not hold.** An
+earlier draft of this note said it "compares across candidate models by design"
+and was therefore the likely first caller to hit this. That is wrong, and the
+distinction matters, because if it were true this would be a *history* — past
+reports already containing cross-space numbers — rather than a risk.
+
+`Sources/SemanticEval/main.swift` takes a single `--model` flag
+(`parseModelFlag()`, :12), resolves exactly one conformer through a `switch`
+(:59), populates one `embeddingByText` map from that one embedder (:101-103),
+and writes its report to a directory stamped with `result.provenance.modelID`
+(:217). Every `cosineSimilarity` call in it — `pairScores` (:33),
+`meanPairwiseSimilarity` (:45), the corpus/query scans (:108, :123) — reads
+from that single map.
+
+So SemanticEval compares models **at the report level**, across runs, not by
+taking a cosine between two spaces. Its past outputs are not suspect. The
+exposure is genuinely latent and arrives with the first caller that holds two
+embedders at once — which ADR-010 makes foreseeable, having named
 bge-small-en-v1.5 as the candidate *over* all-MiniLM-L6-v2 and E5-base-v2.
-
-`Sources/SemanticEval/` compares across candidate models by design and is the
-most likely first caller to hit it.
 
 ## Blast radius
 
@@ -86,10 +100,42 @@ The Rust side already carries this and pins it with a test asserting
 `Some(0.0) != None` — orthogonal-and-comparable versus incomparable — so a
 future reintroduction of the sentinel names itself.
 
-## Not decided here
+## Not decided here — and the question is probably not "which failure mode"
 
-Whether `nil` should be a trap instead. A `preconditionFailure` would be louder
-and is defensible for what is arguably a programming error, but it would make a
-mixed-corpus `SemanticEval` run crash rather than report, and that tool exists
-precisely to compare across models. `Optional` leaves the choice with the
-caller; the trap does not.
+The first two candidates were `nil` versus a `preconditionFailure`. Both assume
+cross-model comparison is a *similarity* operation that should either return
+nothing or crash.
+
+**A third option says it is not a similarity operation at all**, and the
+client-native workspace has already built the vocabulary for it:
+
+- `crates/neuralcompose-mobile-core/src/property_law.rs:28-31` makes
+  `IndexEntryKey` the pair *(content digest, embedding-space identity)* —
+  "two records with different embedding identities are never the same entry,
+  however similar the text."
+- `property_law.rs:66-70`, `shares_index(a, b)`, is exactly this question as an
+  executable law: entries belong in the same index **only** when
+  `embedding_space_identity` matches, because "mixing spaces silently poisons
+  retrieval."
+- `model_pack.rs:305`, `embedding_space_identity()`, derives that identity from
+  model family, revision, weight and tokenizer digests and dimensions — so the
+  space has a name that cannot be forged, not just a `modelID` string.
+- PR #30 treated cross-backend divergence as a **conformance measurement**
+  (`tests/embedding_agreement.rs`, `vulkan_agreement.rs`, `composed_error.rs`),
+  a different question with its own semantics and its own tolerances — not a
+  similarity with a caveat.
+
+So if a future caller genuinely needs to relate two spaces, it likely wants a
+distinct, explicitly-declared operation that states what it means — a
+conformance or agreement measurement between named spaces — rather than
+borrowing `cosineSimilarity` and being handed a `nil` or a trap for its trouble.
+
+That reframes the decision from *which failure mode* to *which operation*, and
+it makes `nil` the cheap, honest default rather than a compromise: the primitive
+declines to answer a question it was never the right operation for, and the
+caller that actually needs an answer asks a differently-named one.
+
+Note the naming: there is no `EmbeddingProfileTerms` type in either repo —
+searched both `crates/` and `Sources/`. The concept lives under
+`embedding_space_identity` / `IndexEntryKey` / `shares_index`, and Swift has no
+equivalent at all today.
