@@ -123,6 +123,18 @@ struct Case {
     /// `(candidateIndex, blendWeightTowardHeard, roleID)`.
     let candidates: [(Int, Float, String)]
     let draw: Double
+    /// Injects the tension rather than deriving it from the candidate
+    /// embeddings.
+    ///
+    /// Needed because `compete`'s silence gate is `tension >= highTension`, and
+    /// a mutation of that `>=` to `>` is only observable when tension lands
+    /// EXACTLY on the bar. Tension derived from a cosine will never do that
+    /// reliably in `Float`, so a fixture built only from embeddings cannot
+    /// discriminate the boundary — a mutation run against the first version of
+    /// this file confirmed that mutant survived. `compete` already takes
+    /// tension as a parameter on both sides, so passing the bar exactly is
+    /// available and exact.
+    var tensionOverride: Float? = nil
 }
 
 let profiles: [(String, DialecticalDynamics.Tuning)] = [
@@ -201,6 +213,44 @@ for (name, tuning) in profiles {
         candidates: [],
         draw: 0.5
     ))
+
+    // ── Boundary cases ──────────────────────────────────────────────────
+    // Added after a mutation run showed the derived-tension cases above could
+    // not discriminate two comparison operators. Both mutants survived the
+    // first fixture; these are placed exactly either side of each comparison.
+
+    // I. Tension EXACTLY on the silence bar, with a margin under the stalemate
+    //    threshold. Kills `tension >= highTension` → `>`: at equality the
+    //    correct code falls silent and the mutant speaks.
+    cases.append(Case(
+        name: "\(name)/boundary-tension-exactly-at-bar", profile: name, tuning: tuning,
+        heardIndex: 18, historyIndices: [], replyIndices: [],
+        candidates: [(80, 0.50, "coherenceSeeking"), (80, 0.50, "displacementSeeking")],
+        draw: 0.5,
+        tensionOverride: tuning.highTension
+    ))
+    // J. The same competition a clear step BELOW the bar — must speak. Without
+    //    this companion, case I alone would also pass against code that always
+    //    fell silent.
+    cases.append(Case(
+        name: "\(name)/boundary-tension-just-under-bar", profile: name, tuning: tuning,
+        heardIndex: 18, historyIndices: [], replyIndices: [],
+        candidates: [(80, 0.50, "coherenceSeeking"), (80, 0.50, "displacementSeeking")],
+        draw: 0.5,
+        tensionOverride: tuning.highTension - 0.01
+    ))
+    // K. Two IDENTICAL candidate embeddings ⇒ identical potentials ⇒
+    //    probabilities exactly [0.5, 0.5], with the draw exactly on that
+    //    cumulative boundary. Kills `d < cumulative` → `d <= cumulative`:
+    //    the correct code walks past the first basin, the mutant stops in it.
+    //    Identical embeddings also make the derived tension exactly 0, so the
+    //    silence gate stays out of the way and selection is the only variable.
+    cases.append(Case(
+        name: "\(name)/boundary-draw-exactly-on-cumulative", profile: name, tuning: tuning,
+        heardIndex: 19, historyIndices: [], replyIndices: [],
+        candidates: [(81, 0.30, "coherenceSeeking"), (81, 0.30, "displacementSeeking")],
+        draw: 0.5
+    ))
 }
 
 // ── Run ─────────────────────────────────────────────────────────────────────
@@ -235,7 +285,8 @@ for c in cases {
         )
     }
 
-    let tension = DialecticalDynamics.tension(among: candidates.map(\.embedding))
+    let tension = c.tensionOverride
+        ?? DialecticalDynamics.tension(among: candidates.map(\.embedding))
     let tau = DialecticalDynamics.selectionTemperature(tension: tension, tuning: c.tuning)
     let probs = DialecticalDynamics.probabilities(
         potentials: scored.map(\.potential), tau: tau
@@ -275,6 +326,7 @@ for c in cases {
     "replyCentroid":\(replyCentroid.map { jArray($0.values) } ?? "null"),\
     "candidates":[\(candidateJSON)],\
     "tension":\(j(tension)),\
+    "tensionInjected":\(c.tensionOverride != nil),\
     "selectionTemperature":\(j(tau)),\
     "probabilities":\(jArray(probs)),\
     "draw":\(j(c.draw)),\
