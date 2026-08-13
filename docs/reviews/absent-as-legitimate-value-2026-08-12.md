@@ -24,7 +24,7 @@ dimension are skipped, and the result is returned as if complete. **A subset
 centroid is a real vector**, and every similarity measured against it afterwards
 is plausible. Nothing reports that anything was dropped.
 
-### 3. `roleFulfillment: role?.objective(energy) ?? 0`
+### 3. `roleFulfillment: role?.objective(energy) ?? 0` — and this one is different in kind
 
 `Sources/BCICore/Composition/HypnagogicDialecticLoop.swift:241`, and the sharpest
 of the set. `roles.first { $0.id == roleID }` is a lookup that can miss; a miss
@@ -38,18 +38,66 @@ that signal.** So a lookup failure manufactures the exact reading the field
 exists to detect, and the diagnostic reports a maximally-failed role instead of
 an internal inconsistency.
 
+**The distinction worth keeping, because it is the version of this argument that
+should convince someone who finds the other four unremarkable:** instances 1, 2,
+4 and 5 are a sentinel colliding with a *plausible number*. This one collides
+with a *diagnostic*. The failure does not merely hide among legitimate values —
+it **impersonates the specific signal a downstream stage is watching for**. A
+role-lookup miss does not produce a suspicious zero; it produces a confident
+report that the displacement pole utterly failed its brief. Anything built on
+that field to detect degenerate generation will fire on an internal
+inconsistency and point at the model.
+
 Not currently reachable: `candidateTexts` is built from `roles`, so the id is
 always present. It is one refactor away — a filtered role list, a duplicate id, a
 role set swapped mid-turn — and the consequence is a wrong diagnostic rather than
 a crash.
 
-### 4. `FeatureExtractor` band energies
+### 4. `FeatureExtractor` band energies — reachability checked, and it is *not* the live path
 
 `Sources/BCICore/Preprocessing/FeatureExtractor.swift:122-126` —
 `energies["delta"] ?? 0` and four siblings. **`0` is a legitimate band energy**
-(a dead electrode). A missing dictionary key and a flat channel are the same
-number downstream. Lower severity than the others, since the dictionary is built
-immediately above, but the same shape.
+(a dead electrode), so a missing dictionary key and a flat channel are the same
+number downstream.
+
+This was worth checking rather than filing next to the others by proximity,
+because electrode failure-without-saying-so is the project's active constraint.
+Two questions, both answered:
+
+**Does the Core ML classifier consume this? No.**
+`CoreMLIntentClassifier.classify(window:)` builds its `MLMultiArray` directly
+from the raw window (`multiArray(from:)`, :119) — channels × samples, zero-padded
+— and never touches `FeatureExtractor`. There is no wrong-input path into the
+shipped classifier. `FeatureExtractor`'s only callers are
+`MockIntentClassifier.swift:46` (the stub path), `JEPATransition.swift:41`, and
+one golden-recording regression test.
+
+**Is the dictionary lookup actually breakable? Barely.** The band names are
+written and read as hardcoded literals in the *same private function*, twenty
+lines apart (`centers` at :103, the reads at :122-126), with a loop that always
+writes all five. There is no config, no external band label, and no caller who
+can influence the keys. The `?? 0` is dead defensive code. Its fuse is a rename
+typo in one of the two lists — short, but local and immediately visible.
+
+So: **lowest severity in this set, and reachable by neither of the routes that
+made it look urgent.** Fix it as tidiness (destructure the tuple list, or build
+`Bands` in the loop) rather than as a defect.
+
+**The sharper sentinel in that same function is a different line.** At :117,
+`let e = n > 0 ? Float(...) : 0` — a channel shorter than the lag is skipped
+(`if ch.count <= lag { continue }`), and if *every* channel is too short the band
+reports `0`. That is insufficient-data rendered as a real measurement, and unlike
+the dictionary read it depends on runtime values: `lag = sampleRate / centerHz / 2`,
+so delta at 256 Hz needs 51 samples. Comfortable for a 1–2 s window, but it is
+the window length and sample rate — not a literal — that keep it safe.
+
+**Where the wrong value would actually land:** `JEPATransition.init?(window:)`
+takes `alphaEnergy`/`betaEnergy`/`thetaEnergy` straight from here into the
+capture persisted for offline JEPA training (ADR-006). It guards `isFinite`,
+which a spurious `0` passes. So the consequence is not a bad live decision but a
+**poisoned training corpus** — silently, and discovered much later. Given a
+corpus has already been lost to a confound once, that is the reachability that
+matters here, not the classifier.
 
 ### 5. `ProsodyWobble` substitutes concrete defaults for `nil`
 
@@ -93,9 +141,25 @@ sentinel names itself.
 
 ## Suggested handling
 
-Instances 1 and 3 are worth fixing; 2 is worth fixing with them since it is in
-the same file as 1's main caller. 4 and 5 are worth a comment stating the
-substitution is deliberate, or a fix, but neither is urgent.
+Ranked by what the failure would actually cost, not by how alarming the line
+looks:
+
+1. **`roleFulfillment` (3)** — highest. It impersonates a diagnostic rather than
+   hiding among plausible values, so anything built on that field to detect
+   degenerate generation would misattribute an internal inconsistency to the
+   model. Fix even though it is currently unreachable.
+2. **`cosineSimilarity` (1)** and **`centroid` (2)** — fix together; they share a
+   file and a caller, and the Rust port has already demonstrated the resolution.
+3. **`FeatureExtractor`'s `n > 0 ? … : 0` (4, second line)** — insufficient data
+   rendered as a measurement, on the path that feeds a *persisted* JEPA training
+   corpus. Worth a guard that refuses rather than reports zero.
+4. **`FeatureExtractor`'s dictionary reads (4, first lines)** — tidiness only.
+   Not reachable; the keys are literals in one private function.
+5. **`ProsodyWobble` (5)** — leave hedged. Substituting a default for "let the
+   engine choose" is a real semantic loss, but it is plausibly what was meant,
+   and it is the one case here where a fix would change *output* rather than only
+   diagnostics. That asymmetry is the argument for leaving it alone until someone
+   states the intent.
 
 Nothing here should be fixed *only* in the Rust port. The dialectic's Rust half
 is now checked against the Swift by a committed conformance fixture
