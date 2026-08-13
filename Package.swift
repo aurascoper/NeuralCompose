@@ -336,7 +336,8 @@ let package = Package(
         .testTarget(
             name: "WorldModelDemoTests",
             dependencies: ["WorldModelDemo", "BCICore"],
-            path: "Tests/WorldModelDemoTests"
+            path: "Tests/WorldModelDemoTests",
+            resources: [.process("Fixtures")]
         ),
         .testTarget(
             name: "NeuralComposeAppTests",
