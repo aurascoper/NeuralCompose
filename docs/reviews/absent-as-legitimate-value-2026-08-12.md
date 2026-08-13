@@ -95,9 +95,34 @@ the window length and sample rate — not a literal — that keep it safe.
 takes `alphaEnergy`/`betaEnergy`/`thetaEnergy` straight from here into the
 capture persisted for offline JEPA training (ADR-006). It guards `isFinite`,
 which a spurious `0` passes. So the consequence is not a bad live decision but a
-**poisoned training corpus** — silently, and discovered much later. Given a
-corpus has already been lost to a confound once, that is the reachability that
-matters here, not the classifier.
+**poisoned training corpus** — silently, and discovered much later.
+
+#### Checked: it has not happened, because the capture has never run
+
+An exact `0.0` band energy out of a float computation over real EEG is a
+measure-zero event — genuine delta power is small but never exactly zero — so
+existing captures can be *scanned* for it rather than reasoned about. Any hit
+would be either this bug or a dead channel, and both are worth finding.
+
+Ran it, 2026-08-13. **There are no captures.** `~/Documents/NeuralCompose/` holds
+`Calibration/`, `EEGIntegration/`, `InteractionLogs/`, `Recordings/`,
+`health.json` and `voice-profile.json` — and no `JEPATransitions/` directory at
+all, on either machine. `TransitionCaptureManager` writes
+`~/Documents/NeuralCompose/JEPATransitions/jepa_transitions.jsonl`
+(`TransitionCaptureManager.swift:58-60`) and that path has never been created,
+which matches `CLAUDE.md`'s own statement that there are zero logged interaction
+events because the capture is opt-in and off by default.
+
+That is the good version of this finding rather than the disappointing one: the
+corpus is empty, so the guard can land **before** the first capture run at zero
+cleanup cost, and there is no archaeology to do. It also means the check is
+better placed at capture time than after: reject a window whose band energies
+come back exactly zero, rather than scanning for them later.
+
+Pair it with making the implicit precondition explicit. The safety of :117
+rests on window length ≥ lag — real, load-bearing, and currently unwritten.
+Assert it (`window.sampleCount > lag` for the lowest-frequency band) instead of
+relying on windows happening to be long enough.
 
 ### 5. `ProsodyWobble` substitutes concrete defaults for `nil`
 
