@@ -50,8 +50,7 @@ public struct DialecticalMemory: Sendable {
         guard replyEmbeddings.count >= 2 else { return 0 }
         var acc: Float = 0
         for i in 1..<replyEmbeddings.count {
-            acc += 1 - DialecticalDynamics.normalized(
-                replyEmbeddings[i].cosineSimilarity(to: replyEmbeddings[i - 1]))
+            acc += 1 - DialecticalDynamics.normalizedSimilarity(replyEmbeddings[i], replyEmbeddings[i - 1])
         }
         return acc / Float(replyEmbeddings.count - 1)
     }

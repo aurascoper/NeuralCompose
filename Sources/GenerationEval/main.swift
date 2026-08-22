@@ -85,7 +85,7 @@ func meaningPreservationCosine(source: String, output: String) async -> Double? 
     guard let embeddings = try? await embedder.encode([source, output]), embeddings.count == 2 else {
         return nil
     }
-    return Double(embeddings[0].cosineSimilarity(to: embeddings[1]))
+    return Double(embeddings[0].cosineSimilarity(to: embeddings[1])!)
 }
 
 // MARK: - Evaluate each candidate

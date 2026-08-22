@@ -1,6 +1,6 @@
 # Embedding comparability is documented but unenforced (2026-08-12)
 
-**Status:** open defect, not yet fixed. Found while porting `DialecticalDynamics`
+**Status:** fixed on `fix/embedding-comparability` (2026-08-22), unverified on Linux (no Swift toolchain on the host); `swift test` on macOS pending. Originally: open defect, not yet fixed. Found while porting `DialecticalDynamics`
 to Rust (`neuralcompose-client-native`, `crates/neuralcompose-hypnagogic`).
 
 ## The defect

@@ -51,12 +51,24 @@ public struct Embedding: Sendable, Equatable {
         self.seed = seed
     }
 
+    /// Whether a similarity between `self` and `other` exists to compute: same
+    /// `modelID`, same dimension, non-empty. Mirrors the Rust port
+    /// (`neuralcompose-hypnagogic/src/embedding.rs`). `seed` and `version` are
+    /// deliberately not checked: `DialecticalDynamics.centroid(of:)` builds
+    /// centroids with `seed: 0`, and a centroid must stay comparable to the
+    /// vectors it was averaged from.
+    public func isComparable(with other: Embedding) -> Bool {
+        modelID == other.modelID && values.count == other.values.count && !values.isEmpty
+    }
+
     /// Cosine similarity to `other`. Because both operands are L2-normalized
     /// by the `values` invariant, this is just the dot product — no magnitude
-    /// division. Returns 0 when the dimensions differ (incomparable spaces)
-    /// rather than trapping.
-    public func cosineSimilarity(to other: Embedding) -> Float {
-        guard values.count == other.values.count else { return 0 }
+    /// division. Returns `nil` when the two are not comparable (different
+    /// space or dimension). `nil` is not a low score and not a failed
+    /// computation: no similarity exists to compute. `0` means orthogonal and
+    /// comparable, which is a different statement.
+    public func cosineSimilarity(to other: Embedding) -> Float? {
+        guard isComparable(with: other) else { return nil }
         var acc: Float = 0
         for i in 0..<values.count { acc += values[i] * other.values[i] }
         return acc
