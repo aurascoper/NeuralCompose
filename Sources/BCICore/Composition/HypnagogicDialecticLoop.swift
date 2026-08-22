@@ -276,7 +276,7 @@ public actor HypnagogicDialecticLoop {
             }
         }()
         let selfSimilarity: Float? = spokenEmb.flatMap { emb in
-            replyCentroid.map { DialecticalDynamics.normalized(emb.cosineSimilarity(to: $0)) }
+            replyCentroid.map { DialecticalDynamics.normalizedSimilarity(emb, $0) }
         }
         var witnessFinding: String?
         var witnessDistance: Float?
@@ -294,7 +294,7 @@ public actor HypnagogicDialecticLoop {
                 if !finding.isEmpty {
                     witnessFinding = finding
                     if let spokenEmb, let findingEmb = try? await embedder.encode([finding]).first {
-                        witnessDistance = 1 - DialecticalDynamics.normalized(findingEmb.cosineSimilarity(to: spokenEmb))
+                        witnessDistance = 1 - DialecticalDynamics.normalizedSimilarity(findingEmb, spokenEmb)
                     }
                 }
             } catch is CancellationError {
@@ -374,7 +374,7 @@ public actor HypnagogicDialecticLoop {
         var worst: Float = -1
         for i in 0..<embeddings.count {
             for j in (i + 1)..<embeddings.count {
-                let d = 1 - DialecticalDynamics.normalized(embeddings[i].cosineSimilarity(to: embeddings[j]))
+                let d = 1 - DialecticalDynamics.normalizedSimilarity(embeddings[i], embeddings[j])
                 if d > worst { worst = d; best = (i, j) }
             }
         }

@@ -194,8 +194,8 @@ final class SemanticReplayRegressionTests: XCTestCase {
         let deepSleep = try await embedder.encode("deep sleep")
         let banana = try await embedder.encode("banana")
 
-        let shared = sleep.cosineSimilarity(to: deepSleep)
-        let unrelated = sleep.cosineSimilarity(to: banana)
+        let shared = try XCTUnwrap(sleep.cosineSimilarity(to: deepSleep))
+        let unrelated = try XCTUnwrap(sleep.cosineSimilarity(to: banana))
         XCTAssertGreaterThan(shared, unrelated,
                              "compositional cluster broken: cos(sleep, deep sleep)=\(shared) should exceed cos(sleep, banana)=\(unrelated)")
     }
@@ -245,7 +245,7 @@ final class SemanticReplayRegressionTests: XCTestCase {
         var matrix = Array(repeating: Array(repeating: Float(0), count: n), count: n)
         for i in 0..<n {
             for k in 0..<n {
-                matrix[i][k] = result[i].cosineSimilarity(to: result[k])
+                matrix[i][k] = try XCTUnwrap(result[i].cosineSimilarity(to: result[k]))
             }
         }
 

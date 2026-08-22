@@ -24,6 +24,19 @@ final class DialecticalDynamicsTests: XCTestCase {
         )
     }
 
+    // MARK: - Comparability
+
+    /// Swift twin of the Rust port's `Some(0.0) != None` pin: orthogonal-and-
+    /// comparable is `0`; incomparable is `nil`, never a score.
+    func testIncomparableIsNilNotZero() throws {
+        let a = emb([1, 0], id: "a"), orthogonal = emb([0, 1], id: "a")
+        XCTAssertEqual(try XCTUnwrap(a.cosineSimilarity(to: orthogonal)), 0)
+        XCTAssertNil(a.cosineSimilarity(to: emb([1, 0], id: "b")), "different modelID")
+        XCTAssertNil(a.cosineSimilarity(to: emb([1, 0, 0], id: "a")), "different dimension")
+        XCTAssertNil(DialecticalDynamics.centroid(of: [a, emb([1, 0], id: "b")]), "mixed spaces")
+        XCTAssertNotNil(DialecticalDynamics.centroid(of: [a, orthogonal]))
+    }
+
     // MARK: - Energy
 
     func testCoherenceIsHighWhenCandidateMatchesHeard() {
