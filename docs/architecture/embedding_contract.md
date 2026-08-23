@@ -79,7 +79,7 @@ An `Embedding` value **must** satisfy:
 | 2.4 | `modelID` and `version` are non-empty and match the producer's `modelID`/`version` | `Embedding.swift:26-38`, test `testProvenanceIsPopulated` at `SentenceEmbedderTests.swift:48` |
 | 2.5 | `cosineSimilarity(to:)` returns a value in `[-1, 1]` (within float error) and is a plain dot product (the L2-normalization invariant is what makes it one) | `Embedding.swift:54-63` |
 | 2.6 | `cosineSimilarity(to:)` returns `0` when dimensions differ, rather than trapping — different spaces are incomparable, not broken | `Embedding.swift:58-59` |
-| 2.7 | Two embeddings with different `modelID`s are not comparable, even if their `dimension` matches | `Embedding.swift:27-28` doc comment |
+| 2.7 | Two embeddings with different `modelID`s are not comparable, even if their `dimension` matches | `Embedding.isComparable(with:)`; `cosineSimilarity(to:)` returns `nil`; `DialecticalDynamicsTests.testIncomparableIsNilNotZero` |
 
 The struct carries *cheap* provenance (`modelID`/`version`/`seed`/
 `dimension`) by design. Heavier provenance — model SHA256, tokenizer

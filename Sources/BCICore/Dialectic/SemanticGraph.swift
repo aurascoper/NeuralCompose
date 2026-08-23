@@ -54,7 +54,7 @@ public struct SemanticGraph: Sendable {
                         turnIndex: turnIndex, kind: kind)
         nextID += 1
         for existing in nodes {
-            let w = DialecticalDynamics.normalized(embedding.cosineSimilarity(to: existing.embedding))
+            let w = DialecticalDynamics.normalizedSimilarity(embedding, existing.embedding)
             if w >= edgeThreshold {
                 edges.append(Edge(a: existing.id, b: node.id, weight: w))
             }
@@ -76,7 +76,7 @@ public struct SemanticGraph: Sendable {
     public func nearestPriorNodes(to query: Embedding, limit: Int,
                                   minSimilarity: Float = 0) -> [Node] {
         nodes
-            .map { ($0, DialecticalDynamics.normalized(query.cosineSimilarity(to: $0.embedding))) }
+            .map { ($0, DialecticalDynamics.normalizedSimilarity(query, $0.embedding)) }
             .filter { $0.1 >= minSimilarity }
             .sorted { $0.1 > $1.1 }
             .prefix(limit)

@@ -43,6 +43,7 @@ let package = Package(
         .executable(name: "GenerationEval", targets: ["GenerationEval"]),
         .executable(name: "dialectic-smoke", targets: ["DialecticSmoke"]),
         .executable(name: "dialectic-session", targets: ["DialecticSession"]),
+        .executable(name: "dialectic-fixture", targets: ["DialecticFixture"]),
     ],
     dependencies: [
         // MLX runtime + small-model utilities. Pinned conservatively; bump as
@@ -263,6 +264,20 @@ let package = Package(
             path: "Sources/DialecticSession",
             swiftSettings: strictConcurrency
         ),
+        // Emits the cross-language conformance fixture that the Rust port of
+        // `DialecticalDynamics` asserts against (client-native
+        // `crates/neuralcompose-hypnagogic`). Depends on BCICore ONLY — no
+        // cloud, no MLX, no weights, no network — so it builds under plain CLT
+        // and its output depends on nothing but this repo's own math.
+        //
+        // Committed permanently, not a throwaway: a fixture whose generator has
+        // been deleted cannot be regenerated, so drift becomes unattributable.
+        .executableTarget(
+            name: "DialecticFixture",
+            dependencies: ["BCICore"],
+            path: "Sources/DialecticFixture",
+            swiftSettings: strictConcurrency
+        ),
 
         // ── Tests ────────────────────────────────────────────────────────
         .testTarget(
@@ -321,7 +336,8 @@ let package = Package(
         .testTarget(
             name: "WorldModelDemoTests",
             dependencies: ["WorldModelDemo", "BCICore"],
-            path: "Tests/WorldModelDemoTests"
+            path: "Tests/WorldModelDemoTests",
+            resources: [.process("Fixtures")]
         ),
         .testTarget(
             name: "NeuralComposeAppTests",

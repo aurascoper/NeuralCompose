@@ -57,7 +57,7 @@ final class SentenceEmbedderTests: XCTestCase {
     func testDistinctInputsDiffer() async throws {
         let a = try await embed("jaw clench")
         let b = try await embed("rest")
-        XCTAssertLessThan(a.cosineSimilarity(to: b), 0.999, "distinct inputs should not be identical")
+        XCTAssertLessThan(try XCTUnwrap(a.cosineSimilarity(to: b)), 0.999, "distinct inputs should not be identical")
     }
 
     func testSharedTokensAreCloserThanUnrelated() async throws {
@@ -67,8 +67,8 @@ final class SentenceEmbedderTests: XCTestCase {
         let deepSleep = try await embed("deep sleep")
         let banana = try await embed("banana")
         XCTAssertGreaterThan(
-            sleep.cosineSimilarity(to: deepSleep),
-            sleep.cosineSimilarity(to: banana),
+            try XCTUnwrap(sleep.cosineSimilarity(to: deepSleep)),
+            try XCTUnwrap(sleep.cosineSimilarity(to: banana)),
             "'sleep' should be closer to 'deep sleep' than to 'banana'"
         )
     }

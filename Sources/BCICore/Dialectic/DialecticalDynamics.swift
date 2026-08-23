@@ -113,6 +113,17 @@ public enum DialecticalDynamics {
     @inlinable
     public static func normalized(_ cosine: Float) -> Float { (cosine + 1) / 2 }
 
+    /// `normalized` over a similarity that must exist. Traps on incomparable
+    /// operands instead of scoring them: one embedder per session makes that a
+    /// defect, not a state the loop should absorb as `0.5`.
+    // ponytail: traps; propagate Optional the day a second embedder is held at once.
+    public static func normalizedSimilarity(_ a: Embedding, _ b: Embedding) -> Float {
+        guard let s = a.cosineSimilarity(to: b) else {
+            preconditionFailure("incomparable embedding spaces: \(a.modelID)/\(a.dimension) vs \(b.modelID)/\(b.dimension)")
+        }
+        return normalized(s)
+    }
+
     /// Scores one candidate against the turn context. Missing centroids (early
     /// turns, before any history) score a neutral `0.5` rather than biasing the
     /// competition toward either pole.
@@ -122,10 +133,10 @@ public enum DialecticalDynamics {
         historyCentroid: Embedding?,
         replyCentroid: Embedding?
     ) -> DialecticalEnergy {
-        let coherence = normalized(candidate.cosineSimilarity(to: heard))
-        let resonance = historyCentroid.map { normalized(candidate.cosineSimilarity(to: $0)) } ?? 0.5
+        let coherence = normalizedSimilarity(candidate, heard)
+        let resonance = historyCentroid.map { normalizedSimilarity(candidate, $0) } ?? 0.5
         // novelty = distance from what we've said; 1 − similarity, on the [0,1] scale.
-        let novelty = replyCentroid.map { 1 - normalized(candidate.cosineSimilarity(to: $0)) } ?? 0.5
+        let novelty = replyCentroid.map { 1 - normalizedSimilarity(candidate, $0) } ?? 0.5
         return DialecticalEnergy(coherence: coherence, resonance: resonance, novelty: novelty)
     }
 
@@ -137,7 +148,7 @@ public enum DialecticalDynamics {
         var pairs = 0
         for i in 0..<embeddings.count {
             for j in (i + 1)..<embeddings.count {
-                acc += 1 - normalized(embeddings[i].cosineSimilarity(to: embeddings[j]))
+                acc += 1 - normalizedSimilarity(embeddings[i], embeddings[j])
                 pairs += 1
             }
         }
@@ -201,8 +212,8 @@ public enum DialecticalDynamics {
     public static func synthesisScore(candidate c: Embedding,
                                       thesis: Embedding,
                                       antithesis: Embedding) -> Float {
-        let toThesis = normalized(c.cosineSimilarity(to: thesis))
-        let toAnti = normalized(c.cosineSimilarity(to: antithesis))
+        let toThesis = normalizedSimilarity(c, thesis)
+        let toAnti = normalizedSimilarity(c, antithesis)
         return min(toThesis, toAnti)
     }
 
@@ -259,13 +270,15 @@ public enum DialecticalDynamics {
 
     /// L2-normalized mean of a set of embeddings — the "direction the dialogue
     /// has been travelling." Provenance (`modelID`/`version`/`dimension`) is
-    /// taken from the first element; embeddings of a different dimension are
-    /// skipped rather than trapping. Returns `nil` for an empty set.
+    /// taken from the first element. Returns `nil` for an empty set, and `nil`
+    /// if any member is not comparable with the first: a centroid over an
+    /// unannounced subset is a plausible vector that means nothing.
     public static func centroid(of embeddings: [Embedding]) -> Embedding? {
         guard let first = embeddings.first else { return nil }
+        guard embeddings.allSatisfy({ $0.isComparable(with: first) }) else { return nil }
         let dim = first.values.count
         var sum = [Float](repeating: 0, count: dim)
-        for e in embeddings where e.values.count == dim {
+        for e in embeddings {
             for i in 0..<dim { sum[i] += e.values[i] }
         }
         let norm = sqrtf(sum.reduce(0) { $0 + $1 * $1 })

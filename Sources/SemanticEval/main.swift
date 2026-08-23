@@ -30,7 +30,7 @@ func fail(_ message: String) -> Never {
 func pairScores(_ pairs: [[String]], embeddingByText: [String: Embedding]) -> [SemanticEvalResult.PairScore] {
     pairs.map { pair in
         let a = pair[0], b = pair[1]
-        let score = embeddingByText[a]!.cosineSimilarity(to: embeddingByText[b]!)
+        let score = embeddingByText[a]!.cosineSimilarity(to: embeddingByText[b]!)!
         return .init(a: a, b: b, score: score)
     }
 }
@@ -42,7 +42,7 @@ func meanPairwiseSimilarity(_ texts: [String], embeddingByText: [String: Embeddi
     var count = 0
     for i in 0..<texts.count {
         for j in (i + 1)..<texts.count {
-            total += embeddingByText[texts[i]]!.cosineSimilarity(to: embeddingByText[texts[j]]!)
+            total += embeddingByText[texts[i]]!.cosineSimilarity(to: embeddingByText[texts[j]]!)!
             count += 1
         }
     }
@@ -112,7 +112,7 @@ var cosineMatrixValues = Array(
 )
 for i in 0..<config.corpus.count {
     for j in 0..<config.corpus.count {
-        cosineMatrixValues[i][j] = corpusEmbeddings[i].cosineSimilarity(to: corpusEmbeddings[j])
+        cosineMatrixValues[i][j] = corpusEmbeddings[i].cosineSimilarity(to: corpusEmbeddings[j])!
     }
 }
 
@@ -154,7 +154,7 @@ for gi in 0..<groupNames.count {
         let phrasesB = config.commandGroups[groupNames[gj]]!
         for a in phrasesA {
             for b in phrasesB {
-                crossTotal += embeddingByText[a]!.cosineSimilarity(to: embeddingByText[b]!)
+                crossTotal += embeddingByText[a]!.cosineSimilarity(to: embeddingByText[b]!)!
                 crossCount += 1
             }
         }
@@ -169,7 +169,7 @@ for trajectory in config.trajectories {
     let phraseEmbeddings = trajectory.phrases.map { embeddingByText[$0]! }
     var stepSimilarities: [Float] = []
     for i in 0..<(phraseEmbeddings.count - 1) {
-        stepSimilarities.append(phraseEmbeddings[i].cosineSimilarity(to: phraseEmbeddings[i + 1]))
+        stepSimilarities.append(phraseEmbeddings[i].cosineSimilarity(to: phraseEmbeddings[i + 1])!)
     }
     trajectoryResults[trajectory.name] = .init(
         phrases: trajectory.phrases,
