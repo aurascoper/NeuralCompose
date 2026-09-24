@@ -54,6 +54,11 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
     private var listener: NWListener?
     private var startNanos: UInt64?
     private var watchdogTask: Task<Void, Never>?
+    /// Listener lifecycle for `currentDiagnostics()` — see
+    /// `StreamListenerState`. Guarded by `lock`. Updated at exactly the
+    /// points the listener itself changes state: start (ready), teardown
+    /// via stop()/onTermination (cancelled), listener .failed (failed).
+    private var listenerState: StreamListenerState = .idle
 
     // Diagnostics bookkeeping — see `currentDiagnostics()`.
     private var lastArrivalNanos: UInt64?
@@ -134,6 +139,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
             newListener.stateUpdateHandler = { state in
                 switch state {
                 case .failed(let error):
+                    self.recordListenerFailed()
                     continuation.finish(throwing: BCIError.streamFailed(reason: "OSC listener failed: \(error)"))
                 case .cancelled:
                     continuation.finish()
@@ -176,6 +182,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
             continuation.onTermination = { @Sendable [weak self] _ in
                 newListener.cancel()
                 self?.cancelWatchdog()
+                self?.recordListenerCancelled()
             }
         }
     }
@@ -205,6 +212,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         defer { lock.unlock() }
         self.listener = newListener
         self.startNanos = startNanos
+        self.listenerState = .ready
         // Reset the per-session timing references. The supervisor reuses ONE
         // stream instance across live retries (stop()/start() in a loop), so a
         // reconnect must measure staleness from THIS attempt's sessionStart, not
@@ -223,6 +231,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         defer { lock.unlock() }
         let current = listener
         listener = nil
+        if current != nil { listenerState = .cancelled }
         return current
     }
 
@@ -237,6 +246,21 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         lock.lock()
         defer { lock.unlock() }
         watchdogTask = task
+    }
+
+    /// Listener lifecycle transitions — see `StreamListenerState`. `failed`
+    /// wins over `cancelled` (a failed listener that is then torn down is
+    /// still a failure, and the failure is the actionable fact).
+    private func recordListenerFailed() {
+        lock.lock()
+        defer { lock.unlock() }
+        listenerState = .failed
+    }
+
+    private func recordListenerCancelled() {
+        lock.lock()
+        defer { lock.unlock() }
+        if listenerState != .failed { listenerState = .cancelled }
     }
 
     private func cancelWatchdog() {
@@ -399,7 +423,8 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
             lastInterArrivalMillis: interArrivalMillis.last,
             lastHeartbeat: lastHeartbeat,
             boundPort: port.rawValue,
-            localInterfaceName: localInterfaceName
+            localInterfaceName: localInterfaceName,
+            listenerState: listenerState
         )
     }
 }

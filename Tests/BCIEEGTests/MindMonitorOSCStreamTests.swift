@@ -454,6 +454,61 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         XCTAssertEqual(diag.movementYielded, 0)
     }
 
+    /// D-behavioural: a DISCARDED stream (consumer releases it) must report
+    /// `.cancelled` in diagnostics — the whole point of `StreamListenerState`.
+    /// Before it existed, a terminated listener and a quiet live one were
+    /// indistinguishable (packetsReceived == 0 either way), which is exactly
+    /// what made the discarded-stream bug expensive: datagrams went to a
+    /// listener that had already torn itself down, and the counters said
+    /// nothing. Keeping the drop-ends-subscription semantics (standard
+    /// AsyncStream behaviour; the app consumes the stream) — this pins the
+    /// OBSERVABILITY of it, not a change.
+    func testDiscardedStreamReportsCancelledListener() async throws {
+        let port = testPort + 9
+        let stream = MindMonitorOSCStream(port: port)
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .idle,
+            "a fresh, never-started stream must read .idle"
+        )
+
+        do {
+            _ = try await stream.start()   // deliberately discarded
+        } catch {
+            return XCTFail("start() unexpectedly threw: \(error)")
+        }
+        // onTermination fires shortly after the last reference drops; give
+        // the teardown a bounded moment to land, then it must read cancelled.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .cancelled,
+            "a discarded stream must report a cancelled listener — a quiet live listener must be distinguishable from a dead one"
+        )
+    }
+
+    /// D-behavioural: a RETAINED stream must report `.ready` while alive, and
+    /// `.cancelled` after an explicit `stop()` — so callers reading
+    /// diagnostics between sessions can tell "waiting for the first packet"
+    /// (ready, quiet) from "no subscription at all" (cancelled).
+    func testRetainedStreamReportsReadyThenCancelledOnStop() async throws {
+        let port = testPort + 10
+        let stream = MindMonitorOSCStream(port: port)
+        let eegStream = try await stream.start()
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .ready,
+            "a live, retained stream must report ready even with zero packets — quiet ≠ dead"
+        )
+
+        await stream.stop()
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .cancelled,
+            "stop() must move diagnostics to cancelled"
+        )
+        // The retained stream is never consumed; keep it alive until after
+        // the stop() assertion so the test doesn't depend on optimizer
+        // release-timing of the local.
+        _ = eegStream
+    }
+
     /// Races `operation` against a timeout, returning `nil` on timeout
     /// instead of hanging the test indefinitely if the watchdog regresses.
     private func withTimeout<T: Sendable>(
