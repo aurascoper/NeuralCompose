@@ -227,7 +227,7 @@ final class MindMonitorOSCStreamTests: XCTestCase {
 
         // Deliberately send nothing more. staleTimeoutSec is 1.0s; allow
         // up to 3s for the watchdog to fire and the stream to throw.
-        let outcome = await withTimeout(seconds: 3) { await collectTask.value }
+        let outcome = await value(of: collectTask, within: 3)
         await stream.stop()
 
         let thrown = try XCTUnwrap(
@@ -278,7 +278,7 @@ final class MindMonitorOSCStreamTests: XCTestCase {
 
         // staleTimeoutSec is 1.0s; the sample watchdog should fire ~2s in
         // despite the ongoing /muse/acc traffic. Allow up to 5s.
-        let outcome = await withTimeout(seconds: 5) { await collectTask.value }
+        let outcome = await value(of: collectTask, within: 5)
         pump.cancel()
         await stream.stop()
 
@@ -353,8 +353,8 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         await sendUDP(makeAccPacket(), port: port)           // movement (/muse/acc)
         await sendUDP(makeEEGPacket([1, 2, 3, 4]), port: port) // eeg
 
-        let movement = (await withTimeout(seconds: 3) { await movementTask.value }) ?? nil
-        _ = await withTimeout(seconds: 3) { await eegTask.value }
+        let movement = (await value(of: movementTask, within: 3)) ?? nil
+        _ = await value(of: eegTask, within: 3)
         await stream.stop()
 
         XCTAssertEqual(movement?.kind, .accel, "an accel packet must be yielded on the movement channel")
@@ -509,20 +509,61 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         _ = eegStream
     }
 
-    /// Races `operation` against a timeout, returning `nil` on timeout
-    /// instead of hanging the test indefinitely if the watchdog regresses.
-    private func withTimeout<T: Sendable>(
-        seconds: Double, _ operation: @escaping @Sendable () async -> T
-    ) async -> T? {
-        await withTaskGroup(of: T?.self) { group in
-            group.addTask { await operation() }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                return nil
+    /// `task`'s value, or `nil` if it doesn't finish within `seconds` — in
+    /// which case `task` is cancelled and abandoned, never awaited, so this
+    /// ALWAYS returns within `seconds` instead of hanging the test if the
+    /// watchdog regresses.
+    ///
+    /// Regression note (C1 audit, 2026-09-24): this helper was built on
+    /// `withTaskGroup` — and a task group waits for ALL its children. When
+    /// the timeout child won and the operation child was itself awaiting an
+    /// external `Task.value` (cancellation-insensitive: cancelling the
+    /// awaiting task does not complete the await), the group could never
+    /// exit and the test hung forever at 0% CPU inside XCTWaiter — a second,
+    /// quieter sibling of the Phase-0 unbounded-wait defect, exposed live by
+    /// the C1 wrong-port mutation on testMovementYieldedAndNotCountedAsDropped
+    /// (movement channel has no watchdog, so nothing ever completed the
+    /// abandoned await). Now the abandoning pattern — same shape as BCILLM's
+    /// `withAbandoningTimeout`: unstructured tasks + a once-flag. It takes the
+    /// Task rather than a closure because cancellation does not propagate
+    /// through `await task.value`: a closure-based helper could only cancel
+    /// its own wrapper, never the task actually holding the stream. Every
+    /// caller's task iterates an AsyncStream, which does honour cancellation,
+    /// so the loser really ends — including a `movementStream` consumer,
+    /// which `stop()` alone never finishes (that stream outlives sessions).
+    private func value<T: Sendable>(of task: Task<T, Never>, within seconds: Double) async -> T? {
+        let once = TimeoutOnceFlag()
+        return await withCheckedContinuation { (cont: CheckedContinuation<T?, Never>) in
+            let timer = Task.detached {
+                try? await Task.sleep(nanoseconds: UInt64(max(0, seconds) * 1_000_000_000))
+                if once.claim() {
+                    task.cancel()
+                    cont.resume(returning: nil)
+                }
             }
-            let result = await group.next() ?? nil
-            group.cancelAll()
-            return result
+            Task.detached {
+                let value = await task.value
+                if once.claim() {
+                    timer.cancel()
+                    cont.resume(returning: value)
+                }
+            }
         }
+    }
+}
+
+/// Once-flag for `value(of:within:)`: whichever of (task, timer) finishes
+/// first claims the right to resume the continuation; the loser's result is
+/// dropped. `@unchecked Sendable` is correct, not a shortcut: `claimed` is
+/// only touched under `lock`.
+private final class TimeoutOnceFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var claimed = false
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if claimed { return false }
+        claimed = true
+        return true
     }
 }
