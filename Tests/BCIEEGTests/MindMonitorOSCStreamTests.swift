@@ -369,10 +369,38 @@ final class MindMonitorOSCStreamTests: XCTestCase {
     /// (/muse/eeg with <4 floats) is real corruption and must count as a DROP
     /// (not be silently rebucketed as benign ignoredNonEEG). A genuinely
     /// non-sample address (/muse/batt) stays ignoredNonEEG.
+    ///
+    /// Regression note (2026-09-24): this test previously hung the xctest
+    /// process. Three independent defects stacked:
+    ///   1. The returned AsyncThrowingStream was discarded (`_ =`), so its
+    ///      onTermination fired ~1 ms after start() and cancelled the
+    ///      NWListener before the datagrams were sent — packetsReceived never
+    ///      advanced and the poll below could never succeed.
+    ///   2. The poll was raced with withTimeout's task-group helper: a group
+    ///      waits for ALL its children, and the poller child swallowed its
+    ///      own cancellation (`try? await Task.sleep` → CancellationError →
+    ///      instant re-loop with no suspension), so once the 2 s timeout child
+    ///      "won", the poller spun at ~97% CPU with unbounded allocation churn
+    ///      (RSS oscillated 3.3–4.7 GB) until the process died under memory
+    ///      pressure with no crash report.
+    ///   3. Nothing bounded the overall wait: XCTest's async support waits
+    ///      forever when the test body never returns.
+    ///
+    /// The rewrite keeps the stream alive, polls in a Task that CHECKS
+    /// Task.isCancelled (so cancellation is honoured), and bounds the wait
+    /// with XCTMultipleExpectations (`fulfillment(of:timeout:)`) — the test
+    /// now FAILS inside its stated 2 s bound with a message instead of
+    /// hanging the runner. The stream contract (onTermination tearing down
+    /// the listener when the consumer drops the stream) is deliberate
+    /// resource cleanup, not a defect; the behavioural question of what a
+    /// discarded stream should mean is recorded in the Phase-2 notes, not
+    /// changed here.
     func testTruncatedSampleAddressCountsAsDroppedNotIgnored() async throws {
         let port = testPort + 8
         let stream = MindMonitorOSCStream(port: port)
-        _ = try await stream.start()
+        // Retain the returned stream: discarding it cancels the listener via
+        // onTermination before the datagrams below are ever delivered.
+        let eegStream = try await stream.start()
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         var truncatedEEG = oscString("/muse/eeg")   // only 2 floats — truncated
@@ -388,14 +416,35 @@ final class MindMonitorOSCStreamTests: XCTestCase {
 
         await sendUDP(truncatedEEG, port: port)
         await sendUDP(batt, port: port)
-        _ = await withTimeout(seconds: 2) { () -> Int in
-            var received = 0
-            while received < 2 {
+
+        // Bounded wait for BOTH datagrams to land in the diagnostics counter.
+        // `received both datagrams` fulfils as soon as packetsReceived >= 2;
+        // if the datagrams are lost, the wait times out at 2 s and the test
+        // FAILS here with the message below — the stated bound, honoured.
+        let bothDatagrams = expectation(description: "received both datagrams")
+        // The poller captures `eegStream` deliberately: a running task keeps
+        // its closure captures alive until the body completes, so the stream —
+        // and with it the listener, via onTermination — cannot be released
+        // before the wait below resolves, in optimized builds too. (This is
+        // the guarantee `withExtendedLifetime` would give, but the stdlib's
+        // overload takes a synchronous closure on this toolchain, so it
+        // cannot wrap an `await`; task-capture is the async-composable
+        // equivalent, with the same release-build force.)
+        let poller = Task { [eegStream] in
+            _ = eegStream  // use the capture: the retention is the point
+            while !Task.isCancelled {
+                if stream.currentDiagnostics().packetsReceived >= 2 {
+                    bothDatagrams.fulfill()
+                    return
+                }
+                // Sleep BETWEEN polls so a cancelled poller suspends and
+                // exits instead of spinning (the pre-rewrite hang mechanism).
                 try? await Task.sleep(nanoseconds: 20_000_000)
-                received = stream.currentDiagnostics().packetsReceived
             }
-            return received
         }
+        defer { poller.cancel() }
+        await fulfillment(of: [bothDatagrams], timeout: 2)
+
         await stream.stop()
 
         let diag = stream.currentDiagnostics()
