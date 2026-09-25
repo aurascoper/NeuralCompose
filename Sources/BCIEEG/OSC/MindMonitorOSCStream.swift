@@ -251,7 +251,9 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
     /// Listener lifecycle transitions — see `StreamListenerState`. Only the
     /// current session's listener may move the state: a late callback from a
     /// listener that stop()/start() already replaced is stale and dropped.
-    private func recordListenerState(_ state: NWListener.State, of source: NWListener) {
+    /// Internal rather than private so tests can hand it a stale source
+    /// directly instead of trying to schedule the race.
+    func recordListenerState(_ state: NWListener.State, of source: NWListener) {
         guard let next = Self.diagnosticState(for: state) else { return }
         lock.lock()
         defer { lock.unlock() }
@@ -259,7 +261,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         applyListenerStateLocked(next)
     }
 
-    private func recordListenerCancelled(_ source: NWListener) {
+    func recordListenerCancelled(_ source: NWListener) {
         lock.lock()
         defer { lock.unlock() }
         guard listener === source else { return }

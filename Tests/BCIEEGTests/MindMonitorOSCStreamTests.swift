@@ -552,6 +552,75 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .cancelled), .cancelled)
     }
 
+    /// A callback from a listener that is no longer the stream's current one
+    /// must not move the state. The write rule takes (state, source), so the
+    /// test hands it a stale source directly; no race has to be scheduled.
+    func testStaleListenerCallbackCannotRewriteState() async throws {
+        let port = testPort + 12
+        let stream = MindMonitorOSCStream(port: port)
+        let eegStream = try await stream.start()
+        let live = await listenerState(of: stream, reaching: .ready, within: 2)
+        XCTAssertEqual(live, .ready, "precondition: the current listener reported ready")
+
+        let stale = try NWListener(using: .udp)   // never started, never the stream's listener
+        let error = NWError.posix(.EADDRINUSE)
+        stream.recordListenerState(.failed(error), of: stale)
+        stream.recordListenerState(.waiting(error), of: stale)
+        stream.recordListenerCancelled(stale)
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .ready,
+            "a stale listener's callbacks must not rewrite the current session's state"
+        )
+
+        await stream.stop()
+        withExtendedLifetime(eegStream) {}
+    }
+
+    /// Terminal states hold for a SESSION, not for the instance: the
+    /// supervisor reuses one stream across its reconnect retries, so a
+    /// `.failed` or `.cancelled` that survived stop()/start() would make
+    /// diagnostics lie after every reconnect. Session 1 fails on an occupied
+    /// port; once the port is freed, session 2 on the same instance must
+    /// reach `.ready`. The occupier is a bare NWListener so the test can
+    /// wait for its own `.cancelled` report instead of sleeping and hoping
+    /// the port has been released.
+    func testTerminalStateIsPerSessionRestartReachesReady() async throws {
+        let port = testPort + 13
+        let occupier = try NWListener(using: .udp, on: NWEndpoint.Port(rawValue: port)!)
+        let occupierReady = expectation(description: "occupier ready")
+        let occupierCancelled = expectation(description: "occupier cancelled")
+        occupier.newConnectionHandler = { $0.cancel() }
+        occupier.stateUpdateHandler = { state in
+            switch state {
+            case .ready: occupierReady.fulfill()
+            case .cancelled: occupierCancelled.fulfill()
+            default: break
+            }
+        }
+        occupier.start(queue: .global())
+        await fulfillment(of: [occupierReady], timeout: 2)
+
+        let stream = MindMonitorOSCStream(port: port)
+        let session1 = try await stream.start()
+        let failed = await listenerState(of: stream, reaching: .failed, within: 2)
+        XCTAssertEqual(failed, .failed, "precondition: session 1 fails on the occupied port")
+        await stream.stop()
+        XCTAssertEqual(stream.currentDiagnostics().listenerState, .failed)
+        withExtendedLifetime(session1) {}
+
+        occupier.cancel()
+        await fulfillment(of: [occupierCancelled], timeout: 2)
+
+        let session2 = try await stream.start()
+        let restarted = await listenerState(of: stream, reaching: .ready, within: 2)
+        XCTAssertEqual(
+            restarted, .ready,
+            "session 1's terminal .failed must not carry into session 2 — reconnect diagnostics depend on it"
+        )
+        await stream.stop()
+        withExtendedLifetime(session2) {}
+    }
+
     /// Polls `stream`'s listener state until it reads `target`, `seconds`
     /// pass, or the task is cancelled (checked, so a cancelled poll exits
     /// instead of spinning), returning the last state read.
