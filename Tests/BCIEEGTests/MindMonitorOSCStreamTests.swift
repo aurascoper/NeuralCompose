@@ -422,16 +422,7 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         // if the datagrams are lost, the wait times out at 2 s and the test
         // FAILS here with the message below — the stated bound, honoured.
         let bothDatagrams = expectation(description: "received both datagrams")
-        // The poller captures `eegStream` deliberately: a running task keeps
-        // its closure captures alive until the body completes, so the stream —
-        // and with it the listener, via onTermination — cannot be released
-        // before the wait below resolves, in optimized builds too. (This is
-        // the guarantee `withExtendedLifetime` would give, but the stdlib's
-        // overload takes a synchronous closure on this toolchain, so it
-        // cannot wrap an `await`; task-capture is the async-composable
-        // equivalent, with the same release-build force.)
-        let poller = Task { [eegStream] in
-            _ = eegStream  // use the capture: the retention is the point
+        let poller = Task {
             while !Task.isCancelled {
                 if stream.currentDiagnostics().packetsReceived >= 2 {
                     bothDatagrams.fulfill()
@@ -444,6 +435,12 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         }
         defer { poller.cancel() }
         await fulfillment(of: [bothDatagrams], timeout: 2)
+        // Keep the stream (and with it the listener, via onTermination) alive
+        // until the wait has resolved; the local is otherwise unused, so the
+        // optimizer may release it early. The stdlib overload is synchronous
+        // and can't wrap the await, but its guarantee runs to this call site,
+        // so an empty body placed after the await covers the whole wait.
+        withExtendedLifetime(eegStream) {}
 
         await stream.stop()
 
@@ -503,10 +500,10 @@ final class MindMonitorOSCStreamTests: XCTestCase {
             stream.currentDiagnostics().listenerState, .cancelled,
             "stop() must move diagnostics to cancelled"
         )
-        // The retained stream is never consumed; keep it alive until after
-        // the stop() assertion so the test doesn't depend on optimizer
-        // release-timing of the local.
-        _ = eegStream
+        // The retained stream is never consumed; keep it alive past the stop()
+        // assertion. `_ = eegStream` is not enough: it has no side effect, so
+        // the optimizer may drop it and release the stream early.
+        withExtendedLifetime(eegStream) {}
     }
 
     /// `task`'s value, or `nil` if it doesn't finish within `seconds` — in
