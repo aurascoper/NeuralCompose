@@ -55,9 +55,9 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
     private var startNanos: UInt64?
     private var watchdogTask: Task<Void, Never>?
     /// Listener lifecycle for `currentDiagnostics()` — see
-    /// `StreamListenerState`. Guarded by `lock`. Updated at exactly the
-    /// points the listener itself changes state: start (ready), teardown
-    /// via stop()/onTermination (cancelled), listener .failed (failed).
+    /// `StreamListenerState`. Guarded by `lock`. `start()` opens a session at
+    /// `.starting`; after that it moves only on what the listener itself
+    /// reports, on `stop()`, or on the consumer dropping the stream.
     private var listenerState: StreamListenerState = .idle
 
     // Diagnostics bookkeeping — see `currentDiagnostics()`.
@@ -137,9 +137,9 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
                 self.receiveLoop(on: connection, continuation: continuation)
             }
             newListener.stateUpdateHandler = { state in
+                self.recordListenerState(state, of: newListener)
                 switch state {
                 case .failed(let error):
-                    self.recordListenerFailed()
                     continuation.finish(throwing: BCIError.streamFailed(reason: "OSC listener failed: \(error)"))
                 case .cancelled:
                     continuation.finish()
@@ -182,7 +182,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
             continuation.onTermination = { @Sendable [weak self] _ in
                 newListener.cancel()
                 self?.cancelWatchdog()
-                self?.recordListenerCancelled()
+                self?.recordListenerCancelled(newListener)
             }
         }
     }
@@ -212,7 +212,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         defer { lock.unlock() }
         self.listener = newListener
         self.startNanos = startNanos
-        self.listenerState = .ready
+        self.listenerState = .starting
         // Reset the per-session timing references. The supervisor reuses ONE
         // stream instance across live retries (stop()/start() in a loop), so a
         // reconnect must measure staleness from THIS attempt's sessionStart, not
@@ -231,7 +231,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         defer { lock.unlock() }
         let current = listener
         listener = nil
-        if current != nil { listenerState = .cancelled }
+        if current != nil { applyListenerStateLocked(.cancelled) }
         return current
     }
 
@@ -248,19 +248,51 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         watchdogTask = task
     }
 
-    /// Listener lifecycle transitions — see `StreamListenerState`. `failed`
-    /// wins over `cancelled` (a failed listener that is then torn down is
-    /// still a failure, and the failure is the actionable fact).
-    private func recordListenerFailed() {
+    /// Listener lifecycle transitions — see `StreamListenerState`. Only the
+    /// current session's listener may move the state: a late callback from a
+    /// listener that stop()/start() already replaced is stale and dropped.
+    private func recordListenerState(_ state: NWListener.State, of source: NWListener) {
+        guard let next = Self.diagnosticState(for: state) else { return }
         lock.lock()
         defer { lock.unlock() }
-        listenerState = .failed
+        guard listener === source else { return }
+        applyListenerStateLocked(next)
     }
 
-    private func recordListenerCancelled() {
+    private func recordListenerCancelled(_ source: NWListener) {
         lock.lock()
         defer { lock.unlock() }
-        if listenerState != .failed { listenerState = .cancelled }
+        guard listener === source else { return }
+        applyListenerStateLocked(.cancelled)
+    }
+
+    /// Terminal states hold for the rest of the session. `.failed` is never
+    /// overwritten: the failure is the actionable fact, and Network.framework
+    /// does report `.cancelled` after `.failed` once a failed listener is torn
+    /// down. After `.cancelled` only a failure may land, so a `.ready` queued
+    /// before a teardown can't revive a dead listener. `recordStarted` opens
+    /// the next session. Caller holds `lock`.
+    private func applyListenerStateLocked(_ next: StreamListenerState) {
+        switch listenerState {
+        case .failed: return
+        case .cancelled where next != .failed: return
+        default: listenerState = next
+        }
+    }
+
+    /// How each `NWListener.State` reads in diagnostics; `nil` leaves it
+    /// unchanged. `.waiting` gets its own state: the listener can't listen
+    /// right now but Network.framework retries on its own, so it is neither
+    /// ready (nothing is being received) nor failed (it may recover).
+    static func diagnosticState(for state: NWListener.State) -> StreamListenerState? {
+        switch state {
+        case .setup: return .starting
+        case .waiting: return .waiting
+        case .ready: return .ready
+        case .failed: return .failed
+        case .cancelled: return .cancelled
+        @unknown default: return nil
+        }
     }
 
     private func cancelWatchdog() {

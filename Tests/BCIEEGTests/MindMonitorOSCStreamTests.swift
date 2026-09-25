@@ -485,13 +485,15 @@ final class MindMonitorOSCStreamTests: XCTestCase {
     /// D-behavioural: a RETAINED stream must report `.ready` while alive, and
     /// `.cancelled` after an explicit `stop()` — so callers reading
     /// diagnostics between sessions can tell "waiting for the first packet"
-    /// (ready, quiet) from "no subscription at all" (cancelled).
+    /// (ready, quiet) from "no subscription at all" (cancelled). `.ready` is
+    /// the listener's own asynchronous report, so the test waits for it.
     func testRetainedStreamReportsReadyThenCancelledOnStop() async throws {
         let port = testPort + 10
         let stream = MindMonitorOSCStream(port: port)
         let eegStream = try await stream.start()
+        let state = await listenerState(of: stream, reaching: .ready, within: 2)
         XCTAssertEqual(
-            stream.currentDiagnostics().listenerState, .ready,
+            state, .ready,
             "a live, retained stream must report ready even with zero packets — quiet ≠ dead"
         )
 
@@ -504,6 +506,65 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         // assertion. `_ = eegStream` is not enough: it has no side effect, so
         // the optimizer may drop it and release the stream early.
         withExtendedLifetime(eegStream) {}
+    }
+
+    /// `.ready` must be OBSERVED from the listener, never asserted by
+    /// start(). A second stream on a port the first already holds gets
+    /// EADDRINUSE from Network.framework, so it must not read `.ready` even
+    /// immediately after start() (it was, before start() stopped writing
+    /// it), must settle on `.failed`, and a later stop() must not launder
+    /// the failure into `.cancelled`.
+    func testListenerThatCannotBindNeverReportsReady() async throws {
+        let port = testPort + 11
+        let holder = MindMonitorOSCStream(port: port)
+        let holderStream = try await holder.start()
+        let holderState = await listenerState(of: holder, reaching: .ready, within: 2)
+        XCTAssertEqual(holderState, .ready, "precondition: the first stream must hold the port")
+
+        let blocked = MindMonitorOSCStream(port: port)
+        let blockedStream = try await blocked.start()
+        XCTAssertNotEqual(
+            blocked.currentDiagnostics().listenerState, .ready,
+            "start() must not claim ready before the listener reports it"
+        )
+        let blockedState = await listenerState(of: blocked, reaching: .failed, within: 2)
+        XCTAssertEqual(blockedState, .failed, "a bind collision must surface as .failed")
+
+        await blocked.stop()
+        XCTAssertEqual(
+            blocked.currentDiagnostics().listenerState, .failed,
+            "stop() after a failure must keep .failed — the failure is the actionable fact"
+        )
+        await holder.stop()
+        withExtendedLifetime((holderStream, blockedStream)) {}
+    }
+
+    /// Pins how each Network.framework listener state reads in diagnostics,
+    /// in particular `.waiting` (can't listen now, retrying on its own),
+    /// which no live test can induce on demand: it reads as neither ready
+    /// nor failed.
+    func testListenerStateMapping() {
+        let error = NWError.posix(.ENETDOWN)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .setup), .starting)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .waiting(error)), .waiting)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .ready), .ready)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .failed(error)), .failed)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .cancelled), .cancelled)
+    }
+
+    /// Polls `stream`'s listener state until it reads `target`, `seconds`
+    /// pass, or the task is cancelled (checked, so a cancelled poll exits
+    /// instead of spinning), returning the last state read.
+    private func listenerState(
+        of stream: MindMonitorOSCStream, reaching target: StreamListenerState, within seconds: Double
+    ) async -> StreamListenerState {
+        let deadline = Date().addingTimeInterval(seconds)
+        var state = stream.currentDiagnostics().listenerState
+        while state != target, Date() < deadline, !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            state = stream.currentDiagnostics().listenerState
+        }
+        return state
     }
 
     /// `task`'s value, or `nil` if it doesn't finish within `seconds` — in

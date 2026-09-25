@@ -13,26 +13,6 @@ import Foundation
 /// CSV playback) have no packet-loss/jitter concept in the same sense —
 /// they're not expected to construct one at all, rather than fabricating
 /// numbers that don't mean anything for a local connection.
-/// Lifecycle of the underlying transport listener, so diagnostics can
-/// distinguish a TERMINATED listener (the consumer dropped the stream, or
-/// `stop()` was called) from a live-but-quiet one. Before this field existed
-/// the two were indistinguishable — `packetsReceived == 0` either way — which
-/// is exactly what made a dropped-stream bug expensive to diagnose: the test
-/// datagrams went to a listener that had already torn itself down, and the
-/// counters said nothing about it. Transports that don't report lifecycle
-/// leave this at `.idle`.
-public enum StreamListenerState: String, Sendable, Equatable {
-    /// Never started, or between `stop()` and the next `start()`.
-    case idle
-    /// Bound and listening (the listener reported ready).
-    case ready
-    /// Torn down: the consumer released the stream (onTermination) or
-    /// `stop()` was called.
-    case cancelled
-    /// The transport itself reported a failure.
-    case failed
-}
-
 public struct StreamDiagnostics: Sendable, Equatable {
     /// Human-readable transport identifier for display, e.g. "OSC (Mind Monitor)".
     public var transport: String
@@ -153,4 +133,30 @@ public struct StreamDiagnostics: Sendable, Equatable {
         guard let lastHeartbeat else { return nil }
         return Date().timeIntervalSince(lastHeartbeat)
     }
+}
+
+/// Lifecycle of the underlying transport listener, so diagnostics can
+/// distinguish a TERMINATED listener (the consumer dropped the stream, or
+/// `stop()` was called) from a live-but-quiet one. Before this field existed
+/// the two were indistinguishable — `packetsReceived == 0` either way — which
+/// is exactly what made a dropped-stream bug expensive to diagnose: the test
+/// datagrams went to a listener that had already torn itself down, and the
+/// counters said nothing about it. Every state past `.starting` is what the
+/// listener itself reported, never assumed. Transports that don't report
+/// lifecycle leave this at `.idle`.
+public enum StreamListenerState: String, Sendable, Equatable {
+    /// Never started.
+    case idle
+    /// `start()` was called; the listener hasn't reported a state yet.
+    case starting
+    /// The listener reported ready: bound and receiving.
+    case ready
+    /// The listener reported it can't listen right now and will retry on its
+    /// own (e.g. no usable network path) — not ready, and not failed.
+    case waiting
+    /// Torn down: the consumer released the stream (onTermination) or
+    /// `stop()` was called.
+    case cancelled
+    /// The listener reported a failure (e.g. the port is already bound).
+    case failed
 }
