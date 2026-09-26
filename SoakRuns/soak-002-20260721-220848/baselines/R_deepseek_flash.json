@@ -1,0 +1,286 @@
+{
+  "input_path": "SoakRuns/soak-002-20260721-220848/runs/R_deepseek_flash.jsonl",
+  "turn_count": 30,
+  "outcome_counts": {
+    "silent": 29,
+    "displacement-seeking": 1
+  },
+  "repetition": {
+    "total_spoken": 1,
+    "total_bigrams": 2,
+    "total_trigrams": 1,
+    "distinct_bigrams": 2,
+    "distinct_trigrams": 1,
+    "bigram_diversity": 1.0,
+    "trigram_diversity": 1.0,
+    "most_repeated_bigrams": [],
+    "most_repeated_trigrams": []
+  },
+  "opening_diversity": {
+    "total_turns": 0,
+    "distinct_openings": 0,
+    "opening_diversity": 0.0,
+    "most_repeated_openings": []
+  },
+  "self_distance": {
+    "n_pairs": 29,
+    "mean_jaccard": 0.06896551724137931,
+    "mean_existing_self_similarity": null,
+    "note": ""
+  },
+  "witness_frequency": {
+    "total_turns": 30,
+    "witness_attempted": 30,
+    "witness_finding_present": 0,
+    "witness_finding_rate": 0.0,
+    "witness_finding_rate_overall": 0.0,
+    "by_outcome": {
+      "silent": {
+        "attempted": 29,
+        "finding": 0,
+        "total": 29
+      },
+      "displacement-seeking": {
+        "attempted": 1,
+        "finding": 0,
+        "total": 1
+      }
+    }
+  },
+  "entropy": {
+    "window": 10,
+    "mean_entropy": 0.5283208335737187,
+    "min_entropy": 0.0,
+    "max_entropy": 1.584962500721156,
+    "first_half_mean": 1.1094737505048093,
+    "second_half_mean": 0.0
+  },
+  "attractor_persistence": {
+    "epsilon": 0.65,
+    "mean_persistence_turns": 0.0,
+    "max_persistence_turns": 0,
+    "persistence_distribution": {
+      "0": 30
+    }
+  },
+  "transitions": {
+    "matrix": {
+      "coherence-seeking": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 0,
+        "synthesis": 0,
+        "silent": 0
+      },
+      "displacement-seeking": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 0,
+        "synthesis": 0,
+        "silent": 1
+      },
+      "synthesis": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 0,
+        "synthesis": 0,
+        "silent": 0
+      },
+      "silent": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 1,
+        "synthesis": 0,
+        "silent": 27
+      }
+    },
+    "row_totals": {
+      "silent": 28,
+      "displacement-seeking": 1
+    },
+    "column_totals": {
+      "silent": 29,
+      "displacement-seeking": 1
+    }
+  },
+  "witness_influence": {
+    "n_with_finding": 0,
+    "horizon": 3,
+    "overall_next_k_distribution": {
+      "coherence-seeking": 0.0,
+      "displacement-seeking": 0.03571428571428571,
+      "synthesis": 0.0,
+      "silent": 0.9642857142857143
+    },
+    "witness_next_k_distribution": {
+      "coherence-seeking": 0.0,
+      "displacement-seeking": 0.0,
+      "synthesis": 0.0,
+      "silent": 0.0
+    },
+    "per_outcome_shift": {
+      "coherence-seeking": 0.0,
+      "displacement-seeking": -0.03571428571428571,
+      "synthesis": 0.0,
+      "silent": -0.9642857142857143
+    }
+  },
+  "latency": {
+    "n_intervals": 29,
+    "note": "per-turn wall-clock latency is NOT in this log shape; turn-index gap is a proxy. Real latency requires a log schema with timestamps per turn.",
+    "mean_turn_index_gap": 1.0,
+    "median_turn_index_gap": 1
+  },
+  "provenance": {
+    "total_turns": 30,
+    "turns_with_fingerprint": 30,
+    "fingerprint_rate": 1.0,
+    "fingerprint_models": {
+      "deepseek-v4-flash:cloud": 30
+    },
+    "note": "0/140 is the expected baseline pre-b9c09fd-live-app. The core runtime records fingerprints (commit b9c09fd); the live app will start recording them once the AppViewModel + LiveRuntimeFactory wiring lands."
+  },
+  "inertia": {
+    "semantic_inertia": 0.034266704702009494,
+    "linguistic_inertia": 0.0,
+    "policy_inertia": 0.944428792328578,
+    "exploration_pressure": 0.055571207671421985,
+    "heard_length_variance": 280.89,
+    "heard_length_autocorrelation_lag1": 0.09015555236373055,
+    "note": ""
+  },
+  "symbolic_drift": {
+    "total_turns": 30,
+    "total_words": 3,
+    "relational": {
+      "first": 0.0,
+      "second": 0.0,
+      "drift": 0.0,
+      "top_words": {}
+    },
+    "object": {
+      "first": 0.0,
+      "second": 0.0,
+      "drift": 0.0,
+      "top_words": {}
+    },
+    "process": {
+      "first": 0.0,
+      "second": 0.0,
+      "drift": 0.0,
+      "top_words": {}
+    },
+    "other": {
+      "first": 1.0,
+      "second": 0.0,
+      "drift": -1.0,
+      "top_words": {}
+    },
+    "note": "P(relational) flat (no clear drift)"
+  },
+  "rrb": {
+    "p_relational_spoken": 0.0,
+    "p_relational_heard": 0.022008547008547007,
+    "rrb": 0.0,
+    "amplification_class": "suppression",
+    "note": ""
+  },
+  "rhetorical_motifs": {
+    "total_turns": 30,
+    "total_words": 3,
+    "motif_counts": {
+      "adversity": 0,
+      "inwardness": 0,
+      "transcendence": 0,
+      "observation": 0,
+      "investigation": 0
+    },
+    "motif_rates_per_1000": {
+      "adversity": 0.0,
+      "inwardness": 0.0,
+      "transcendence": 0.0,
+      "observation": 0.0,
+      "investigation": 0.0
+    },
+    "per_outcome_rates_per_1000": {
+      "displacement-seeking": {
+        "adversity": 0.0,
+        "inwardness": 0.0,
+        "transcendence": 0.0,
+        "observation": 0.0,
+        "investigation": 0.0
+      },
+      "silent": {
+        "adversity": 0.0,
+        "inwardness": 0.0,
+        "transcendence": 0.0,
+        "observation": 0.0,
+        "investigation": 0.0
+      }
+    },
+    "teleological_rate": 0.0,
+    "epistemic_rate": 0.0,
+    "teleological_ratio": 0.0,
+    "orientation": "epistemic",
+    "note": ""
+  },
+  "level_of_abstraction": {
+    "total_turns": 30,
+    "total_words": 3,
+    "distribution": {
+      "concrete": 0.0,
+      "interactional": 0.0,
+      "relational": 0.0,
+      "societal": 0.0,
+      "existential": 0.0
+    },
+    "per_outcome": {},
+    "first_half": {
+      "concrete": 0,
+      "interactional": 0,
+      "relational": 0,
+      "societal": 0,
+      "existential": 0
+    },
+    "second_half": {
+      "concrete": 0,
+      "interactional": 0,
+      "relational": 0,
+      "societal": 0,
+      "existential": 0
+    },
+    "drift": {
+      "concrete": 0,
+      "interactional": 0,
+      "relational": 0,
+      "societal": 0,
+      "existential": 0
+    },
+    "centroid_first": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "centroid_second": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "abstraction_shift": 0.0,
+    "note": "no significant abstraction drift"
+  },
+  "named_phrases": {
+    "we should consider whether there might be another variable": {
+      "count": 0,
+      "positions": []
+    },
+    "in a live dialogue": {
+      "count": 0,
+      "positions": []
+    },
+    "as a human i": {
+      "count": 0,
+      "positions": []
+    }
+  }
+}

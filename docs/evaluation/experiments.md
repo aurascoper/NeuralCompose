@@ -189,6 +189,65 @@ code. The work to land it:
 This is **Priority 2** in the architecture review's
 ordering (after the runtime merge, before Rust Phase 0).
 
+## Current starter artifacts
+
+The prosody MVP has one preregistered, docs-only starter
+experiment:
+
+- `docs/experiments/prosody-mvp-001.yaml`
+- `docs/hypotheses/reflective_prosody_v1.yaml`
+
+These files exercise the intended shape without adding an experiment
+loader or changing runtime behavior. The experiment consumes exported
+`DialecticalTurnEvent` and `ProsodyTraceEvent` JSONL streams, then
+tests whether measured `pause_before` predicts synthesis outcomes.
+Requested prosody controls can validate the telemetry path but cannot
+satisfy the hypothesis acceptance gate.
+
+The current offline runner is stdlib-only:
+
+```bash
+python3 Scripts/analyze_prosody_hypothesis.py \
+  --dialectic-turns dialectic-turns-YYYY-MM-DD.jsonl \
+  --prosody-trace prosody-trace-YYYY-MM-DD.jsonl \
+  --output prosody-hypothesis-analysis.json \
+  --pretty
+```
+
+It emits `prosody-hypothesis-analysis-v0` and returns a decision of
+`supported`, `rejected`, or `not_testable`.
+
+The turn-local recurrence MVP is a second docs-and-offline-analysis
+starter experiment:
+
+- `docs/experiments/exp-rsp-001.yaml`
+- `docs/hypotheses/h-rsp-001.yaml`
+
+It consumes only isolated canonical `SoakRuns` JSONL and conditions on
+apparent synthesis turns. Its exporter produces an `rsp-dataset-v0`
+artifact containing source checksums, encoder provenance, and derived
+numeric features only; the Julia evaluator produces `rsp-analysis-v0`.
+The five-soak cohort is a pipeline pilot whose decision is always
+`insufficient_evidence`. It does not add a runtime feature, alter the
+telemetry schema, or make `RSP_hat` a validated latent construct.
+
+```bash
+python3 Scripts/export_rsp_features.py \
+  --run SoakRuns/soak-002-20260721-220848/runs/F_qwen05b.jsonl \
+  --run SoakRuns/soak-002-20260721-220848/runs/F_qwen15b.jsonl \
+  --run SoakRuns/soak-002-20260721-220848/runs/F_qwen3b.jsonl \
+  --run SoakRuns/soak-002-20260721-220848/runs/R_qwen05b.jsonl \
+  --run SoakRuns/soak-002-20260721-220848/runs/R_qwen15b.jsonl \
+  --encoder-dir Models/BGE-small-en-v1.5 \
+  --encoder-revision main \
+  --output rsp-dataset.json
+
+julia --project=/Users/aurascoper/Developer/NeuralComposeScience \
+  /Users/aurascoper/Developer/NeuralComposeScience/scripts/evaluate_rsp.jl \
+  --dataset rsp-dataset.json \
+  --output rsp-analysis.json
+```
+
 ## Out of scope
 
 The schema is *not* a workflow management system. It does

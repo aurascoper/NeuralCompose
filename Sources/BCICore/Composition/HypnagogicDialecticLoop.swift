@@ -109,6 +109,9 @@ public actor HypnagogicDialecticLoop {
     private let glossProvider: @Sendable () async -> SpectralState?
     /// Opt-in persistence of each turn's competition. Null by default.
     private let turnLogger: any DialecticalTurnLogging
+    /// Opt-in persistence of requested prosody per voiced dialectical turn.
+    /// Null by default; this is telemetry only and never changes speech behavior.
+    private let prosodyTracer: any ProsodyTraceLogging
     private let config: Config
     /// Broadcast of spoken-node events for grounding the voice in the 3D
     /// workspace (Stage 1b): a `place` event per voiced candidate + a
@@ -126,6 +129,8 @@ public actor HypnagogicDialecticLoop {
     public private(set) var turnIndex = 0
     /// Wall-clock of the last completed turn (health watchdog).
     public private(set) var lastTurnAt: Date?
+    private var phase: HypnagogicLoopPhase = .stopped
+    private var lastFailure: String?
     /// Tension carried from the previous turn — shapes this turn's prompts.
     private var standingTension: Float = 0
     /// The semantic-graph memory the dialectic lives in (centroids, recurrence,
@@ -146,6 +151,7 @@ public actor HypnagogicDialecticLoop {
         random: @escaping @Sendable () -> Double = { Double.random(in: 0..<1) },
         glossProvider: @escaping @Sendable () async -> SpectralState? = { nil },
         turnLogger: any DialecticalTurnLogging = NullDialecticalTurnLogger(),
+        prosodyTracer: any ProsodyTraceLogging = NullProsodyTraceLogger(),
         witness: (any TextGenerating)? = nil,
         config: Config = .init()
     ) {
@@ -159,6 +165,7 @@ public actor HypnagogicDialecticLoop {
         self.random = random
         self.glossProvider = glossProvider
         self.turnLogger = turnLogger
+        self.prosodyTracer = prosodyTracer
         self.config = config
         self.memory = DialecticalMemory(
             historyWindow: config.historyWindow,
@@ -166,6 +173,15 @@ public actor HypnagogicDialecticLoop {
         )
         self.field = DialecticalField(base: tuning.weights,
                                       inertia: tuning.fieldInertia, wind: tuning.glossWind)
+    }
+
+    public var status: HypnagogicLoopStatus {
+        HypnagogicLoopStatus(
+            phase: phase,
+            lastFailure: lastFailure,
+            turnIndex: turnIndex,
+            lastTurnAt: lastTurnAt
+        )
     }
 
     /// Records the latest `GenerationMetadata` from the adapter-wrapped
@@ -218,6 +234,8 @@ public actor HypnagogicDialecticLoop {
     public func start() {
         guard loopTask == nil else { return }
         isRunning = true
+        phase = .listening
+        lastFailure = nil
         loopTask = Task { [weak self] in await self?.run() }
     }
 
@@ -226,6 +244,7 @@ public actor HypnagogicDialecticLoop {
         loopTask?.cancel()
         loopTask = nil
         isRunning = false
+        phase = .stopped
         await listener.cancel()
         await speaker.stopSpeaking()
     }
@@ -235,21 +254,30 @@ public actor HypnagogicDialecticLoop {
     private func run() async {
         while !Task.isCancelled {
             do {
+                phase = .listening
                 let heard = try await listener.listen(timeout: config.listenTimeout)
                 try Task.checkCancellation()
 
                 if let transcript = heard?.trimmingCharacters(in: .whitespacesAndNewlines),
                    !transcript.isEmpty {
+                    phase = .generating
                     try await runTurn(heard: transcript)
                 } else {
                     // Empty *input* (the user said nothing) — distinct from a
                     // dialectical silence. Breathe with an induction cue.
+                    phase = .speaking
                     try await speakChunks(nextSilenceCue(), prosody: config.prosody)
+                    lastFailure = nil
                 }
             } catch is CancellationError {
                 return
             } catch {
                 if Task.isCancelled { return }
+                phase = .retrying
+                lastFailure = error.localizedDescription
+                BCILog.pipeline.error(
+                    "hypnagogic dialectic loop failed: \(error.localizedDescription, privacy: .public)"
+                )
             }
 
             do {
@@ -290,7 +318,7 @@ public actor HypnagogicDialecticLoop {
         // is now visible in the rollup as N `silent` outcomes, not
         // as a hang.
         guard !candidateTexts.isEmpty else {
-            await logSilentTurn(heard: heard)
+            try await logSilentTurn(heard: heard)
             return
         }
 
@@ -405,6 +433,7 @@ public actor HypnagogicDialecticLoop {
 
         switch result.outcome {
         case let .spoke(candidate), let .synthesized(candidate):
+            phase = .speaking
             consecutiveSilence = 0
             memory.recordReply(text: candidate.text, embedding: candidate.embedding, turnIndex: turnIndex)
             // Block a later synthesis from re-speaking this verbatim.
@@ -423,15 +452,18 @@ public actor HypnagogicDialecticLoop {
                 potentials: scored.map(\.potential), tau: result.selectionTemperature)
             let turnProsody = SpeechProsody.blend(
                 zip(scored, probs).map { (roleProsody(for: $0.candidate.roleID), $1) })
+            await logRequestedProsody(for: record, text: candidate.text, prosody: turnProsody)
             try await speakChunks(candidate.text, prosody: turnProsody,
                                   grounding: (nodeID: nodeID, embedding: candidate.embedding))
         case .silent:
             consecutiveSilence += 1
             if consecutiveSilence >= config.maxConsecutiveSilence {
                 consecutiveSilence = 0
+                phase = .speaking
                 try await speakChunks(nextSilenceCue(), prosody: config.prosody)
             }
         }
+        lastFailure = nil
         lastTurnAt = Date()
         turnIndex += 1
     }
@@ -442,7 +474,7 @@ public actor HypnagogicDialecticLoop {
     /// `turnIndex` advances so the loop's progress check sees the
     /// turn as completed. The 90s watchdog no longer fires for
     /// these runs.
-    private func logSilentTurn(heard: String) async {
+    private func logSilentTurn(heard: String) async throws {
         let competition = DialecticalCompetition(
             index: turnIndex,
             heard: heard,
@@ -464,8 +496,10 @@ public actor HypnagogicDialecticLoop {
         consecutiveSilence += 1
         if consecutiveSilence >= config.maxConsecutiveSilence {
             consecutiveSilence = 0
-            try? await speakChunks(nextSilenceCue(), prosody: config.prosody)
+            phase = .speaking
+            try await speakChunks(nextSilenceCue(), prosody: config.prosody)
         }
+        lastFailure = nil
         lastTurnAt = Date()
         turnIndex += 1
     }
@@ -484,6 +518,42 @@ public actor HypnagogicDialecticLoop {
     /// unknown role id, e.g. a resurfaced `"synthesis"`).
     private func roleProsody(for id: String) -> SpeechProsody {
         roles.first { $0.id == id }?.voiceProsody ?? config.prosody
+    }
+
+    private func logRequestedProsody(
+        for record: DialecticalCompetition,
+        text: String,
+        prosody: SpeechProsody
+    ) async {
+        await prosodyTracer.log(ProsodyTraceEvent(
+            index: record.index,
+            sourceKind: "dialectical-turn-requested-prosody",
+            utteranceText: text,
+            dialogueState: [
+                "turn_index": Double(record.index),
+                "tension": Double(record.tension),
+                "margin": Double(record.margin),
+                "selection_temperature": Double(record.selectionTemperature),
+                "gloss_scalar": Double(record.glossScalar),
+            ],
+            requested: ProsodyFeatureVector(
+                requested: prosody,
+                cadenceClass: cadenceClass(for: record.outcome)
+            ),
+            voiceIdentifier: speaker.voiceIdentifier,
+            synthesizerIdentifier: speaker.isLive ? "live" : "stub"
+        ))
+    }
+
+    private func cadenceClass(for outcome: DialecticalOutcome) -> String {
+        switch outcome {
+        case let .spoke(candidate):
+            return "role:\(candidate.roleID)"
+        case .synthesized:
+            return "synthesis"
+        case .silent:
+            return "silent"
+        }
     }
 
     /// Indices of the two most semantically opposed candidate embeddings — the

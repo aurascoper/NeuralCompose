@@ -95,12 +95,19 @@ features as the same target shape. Requested vectors can be produced
 from the existing `SpeechProsody`; measured vectors can later be
 filled from recordings.
 
-`SpokenGenerationLoop` now emits requested-control
-`ProsodyTraceEvent`s when a `ProsodyTraceLogging` sink is injected:
-one event per spoken phrase, with the requested cadence vector,
-phrase-level commitment, voice identifier, and synthesizer class. The
-default sink is `NullProsodyTraceLogger`, so no runtime telemetry is
-written unless a caller opts in.
+`SpokenGenerationLoop` and `HypnagogicDialecticLoop` now emit
+requested-control `ProsodyTraceEvent`s when a `ProsodyTraceLogging`
+sink is injected. The spoken-generation loop writes one event per
+phrase with cycle/phrase indices. The dialectical loop writes one
+event per voiced turn with `dialogue_state.turn_index`, making it
+joinable to `DialecticalTurnEvent`. Both include the requested
+cadence vector, voice identifier, and synthesizer class.
+
+The default sink is `NullProsodyTraceLogger`, so no runtime telemetry
+is written unless a caller opts in. In the live app, local interaction
+logging injects `TelemetryLogger`, which writes a separate
+`prosody-trace-<day>.jsonl` stream next to `spoken-trace` and
+`dialectic-turns`.
 
 The measurement contract for these fields is defined in
 `prosody-feature-contract.md`.
@@ -129,6 +136,12 @@ commitment. The next scientific step is to add embeddings and
 measured acoustic features from recordings, then ask whether semantic
 state predicts cadence better than the heuristic baseline. No raw
 audio is required for the initial requested-control baseline.
+
+The first preregistered hypothesis is
+`docs/hypotheses/reflective_prosody_v1.yaml`, with the matching
+experiment in `docs/experiments/prosody-mvp-001.yaml`. Its acceptance
+gate requires measured prosody, so requested controls can validate the
+pipeline but cannot validate the scientific claim.
 
 ## Research Flow
 

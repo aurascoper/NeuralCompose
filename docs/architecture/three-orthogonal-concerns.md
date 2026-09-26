@@ -293,15 +293,23 @@ that makes this scientific. A kernel that passes gate 1
 ready* for Phase 1, even if it's fast. Performance
 alone is not sufficient.
 
-When Rust Phase 0 begins, it will already have:
+Rust Phase 0 can begin before Julia models mature when the work is
+measurement infrastructure: deterministic feature extraction,
+timestamp processing, signal processing, telemetry normalization, and
+other reproducible numeric kernels. It should not infer behavioral
+meaning from those signals. That belongs to Science.
 
-- Stable telemetry (the four-axis metric contracts)
-- Stable benchmarks (the matrix corpus + live data)
-- Acceptance criteria (the metric contract bands)
-- Repeatable experiments (the schema in
-  `docs/evaluation/experiments.md`)
-- Reproducible runtime selection (the unified
-  RuntimeFactory)
+When a Rust kernel is promoted beyond measurement infrastructure, it
+should have:
+
+- Stable telemetry or feature contracts.
+- Stable benchmarks or input corpora.
+- Acceptance criteria for correctness, stability, determinism, and
+  performance.
+- Repeatable experiments that prove the kernel preserves the intended
+  measurement.
+- Reproducible runtime selection through the unified RuntimeFactory
+  when the kernel reaches the Swift boundary.
 
 That means every Rust kernel can be evaluated
 scientifically instead of anecdotally. The four-gate
@@ -349,14 +357,18 @@ promotion path for Julia models.
 
 1. **Runtime unification** — `LiveRuntimeFactory` env-var
    fix + cross-model harness + merge into `main`
-2. **Freeze the measurement layer** — the four metric
-   contracts in `docs/evaluation/metrics.md`
+2. **Freeze the measurement layer** — metric contracts in
+   `docs/evaluation/metrics.md` plus feature contracts such as
+   `prosody-feature-contract.md`
 3. **Open `feature/research-hypotheses`** — the
    `Experiment → ResearchHypothesis` schema
 4. **Use the four metrics** to evaluate carefully chosen
    hypotheses
-5. **Rust Phase 0** — gated on the four-gate evaluation
-   order; only after #1 and #3 are stable
+5. **Continue Rust Phase 0 for measurement infrastructure** —
+   deterministic kernels such as `Rust/prosody_features`
+6. **Start Julia Science in parallel** — state reconstruction,
+   reference models, parameter estimation, and falsification against
+   telemetry artifacts
 
 Refs: The architecture review on 2026-07-21; the
 metric contracts in `docs/evaluation/metrics.md`; the

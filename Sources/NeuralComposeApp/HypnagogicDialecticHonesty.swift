@@ -6,14 +6,15 @@ import Foundation
 ///
 /// The load-bearing honesty points: this is scaffolding, not a validated
 /// intervention; `SpectralState` only *biases* the dialogue as a heuristic
-/// "wind" and never decodes cognition; and dialectic mode makes two cloud calls
-/// per turn — THREE for Reflective, which adds a non-voiced introspective Witness
-/// (WITNESS.md) — the one deliberate runtime network exception.
+/// "wind" and never decodes cognition; and dialectic mode makes two generation
+/// calls per turn — THREE for Reflective, which adds a non-voiced introspective
+/// Witness (WITNESS.md). The configured reference runtime may be local Ollama
+/// or a cloud-backed CLI.
 enum HypnagogicDialecticHonesty {
 
     /// Shown (red) while either hypnagogic mode is active — the egress reality.
     static let egressCaveat =
-        "Listening on-device; transcript text may be sent to a cloud assistant. Audio never leaves the machine."
+        "Listening on-device; transcript text may be sent to the configured generation runtime. Audio never leaves the machine."
 
     /// Shown (red) additionally when dialectic mode is active. Reflective adds a
     /// third, non-voiced Witness call (`ContextProfile.witnessEnabled`), so it
@@ -27,5 +28,5 @@ enum HypnagogicDialecticHonesty {
 
     /// Always shown under the toggle — scope + the gloss-is-not-a-read boundary.
     static let headerCaveat =
-        "Experimental, manual-trigger scaffolding — not a validated intervention, not wired to any sleep detector. Any EEG reading only biases the dialogue as a heuristic 'wind', never a cognitive decode. The one runtime network exception (decision_registry entry 8)."
+        "Experimental, manual-trigger scaffolding — not a validated intervention, not wired to any sleep detector. Any EEG reading only biases the dialogue as a heuristic 'wind', never a cognitive decode. The reference runtime is explicitly shown while active."
 }

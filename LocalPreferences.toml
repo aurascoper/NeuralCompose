@@ -1,0 +1,6 @@
+[JACC]
+backends = ["metal"]
+default_backend = "metal"
+
+    [JACC.placement]
+    metal = "none"

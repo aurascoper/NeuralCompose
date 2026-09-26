@@ -1,8 +1,8 @@
 # Julia Science Workspace
 
-> **Status:** Draft (2026-07-22). This document defines Julia's
-> role as an offline scientific companion to NeuralCompose. It
-> does not add Julia to the application runtime.
+> **Status:** Initial sibling workspace implemented (2026-07-22).
+> Julia remains an offline scientific companion to NeuralCompose; it
+> is not an application runtime dependency.
 
 ## Purpose
 
@@ -93,6 +93,20 @@ NeuralComposeScience/
 That workspace should have no AVFoundation, SwiftUI, SceneKit, app
 state, or production speech loop. It is mathematics, simulation,
 estimation, and visualization over exported evidence.
+
+## Initial Workspace
+
+The initial sibling workspace is ../NeuralComposeScience/. It contains a
+version-pinned Julia project, the Goal 0/Goal 1 artifact contract, a synthetic
+fixture, an executable ODE experiment, a held-out validation gate, and a
+trajectory plot. Its local Julia depots and generated artifacts are ignored.
+
+EXP-ODE-001 fits a scalar first-order relaxation model to
+continuation_pressure only after a Goal 0 artifact is representable and the
+corresponding Goal 1 decision is supported. It fits the earliest 70 percent of
+observations, scores the held-out suffix, and always reports production
+promotion as not_eligible. The fixture proves the workflow, not the dialogue
+hypothesis; no real soak has yet been used as empirical validation.
 
 ## First Responsibility
 
@@ -264,11 +278,12 @@ Rust kernel.
 
 ## First Model Experiment
 
-Only after Goal 0 succeeds, posit a simple first-order nonlinear
-system, simulate trajectories, and compare them qualitatively against
-one long soak run. The first modeling question is not whether the
-equations are correct. The first question is whether any continuous
-dynamical model can reproduce the observed shape of the behavior.
+Only after Goal 0 succeeds and Goal 1 is supported, posit a simple
+first-order system, simulate trajectories, and compare them against
+held-out measurements from one long soak run. The first modeling
+question is not whether the equations are correct. The first question
+is whether any continuous dynamical model predicts the observed shape
+of the behavior it was not fit to.
 
 Every Julia project should answer exactly one question:
 
@@ -322,6 +337,13 @@ Julia prototype
   -> shipped application behavior
 ```
 
+The ownership rule is:
+
+```text
+Rust owns production implementations.
+Julia owns scientific reference implementations.
+```
+
 This keeps each language's identity clear:
 
 - Swift: interaction, UI, orchestration, Apple ecosystem.
@@ -331,12 +353,33 @@ This keeps each language's identity clear:
 
 ## Roadmap Fit
 
-Julia work can begin in parallel with Rust Phase 0 after
-`feature/pluggable-generators` stabilizes. The sequencing is:
+Julia science work can begin in parallel with Rust Phase 0 after the
+runtime substrate is stable. They are different tracks:
+
+```text
+runtime stabilized
+        │
+        ▼
+        ├───────────────┐
+        ▼               ▼
+Rust Phase 0       Julia Science
+(deterministic     (state reconstruction,
+ measurement)       reference models)
+        │               │
+        └──────┬────────┘
+               ▼
+validation against telemetry
+               ▼
+promotion into Rust
+               ▼
+Swift runtime
+```
+
+The sequencing is:
 
 1. Merge `feature/pluggable-generators` into `main`.
-2. Begin Rust Phase 0 as a deterministic utility crate.
-3. Create `NeuralComposeScience/` as a separate Julia research
-   workspace.
+2. Begin Rust Phase 0 as deterministic measurement infrastructure.
+3. Create or grow `NeuralComposeScience/` as a separate Julia
+   research workspace.
 4. Treat each Julia model as a scientific hypothesis.
 5. Reimplement only validated computational kernels in Rust.

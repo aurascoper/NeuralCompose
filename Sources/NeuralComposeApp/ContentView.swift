@@ -55,6 +55,8 @@ struct ContentView: View {
                 spokenGenerationLoopEnabled: $viewModel.spokenGenerationLoopEnabled,
                 hypnagogicLoopEnabled: $viewModel.hypnagogicLoopEnabled,
                 hypnagogicMode: $viewModel.hypnagogicMode,
+                hypnagogicRuntimePreference: $viewModel.hypnagogicRuntimePreference,
+                hypnagogicRuntimeDiagnostics: viewModel.hypnagogicRuntimeDiagnostics,
                 health: viewModel.healthSnapshot
             )
             Divider()

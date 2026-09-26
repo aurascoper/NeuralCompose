@@ -86,9 +86,19 @@ The same shape can represent three phases:
 - `measured`: acoustic features measured from rendered or recorded
   speech.
 
-`SpokenGenerationLoop` currently emits the requested phase when a
-`ProsodyTraceLogging` sink is injected. That is a baseline, not a
-measurement of real audio.
+`SpokenGenerationLoop` and `HypnagogicDialecticLoop` currently emit
+the requested phase when a `ProsodyTraceLogging` sink is injected.
+That is a baseline, not a measurement of real audio. The live app's
+local `TelemetryLogger` implements that sink and writes
+`prosody-trace-<day>.jsonl` when interaction logging is enabled.
+
+Current source kinds are:
+
+- `spoken-generation-requested-prosody`: phrase-level requested
+  controls keyed by cycle and phrase indices.
+- `dialectical-turn-requested-prosody`: turn-level requested controls
+  keyed by `dialogue_state.turn_index`, joinable to
+  `DialecticalTurnEvent.index`.
 
 ## Phase 0 Rust Boundary
 
@@ -158,6 +168,15 @@ Are there attractors in joint state:
 
 These are hypotheses to falsify. The feature contract does not encode
 their answers.
+
+The first registered prosody MVP hypothesis is
+`docs/hypotheses/reflective_prosody_v1.yaml`: measured
+`pause_before` should predict synthesis outcomes after joining
+`prosody-trace` with `dialectic-turns`. Its paired experiment is
+`docs/experiments/prosody-mvp-001.yaml`, and the offline analysis
+runner is `Scripts/analyze_prosody_hypothesis.py`.
+Requested-control traces are explicitly excluded from acceptance for
+that hypothesis.
 
 ## Non-Goals
 

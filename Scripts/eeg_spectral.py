@@ -36,7 +36,7 @@ _EPS = 1e-8
 # np.trapezoid is the numpy>=2.0 name; np.trapz is the numpy<2.0 name. This
 # environment pins numpy 1.26 (has only trapz); support both so the module is
 # portable if the calibration venv is later bumped to numpy 2.x.
-_trapz = getattr(np, "trapezoid", getattr(np, "trapz"))
+_trapz = getattr(np, "trapezoid", None) or getattr(np, "trapz")
 
 
 def band_power(freqs: np.ndarray, psd: np.ndarray, band: tuple[float, float]) -> float:

@@ -74,6 +74,46 @@ final class TelemetryLoggerTests: XCTestCase {
         XCTAssertEqual(entries.count, 2, "events on different calendar days must land in separate files, found: \(entries)")
     }
 
+    func testProsodyTraceWritesSeparateJSONLStream() async throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let logger = TelemetryLogger(directory: dir)
+
+        let event = ProsodyTraceEvent(
+            index: 7,
+            sourceKind: "spoken-generation-requested-prosody",
+            utteranceText: "Maybe this could work.",
+            dialogueState: ["cycle_index": 2, "phrase_index": 1],
+            requested: ProsodyFeatureVector(
+                speechRate: 0.42,
+                pauseBefore: 0.25,
+                emphasis: 0.1,
+                hesitation: 0.4,
+                cadenceClass: "hedged"
+            ),
+            voiceIdentifier: "test-voice",
+            synthesizerIdentifier: "stub"
+        )
+        await logger.log(event)
+
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone.current
+        let expectedURL = dir.appendingPathComponent("prosody-trace-\(dayFormatter.string(from: Date())).jsonl")
+
+        let contents = try String(contentsOf: expectedURL, encoding: .utf8)
+        let lines = contents.split(separator: "\n", omittingEmptySubsequences: true)
+        XCTAssertEqual(lines.count, 1)
+
+        let decoded = try JSONDecoder().decode(ProsodyTraceEvent.self, from: Data(lines[0].utf8))
+        XCTAssertEqual(decoded.index, 7)
+        XCTAssertEqual(decoded.schemaVersion, ProsodyTraceEvent.currentSchemaVersion)
+        XCTAssertEqual(decoded.utteranceText, "Maybe this could work.")
+        XCTAssertEqual(decoded.requested?.pauseBefore, 0.25)
+        XCTAssertEqual(decoded.requested?.cadenceClass, "hedged")
+        XCTAssertNil(decoded.measured, "requested-control trace is not acoustic measurement")
+    }
+
     func testDefaultDirectoryMatchesRecordingsConvention() {
         let expected = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("NeuralCompose")

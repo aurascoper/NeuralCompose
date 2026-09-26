@@ -12,16 +12,19 @@ import BCICore
 /// opt-in `AppViewModel.interactionLoggingEnabled` toggle themselves; this
 /// actor writes unconditionally whenever `log(_:)` is called.
 ///
-/// Files rotate daily (`interactions-<yyyy-MM-dd>.jsonl`), mirroring the
-/// dated-session convention `Recordings/night-<date>/` already uses, so no
-/// single file grows unbounded across a long-running install.
-public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, SpokenGenerationTraceLogging {
+/// Files rotate daily (`interactions-<yyyy-MM-dd>.jsonl`,
+/// `dialectic-turns-<yyyy-MM-dd>.jsonl`, `spoken-trace-<yyyy-MM-dd>.jsonl`,
+/// `prosody-trace-<yyyy-MM-dd>.jsonl`), mirroring the dated-session convention
+/// `Recordings/night-<date>/` already uses, so no single file grows unbounded
+/// across a long-running install.
+public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, SpokenGenerationTraceLogging, ProsodyTraceLogging {
     private let directory: URL
     private let encoder: JSONEncoder
     private let dayFormatter: DateFormatter
 
     /// One open handle per stream prefix (`interactions`, `dialectic-turns`,
-    /// `spoken-trace`), each rotating daily. Keyed so the streams never share a file.
+    /// `spoken-trace`, `prosody-trace`), each rotating daily. Keyed so the
+    /// streams never share a file.
     private var streams: [String: (day: String, handle: FileHandle)] = [:]
 
     public init(directory: URL) {
@@ -63,6 +66,14 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
     public func log(_ event: SpokenGenerationTraceEvent) async {
         write(event, prefix: "spoken-trace",
               day: dayFormatter.string(from: Date()), id: "cycle-\(event.index)")
+    }
+
+    /// Prosody traces go to their own `prosody-trace-<day>.jsonl` stream. This
+    /// keeps cadence targets separate from semantic turn telemetry while still
+    /// letting offline analysis join streams by index / dialogue-state scalars.
+    public func log(_ event: ProsodyTraceEvent) async {
+        write(event, prefix: "prosody-trace",
+              day: dayFormatter.string(from: Date()), id: "prosody-\(event.index)")
     }
 
     private func write<E: Encodable>(_ event: E, prefix: String, day: String, id: String) {

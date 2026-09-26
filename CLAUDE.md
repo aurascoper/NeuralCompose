@@ -10,29 +10,19 @@ Privacy-first, fully on-device macOS prototype for **EEG-driven communication**.
 
 ## Run / test / build
 ```sh
-./Scripts/build.sh                          # swift build (stub bridge, mock classifier, stub predictor)
-./Scripts/run-synthetic.sh                  # launches app with synthetic EEG — no hardware, no models needed
-./Scripts/build.sh --with-brainflow         # requires BrainFlow installed (see HARDWARE_SETUP.md)
-./Scripts/run-muse-s.sh                     # live Muse S over Bluetooth
-./Scripts/build-xcode-mlx.sh                # MLX path needs full Xcode (not just CLT) to compile Metal kernels
-./Scripts/run-calibration.sh                # capture training data for intent classifier
-python Scripts/train-intent-classifier.py   # train + export an .mlpackage from calibration data
-
-swift test                                  # all tests
+./Scripts/build.sh             # swift build (stub bridge, mock classifier, stub predictor)
+./Scripts/run-synthetic.sh     # canonical baseline — synthetic EEG, no hardware or models needed
+./Scripts/build-xcode-mlx.sh   # MLX path — needs full Xcode (not just CLT) to compile Metal kernels
+swift test                     # all tests
 ```
+Other entry points (live Muse, calibration, classifier training) are self-describing scripts in `Scripts/`; hardware paths need BrainFlow installed (`HARDWARE_SETUP.md`, `build.sh --with-brainflow`).
 
 ## Layout
+Only the non-obvious constraints; the directory tree speaks for itself otherwise.
 - `Sources/BCIBridge/` — Obj-C++ shim for BrainFlow. Default builds with `BCI_BRIDGE_STUB`; define `BCI_BRAINFLOW_AVAILABLE` + `-lBrainflow` to wire in the real library.
-- `Sources/BCICore/` — pure-Swift, no third-party deps: models, protocols (`EEGStreaming`, `IntentClassifying`, `NextWordPredicting`, `TokenizerProviding`), ring buffer, intent FSM
-- `Sources/BCIEEG/` — EEG streams: BrainFlow facade, synthetic generator, playback from recordings
-- `Sources/BCIClassifier/` — Core ML wrapper (ANE-preferred via `MLComputeUnits`); mock classifier for stub mode
-- `Sources/BCILLM/` — **isolated MLX adapter** + stub predictor + tokenizer; ONLY target that imports MLX/transformers
-- `Sources/NeuralComposeApp/` — SwiftUI app target; `AppContainer` composes everything via protocols
-- `Models/` — `IntentClassifier.mlpackage` (auto-compiled by Core ML on first load), plus `README.md` for the MLX LLM drop-in convention
-- `Tests/` — one test target per library (`BCICoreTests`, `BCIEEGTests`, `BCIClassifierTests`, `BCILLMTests`)
-- `Scripts/` — build/run/calibration/training shell scripts + Python training helper
-- `Recordings/` — captured EEG sessions for playback testing
-- `WorldModel/` — **decoupled research spike** (PyTorch, not MLX; no dependency on `Sources/`): a synthetic JEPA + latent-MPC exercise, unrelated to the EEG pipeline until proven out — see its own `README.md`
+- `Sources/BCICore/` — pure-Swift, **no third-party deps** (protocols, models, ring buffer, intent FSM)
+- `Sources/BCILLM/` — **isolated MLX adapter**; ONLY target that imports MLX/transformers
+- `WorldModel/` — **decoupled research spike** (PyTorch, not MLX; no dependency on `Sources/`) — constraints live in `WorldModel/CLAUDE.md` (auto-loads when working there)
 - `HARDWARE_SETUP.md`, `MODEL_SETUP.md`, `CALIBRATION.md`, `TROUBLESHOOTING.md` — operational docs (keep up to date)
 
 ## Conventions
@@ -48,12 +38,6 @@ swift test                                  # all tests
 - **Hardware ceiling is real, not a tuning problem.** The Muse channel set (TP9, AF7, AF8, TP10) has nothing over Broca's area (~F7/F3) or left superior temporal gyrus (~T7/T3) — the regions covert-speech decoding relies on. AF7/AF8 are dominated by the ocular artifacts Track A exploits as a feature; imagined-speech work needs to suppress those instead. No published 4-channel dry-electrode Muse imagined-speech result clears a defensible chance bar.
 - **Pre-registration gate (must pass before promoting past experimental):** a single binary held-out balanced-accuracy threshold — e.g. 65% on a 2-class discrimination, 5-fold within-subject cross-validation, n ≥ 50 trials per class — pinned *before* training. If it doesn't clear, Track B parks; do not promote on training accuracy or "looks promising."
 - **Architecture isolation rule:** keep Track B's labels, classifier protocol, `.mlpackage`, and trainer parallel to Track A's, never extensions of them — mixing imagined-word labels into `CalibrationLabel`/`IntentClass` would corrupt the production model the next time `train-intent-classifier.py` runs against a mixed session.
-
-## World Model (JEPA + MPC) research spike
-- **Lives entirely in `WorldModel/`, decoupled from the app on purpose.** PyTorch, not MLX; no import of `BCICore`/`BCIEEG`/`BCIClassifier`/`BCILLM`. The MLX-isolation rule above doesn't apply here because nothing here touches the SwiftPM target graph.
-- **Synthetic by design, not a shortcut.** The motivating idea — a JEPA-style transition predictor over EEG-derived `SpectralState`/`GenerationAdaptation` — is real but currently unbuildable: one processed night of sleep data, zero logged interaction events (`InteractionLogging` is opt-in, off by default per `ADR-005-local-interaction-logging.md`). A JEPA needs volume, action variation, and temporal transitions none of that provides yet. So the architecture gets proven on a synthetic 2D continuous-control task first, where ground truth and volume are both free.
-- **Multi-day, staged.** Day 1 (synthetic env + trajectory dataset + DataLoader) is the only stage landed so far. See `WorldModel/README.md` for the full four-day plan and current status — don't assume later days exist without checking.
-- **Pointing this at real EEG data is a future decision, not an assumption.** Nothing here should be read as committing to that path; it's contingent on the architecture actually working on the toy task first.
 
 ## Gotchas
 - **MLX path requires full Xcode**, not just Command Line Tools — SwiftPM needs Xcode to compile mlx-swift's Metal kernels. See `MODEL_SETUP.md`. There's a parked `venv.py314.parked` from a Python 3.14 compatibility issue — current venv is regular Python.

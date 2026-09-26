@@ -1,0 +1,110 @@
+hypothesis:
+  id: H-RSP-001
+  status: pre_registered
+  proposed_at: 2026-07-22
+  concern: Science
+  title: Turn-local recurrence prediction after apparent synthesis
+
+  question: >
+    Do features available by the end of an apparent synthesis turn provide
+    incremental held-out prediction of five-turn semantic recurrence beyond
+    preregistered local and historical baselines?
+
+  estimand: >
+    P(recurrence_5 | DialecticalTurnEvent.outcome starts with "synthesized:",
+    X_t). This experiment is conditional on the runtime's apparent-synthesis
+    label and does not estimate recurrence for all dialogue turns.
+
+  claim: >
+    A causal, turn-local ridge model predicts five-turn recurrence more
+    accurately than current synthesis-to-theme similarity on held-out soaks.
+
+  construct_boundary: >
+    RSP_hat is the model's out-of-sample recurrence prediction, not an
+    independently validated latent variable. This experiment tests a useful
+    predictor inspired by residual semantic structure; it does not establish
+    Residual Semantic Potential as a psychological or ontological construct.
+
+  predictors:
+    horizon: through_turn_t_only
+    required_features:
+      - closure_efficiency
+      - semantic_inertia_delta
+      - policy_inertia_delta_causal
+      - motif_orientation_delta
+      - level_of_abstraction_delta
+      - relational_amplification_delta
+      - candidate_context_distance
+      - candidate_dispersion
+      - winner_margin
+      - response_length
+      - history_dispersion
+      - synthesis_confidence
+
+  outcomes:
+    primary:
+      id: recurrence_5
+      definition: >
+        Maximum normalized cosine similarity between the union of heard text,
+        coherence pole, and displacement pole at turn t and the next five
+        spoken turns. Silent future turns contribute zero.
+    diagnostics:
+      - recurrence_5_heard
+      - recurrence_5_coherence_pole
+      - recurrence_5_displacement_pole
+    sensitivities:
+      - mean_recurrence_5
+      - top2_mean_recurrence_5
+
+  baselines:
+    primary: current_synthesis_theme_similarity
+    fitting: >
+      Every non-mean baseline is a one-feature ridge predictor fitted only on
+      the training portion of each grouped fold; the training-mean baseline
+      uses only the training outcome mean.
+    secondary:
+      - training_mean_recurrence
+      - lagged_recurrence_5
+      - response_length
+      - synthesis_confidence
+      - semantic_inertia_delta
+
+  pilot:
+    regularization: ridge_lambda_1_0
+    inference_status: insufficient_evidence
+    purpose:
+      - validate reproducible causal row reconstruction
+      - validate grouped evaluation without soak leakage
+      - inspect target variability and provisional incremental signal
+
+  confirmation:
+    minimum_eligible_anchors: 100
+    minimum_soaks: 12
+    minimum_generator_configurations: 3
+    minimum_model_variants: 2
+    maximum_configuration_share: 0.40
+    validation: nested_leave_one_soak_out
+    ridge_lambda_grid: [0.01, 0.1, 1.0, 10.0, 100.0]
+    acceptance:
+      minimum_held_out_spearman_rho: 0.40
+      primary_baseline: >
+        The soak-cluster bootstrap confidence interval for MAE improvement
+        over current_synthesis_theme_similarity excludes zero.
+      response_length_ablation: >
+        The model without response_length retains positive MAE improvement
+        over the primary baseline.
+
+  rejection:
+    - confirmation sample gates fail
+    - primary baseline improvement is not positive with grouped confidence
+    - held-out Spearman rho is below 0.40
+    - the response-length ablation loses positive primary-baseline improvement
+    - the model is statistically worse than a secondary baseline
+    - recurrence conclusions reverse for a required sensitivity outcome
+
+  promotion:
+    rust_eligible: false
+    reason: >
+      A supported predictor remains a Julia reference result. Independent
+      replication and construct-validation work are required before any
+      deterministic production-kernel proposal.

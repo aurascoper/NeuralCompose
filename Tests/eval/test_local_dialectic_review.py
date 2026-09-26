@@ -137,6 +137,90 @@ class LocalDialecticReviewTests(unittest.TestCase):
         self.assertEqual(result["finding_count"], 0)
         self.assertEqual(result["categories"], [])
 
+    def test_materialization_reissues_only_safe_metadata_receipts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, parse_report = self._quarantined_source(root)
+            report = json.loads(parse_report.read_text())
+            chunks = [{
+                "schema_version": REVIEW.REVIEW_SCHEMA,
+                "chunk_id": "chunk-001",
+                "source_lines": [1],
+                "legacy_turn_indices": [0],
+                "disposition": REVIEW.REVIEW_DISPOSITION,
+                "findings": [],
+                "review_status": "rejected_response",
+                "rejection_reason": "invalid citation",
+            }]
+            findings = root / "findings.jsonl"
+            findings.write_text("".join(json.dumps(chunk) + "\n" for chunk in chunks))
+            run = root / "run.json"
+            run.write_text(json.dumps({
+                "schema_version": REVIEW.RUN_SCHEMA,
+                "source_sha256": report["source"]["sha256"],
+                "review_findings_sha256": REVIEW.sha256_json(chunks),
+                "disposition": REVIEW.REVIEW_DISPOSITION,
+                "science_influence_allowed": False,
+                "network_enabled": False,
+                "embeddings_created": False,
+                "review_status": "contract_rejected",
+                "review_model": "qwen2.5:0.5b",
+                "model_digest": "a" * 64,
+                "runtime": "ollama_local_loopback",
+                "temperature": 0.0,
+                "seed": 42,
+                "chunk_size_valid_records": 16,
+                "chunk_overlap_records": 2,
+                "accepted_chunk_count": 0,
+                "rejected_chunk_count": 1,
+            }))
+            summary = REVIEW.materialize_local_review_artifacts(
+                findings,
+                run,
+                parse_report,
+                chunks_output=root / "local-semantic-review-chunks-v0.jsonl",
+                summary_output=root / "local-semantic-review-summary-v0.json",
+                run_manifest_output=root / "local-semantic-review-run-manifest-v0.json",
+            )
+            self.assertEqual(summary["schema_version"], REVIEW.SUMMARY_SCHEMA)
+            self.assertEqual(summary["aggregate"]["finding_count"], 0)
+            self.assertFalse(summary["science_influence_allowed"])
+            self.assertNotIn("private phrase", (root / "local-semantic-review-summary-v0.json").read_text())
+            self.assertTrue(source.is_file())
+
+    def test_materialization_rejects_raw_record_payloads(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, parse_report = self._quarantined_source(root)
+            findings = root / "findings.jsonl"
+            findings.write_text(json.dumps({
+                "schema_version": REVIEW.REVIEW_SCHEMA,
+                "chunk_id": "chunk-001",
+                "findings": [],
+                "disposition": REVIEW.REVIEW_DISPOSITION,
+                "raw_record": "forbidden",
+            }) + "\n")
+            run = root / "run.json"
+            report = json.loads(parse_report.read_text())
+            run.write_text(json.dumps({
+                "schema_version": REVIEW.RUN_SCHEMA,
+                "source_sha256": report["source"]["sha256"],
+                "review_findings_sha256": "unused",
+                "disposition": REVIEW.REVIEW_DISPOSITION,
+                "science_influence_allowed": False,
+                "network_enabled": False,
+                "embeddings_created": False,
+            }))
+            with self.assertRaisesRegex(REVIEW.ReviewContractError, "unsupported fields"):
+                REVIEW.materialize_local_review_artifacts(
+                    findings,
+                    run,
+                    parse_report,
+                    chunks_output=root / "chunks.jsonl",
+                    summary_output=root / "summary.json",
+                    run_manifest_output=root / "manifest.json",
+                )
+
     def test_remote_endpoint_and_cloud_model_are_rejected(self) -> None:
         with self.assertRaisesRegex(REVIEW.ReviewContractError, "only http://127.0.0.1"):
             REVIEW._require_loopback_ollama("https://example.com")

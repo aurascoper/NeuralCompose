@@ -48,15 +48,16 @@ struct PrivacyIndicatorView: View {
     /// `worldModelDemoEnabled` it persists nothing; red means "the loop is
     /// actively speaking generated text," not "recording."
     @Binding var spokenGenerationLoopEnabled: Bool
-    /// Experimental opt-in for the hypnagogic loop. UNIQUE among these toggles:
-    /// while active it both captures the mic (on-device STT) AND may send
-    /// transcript text to a cloud assistant — the one deliberate runtime network
-    /// exception (decision_registry entry 8). Red = "listening + text may leave."
+    /// Experimental opt-in for the hypnagogic loop. It captures the mic during
+    /// listening and sends transcript text only to its configured reference
+    /// runtime; audio always remains on-device.
     @Binding var hypnagogicLoopEnabled: Bool
     /// The interaction mode when enabled: `mirror` (plain reply) or
     /// `focused`/`reflective`/`contemplative` (the dialectic competition, two
     /// cloud calls/turn).
     @Binding var hypnagogicMode: HypnagogicMode
+    @Binding var hypnagogicRuntimePreference: HypnagogicRuntimePreference
+    var hypnagogicRuntimeDiagnostics: HypnagogicRuntimeDiagnostics
     /// Latest app-watchdog snapshot for the degraded badge (read-only display).
     var health: HealthSnapshot? = nil
 
@@ -125,10 +126,9 @@ struct PrivacyIndicatorView: View {
                         Text("Network").bold()
                         if hypnagogicLoopEnabled {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Cloud active — Hypnagogic (\(hypnagogicMode.label))").foregroundStyle(.red)
-                                Text(hypnagogicMode.isDialectical
-                                     ? "Transcript text (never audio) may be sent to the claude CLI — \(hypnagogicMode.profile?.witnessEnabled == true ? "three" : "two") calls per turn in the dialectical modes\(hypnagogicMode.profile?.witnessEnabled == true ? " (Reflective adds a non-voiced Witness)" : ""). Opt-in exception — see decision_registry entry 8."
-                                     : "Transcript text (never audio) may be sent to the claude CLI. Opt-in exception — see decision_registry entry 8.")
+                                Text("\(hypnagogicRuntimeDiagnostics.configuration.providerLabel) active — Hypnagogic (\(hypnagogicMode.label))")
+                                    .foregroundStyle(hypnagogicRuntimeDiagnostics.configuration.runtimeName.lowercased() == "ollama" ? .orange : .red)
+                                Text(hypnagogicRuntimeEgressDescription)
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -246,13 +246,39 @@ struct PrivacyIndicatorView: View {
                                 ForEach(HypnagogicMode.allCases) { Text($0.label).tag($0) }
                             }
                             .pickerStyle(.segmented)
+                            Picker("Runtime", selection: $hypnagogicRuntimePreference) {
+                                ForEach(HypnagogicRuntimePreference.allCases) { preference in
+                                    Text(preference.label).tag(preference)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .disabled(hypnagogicRuntimeDiagnostics.configuration.isEnvironmentControlled)
+                            Text("Runtime: \(hypnagogicRuntimeDiagnostics.configuration.providerLabel) · \(hypnagogicRuntimeDiagnostics.configuration.model) · \(hypnagogicRuntimeDiagnostics.configuration.transportLabel)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("Prompt: \(hypnagogicRuntimeDiagnostics.promptProfile) · Style: \(hypnagogicRuntimeDiagnostics.interactionStyle) · \(hypnagogicRuntimeDiagnostics.configuration.source.label)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("State: \(hypnagogicRuntimeDiagnostics.phase.displayLabel) · Turns: \(hypnagogicRuntimeDiagnostics.turnCount)")
+                                .font(.caption2)
+                                .foregroundStyle(hypnagogicRuntimeDiagnostics.phase == .retrying ? .orange : .secondary)
+                            if let failure = hypnagogicRuntimeDiagnostics.lastFailure {
+                                Label(failure, systemImage: "exclamationmark.triangle.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.orange)
+                            }
+                            if hypnagogicRuntimeDiagnostics.configuration.isEnvironmentControlled {
+                                Text("Runtime selection is controlled by this launch environment.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             if let profile = hypnagogicMode.profile {
                                 Text(profile.summary)
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
                             if hypnagogicLoopEnabled {
-                                Text(HypnagogicDialecticHonesty.egressCaveat)
+                                Text(hypnagogicRuntimeEgressCaveat)
                                     .foregroundStyle(.red)
                                 if hypnagogicMode.isDialectical {
                                     Text(HypnagogicDialecticHonesty.dialecticCaveat(reflective: hypnagogicMode.profile?.witnessEnabled == true))
@@ -300,6 +326,22 @@ struct PrivacyIndicatorView: View {
         if lastError != nil           { return .red }
         if mode.isFullyLive           { return .green }
         return .orange
+    }
+
+    private var hypnagogicRuntimeEgressDescription: String {
+        let runtime = hypnagogicRuntimeDiagnostics.configuration
+        if runtime.runtimeName.lowercased() == "ollama" {
+            return "Transcript text (never audio) is sent only to the local Ollama service. \(hypnagogicMode.isDialectical ? "The dialectical modes make \(hypnagogicMode.profile?.witnessEnabled == true ? "three" : "two") calls per turn." : "")"
+        }
+        return hypnagogicMode.isDialectical
+            ? "Transcript text (never audio) may be sent to \(runtime.providerLabel) — \(hypnagogicMode.profile?.witnessEnabled == true ? "three" : "two") calls per turn in the dialectical modes\(hypnagogicMode.profile?.witnessEnabled == true ? " (Reflective adds a non-voiced Witness)" : "")."
+            : "Transcript text (never audio) may be sent to \(runtime.providerLabel)."
+    }
+
+    private var hypnagogicRuntimeEgressCaveat: String {
+        hypnagogicRuntimeDiagnostics.configuration.runtimeName.lowercased() == "ollama"
+            ? "Listening and speech remain on-device; transcript text is sent to local Ollama only."
+            : HypnagogicDialecticHonesty.egressCaveat
     }
 
     @ViewBuilder

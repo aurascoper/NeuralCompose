@@ -1,0 +1,35 @@
+{
+  "base_dir": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220755",
+  "cells": [
+    {
+      "label": "F_qwen05b",
+      "path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220755/baselines/F_qwen05b.json",
+      "outcomes": {},
+      "metrics": {
+        "ngram_diversity": 1.0,
+        "opening_diversity": 1.0,
+        "self_similarity": null,
+        "witness_count": null,
+        "synthesis_rate": 0.0,
+        "silent_rate": 0.0,
+        "fp_rate": 1.0,
+        "entropy_first": 0.0,
+        "entropy_second": 0.0
+      },
+      "named_phrases": {
+        "we should consider whether there might be another variable": {
+          "count": 0,
+          "positions": []
+        },
+        "in a live dialogue": {
+          "count": 0,
+          "positions": []
+        },
+        "as a human i": {
+          "count": 0,
+          "positions": []
+        }
+      }
+    }
+  ]
+}

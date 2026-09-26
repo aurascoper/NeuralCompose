@@ -26,6 +26,7 @@ import quarantine_dialectic_corpus as quarantine
 REVIEW_SCHEMA = "nc-dialectic-local-review-chunk-v0"
 RUN_SCHEMA = "nc-dialectic-local-review-run-v0"
 AGGREGATE_SCHEMA = "nc-dialectic-local-review-aggregate-v0"
+SUMMARY_SCHEMA = "nc-local-semantic-review-summary-v0"
 REVIEWER_VERSION = "local-dialectic-review-v1"
 DEFAULT_MODEL = "qwen2.5:0.5b"
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
@@ -60,6 +61,31 @@ REVIEW_DISPOSITION = {
     "eligible_for_training": False,
     "cloud_exposure_allowed": False,
 }
+_PERSISTED_CHUNK_KEYS = frozenset(
+    {
+        "schema_version",
+        "chunk_id",
+        "source_lines",
+        "legacy_turn_indices",
+        "disposition",
+        "findings",
+        "review_status",
+        "rejection_reason",
+    }
+)
+_PERSISTED_FINDING_KEYS = frozenset(
+    {
+        "source_lines",
+        "legacy_turn_indices",
+        "finding_type",
+        "severity",
+        "confidence",
+        "observation",
+        "engineering_implication",
+        "contains_verbatim_private_text",
+        "citation_normalized_from_legacy_index",
+    }
+)
 FINDINGS_JSON_SCHEMA = {
     "type": "array",
     "items": {
@@ -469,12 +495,95 @@ def _load_review_chunks(path: Path) -> list[dict[str, Any]]:
             raise ReviewContractError(f"review findings line {line_number} is invalid JSON") from error
         if not isinstance(chunk, dict) or chunk.get("schema_version") != REVIEW_SCHEMA:
             raise ReviewContractError(f"review findings line {line_number} has the wrong schema")
+        unexpected = set(chunk) - _PERSISTED_CHUNK_KEYS
+        if unexpected:
+            raise ReviewContractError(f"review findings line {line_number} has unsupported fields: {sorted(unexpected)}")
         if chunk.get("disposition") != REVIEW_DISPOSITION:
             raise ReviewContractError(f"review findings line {line_number} has the wrong disposition")
         if not isinstance(chunk.get("chunk_id"), str) or not isinstance(chunk.get("findings"), list):
             raise ReviewContractError(f"review findings line {line_number} is malformed")
+        for finding_position, finding in enumerate(chunk["findings"]):
+            if not isinstance(finding, dict):
+                raise ReviewContractError(f"review findings line {line_number} finding {finding_position} is malformed")
+            unexpected_finding = set(finding) - _PERSISTED_FINDING_KEYS
+            if unexpected_finding:
+                raise ReviewContractError(
+                    f"review findings line {line_number} finding {finding_position} has unsupported fields: {sorted(unexpected_finding)}"
+                )
+            if finding.get("contains_verbatim_private_text") is not False:
+                raise ReviewContractError(f"review findings line {line_number} finding {finding_position} is not marked non-verbatim")
         chunks.append(chunk)
     return chunks
+
+
+def _load_metadata_object(path: Path, expected_schema: str, name: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        raise ReviewContractError(f"cannot read {name}: {error}") from error
+    if not isinstance(value, dict) or value.get("schema_version") != expected_schema:
+        raise ReviewContractError(f"{name} has the wrong schema")
+    return value
+
+
+def materialize_local_review_artifacts(
+    findings_input: Path,
+    run_manifest_input: Path,
+    parse_report_input: Path,
+    *,
+    chunks_output: Path,
+    summary_output: Path,
+    run_manifest_output: Path,
+) -> dict[str, Any]:
+    """Reissue validated metadata-only outputs without reopening private JSONL."""
+    chunks = _load_review_chunks(findings_input)
+    run_manifest = _load_metadata_object(run_manifest_input, RUN_SCHEMA, "review run manifest")
+    parse_report = _load_metadata_object(parse_report_input, quarantine.PARSE_REPORT_SCHEMA, "quarantine parse report")
+    _require_disposition(parse_report.get("disposition"))
+    if run_manifest.get("disposition") != REVIEW_DISPOSITION:
+        raise ReviewContractError("review run manifest has the wrong disposition")
+    if run_manifest.get("science_influence_allowed") is not False:
+        raise ReviewContractError("review run manifest permits scientific influence")
+    if run_manifest.get("network_enabled") is not False or run_manifest.get("embeddings_created") is not False:
+        raise ReviewContractError("review run manifest permits network or embedding output")
+    source = parse_report.get("source")
+    records = parse_report.get("records")
+    if not isinstance(source, dict) or not isinstance(source.get("sha256"), str):
+        raise ReviewContractError("quarantine parse report lacks a source checksum")
+    if run_manifest.get("source_sha256") != source["sha256"]:
+        raise ReviewContractError("review run manifest belongs to another corpus")
+    if not isinstance(records, dict) or not all(isinstance(records.get(key), int) for key in ("valid_record_count", "malformed_record_count")):
+        raise ReviewContractError("quarantine parse report lacks record counts")
+    if run_manifest.get("review_findings_sha256") != sha256_json(chunks):
+        raise ReviewContractError("review chunks do not match the run manifest hash")
+    summary = {
+        "schema_version": SUMMARY_SCHEMA,
+        "source_sha256": source["sha256"],
+        "valid_record_count": records["valid_record_count"],
+        "malformed_record_count": records["malformed_record_count"],
+        "review": {
+            "review_status": run_manifest.get("review_status"),
+            "review_model": run_manifest.get("review_model"),
+            "model_digest": run_manifest.get("model_digest"),
+            "runtime": run_manifest.get("runtime"),
+            "temperature": run_manifest.get("temperature"),
+            "seed": run_manifest.get("seed"),
+            "chunk_size_valid_records": run_manifest.get("chunk_size_valid_records"),
+            "chunk_overlap_records": run_manifest.get("chunk_overlap_records"),
+            "accepted_chunk_count": run_manifest.get("accepted_chunk_count"),
+            "rejected_chunk_count": run_manifest.get("rejected_chunk_count"),
+        },
+        "aggregate": aggregate_review_chunks(chunks),
+        "disposition": REVIEW_DISPOSITION,
+        "science_influence_allowed": False,
+    }
+    chunks_output.parent.mkdir(parents=True, exist_ok=True)
+    summary_output.parent.mkdir(parents=True, exist_ok=True)
+    run_manifest_output.parent.mkdir(parents=True, exist_ok=True)
+    chunks_output.write_text("".join(json.dumps(chunk, sort_keys=True) + "\n" for chunk in chunks))
+    summary_output.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    run_manifest_output.write_text(json.dumps(run_manifest, indent=2, sort_keys=True) + "\n")
+    return summary
 
 
 def run_review(
@@ -575,6 +684,14 @@ def main(argv: list[str] | None = None) -> int:
     aggregate = subcommands.add_parser("aggregate", help="aggregate structured Pass-A findings without raw dialogue")
     aggregate.add_argument("--findings-input", required=True, type=Path)
     aggregate.add_argument("--output", required=True, type=Path)
+
+    materialize = subcommands.add_parser("materialize", help="reissue metadata-only review receipts without reading private JSONL")
+    materialize.add_argument("--findings-input", required=True, type=Path)
+    materialize.add_argument("--run-manifest-input", required=True, type=Path)
+    materialize.add_argument("--parse-report", required=True, type=Path)
+    materialize.add_argument("--chunks-output", required=True, type=Path)
+    materialize.add_argument("--summary-output", required=True, type=Path)
+    materialize.add_argument("--run-manifest-output", required=True, type=Path)
     args = parser.parse_args(argv)
 
     if args.command == "aggregate":
@@ -582,6 +699,18 @@ def main(argv: list[str] | None = None) -> int:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
         print(f"wrote {args.output} ({result['finding_count']} metadata-only findings)")
+        return 0
+
+    if args.command == "materialize":
+        result = materialize_local_review_artifacts(
+            args.findings_input,
+            args.run_manifest_input,
+            args.parse_report,
+            chunks_output=args.chunks_output,
+            summary_output=args.summary_output,
+            run_manifest_output=args.run_manifest_output,
+        )
+        print(f"wrote {args.chunks_output}, {args.summary_output}, and {args.run_manifest_output} ({result['aggregate']['finding_count']} metadata-only findings)")
         return 0
 
     if args.context_limit <= 0:

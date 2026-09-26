@@ -114,6 +114,9 @@ Related architecture notes:
   scopes bounded implementation backends.
 - [Julia Science Workspace](docs/architecture/julia-science-workspace.md)
   keeps Julia as an offline scientific laboratory, not an app runtime.
+- [NeuralComposeEEG](NeuralComposeEEG/README.md) defines a separate,
+  shadow-only four-channel Muse encoder benchmark with complete-session splits;
+  it has no Swift or live-control dependency.
 - [EEG Mathematics, Physics, and Methods Scope](docs/scoping/eeg-mathematics-physics-methods-scope.md)
   keeps the current encoder work grounded in the necessary linear-algebra,
   signal-processing, and evaluation foundations while deferring forward models
@@ -129,6 +132,9 @@ Related architecture notes:
   separates what text is generated from how it is spoken.
 - [Prosody Feature Contract](docs/architecture/prosody-feature-contract.md)
   defines the cadence fields that Engineering can measure and Science can model.
+- [Prosody MVP Experiment](docs/experiments/prosody-mvp-001.yaml)
+  preregisters the first cadence hypothesis:
+  [reflective_prosody_v1](docs/hypotheses/reflective_prosody_v1.yaml).
 
 ### Rust Phase 0
 
@@ -592,6 +598,26 @@ cd NeuralCompose
 python3 Scripts/analyze-eeg-session.py Recordings/golden/golden_20260710-141352.eeg.csv
 swift test --filter GoldenRecordingRegressionTests
 ```
+
+## macOS packaging
+
+Create a relocatable release bundle, then a drag-to-Applications disk image:
+
+```bash
+./Scripts/package-macos-app.sh
+./Scripts/create-dmg.sh
+```
+
+The artifacts are written to `dist/NeuralCompose.app` and
+`dist/NeuralCompose-<version>.dmg`. The bundle includes the app metadata,
+icon, SwiftPM resource bundles, and any dynamic libraries produced by a
+BrainFlow-enabled build. Both scripts use ad-hoc signing by default for local
+use; pass `--sign 'Developer ID Application: ...'` when preparing a signed
+distribution. See each script's `--help` output for build and output options.
+
+Before distributing beyond the development machine, launch the bundle itself
+and manually confirm permissions, Personal Voice, model/resource discovery,
+telemetry location, runtime selection, and `neuralcompose://` routing.
 
 ## Experimental status & limitations
 

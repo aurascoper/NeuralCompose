@@ -185,13 +185,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     /// Experimental, opt-in **hypnagogic dialogue loop** (see
-    /// `HypnagogicDialogueLoop`). Off by default and session-scoped. UNLIKE every
-    /// other opt-in here, when enabled it (a) captures microphone audio during
-    /// listen turns and (b) may send transcript *text* to a cloud LLM via the
-    /// `claude` CLI — the sole deliberate exception to "No network at runtime"
-    /// (decision_registry entry 8). Audio stays on-device (on-device STT); only
-    /// text can leave; nothing is persisted. Manual trigger only — NOT wired to
-    /// any sleep-stage detector. The privacy banner must reflect this while active.
+    /// `HypnagogicDialogueLoop`). Off by default and session-scoped. It captures
+    /// microphone audio during listen turns and sends transcript text only to the
+    /// explicitly configured reference runtime. Audio stays on-device; nothing is
+    /// persisted. Manual trigger only — NOT wired to any sleep-stage detector.
     @Published public var hypnagogicLoopEnabled: Bool = false {
         didSet {
             guard oldValue != hypnagogicLoopEnabled else { return }
@@ -210,6 +207,26 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             reconcileHypnagogicLoop()
         }
     }
+
+    /// Finder and DMG launches do not inherit shell variables, so the app keeps
+    /// an explicit runtime choice. `NEURALCOMPOSE_RUNTIME` / `_MODEL` still win
+    /// when supplied, preserving scripted-harness reproducibility.
+    @Published public var hypnagogicRuntimePreference: HypnagogicRuntimePreference = .ollama {
+        didSet {
+            guard oldValue != hypnagogicRuntimePreference else { return }
+            runtimeDefaults.set(hypnagogicRuntimePreference.rawValue,
+                                forKey: HypnagogicRuntimeConfiguration.preferenceKey)
+            hypnagogicRuntimeDiagnostics = defaultHypnagogicRuntimeDiagnostics()
+            restartHypnagogicLoopForRuntimeChange()
+        }
+    }
+
+    @Published public private(set) var hypnagogicRuntimeDiagnostics =
+        HypnagogicRuntimeDiagnostics(
+            configuration: .resolve(environment: [:], preference: .ollama),
+            promptProfile: "hypnagogic",
+            interactionStyle: "mirror"
+        )
 
     // ── Track B (imagined speech) — additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
@@ -276,6 +293,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private let voiceOutput: any SpeechSynthesizing
     private let voiceInput: any DictationRecognizing
     private let voiceCommandInput: any VoiceCommandRecognizing
+    private let runtimeDefaults: UserDefaults
+    private let launchEnvironment: [String: String]
     /// Set by `AppLoader` after the dispatcher is constructed. Used
     /// by `stopCommandListening()` to dispatch the recognized
     /// command through the same path the palette / menu / buttons
@@ -340,7 +359,26 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// gated by any opt-in — it records diagnostic metadata only, no transcripts.
     private let healthLogger = HealthLogger()
 
-    public init(container: AppContainer) {
+    public init(
+        container: AppContainer,
+        runtimeDefaults: UserDefaults = .standard,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
+        self.runtimeDefaults = runtimeDefaults
+        self.launchEnvironment = environment
+        let preference = runtimeDefaults
+            .string(forKey: HypnagogicRuntimeConfiguration.preferenceKey)
+            .flatMap(HypnagogicRuntimePreference.init(rawValue:))
+            ?? .ollama
+        self.hypnagogicRuntimePreference = preference
+        self.hypnagogicRuntimeDiagnostics = HypnagogicRuntimeDiagnostics(
+            configuration: .resolve(
+                environment: environment,
+                preference: preference
+            ),
+            promptProfile: "hypnagogic",
+            interactionStyle: "mirror"
+        )
         self.container = container
         self.metrics = container.metrics
         self.classifier = container.classifierResolved.classifier
@@ -762,6 +800,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         // `spoken-trace-<day>.jsonl`, gated on the same interaction-log opt-in as
         // dialectic turns; off ⇒ NullSpokenGenerationTraceLogger (records nothing).
         let tracer: any SpokenGenerationTraceLogging
+        // Requested cadence vectors go to `prosody-trace-<day>.jsonl`, also gated
+        // by local interaction logging. This is Engineering telemetry, not a
+        // behavior change and not an inference about the user.
+        let prosodyTracer: any ProsodyTraceLogging
         if interactionLoggingEnabled {
             if let sink = interactionLogger as? any SpokenGenerationTraceLogging {
                 tracer = sink
@@ -773,8 +815,16 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     "interaction logging enabled but the injected logger does not support spoken-generation traces — spoken-trace stream disabled")
                 tracer = NullSpokenGenerationTraceLogger()
             }
+            if let sink = interactionLogger as? any ProsodyTraceLogging {
+                prosodyTracer = sink
+            } else {
+                BCILog.pipeline.notice(
+                    "interaction logging enabled but the injected logger does not support prosody traces — prosody-trace stream disabled")
+                prosodyTracer = NullProsodyTraceLogger()
+            }
         } else {
             tracer = NullSpokenGenerationTraceLogger()
+            prosodyTracer = NullProsodyTraceLogger()
         }
         let loop = SpokenGenerationLoop(
             generator: container.predictorResolved.generator,
@@ -784,7 +834,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     SignalQualityGenerationRules.adaptation(for: self?.signalQuality)
                 }
             },
-            tracer: tracer
+            tracer: tracer,
+            prosodyTracer: prosodyTracer
         )
         spokenLoop = loop
         await loop.start()
@@ -805,7 +856,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// `NEURALCOMPOSE_INTERACTION_LOG=1` additionally enables local turn logging
     /// (ADR-005) so a scripted run captures `dialectic-turns-<day>.jsonl`.
     private func applyHypnagogicAutostartFromEnvironment() {
-        let env = ProcessInfo.processInfo.environment
+        let env = launchEnvironment
         if let log = env["NEURALCOMPOSE_INTERACTION_LOG"]?.lowercased(),
            log == "1" || log == "true" {
             interactionLoggingEnabled = true
@@ -843,10 +894,40 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
+    private var resolvedHypnagogicRuntimeConfiguration: HypnagogicRuntimeConfiguration {
+        .resolve(
+            environment: launchEnvironment,
+            preference: hypnagogicRuntimePreference
+        )
+    }
+
+    private func defaultHypnagogicRuntimeDiagnostics() -> HypnagogicRuntimeDiagnostics {
+        HypnagogicRuntimeDiagnostics(
+            configuration: resolvedHypnagogicRuntimeConfiguration,
+            promptProfile: hypnagogicMode.isDialectical ? "wakingDialectical" : "hypnagogic",
+            interactionStyle: hypnagogicMode.isDialectical ? "dialectical" : "mirror"
+        )
+    }
+
+    /// Runtime changes intentionally rebuild the opt-in loop so a single session
+    /// never mixes generator providers or model identifiers.
+    private func restartHypnagogicLoopForRuntimeChange() {
+        guard hypnagogicLoopEnabled,
+              !resolvedHypnagogicRuntimeConfiguration.isEnvironmentControlled else { return }
+        let previous = hypnagogicLoopReconcile
+        hypnagogicLoopReconcile = Task { [weak self] in
+            _ = await previous?.value
+            guard let self else { return }
+            await self.ensureHypnagogicLoopStopped()
+            guard self.hypnagogicLoopEnabled else { return }
+            await self.ensureHypnagogicLoopRunning()
+        }
+    }
+
     /// Built lazily on first enable. Constructs the on-device mic listener and
-    /// the cloud `claude-cli` generator HERE (not in AppContainer) so the
-    /// network-egress path is instantiated only when the user opts in. Requests
-    /// mic + speech authorization first; if denied, flips the toggle back off.
+    /// configured reference generator HERE (not in AppContainer), so this path
+    /// exists only after explicit opt-in. Requests mic + speech authorization
+    /// first; if denied, flips the toggle back off.
     private func ensureHypnagogicLoopRunning() async {
         // Already running the requested mode? Nothing to do. A change tears the
         // old loop down first.
@@ -863,102 +944,95 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         // turned it back off in the meantime.
         guard hypnagogicLoopEnabled else { return }
 
-        let loop: any HypnagogicRunnable
-        if let profile = hypnagogicMode.profile {
-            // Dialectical (focused/reflective/contemplative). Two cloud calls per
-            // turn (one per role) — plus a THIRD for Reflective's introspective
-            // Witness (WITNESS.md), which observes but is never voiced. The gloss
-            // reads the current spectral state as a heuristic BIAS (never a
-            // decoder); turn logging is gated on the interaction-log opt-in,
-            // resolved at build time (toggling it mid-loop takes effect on the
-            // next rebuild).
-            //
-            // All three profiles are WAKING, so the loop runs the waking role set
-            // + a lucid waking system prompt — a coherent exchange, not sleep
-            // onset. The sleep-mirror roles/prompt stay reserved for the future
-            // wind-down / hypnagogic / dream rungs on the mode ladder.
-            let turnLogger: any DialecticalTurnLogging =
-                (interactionLoggingEnabled ? (interactionLogger as? any DialecticalTurnLogging) : nil)
-                ?? NullDialecticalTurnLogger()
-            // RVS-001+1: the dialectic and witness generators are
-            // resolved through `LiveRuntimeFactory` so the live app
-            // honors `NEURALCOMPOSE_RUNTIME` / `NEURALCOMPOSE_MODEL`
-            // (matching the headless harness's `--runtime` /
-            // `--model` flags). Default is Claude (legacy
-            // `ClaudeCLIGenerator`) so production behavior is
-            // unchanged when the env vars are absent. The witness
-            // gets a separate resolver call so its system prompt
-            // is the Witness prompt, not the dialectic prompt.
-            let dialecticResolved = (try? LiveRuntimeFactory.make(
-                systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
-            )) ?? (ClaudeCLIGenerator(systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt),
-                   LiveRuntimeFactory.Resolved(
-                       name: "claude-cli-fallback",
-                       model: "claude-sonnet-5",
-                       systemPromptSource: "fallback"))
-            let witnessResolved = (try? LiveRuntimeFactory.make(
-                systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt
-            )) ?? (ClaudeCLIGenerator(systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt),
-                   LiveRuntimeFactory.Resolved(
-                       name: "claude-cli-fallback",
-                       model: "claude-sonnet-5",
-                       systemPromptSource: "fallback"))
-            BCILog.pipeline.notice(
-                "dialectic runtime: \(dialecticResolved.resolved); witness runtime: \(witnessResolved.resolved)")
-            loop = HypnagogicDialecticLoop(
-                listener: listener,
-                generator: dialecticResolved.generator,
-                speaker: voiceOutput,
-                embedder: container.sentenceEmbedder,
-                roles: DialecticalRole.wakingRoles,
-                tuning: profile.tuning,
-                glossProvider: { [weak self] in await self?.currentSpectralGlossState() ?? nil },
-                turnLogger: turnLogger,
-                // Reflective (and only Reflective) gets the introspective Witness —
-                // a non-voiced third generator that names what both poles avoided
-                // (WITNESS.md). This is the third cloud call; Focused/Contemplative
-                // leave it nil.
-                witness: profile.witnessEnabled
-                    ? witnessResolved.generator
-                    : nil,
-                config: profile.loopConfig()
+        let runtimeConfiguration = resolvedHypnagogicRuntimeConfiguration
+        do {
+            let loop: any HypnagogicRunnable
+            let diagnostics: HypnagogicRuntimeDiagnostics
+            if let profile = hypnagogicMode.profile {
+                // Dialectical (focused/reflective/contemplative). The Witness is
+                // non-voiced and exists only for the Reflective profile.
+                let turnLogger: any DialecticalTurnLogging =
+                    (interactionLoggingEnabled ? (interactionLogger as? any DialecticalTurnLogging) : nil)
+                    ?? NullDialecticalTurnLogger()
+                let prosodyTracer: any ProsodyTraceLogging =
+                    (interactionLoggingEnabled ? (interactionLogger as? any ProsodyTraceLogging) : nil)
+                    ?? NullProsodyTraceLogger()
+                let dialecticResolved = try LiveRuntimeFactory.make(
+                    runtimeName: runtimeConfiguration.runtimeName,
+                    model: runtimeConfiguration.model,
+                    systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
+                )
+                let witnessResolved = try LiveRuntimeFactory.make(
+                    runtimeName: runtimeConfiguration.runtimeName,
+                    model: runtimeConfiguration.model,
+                    systemPrompt: ClaudeCLIGenerator.witnessSystemPrompt
+                )
+                BCILog.pipeline.notice(
+                    "dialectic runtime: \(dialecticResolved.resolved); witness runtime: \(witnessResolved.resolved)"
+                )
+                loop = HypnagogicDialecticLoop(
+                    listener: listener,
+                    generator: dialecticResolved.generator,
+                    speaker: voiceOutput,
+                    embedder: container.sentenceEmbedder,
+                    roles: DialecticalRole.wakingRoles,
+                    tuning: profile.tuning,
+                    glossProvider: { [weak self] in await self?.currentSpectralGlossState() ?? nil },
+                    turnLogger: turnLogger,
+                    prosodyTracer: prosodyTracer,
+                    witness: profile.witnessEnabled ? witnessResolved.generator : nil,
+                    config: profile.loopConfig()
+                )
+                diagnostics = HypnagogicRuntimeDiagnostics(
+                    configuration: runtimeConfiguration,
+                    promptProfile: "wakingDialectical",
+                    interactionStyle: "dialectical",
+                    phase: .listening
+                )
+            } else {
+                let mirrorResolved = try LiveRuntimeFactory.make(
+                    runtimeName: runtimeConfiguration.runtimeName,
+                    model: runtimeConfiguration.model
+                )
+                BCILog.pipeline.notice("hypnagogic runtime: \(mirrorResolved.resolved)")
+                loop = HypnagogicDialogueLoop(
+                    listener: listener,
+                    generator: mirrorResolved.generator,
+                    speaker: voiceOutput
+                )
+                diagnostics = HypnagogicRuntimeDiagnostics(
+                    configuration: runtimeConfiguration,
+                    promptProfile: "hypnagogic",
+                    interactionStyle: "mirror",
+                    phase: .listening
+                )
+            }
+
+            hypnagogicLoop = loop
+            hypnagogicLoopBuilt = hypnagogicMode
+            hypnagogicRuntimeDiagnostics = diagnostics
+            // Forward this loop's spoken-node events into the stable relay the 3D
+            // workspace subscribes to. Only the dialectic loop emits them.
+            spokenNodeForwardTask?.cancel()
+            if let dialectic = loop as? HypnagogicDialecticLoop {
+                await dialectic.attachMetadataCaptureFromAdapter()
+                let relay = spokenNodeRelay
+                let events = dialectic.spokenNodeStream()
+                spokenNodeForwardTask = Task { for await event in events { relay.send(event) } }
+            }
+            await loop.start()
+        } catch {
+            let failure = "Runtime configuration failed: \(error.localizedDescription)"
+            hypnagogicRuntimeDiagnostics = HypnagogicRuntimeDiagnostics(
+                configuration: runtimeConfiguration,
+                promptProfile: hypnagogicMode.isDialectical ? "wakingDialectical" : "hypnagogic",
+                interactionStyle: hypnagogicMode.isDialectical ? "dialectical" : "mirror",
+                phase: .retrying,
+                lastFailure: failure
             )
-        } else {
-            // Mirror — the plain, non-competing reply loop (one cloud call/turn).
-            // RVS-001+1: same `LiveRuntimeFactory` resolution as the
-            // dialectic path, so the mirror uses the selected runtime
-            // (default: Claude).
-            let mirrorResolved = (try? LiveRuntimeFactory.make()) ??
-                (ClaudeCLIGenerator(), LiveRuntimeFactory.Resolved(
-                    name: "claude-cli-fallback",
-                    model: "claude-sonnet-5",
-                    systemPromptSource: "fallback"))
-            loop = HypnagogicDialogueLoop(
-                listener: listener,
-                generator: mirrorResolved.generator,
-                speaker: voiceOutput
-            )
+            BCILog.pipeline.error("hypnagogic runtime configuration failed: \(error.localizedDescription, privacy: .public)")
+            hypnagogicLoopEnabled = false
         }
-        hypnagogicLoop = loop
-        hypnagogicLoopBuilt = hypnagogicMode
-        // Forward this loop's spoken-node events into the stable relay the 3D
-        // workspace subscribes to (Stage 1d). Only the dialectic loop emits
-        // them; the mirror loop leaves the relay quiet.
-        spokenNodeForwardTask?.cancel()
-        if let dialectic = loop as? HypnagogicDialecticLoop {
-            // RVS-001+1: wire the metadata capture from the
-            // adapter (or no-op for legacy `TextGenerating`).
-            // The dialectic loop's `runTurn` will then populate
-            // `DialecticalTurnEvent.generatorFingerprint` on
-            // every turn. This is the live-app side of the
-            // two-layer metadata path; the core runtime path
-            // was committed in `b9c09fd`.
-            await dialectic.attachMetadataCaptureFromAdapter()
-            let relay = spokenNodeRelay
-            let events = dialectic.spokenNodeStream()
-            spokenNodeForwardTask = Task { for await event in events { relay.send(event) } }
-        }
-        await loop.start()
     }
 
     private func ensureHypnagogicLoopStopped() async {
@@ -967,6 +1041,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         await hypnagogicLoop?.stop()
         hypnagogicLoop = nil
         hypnagogicLoopBuilt = nil
+        hypnagogicRuntimeDiagnostics = hypnagogicRuntimeDiagnostics.stopped()
     }
 
     /// The latest spectral-state gloss for the dialectic loop's fast biological
@@ -988,9 +1063,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
         var turnCount: Int?
         var lastTurnAt: Date?
-        if let dialectic = hypnagogicLoop as? HypnagogicDialecticLoop {
-            turnCount = await dialectic.turnIndex
-            lastTurnAt = await dialectic.lastTurnAt
+        if let loop = hypnagogicLoop {
+            let loopStatus = await loop.status
+            turnCount = loopStatus.turnIndex
+            lastTurnAt = loopStatus.lastTurnAt
+            hypnagogicRuntimeDiagnostics = hypnagogicRuntimeDiagnostics.updating(with: loopStatus)
         }
         let loopRunning = hypnagogicLoop != nil
         let secondsSinceLastTurn = lastTurnAt.map { now.timeIntervalSince($0) }

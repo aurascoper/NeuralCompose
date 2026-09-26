@@ -70,6 +70,19 @@ public actor HypnagogicDialogueLoop {
     private var loopTask: Task<Void, Never>?
     private var silenceIndex = 0
     public private(set) var isRunning = false
+    private var phase: HypnagogicLoopPhase = .stopped
+    private var lastFailure: String?
+    private var turnIndex = 0
+    private var lastTurnAt: Date?
+
+    public var status: HypnagogicLoopStatus {
+        HypnagogicLoopStatus(
+            phase: phase,
+            lastFailure: lastFailure,
+            turnIndex: turnIndex,
+            lastTurnAt: lastTurnAt
+        )
+    }
 
     public init(
         listener: any HypnagogicListening,
@@ -87,6 +100,8 @@ public actor HypnagogicDialogueLoop {
     public func start() {
         guard loopTask == nil else { return }
         isRunning = true
+        phase = .listening
+        lastFailure = nil
         loopTask = Task { [weak self] in
             await self?.run()
         }
@@ -99,6 +114,7 @@ public actor HypnagogicDialogueLoop {
         loopTask?.cancel()
         loopTask = nil
         isRunning = false
+        phase = .stopped
         await listener.cancel()
         await speaker.stopSpeaking()
     }
@@ -106,12 +122,14 @@ public actor HypnagogicDialogueLoop {
     private func run() async {
         while !Task.isCancelled {
             do {
+                phase = .listening
                 let heard = try await listener.listen(timeout: config.listenTimeout)
                 try Task.checkCancellation()
 
                 let reply: String
                 if let transcript = heard?.trimmingCharacters(in: .whitespacesAndNewlines),
                    !transcript.isEmpty {
+                    phase = .generating
                     reply = try await generator.generate(
                         prompt: transcript,
                         maxTokens: config.maxTokens,
@@ -124,7 +142,11 @@ public actor HypnagogicDialogueLoop {
                 }
 
                 try Task.checkCancellation()
+                phase = .speaking
                 try await speakChunks(reply)
+                lastFailure = nil
+                lastTurnAt = Date()
+                turnIndex += 1
             } catch is CancellationError {
                 return
             } catch {
@@ -132,6 +154,11 @@ public actor HypnagogicDialogueLoop {
                 // stopSpeaking) — exit if cancelled, else fall through to the
                 // delay rather than hot-spinning on a persistent error.
                 if Task.isCancelled { return }
+                phase = .retrying
+                lastFailure = error.localizedDescription
+                BCILog.pipeline.error(
+                    "hypnagogic mirror loop failed: \(error.localizedDescription, privacy: .public)"
+                )
             }
 
             do {

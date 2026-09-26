@@ -106,6 +106,11 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         func log(_ event: DialecticalTurnEvent) async { events.append(event) }
     }
 
+    private actor CapturingProsodyLogger: ProsodyTraceLogging {
+        private(set) var events: [ProsodyTraceEvent] = []
+        func log(_ event: ProsodyTraceEvent) async { events.append(event) }
+    }
+
     private func fastConfig(maxSilence: Int = 3, witnessEnabled: Bool = false) -> HypnagogicDialecticLoop.Config {
         HypnagogicDialecticLoop.Config(listenTimeout: 0.01, interTurnDelayNanos: 1_000,
                                        maxConsecutiveSilence: maxSilence,
@@ -271,6 +276,48 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         await loop.stop()
     }
 
+    func testDialecticLoopLogsTurnIndexedRequestedProsody() async {
+        let embedder = MapEmbedder(dimension: 2, table: [
+            "the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1],
+        ])
+        let listener = SpyListener(script: ["the sea"])
+        let generator = TwoRoleGenerator(stabilizer: "calm sea", dreamer: "moon river")
+        let speaker = SpySpeaker()
+        let turnLogger = CapturingTurnLogger()
+        let prosodyLogger = CapturingProsodyLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener,
+            generator: generator,
+            speaker: speaker,
+            embedder: embedder,
+            random: { 0.5 },
+            turnLogger: turnLogger,
+            prosodyTracer: prosodyLogger,
+            config: fastConfig()
+        )
+
+        await loop.start()
+        let ok = await poll {
+            let turnCount = await turnLogger.events.count
+            let prosodyCount = await prosodyLogger.events.count
+            return turnCount >= 1 && prosodyCount >= 1
+        }
+        await loop.stop()
+
+        XCTAssertTrue(ok, "voiced dialectical turns should emit matching turn and prosody traces")
+        let turns = await turnLogger.events
+        let prosody = await prosodyLogger.events
+        XCTAssertEqual(turns.first?.index, 0)
+        XCTAssertEqual(prosody.first?.index, 0)
+        XCTAssertEqual(prosody.first?.sourceKind, "dialectical-turn-requested-prosody")
+        XCTAssertEqual(prosody.first?.utteranceText, turns.first?.spokenText)
+        XCTAssertEqual(prosody.first?.dialogueState["turn_index"], 0)
+        XCTAssertNotNil(prosody.first?.requested)
+        XCTAssertNil(prosody.first?.measured, "the dialectical hook records requested controls, not measured audio")
+        XCTAssertEqual(prosody.first?.voiceIdentifier, "spy-voice")
+        XCTAssertEqual(prosody.first?.synthesizerIdentifier, "stub")
+    }
+
     func testNearEquilibriumTheDrawTipsWhichBasinIsSpoken() async {
         // Two equal-potential, low-tension candidates: only the injected draw differs.
         let table: [String: [Float]] = ["x": [0, 1], "AAA": [1, 0], "BBB": [1, 0]]
@@ -359,5 +406,37 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(cancels, 1, "stop() must cancel the listener")
         let stops = await speaker.stopCount
         XCTAssertGreaterThanOrEqual(stops, 1, "stop() must interrupt the speaker")
+    }
+
+    func testStatusReportsProgressAndStoppedLifecycle() async {
+        let embedder = MapEmbedder(dimension: 2, table: [
+            "one": [1, 0], "stable": [1, 0], "dream": [0, 1],
+        ])
+        let loop = HypnagogicDialecticLoop(
+            listener: SpyListener(script: ["one"], loopLast: true),
+            generator: TwoRoleGenerator(stabilizer: "stable", dreamer: "dream"),
+            speaker: SpySpeaker(),
+            embedder: embedder,
+            random: { 0.5 },
+            config: fastConfig()
+        )
+
+        let initial = await loop.status
+        XCTAssertEqual(initial.phase, .stopped)
+        XCTAssertEqual(initial.turnIndex, 0)
+
+        await loop.start()
+        let didCompleteTurn = await poll { (await loop.status).turnIndex >= 1 }
+        XCTAssertTrue(didCompleteTurn, "a successful turn must be visible in loop status")
+
+        let active = await loop.status
+        XCTAssertNotEqual(active.phase, .stopped)
+        XCTAssertNil(active.lastFailure)
+        XCTAssertNotNil(active.lastTurnAt)
+
+        await loop.stop()
+        let stopped = await loop.status
+        XCTAssertEqual(stopped.phase, .stopped)
+        XCTAssertGreaterThanOrEqual(stopped.turnIndex, 1)
     }
 }

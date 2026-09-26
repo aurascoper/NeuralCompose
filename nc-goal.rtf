@@ -1,0 +1,1031 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs22 \cf0 /goal NeuralCompose universal model-runtime, provider, desktop, and CI program\
+\
+Repository authority:\
+  ~/Developer/neuralcompose-client-native\
+\
+Primary mission:\
+  Evolve NeuralCompose from its validated mobile behavioral core into a\
+  privacy-explicit, model-pack-driven AI client supporting:\
+\
+    - Android arm64\
+    - iOS arm64\
+    - Ubuntu 26.04 x86_64\
+    - Windows x86_64\
+    - Windows arm64\
+\
+  with independently identified runtime backends:\
+\
+    - CPU\
+    - Vulkan\
+    - CUDA\
+    - Windows ML / DirectML\
+    - OpenVINO\
+    - Qualcomm QNN\
+    - Core ML / Metal\
+    - ROCm or MIGraphX only where officially supported and device-validated\
+\
+Execution mode:\
+  Work sequentially.\
+  One milestone = one branch = one PR = one review surface.\
+  Never self-merge.\
+  Stop after every PR and wait for operator review.\
+  Never place several milestone implementations in one PR.\
+  Merge-forward reviewed branches when necessary; do not rewrite reviewed history.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+0. PRECONDITION \'97 M7-A MUST CLOSE FIRST\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Do not begin this goal until:\
+\
+  - PR #2 is merged.\
+  - Its exact reviewed head has green CI.\
+  - The round-2 restoration, removal-integrity, catalog-ambiguity,\
+    transport/locality, and verification-policy findings are resolved.\
+  - main contains the sealed M7-A contracts.\
+  - tag m7-a-model-pack-contract exists on the M7-A merge commit.\
+\
+Before creating every branch:\
+\
+  git fetch origin --prune\
+  git switch main\
+  git pull --ff-only\
+  git status --short                 # must be empty\
+  git rev-parse HEAD                 # record exact base\
+  git remote get-url origin          # verify native repository\
+\
+Never run this work in:\
+  ~/Developer/neuralcompose-client\
+  ~/Developer/NeuralCompose\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+1. GLOBAL ARCHITECTURAL LAW\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Preserve ADR-001 and the following rules throughout every milestone:\
+\
+1. Capabilities ship with the app; large model weights do not.\
+2. Model installation requires explicit user consent.\
+3. The app owns semantic intent and prompt profiles.\
+4. A runtime owns transport and execution, not semantic rewriting.\
+5. Provider identity is independent of backend identity.\
+6. No local failure silently becomes a cloud request.\
+7. Requested and resolved identities remain separately visible.\
+8. Generation and embedding packs remain distinct.\
+9. Shell/platform adapters own effects:\
+     network, downloads, files, secure credentials, OS model APIs,\
+     inference handles, drivers, and platform lifecycle.\
+10. Rust owns deterministic:\
+     identity, selection, validation, state transitions, readiness,\
+     integrity, conformance policy, and provenance.\
+11. A provider credential never enters Rust snapshots or Git.\
+12. Raw recordings, transcripts, prompts, and reflective logs never enter CI.\
+13. No target is called supported merely because it compiles.\
+\
+Provider identity example:\
+  local-qwen\
+\
+Runtime/backend identities:\
+  llama-cpp-cpu\
+  llama-cpp-vulkan\
+  llama-cpp-cuda\
+  windows-ml-openvino\
+  windows-ml-qnn\
+  coreml\
+  apple-system-model\
+\
+Changing backend must not silently change provider.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+2. SUPPORT-LEVEL VOCABULARY\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Every target/backend pair must carry exactly one support status:\
+\
+  Contracted\
+    Schema and deterministic Rust behavior exist.\
+\
+  BuildValidated\
+    Code compiles and packages on the named OS/architecture.\
+\
+  RuntimeSmokeValidated\
+    A deterministic fixture model executes successfully.\
+\
+  DeviceValidated\
+    The real candidate model executes on named physical hardware.\
+\
+  ReleaseSupported\
+    Signed packaging, installation, upgrade, removal, and acceptance gates pass.\
+\
+Never promote a target by implication.\
+\
+Maintain:\
+  docs/support-matrix.md\
+\
+Each row records:\
+\
+  OS\
+  architecture\
+  backend ID\
+  runtime ABI\
+  support status\
+  exact hardware\
+  OS version\
+  driver/runtime version\
+  model-pack ID and digest\
+  evidence commit\
+  acceptance document\
+  known limitations\
+  last validation date\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+3. M7-A2 \'97 ADR-002: RUNTIME TARGETS, PROPERTY LAW, AND CONFORMANCE\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Branch:\
+  m7-a2/runtime-target-and-conformance-contracts\
+\
+Scope:\
+  Contracts, schemas, tests, CI skeleton, and documentation only.\
+  No real model execution.\
+  No provider SDK.\
+  No Tauri UI.\
+  No accelerator library.\
+\
+Create ADR-002 covering:\
+\
+  - OS target and hardware backend are separate dimensions.\
+  - Logical model identity and backend artifact variant are separate.\
+  - Runtime packs have their own signed and verified manifests.\
+  - Backend equality is semantic conformance, not mathematical equivalence.\
+  - Idempotence, equivariance, and invariance are explicit testable properties.\
+  - No unsupported backend fallback.\
+  - Target promotion follows the support-level vocabulary.\
+\
+Add contracts resembling:\
+\
+  RuntimeTarget \{\
+    os\
+    architecture\
+    accelerator_class\
+    backend_id\
+    runtime_abi\
+    model_formats\
+    minimum_os_version\
+    minimum_backend_version\
+    minimum_driver_version\
+    capabilities\
+  \}\
+\
+  RuntimePackManifest \{\
+    schema_version\
+    runtime_pack_id\
+    version\
+    target\
+    libraries[]\
+    licenses[]\
+    entrypoints[]\
+    runtime_abi\
+    signing_identity\
+    manifest_digest\
+  \}\
+\
+  ModelVariant \{\
+    logical_model_id\
+    variant_id\
+    model_pack_id\
+    runtime_target\
+    quantization\
+    artifact_format\
+    numerical_contract_id\
+  \}\
+\
+  BackendConformancePolicy \{\
+    tokenizer_identity\
+    prompt_byte_identity\
+    stop_token_identity\
+    context_cap\
+    deterministic_test_mode\
+    logits_tolerance\
+    embedding_tolerance\
+    generated-token policy\
+  \}\
+\
+Required property laws:\
+\
+Idempotence:\
+  - resolving identical provider input twice yields identical identity;\
+  - verifying identical inventory twice yields the same receipt;\
+  - publishing twice creates no duplicate installation;\
+  - installing the exact already-active variant creates no duplicate;\
+  - removing an already-absent pack remains absent;\
+  - indexing the same content hash + embedding identity creates one entry.\
+\
+Time-origin equivariance:\
+  Shift every monotonic timestamp by constant \uc0\u916 .\
+  Phase sequence, elapsed durations, stale decisions, and retry decisions\
+  must remain equivalent.\
+\
+Window-shift equivariance:\
+  Shift an indexed recording window by N samples.\
+  Event ranges shift by N while event type and detector parameters remain fixed.\
+\
+Channel-permutation equivariance:\
+  Permute values and matching electrode labels together.\
+  Channel-associated outputs permute correspondingly.\
+  Permuting values without labels must be rejected.\
+\
+Path invariance:\
+  Moving a verified pack under a different private filesystem root does not\
+  change its content or model identity.\
+\
+Artifact-order invariance:\
+  Reordering declared artifacts does not change canonical manifest digests.\
+\
+Non-invariances:\
+  Changing tokenizer, model revision, quantization, prompt profile,\
+  embedding dimensions, pooling, normalization, task instruction,\
+  channel identity, or numerical contract must change identity.\
+\
+Backend semantic conformance:\
+  Do not require byte-identical stochastic prose across CUDA, Vulkan,\
+  OpenVINO, QNN, Metal, or CPU.\
+\
+  Require:\
+    - same model/tokenizer/template identity;\
+    - exact prompt bytes;\
+    - exact input token IDs;\
+    - exact stop-token configuration;\
+    - declared output shape and type;\
+    - deterministic greedy test behavior where stable;\
+    - logits or embeddings within pre-registered tolerance where exposed;\
+    - sampled-output evaluation as distributions, not string equality;\
+    - backend identity always present in provenance.\
+\
+Acceptance:\
+  - Rust tests under both feature sets.\
+  - JSON schema and drift tests.\
+  - Swift and Kotlin binding tests.\
+  - mutation tests for each load-bearing property.\
+  - CI green on exact PR head.\
+  - explicit nonclaim: no runtime or model executed.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+4. M7-B \'97 LOCAL QWEN GENERATION PROTOTYPE\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Branch:\
+  m7-b/local-qwen-generation-benchmark\
+\
+Base:\
+  M7-A2 merge commit.\
+\
+Objective:\
+  Implement an explicit-download, on-device generation prototype and compare:\
+\
+  Candidate A:\
+    Qwen2.5-0.5B-Instruct\
+    official GGUF\
+    Q4_K_M\
+\
+  Candidate B:\
+    Qwen3-0.6B\
+    official upstream identity\
+    non-thinking mode for the primary comparison\
+\
+Quantization discipline:\
+  Do not pull an unpinned community artifact.\
+\
+  If an official Qwen3 artifact matching the selected quantization is absent:\
+    - quantize from the pinned official upstream weights;\
+    - pin the conversion tool commit;\
+    - pin the llama.cpp commit;\
+    - record the exact command;\
+    - record source artifact hashes;\
+    - record output GGUF hash;\
+    - record calibration/quantization settings;\
+    - publish only the resulting verified model-pack manifest.\
+\
+Runtime:\
+  Start with a pinned llama.cpp-compatible GGUF runtime.\
+  Keep behavioral contracts in Rust.\
+  Keep platform inference handles in the Android/iOS adapter layer.\
+  Do not place model bytes in Git.\
+  Do not place model weights in normal GitHub Actions artifacts.\
+\
+User flow:\
+  Model Packs\
+  \uc0\u8594  inspect name/version/license/download size/device requirements\
+  \uc0\u8594  explicit Download\
+  \uc0\u8594  .partial storage\
+  \uc0\u8594  byte-size check\
+  \uc0\u8594  SHA-256 check\
+  \uc0\u8594  catalog/runtime compatibility\
+  \uc0\u8594  atomic publication\
+  \uc0\u8594  Ready\
+  \uc0\u8594  device benchmark\
+  \uc0\u8594  Generate\
+\
+No automatic download.\
+No automatic cloud fallback.\
+No background download on cellular by default.\
+Provide pause, retry, delete, and integrity-recheck controls.\
+\
+Benchmark corpus:\
+  - committed, synthetic, sanitized fixtures only;\
+  - fixed prompt profiles and prompt hashes;\
+  - no raw dialectic sessions;\
+  - no user journal entries;\
+  - no model-specific prompt changes unless separately registered;\
+  - same semantic task for both candidates.\
+\
+Evaluate:\
+\
+Quality:\
+  - instruction adherence;\
+  - required-output structure;\
+  - unsupported invention;\
+  - appropriate uncertainty;\
+  - false refusal;\
+  - substantive-position retention;\
+  - repetition/pattern copying;\
+  - truncation behavior;\
+  - language preservation;\
+  - prompt-profile fidelity.\
+\
+Performance:\
+  - cold load;\
+  - warm load;\
+  - time to first token;\
+  - prompt tokens/sec;\
+  - generation tokens/sec;\
+  - peak RSS;\
+  - model memory;\
+  - cancellation latency;\
+  - sustained five-minute generation;\
+  - battery delta;\
+  - temperature/thermal throttling;\
+  - background/foreground recovery;\
+  - model deletion and reinstall.\
+\
+Primary physical acceptance:\
+  Pixel 8a.\
+\
+Secondary physical acceptance:\
+  GPD Win Mini after the desktop shell exists.\
+\
+Decision rule:\
+  Do not choose Qwen3 because it is newer.\
+  Do not choose Qwen2.5 merely because it is smaller.\
+\
+  Promote a default mobile pack only if it:\
+    - passes every integrity/privacy gate;\
+    - meets the pre-registered latency and memory ceiling;\
+    - materially improves the quality panel or is materially cheaper;\
+    - does not introduce unacceptable repetition or thermal behavior.\
+\
+A split result is allowed:\
+  Qwen2.5 may remain Basic.\
+  Qwen3 may become Enhanced.\
+  Neither may be default if both fail.\
+\
+Device acceptance:\
+  - explicit download;\
+  - interrupted download;\
+  - bad hash;\
+  - install;\
+  - restart restore;\
+  - generation;\
+  - cancellation;\
+  - background/foreground;\
+  - removal;\
+  - removal failure + revalidation;\
+  - no network after local Ready;\
+  - no cloud request after local failure.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+5. M7-C \'97 APPLE SYSTEM-MODEL PROVIDER\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Branch:\
+  m7-c/apple-system-model-provider\
+\
+Objective:\
+  Add Apple\'92s system language model as one explicit provider.\
+\
+It is not:\
+  - the canonical NeuralCompose behavior;\
+  - an automatic fallback;\
+  - proof of parity with Qwen;\
+  - available on every Apple device.\
+\
+Provider ID:\
+  apple-system\
+\
+Transport:\
+  SystemModel\
+\
+Locality:\
+  OnDevice unless the actual selected Apple profile explicitly reports\
+  another locality, in which case resolved identity must disclose it.\
+\
+Required behavior:\
+  - check framework and model availability before session creation;\
+  - expose device-ineligible;\
+  - expose Apple Intelligence disabled;\
+  - expose model downloading/not ready;\
+  - expose unknown unavailable;\
+  - never reroute to cloud or Qwen automatically;\
+  - retain exact prompt profile and prompt hash;\
+  - record OS version/build and framework capability identity;\
+  - invalidate prior evaluation claims when the OS model changes;\
+  - support cancellation;\
+  - fail closed when required capabilities are absent.\
+\
+CI:\
+  Hosted macOS:\
+    compile\
+    unit tests\
+    mock availability states\
+    prompt-byte tests\
+    no-fallback tests\
+\
+  Physical Apple device:\
+    actual availability\
+    first generation\
+    structured output\
+    cancellation\
+    model-not-ready behavior\
+    OS update identity behavior\
+\
+Simulator-only evidence is not physical model evidence.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+6. M7-D \'97 EMBEDDING-PACK EVALUATION\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Branch:\
+  m7-d/embedding-pack-evaluation\
+\
+Objective:\
+  Select an embedding pack by measured retrieval quality and device cost.\
+\
+Do not reuse arbitrary generation-model hidden states.\
+\
+Every embedding-space identity must pin:\
+  model family\
+  model revision\
+  all weight hashes\
+  tokenizer hashes\
+  output dimensions\
+  pooling\
+  normalization\
+  task instruction\
+  runtime/backend numerical contract\
+  quantization where numerically relevant\
+\
+Candidate classes:\
+  - small mobile-first embedding model;\
+  - medium multilingual candidate;\
+  - larger research candidate.\
+\
+Do not select the final candidates before:\
+  - source and license are pinned;\
+  - model artifacts are reproducible;\
+  - target runtime compatibility is known.\
+\
+Dataset:\
+  - synthetic and consented evaluation data only;\
+  - no raw private dialogue corpus;\
+  - immutable query/document split;\
+  - multilingual and rare-term cases;\
+  - hard negatives;\
+  - duplicate and near-duplicate cases.\
+\
+Metrics:\
+  Recall@k\
+  MRR\
+  nDCG@k\
+  semantic-neighbor stability\
+  false-neighbor rate\
+  multilingual retrieval\
+  latency per item\
+  peak memory\
+  battery/thermal cost\
+  index bytes per 1,000 entries\
+  startup/load cost\
+\
+Required controls:\
+  lexical/BM25 baseline\
+  deterministic hand-feature baseline where relevant\
+  random embedding negative control\
+  dimension-reduced variants\
+  task-instruction ablation\
+\
+Promotion rule:\
+  A label-free geometry metric cannot promote a model by itself.\
+  Retrieval quality must improve without violating device cost ceilings.\
+\
+Index law:\
+  vectors from different embedding-space identities never share one index.\
+\
+Idempotence:\
+  indexing the same content hash under the same embedding identity produces\
+  one logical entry.\
+\
+Backend conformance:\
+  embeddings from different backends must meet the declared numerical\
+  tolerance or receive different numerical-contract identities.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+7. M7-E \'97 REMOTE PROVIDERS\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Split into separate PRs.\
+\
+M7-E1:\
+  m7-e1/ollama-endpoint-provider\
+\
+M7-E2:\
+  m7-e2/ollama-cloud-provider\
+\
+M7-E3:\
+  m7-e3/brokered-cloud-providers\
+\
+M7-E1 \'97 Ollama endpoint:\
+  - explicit user-supplied endpoint;\
+  - LocalNetwork or RemoteEndpoint locality;\
+  - exact server identity and selected model digest where available;\
+  - capability probe;\
+  - TLS requirements for remote/public networks;\
+  - no exposure of unauthenticated local Ollama to the public internet;\
+  - no automatic use of Ollama Cloud;\
+  - malformed or unreachable endpoint is Unavailable, not rerouted.\
+\
+M7-E2 \'97 Ollama Cloud:\
+  - separate provider ID;\
+  - Cloud locality;\
+  - explicit user selection and cloud-egress warning;\
+  - authentication kept in secure platform storage or broker;\
+  - never represented as a local Ollama endpoint;\
+  - usage/latency metadata recorded without prompt text.\
+\
+M7-E3 \'97 Anthropic/OpenAI:\
+  Public release mode:\
+    mobile/desktop client\
+    \uc0\u8594  authenticated NeuralCompose broker\
+    \uc0\u8594  provider\
+\
+  The app-owner API key must never ship in:\
+    source\
+    binary\
+    app configuration\
+    model manifest\
+    logs\
+    crash report\
+    GitHub Actions artifact\
+\
+  Broker responsibilities:\
+    user authentication\
+    short-lived client tokens\
+    provider credential storage\
+    per-user limits\
+    budget ceilings\
+    rate limits\
+    revocation\
+    audit metadata\
+    provider/model resolution\
+    no silent provider substitution\
+\
+  Advanced BYOK may be evaluated separately:\
+    Keychain / Android secure storage / OS credential manager\
+    explicit warning\
+    never default\
+    never copied into Rust snapshots\
+\
+PR CI:\
+  mock servers only\
+  deterministic streaming fixtures\
+  disconnect and cancellation\
+  malformed event streams\
+  rate-limit errors\
+  auth missing/revoked\
+  provider model mismatch\
+  prompt hash preservation\
+  no fallback\
+\
+Protected integration CI:\
+  workflow_dispatch\
+  protected environment\
+  no fork PR access\
+  short-lived test credentials\
+  sanitized prompts only\
+  strict budget cap\
+  no raw response artifact retention\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+8. M8 \'97 DESKTOP AND ACCELERATOR EXPANSION\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+M8 begins only after:\
+  - M7-A2 merged;\
+  - one M7-B local generation runtime is device-validated;\
+  - the provider/model-pack contracts are stable.\
+\
+M8-A \'97 desktop shell:\
+  Branch:\
+    m8-a/tauri-desktop-shell\
+\
+  Default architecture:\
+    Rust behavioral core\
+    + Tauri 2\
+    + React/TypeScript presentation\
+\
+  Targets:\
+    Ubuntu 26.04 x86_64\
+    Windows x86_64\
+    Windows arm64\
+\
+  Tauri is provisional until the spike proves:\
+    - shell-owned effects remain enforceable;\
+    - native runtime libraries can be isolated;\
+    - signing and packaging work;\
+    - accessibility and lifecycle behavior are acceptable.\
+\
+  A different shell requires an ADR amendment and evidence, not preference.\
+\
+M8-B \'97 CPU/Vulkan baseline:\
+  Branch:\
+    m8-b/desktop-cpu-vulkan\
+\
+  Hardware:\
+    GPD Win Mini on Windows and Ubuntu.\
+\
+  Start with:\
+    CPU correctness\
+    then Vulkan acceleration\
+\
+  Do not claim 32 GB dedicated VRAM.\
+  Record actual UMA setting, available system memory, and measured behavior.\
+\
+M8-C \'97 CUDA:\
+  Optional runtime pack for Windows/Linux NVIDIA.\
+  Compile and test separately.\
+  Pin CUDA/cuDNN/runtime compatibility.\
+  Never make CUDA a base application dependency.\
+\
+M8-D \'97 OpenVINO:\
+  Optional Windows/Linux Intel runtime pack.\
+  Validate CPU, GPU, and NPU separately.\
+  Do not infer NPU support from successful CPU execution.\
+\
+M8-E \'97 Qualcomm:\
+  Two distinct targets:\
+    Android arm64 + QNN\
+    Windows arm64 + QNN\
+\
+  Physical Snapdragon validation is mandatory before DeviceValidated.\
+\
+M8-F \'97 AMD:\
+  Windows:\
+    CPU/Vulkan baseline first.\
+    Windows ML may serve supported ONNX embedding/classifier workloads.\
+    Do not use MIGraphX for Qwen GenAI while official support excludes it.\
+\
+  Ubuntu:\
+    CPU/Vulkan baseline first.\
+    ROCm is Experimental until exact APU + OS support is verified.\
+\
+  Never infer support for one Ryzen family from another.\
+\
+Packaging:\
+  Ubuntu:\
+    .deb\
+    AppImage\
+    optional later Flatpak\
+\
+  Windows x64:\
+    signed MSI or NSIS\
+\
+  Windows arm64:\
+    native arm64 application\
+    accurately disclose installer architecture/emulation behavior\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+9. CI ARCHITECTURE\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Use five evidence tiers.\
+\
+TIER 0 \'97 REQUIRED CONTRACT CI, EVERY PR\
+  No model weights.\
+  No provider secrets.\
+  No physical hardware claims.\
+\
+  Jobs:\
+    Rust formatting\
+    Rust clippy -D warnings\
+    Rust tests default features\
+    Rust tests UniFFI/all features\
+    schema validation\
+    fixture drift\
+    generated-binding drift\
+    secret/private-endpoint scan\
+    git diff --check\
+    license manifest check\
+    property-law tests\
+    prompt-profile hash tests\
+\
+  Stable required hosts:\
+    ubuntu-24.04\
+    windows-2025\
+    macos-26 arm64\
+\
+TIER 1 \'97 BUILD/PACKAGE MATRIX\
+  Path-filtered when platform code changes.\
+\
+  Matrix:\
+    Ubuntu x86_64\
+    Windows x86_64\
+    macOS/iOS arm64\
+    Android arm64 build\
+    Ubuntu 26.04 preview canary\
+    Windows arm64 preview canary\
+\
+  Preview runner failures:\
+    visible and investigated;\
+    not the sole merge authority until runner stability is acceptable.\
+\
+  Outputs:\
+    unsigned test packages\
+    checksums\
+    SBOM\
+    build manifest\
+    no full model weights\
+\
+TIER 2 \'97 DETERMINISTIC RUNTIME SMOKE\
+  Use a tiny committed or reproducibly generated fixture model permitted by\
+  license and repository policy.\
+\
+  Test:\
+    load\
+    tokenize\
+    deterministic short generation\
+    cancellation\
+    unload\
+    wrong ABI\
+    wrong hash\
+    missing artifact\
+    backend unavailable\
+    no fallback\
+\
+  Compile-only is not runtime validation.\
+\
+TIER 3 \'97 PHYSICAL DEVICE ACCEPTANCE\
+  Trigger:\
+    workflow_dispatch or controlled schedule\
+\
+  Runners/devices:\
+    Pixel 8a\
+    physical supported iPhone\
+    GPD Win Mini Windows\
+    GPD Win Mini Ubuntu\
+    optional NVIDIA device\
+    optional Intel device\
+    optional Snapdragon Windows device\
+\
+  Use self-hosted runner labels such as:\
+    self-hosted, android, pixel8a, arm64\
+    self-hosted, macos, apple-system-model\
+    self-hosted, windows, x64, gpd-amd\
+    self-hosted, linux, x64, gpd-amd\
+    self-hosted, windows, arm64, qnn\
+    self-hosted, linux, x64, cuda\
+\
+  Self-hosted jobs:\
+    never run untrusted fork code;\
+    use protected environments;\
+    use explicit workflow dispatch;\
+    clean workspaces between runs;\
+    redact local paths and network identity;\
+    never upload model weights or private prompts.\
+\
+TIER 4 \'97 RELEASE CANDIDATE\
+  Requires:\
+    all required support-matrix rows at ReleaseSupported;\
+    signed packages;\
+    installer upgrade test;\
+    uninstall/removal test;\
+    model-pack install/update/removal test;\
+    SBOM;\
+    checksums;\
+    provenance attestation;\
+    privacy manifest;\
+    license notices;\
+    rollback test;\
+    no-secret scan;\
+    operator approval.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+10. CI WORKFLOW LAYOUT\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Create focused workflows rather than one monolith:\
+\
+  .github/workflows/\
+    core-contract.yml\
+    bindings.yml\
+    android-build.yml\
+    ios-build.yml\
+    desktop-build.yml\
+    runtime-smoke.yml\
+    property-laws.yml\
+    provider-mocks.yml\
+    device-acceptance.yml\
+    model-benchmark.yml\
+    release-candidate.yml\
+\
+Rules:\
+  - pin third-party actions to immutable commit SHAs;\
+  - default permissions: contents: read;\
+  - never use pull_request_target to build PR code;\
+  - no secrets on fork PRs;\
+  - use concurrency groups to cancel superseded runs;\
+  - use path filters for expensive platform builds;\
+  - cache compilers/dependencies, not private models;\
+  - full candidate model workflows are manual/scheduled;\
+  - model artifacts are downloaded from pinned sources and hash-checked;\
+  - benchmark outputs contain aggregate metrics and identities only.\
+\
+Required branch protections:\
+  core-contract\
+  bindings\
+  relevant platform build\
+  schema/fixture drift\
+  no-secret scan\
+\
+Hardware acceptance is required only for promotion to DeviceValidated or\
+ReleaseSupported, not for every documentation PR.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+11. EVIDENCE FORMAT\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+Every milestone PR body must contain:\
+\
+  exact base SHA\
+  exact head SHA\
+  changed-file count\
+  scope\
+  nonclaims\
+  model/runtime/provider identities\
+  artifact hashes\
+  CI run IDs\
+  local tests\
+  physical devices used\
+  hardware/OS/driver versions\
+  defects found\
+  defects fixed\
+  remaining nonclaims\
+  support-matrix changes\
+\
+Every physical acceptance document must separate:\
+\
+  observed\
+  inferred\
+  compile-only\
+  simulator-only\
+  not observed\
+\
+No sentence such as \'93works on Windows,\'94 \'93supports CUDA,\'94 or \'93runs on iOS\'94\
+is permitted without naming the exact evidence level.\
+\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+12. PROGRAM COMPLETION\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+This /goal is complete only when:\
+\
+M7-B:\
+  at least one local Qwen pack is DeviceValidated on Pixel 8a.\
+\
+M7-C:\
+  Apple system provider is DeviceValidated on a physical eligible device,\
+  with unavailable states and no-fallback behavior proven.\
+\
+M7-D:\
+  an embedding pack is promoted by a pre-registered retrieval and device-cost\
+  rule, with immutable embedding-space identity.\
+\
+M7-E:\
+  Ollama endpoint, Ollama Cloud, and brokered cloud providers are separate,\
+  explicit, provenance-complete, and fail closed.\
+\
+Desktop:\
+  signed beta packages install on:\
+    Ubuntu 26.04 x86_64\
+    Windows x86_64\
+    Windows arm64\
+\
+Backends:\
+  CPU baseline is ReleaseSupported.\
+  Every optional accelerator has its own runtime-pack identity and support row.\
+  Unsupported accelerator absence never prevents CPU use unless explicitly\
+  selected as required.\
+  No accelerator failure silently changes provider.\
+\
+Properties:\
+  idempotence, equivariance, invariance, and backend conformance tests are\
+  required CI gates.\
+\
+Privacy:\
+  model weights are opt-in;\
+  raw dialogue and audio remain local;\
+  cloud egress is explicit;\
+  no app-owner API key ships to clients;\
+  no implicit fallback exists anywhere.\
+\
+Final program law:\
+\
+  same semantic provider contract\
+  + explicitly identified model variant\
+  + explicitly identified runtime/backend\
+  + trusted model and runtime manifests\
+  + no implicit fallback\
+  + no false claim of numerical equivalence\
+  + evidence before promotion\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+AUTONOMOUS EXECUTION POLICY\
+\uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+\
+This document is the program roadmap, not permission to implement every\
+milestone in one uninterrupted branch or pull request.\
+\
+Execute exactly one milestone at a time.\
+\
+For each milestone:\
+\
+1. Verify the repository, branch, clean worktree, and exact base SHA.\
+2. Create one dedicated branch.\
+3. Implement only that milestone's declared scope.\
+4. Run every required local gate.\
+5. Regenerate bindings and native artifacts when the contract changes.\
+6. Push the branch.\
+7. Open or update one pull request.\
+8. Wait for exact-head CI.\
+9. Address branch-caused CI failures and review findings with minimal,\
+   evidence-based changes.\
+10. Re-run the complete affected acceptance surface after every fix.\
+11. Stop when the milestone reaches an operator-review boundary.\
+12. Never merge the pull request.\
+13. Never begin the next milestone before the operator merges the current one.\
+\
+Valid terminal states:\
+\
+ACHIEVED\
+  - all milestone acceptance criteria hold;\
+  - exact-head CI is green;\
+  - required physical-device evidence is recorded;\
+  - the PR resolution summary is posted;\
+  - the PR is open and awaiting operator merge.\
+\
+BLOCKED_OPERATOR\
+  - signing, physical interaction, account login, purchase, legal acceptance,\
+    secret provisioning, manual UI observation, or merge authority is required.\
+\
+BLOCKED_EXTERNAL\
+  - an upstream service, runner, SDK, model artifact, store review, hardware,\
+    or documented platform capability is unavailable.\
+\
+BLOCKED_EVIDENCE\
+  - the requested support or promotion claim cannot be established from the\
+    available tests or hardware.\
+\
+A blocked terminal state must report:\
+  - exact branch and head;\
+  - completed work;\
+  - remaining blocker;\
+  - commands or manual action required;\
+  - claims that remain explicitly unmade.\
+\
+Do not broaden scope merely because time or context remains.\
+\
+Command structure: one /goal per milestone; an optional /loop only while\
+waiting on external CI or review state (poll, minimal branch-caused fixes,\
+never merge, never start the next milestone).\
+\
+Sequencing correction (2026-07-29):\
+  M7 = provider and model capability program (M7-A, M7-A2, M7-B..E).\
+  M8 = desktop distribution and accelerator program.\
+  Do not label desktop work M7-B0.\
+  Ollama local and Ollama Cloud remain SEPARATE providers (unauthenticated\
+  localhost API vs authenticated remote API \'97 distinct privacy identities).\
+  OpenAI app-owner keys remain server-side behind the broker; OpenAI\
+  prohibits exposing API keys in client applications.\
+}

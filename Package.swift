@@ -38,6 +38,7 @@ let package = Package(
         .library(name: "WorldModelDemo", targets: ["WorldModelDemo"]),
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
+        .executable(name: "RSPEmbedding", targets: ["RSPEmbedding"]),
         .executable(name: "MLXProbe", targets: ["MLXProbe"]),
         .executable(name: "SpectralProbe", targets: ["SpectralProbe"]),
         .executable(name: "GenerationEval", targets: ["GenerationEval"]),
@@ -72,6 +73,7 @@ let package = Package(
         .target(
             name: "BCICore",
             path: "Sources/BCICore",
+            exclude: ["Dialectic/MATH.md", "Dialectic/FIELD_V2.md", "Dialectic/README.md", "Dialectic/WITNESS.md"],
             swiftSettings: strictConcurrency
         ),
 
@@ -167,7 +169,7 @@ let package = Package(
             // is intentionally NOT declared as a SwiftPM resource: SwiftPM
             // forbids Info.plist as a top-level resource. `swift run` produces
             // a runnable binary without one.
-            exclude: ["Resources/Info.plist"],
+            exclude: ["Resources/Info.plist", "Resources/NeuralCompose.icns"],
             swiftSettings: strictConcurrency
         ),
 
@@ -200,6 +202,18 @@ let package = Package(
             name: "SemanticEval",
             dependencies: ["BCICore", "BCIClassifier"],
             path: "Sources/SemanticEval",
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── Offline RSP embedding bridge ──────────────────────────────────
+        // A scientific CLI only: it reads text from a temporary local file and
+        // emits normalized vectors for the Python feature exporter. It is not
+        // linked into the app and never writes dialogue text or vectors into a
+        // telemetry artifact.
+        .executableTarget(
+            name: "RSPEmbedding",
+            dependencies: ["BCICore", "BCIClassifier"],
+            path: "Sources/RSPEmbedding",
             swiftSettings: strictConcurrency
         ),
 
