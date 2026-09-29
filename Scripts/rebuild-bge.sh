@@ -4,8 +4,16 @@
 # prove the result is the pinned model.
 #
 # Usage:
-#   ./Scripts/rebuild-bge.sh                 convert, then verify
+#   ./Scripts/rebuild-bge.sh                 unlock, convert, verify, lock
 #   ./Scripts/rebuild-bge.sh --verify-only   verify the model already on disk
+#   ./Scripts/rebuild-bge.sh --lock          lock the model package and torch's library
+#   ./Scripts/rebuild-bge.sh --unlock        unlock them, e.g. before upgrading torch
+#
+# Locking: the model package and torch's libtorch_cpu.dylib vanished together
+# on 2026-07-27 and again on 2026-09-28. macOS's Storage settings list them as
+# large files with a Delete button. Locking sets the user-immutable flag
+# (chflags uchg), so a deletion fails or has to ask until the flag is cleared.
+# It stops accidents, not an owner who clears the flag on purpose.
 #
 # Inputs, all committed:
 #   Scripts/bge-small-en-v1.5.lock.json      Hugging Face revision, expected sha256s
@@ -26,13 +34,17 @@ LOCK="${BGE_LOCK:-Scripts/bge-small-en-v1.5.lock.json}"
 REQUIREMENTS="Scripts/requirements-bge-conversion.txt"
 VENV="${BGE_VENV:-$REPO_ROOT/venv}"
 
-usage() { sed -n '3,20p' "$0" | sed 's/^# \{0,1\}//'; }
+# The header comment is the usage text: every comment line after the shebang,
+# up to the first line of code.
+usage() { awk 'NR > 2 && /^#/ { sub(/^# ?/, ""); print; next } NR > 2 { exit }' "$0"; }
 
 MODE=rebuild
 if [ $# -gt 1 ]; then usage >&2; exit 64; fi
 case "${1:-}" in
     "")            ;;
     --verify-only) MODE=verify ;;
+    --lock)        MODE=lock ;;
+    --unlock)      MODE=unlock ;;
     *)             usage >&2; exit 64 ;;
 esac
 
@@ -54,6 +66,28 @@ PY
 MODEL="$(lock_get model)"
 REVISION="$(lock_get revision)"
 OUT="${BGE_OUTPUT_DIR:-$(lock_get output_dir)}"
+
+# The 2 items that get locked, one per line; only those that exist.
+lockable_items() {
+    local library
+    if [ -d "$OUT/model.mlpackage" ]; then printf '%s\n' "$OUT/model.mlpackage"; fi
+    for library in "$VENV"/lib/python*/site-packages/torch/lib/libtorch_cpu.dylib; do
+        if [ -f "$library" ]; then printf '%s\n' "$library"; fi
+    done
+}
+
+set_lock() {   # set_lock uchg | nouchg
+    local item
+    lockable_items | while IFS= read -r item; do chflags -R "$1" "$item"; done
+}
+
+report_locks() {
+    local item state
+    lockable_items | while IFS= read -r item; do
+        if ls -ldO "$item" | awk '{print $5}' | grep -q uchg; then state=locked; else state=UNLOCKED; fi
+        printf '  %-8s  %s\n' "$state" "$item"
+    done
+}
 
 ensure_venv() {
     if [ ! -x "$VENV/bin/python" ]; then
@@ -182,15 +216,25 @@ PY
     echo "Verified: $OUT is $MODEL at $REVISION."
 }
 
+if [ "$MODE" = lock ] || [ "$MODE" = unlock ]; then
+    if [ "$MODE" = lock ]; then set_lock uchg; else set_lock nouchg; fi
+    report_locks
+    exit 0
+fi
+
 if [ "$MODE" = verify ]; then
     [ -x "$VENV/bin/python" ] || {
         echo "error: no virtualenv at $VENV; run ./Scripts/rebuild-bge.sh to create it" >&2
         exit 1
     }
     verify
+    report_locks
     exit 0
 fi
 
+# A rebuild overwrites the package, and the torch repair overwrites the
+# library, so both are unlocked first and locked again once verified.
+set_lock nouchg
 ensure_venv
 echo "Converting $MODEL at $REVISION into $OUT ..."
 # The conversion's stderr is version warnings and progress bars. Keep it out
@@ -205,4 +249,6 @@ if ! TOKENIZERS_PARALLELISM=false "$VENV/bin/python" Scripts/convert-sentence-em
 fi
 rm -f "$convert_log"
 verify
+set_lock uchg
+report_locks
 echo "Next: swift test --filter SemanticBGEReplayRegressionTests"

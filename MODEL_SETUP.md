@@ -199,6 +199,17 @@ if any hash differs from the lock. The replay test then confirms the model
 reproduces the committed fixture, which is what makes it the same embedding
 space and not merely the same files.
 
+A rebuild ends by locking the model package and the virtualenv's
+`libtorch_cpu.dylib` with the user-immutable flag. Both vanished together on
+2026-07-27 and on 2026-09-28, and macOS's Storage settings offer them for
+deletion as large files. While locked they can be read but not deleted, moved
+or overwritten. Unlock before upgrading torch or replacing the model by hand:
+
+```sh
+./Scripts/rebuild-bge.sh --unlock
+./Scripts/rebuild-bge.sh --lock
+```
+
 Run the app from the repository root: the model path is relative to the
 working directory.
 
