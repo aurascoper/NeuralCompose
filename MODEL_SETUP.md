@@ -178,7 +178,33 @@ rm -rf .build && ./Scripts/build.sh --with-brainflow
 
 ---
 
-## 3. Why this split?
+## 3. Sentence embedder (BGE)
+
+The semantic graph and the spectral estimator need real embeddings. Without
+`Models/BGE-small-en-v1.5/model.mlpackage` the app falls back to the
+deterministic stub embedder, which places nodes by hash.
+
+One command rebuilds the model from pinned inputs and checks the result:
+
+```sh
+./Scripts/rebuild-bge.sh                # convert, then verify
+./Scripts/rebuild-bge.sh --verify-only  # check the model already on disk
+swift test --filter SemanticBGEReplayRegressionTests
+```
+
+The Hugging Face revision and the expected sha256s live in
+`Scripts/bge-small-en-v1.5.lock.json`; the Python stack is pinned in
+`Scripts/requirements-bge-conversion.txt` (Python 3.11). The script exits 1
+if any hash differs from the lock. The replay test then confirms the model
+reproduces the committed fixture, which is what makes it the same embedding
+space and not merely the same files.
+
+Run the app from the repository root: the model path is relative to the
+working directory.
+
+---
+
+## 4. Why this split?
 
 Core ML (ANE) for classification + MLX (GPU) for generation is the sweet spot
 on Apple Silicon: the two engines don't fight for the same compute. Routing

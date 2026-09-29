@@ -1,0 +1,19 @@
+# Pinned stack for Scripts/convert-sentence-embedder.py, on Python 3.11.
+#
+# Used by Scripts/rebuild-bge.sh. Exact pins, not floors: coremltools 9.x
+# fails this conversion three different ways (see the version history
+# comment on trace_model() in the conversion script), and newer torch or
+# transformers releases each fail differently again.
+#
+# Verified 2026-09-28: two conversions with exactly these versions produce
+# the same weight.bin and the same canonical spec digest, and embeddings
+# that match the 2026-07-12 evaluation bit for bit.
+coremltools==8.0
+torch==2.4.1
+transformers==4.44.2
+sentence-transformers==3.0.1
+tokenizers==0.19.1
+huggingface-hub==0.25.2
+safetensors==0.8.0
+numpy==1.26.4
+protobuf==7.35.1

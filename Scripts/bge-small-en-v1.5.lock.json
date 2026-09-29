@@ -1,0 +1,27 @@
+{
+  "model": "BAAI/bge-small-en-v1.5",
+  "revision": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+  "python": "3.11",
+  "requirements": "Scripts/requirements-bge-conversion.txt",
+  "output_dir": "Models/BGE-small-en-v1.5",
+  "source": {
+    "model.safetensors": "3c9f31665447c8911517620762200d2245a2518d6e7208acc78cd9db317e21ad"
+  },
+  "expected": {
+    "files": {
+      "model.mlpackage/Data/com.apple.CoreML/weights/weight.bin": "a53576196bb9e9ca27990ab5f69982983fdec998959ad387925c4901a6db52fc",
+      "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+      "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+    },
+    "spec_canonical_sha256": "f0a1ef70719afb8a22f651c2e6359a97454562fe2f99e61ed54dbde01457bd40",
+    "mlpackage_digest": "a0694f1fdaa2dc5d7511efb66643b7deed62543eb88ce0da14c7aede0016eb28"
+  },
+  "notes": [
+    "weight.bin, tokenizer.json and vocab.txt are byte-reproducible: two conversions on 2026-09-28 gave identical files.",
+    "model.mlmodel is not byte-reproducible. Its protobuf maps serialise in a different order on each run, while the message itself is identical. spec_canonical_sha256 is the sha256 of the spec re-serialised with deterministic=True, which is stable.",
+    "Manifest.json is not pinned: coremltools writes fresh random identifiers into it on every conversion.",
+    "mlpackage_digest is the sha256 of the text 'weight.bin <sha256>\\nspec <canonical sha256>\\n'. It stands in for a hash of the whole package, which cannot be stable for the two reasons above.",
+    "EmbeddingBench's coreml_sha256 hashes every byte in the package, Manifest.json included, so the value recorded in Benchmarks/2026-07-24-bge-small-en-v1.5.json cannot be reproduced by any later conversion. Its tokenizer_sha256 matches the one pinned here.",
+    "revision is what 'main' resolved to on 2026-09-28; Hugging Face reports it last modified on 2024-02-22."
+  ]
+}
