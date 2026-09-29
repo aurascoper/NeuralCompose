@@ -1,0 +1,44 @@
+{
+  "schema_version": "nc-bendr-encoder-v0",
+  "model_id": "bendr",
+  "upstream": {
+    "repository": "https://github.com/SPOClab-ca/BENDR",
+    "tag": "v0.1-alpha",
+    "revision": "5a6f49365a729852a5666aa744938aa4238f7ecd",
+    "dn3_revision": "dc54fc61895fa82ea73ad74c6bba10963cdadab2"
+  },
+  "checkpoint": {
+    "filename": "encoder.pt",
+    "url": "https://github.com/SPOClab-ca/BENDR/releases/download/v0.1-alpha/encoder.pt",
+    "sha256": "32c913b1778d8bdf7f08bbe8ef5e6bef2954087b482851816deefc4d0fcf84cb"
+  },
+  "geometry": {
+    "sample_rate_hz": 256,
+    "window_samples": 1024,
+    "encoder_input_channels": 20,
+    "encoder_hidden_channels": 512,
+    "encoder_widths": [3, 3, 3, 3, 3, 3],
+    "encoder_strides": [3, 2, 2, 2, 2, 2]
+  },
+  "target_channels": [
+    "FP1", "FP2", "F7", "F3", "FZ", "F4", "F8",
+    "T7", "C3", "CZ", "C4", "T8", "T5", "P3", "PZ", "P4", "T6",
+    "O1", "O2", "SCALE"
+  ],
+  "muse_source_channels": ["TP9", "AF7", "AF8", "TP10"],
+  "approximate_target_mapping": {
+    "TP9": "T5",
+    "AF7": "F7",
+    "AF8": "F8",
+    "TP10": "T6"
+  },
+  "scale_channel": {
+    "status": "unobserved_from_canonical_zscore_windows",
+    "handling": "explicit_missing_target_embedding_in_learned_adapter"
+  },
+  "input_adaptation": {
+    "canonical_input": "causal_calibration_zscore_windows",
+    "original_deep1010_minmax_reconstruction": "not_claimed",
+    "interpretation": "encoder_transfer_sensitivity_only"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schema_version": "nc-eeg-observable-protocol-spec-v1",
+  "protocol_id": "encoder-pilot-v1",
+  "protocol_cue_clock": "unix_epoch_wall_time",
+  "tag_blinks": 5,
+  "transition_gap_seconds": 8,
+  "duration_tolerance_seconds": 2,
+  "listening_audio": {
+    "id_required": true,
+    "sha256_algorithm": "sha256",
+    "source": "operator_supplied_local_immutable_asset"
+  },
+  "speaking_script": {
+    "id": "nc-eeg-speaking-count-1-to-20-v1",
+    "relative_path": "../stimuli/speaking-count-1-to-20-v1.txt",
+    "sha256_algorithm": "sha256"
+  },
+  "segments": [
+    {
+      "label": "eyes_open",
+      "duration_seconds": 60,
+      "instruction": "Sit still, face forward, and keep your eyes open without speaking."
+    },
+    {
+      "label": "eyes_closed",
+      "duration_seconds": 45,
+      "instruction": "Sit still with eyes gently closed. Do not speak or deliberately move."
+    },
+    {
+      "label": "blink_artifact",
+      "duration_seconds": 30,
+      "instruction": "Make deliberate, separated blinks while otherwise remaining still."
+    },
+    {
+      "label": "jaw_artifact",
+      "duration_seconds": 30,
+      "instruction": "Make gentle, repeated jaw or facial-muscle movements while keeping your head still."
+    },
+    {
+      "label": "head_motion_artifact",
+      "duration_seconds": 30,
+      "instruction": "Make slow, deliberate side-to-side head movements without speaking."
+    },
+    {
+      "label": "listening",
+      "duration_seconds": 60,
+      "instruction": "Sit still and listen silently to the selected immutable neutral audio asset."
+    },
+    {
+      "label": "speaking",
+      "duration_seconds": 60,
+      "instruction": "Sit still and repeat the pinned neutral count script aloud at a comfortable, even pace."
+    },
+    {
+      "label": "recovery",
+      "duration_seconds": 60,
+      "instruction": "Sit still, do not speak, and return to a quiet eyes-open baseline."
+    }
+  ]
+}

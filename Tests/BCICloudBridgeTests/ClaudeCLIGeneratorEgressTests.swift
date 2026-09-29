@@ -9,9 +9,17 @@ final class ClaudeCLIGeneratorEgressTests: XCTestCase {
 
     /// Writes an executable stub that captures its argv (one per line) to
     /// `argsFile` and emits a valid `claude -p --output-format json` envelope.
+    /// The stub is named exactly `claude`, inside a unique directory. The
+    /// executable-override path now refuses anything not named `claude`
+    /// (a wrapper would silently receive Claude's own flags), so a stub called
+    /// `claude-stub-….sh` would be rejected — and a real installation is named
+    /// `claude` anyway, so this is the more faithful fixture.
     private func makeStub(argsFile: URL, reply: String = "STUB REPLY") throws -> URL {
-        let stub = FileManager.default.temporaryDirectory
-            .appendingPathComponent("claude-stub-\(UUID().uuidString).sh")
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("claude-stub-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let stub = directory.appendingPathComponent("claude")
         // NUL-delimit the captured args so a multi-line arg (the system prompt)
         // isn't split apart on its own newlines.
         let script = """
@@ -37,7 +45,7 @@ final class ClaudeCLIGeneratorEgressTests: XCTestCase {
         let stub = try makeStub(argsFile: argsFile)
         defer { try? FileManager.default.removeItem(at: stub); try? FileManager.default.removeItem(at: argsFile) }
 
-        let gen = ClaudeCLIGenerator(
+        let gen = try ClaudeCLIGenerator(
             model: "claude-sonnet-5", systemPrompt: "TEST-SYS-PROMPT", executablePath: stub.path)
         let reply = try await gen.generate(
             prompt: "user transcript text", maxTokens: 10, temperature: 0.5, cancellationID: UUID())
@@ -67,26 +75,26 @@ final class ClaudeCLIGeneratorEgressTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: stub); try? FileManager.default.removeItem(at: argsFile) }
 
         // Default init: the caller does NOT get to leave the system prompt open.
-        let gen = ClaudeCLIGenerator(executablePath: stub.path)
+        let gen = try ClaudeCLIGenerator(executablePath: stub.path)
         _ = try await gen.generate(prompt: "anything", maxTokens: 1, temperature: 0, cancellationID: UUID())
 
         let args = try capturedArgs(argsFile)
         guard let i = args.firstIndex(of: "--system-prompt"), i + 1 < args.count else {
             return XCTFail("no --system-prompt passed")
         }
-        XCTAssertEqual(args[i + 1], ClaudeCLIGenerator.hypnagogicSystemPrompt,
+        XCTAssertEqual(args[i + 1], try ClaudeCLIGenerator.hypnagogicSystemPrompt(),
                        "the default egress uses the constrained hypnagogic prompt, so the network path "
                        + "can't be accidentally pointed at an unconstrained prompt")
     }
 
-    func testCancellationDoesNotSendAnything() async {
+    func testCancellationDoesNotSendAnything() async throws {
         let argsFile = FileManager.default.temporaryDirectory
             .appendingPathComponent("args-\(UUID().uuidString).txt")
         defer { try? FileManager.default.removeItem(at: argsFile) }
         guard let stub = try? makeStub(argsFile: argsFile) else { return XCTFail("stub") }
         defer { try? FileManager.default.removeItem(at: stub) }
 
-        let gen = ClaudeCLIGenerator(executablePath: stub.path)
+        let gen = try ClaudeCLIGenerator(executablePath: stub.path)
         let id = UUID()
         let task = Task { try await gen.generate(prompt: "x", maxTokens: 1, temperature: 0, cancellationID: id) }
         task.cancel()

@@ -1,0 +1,43 @@
+{
+  "schema_version": "nc-eeg-source-manifest-v0",
+  "dataset_id": "muse-observable-state-pilot",
+  "label_order": [
+    "eyes_open",
+    "eyes_closed",
+    "blink_artifact",
+    "jaw_artifact",
+    "head_motion_artifact",
+    "poor_contact_artifact",
+    "listening",
+    "speaking",
+    "recovery"
+  ],
+  "sessions": [
+    {
+      "session_id": "muse-YYYYMMDD-001",
+      "participant_id": "participant-local-001",
+      "recording_date": "YYYY-MM-DD",
+      "device_id": "muse-s-local-001",
+      "headset_fit_id": "fit-YYYYMMDD-001",
+      "eeg_csv": "../../Recordings/local/muse-YYYYMMDD-001/eeg.csv",
+      "sample_rate_hz": 256,
+      "channel_order": ["TP9", "AF7", "AF8", "TP10"],
+      "task_blocks": [
+        {
+          "label": "eyes_open",
+          "start_seconds": 0,
+          "end_seconds": 30,
+          "role": "calibration",
+          "label_provenance": "protocol-cue-v1"
+        },
+        {
+          "label": "eyes_closed",
+          "start_seconds": 30,
+          "end_seconds": 60,
+          "role": "task",
+          "label_provenance": "protocol-cue-v1"
+        }
+      ]
+    }
+  ]
+}

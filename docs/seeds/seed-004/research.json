@@ -1,0 +1,56 @@
+{
+  "seed_id": "004",
+  "part": "research",
+  "content_version": 1,
+  "open_hypotheses": [
+    {
+      "id": "provider-substitution-equivalence",
+      "status": "OPEN — keep-bar pre-registered in this seed; tested in this branch via benchmark-001-grounding",
+      "claim": "Provider substitution is an architectural equivalence, not a behavioral identity. The Claude runtime preserves its existing behavior (reference); alternative providers (Ollama with deepseek-v4-flash:cloud, qwen2.5:3b, ...) are *characterized* against Claude on benchmark-001, not required to imitate Claude output. A lower-cost / lower-latency / slightly-different-dialogue is an engineering tradeoff, not a regression.",
+      "measured_from": "benchmark-001-grounding run output across (runtime, model, profile) combinations; compared via outcome distribution, mean tension, latency, cost, mean_self_similarity, witness_attempts/witness_turns (for Reflective)."
+    },
+    {
+      "id": "runtime-is-transport-invariant",
+      "status": "OPEN — enforced by ADR-009 invariant #2 (the runtime SHALL NOT modify semantic intent); tested in this branch by code review + a test that asserts the Ollama runtime does not rewrite prompts, alter temperature, inject system instructions, modify stop sequences, or interpret outputs.",
+      "claim": "The runtime is transport. Semantics live above it. A runtime that modifies semantic intent is a non-conformant implementation, full stop."
+    },
+    {
+      "id": "prompt-portability",
+      "status": "OPEN — tested in this branch by asserting that identical prompt bytes are passed to Claude and Ollama on the same prompt profile (sha256 match).",
+      "claim": "A PromptProfile, once defined, produces byte-identical prompt text on every runtime. Differences in output are attributable to the runtime/model, never to the prompt assembly."
+    }
+  ],
+  "accepted_decisions": [
+    "GenerationRuntime is the provider-neutral runtime protocol. The dialectical engine depends on GenerationRuntime, not on TextGenerating/ClaudeCLIGenerator. (ADR-009.)",
+    "GenerationRuntime is composed over a GenerationTransport (HTTP / subprocess / local-process). Adding a model behind an existing transport is a configuration change, not a Swift type. (ADR-009 invariant #3.)",
+    "TextGenerating is preserved as a legacy compatibility shim during the transition. The harness, app, and tests migrate incrementally; TextGenerating is deprecated once nothing depends on it. (ADR-009.)",
+    "Prompt profiles are repository resources (Markdown files under Sources/BCICloudBridge/Prompts/), not code on the runtime. Ownership belongs to the dialectical engine. (ADR-009 invariant #1.)",
+    "The runtime SHALL NOT modify semantic intent: no prompt rewriting, no temperature adjustment, no hidden system prompts, no response interpretation. (ADR-009 invariant #2.)",
+    "The runtime is capability-advertised. RuntimeCapabilities { tokenCounting: Bool, streaming: Bool, logProbs: Bool, ... } is published by each conformer. Optional methods (estimateTokens, etc.) are best-effort. (ADR-009 invariant #4.)",
+    "Benchmark governance is a separate document (docs/architecture/benchmark-governance.md), referenced not defined in ADR-009. Canonical benchmarks are immutable. Provider comparisons MUST use canonical benchmark artifacts. (ADR-009 invariant #5; benchmark-governance.md.)",
+    "ClaudeCLIGenerator remains the reference implementation for the dialectical engine. Provider substitution does not relax the no-network-at-runtime principle; each non-local transport is its own opt-in surface and its own banner disclosure.",
+    "Provider-substitution equivalence is architectural, not behavioral. Characterize tradeoffs; do not require model output equality. (Keep-bar.)",
+    "Benchmark-001-grounding (docs/seeds/benchmarks/benchmark-001-grounding.txt) is the canonical cross-provider evaluation input. Committed on seed-003 / e1eb7f4; first-drafted on worldmodel/overnight-transform-ab. Cross-provider runs use identical input, identical prompt profile, identical interaction style; only runtime, model, and generation parameters may differ.",
+    "Runtime selection precedence: CLI flag (`--runtime <name>`) > environment variable (`NEURALCOMPOSE_RUNTIME=<name>`) > Claude (default). UI selection (e.g. an in-app picker) is a separate Sources/NeuralComposeApp/ change, out of scope for this branch."
+  ],
+  "rejected_decisions": [
+    "Per-provider Swift conformers (one DeepSeekGenerator, one MinimaxGenerator, ...). Rejected in favor of transport-level conformers with model-as-configuration; per-provider conformers duplicate the transport code for no benefit.",
+    "Mandatory tokenize() on the protocol. Rejected in favor of capability-advertised token counting (RuntimeCapabilities.tokenCounting) and best-effort estimateTokens() that returns nil when unsupported. The Claude CLI does not expose token counts; requiring it would force every Claude conformer to synthesize them.",
+    "PromptProfile as Swift structs in code. Rejected in favor of Markdown files under Sources/BCICloudBridge/Prompts/. The dialectical engine loads them at startup; a Swift struct could be regenerated from the Markdown if needed. (This decision is preliminary; if a future branch finds the loader cost prohibitive, a Swift-struct variant is a small reversible change.)",
+    "Burning an ADR number for benchmark governance. Rejected in favor of docs/architecture/benchmark-governance.md. ADR-009 references it; the policy lives there, decoupled from runtime architecture."
+  ],
+  "pending_questions": [
+    "What is the correct ergonomic for prompt loading at startup? (Once-per-process load, per-turn load, hot-reload in dev? — Implementation detail; default = once-per-process; revisit if observed cost is wrong.)",
+    "Does the generator fingerprint need to be signed for tamper-resistance in adversarial settings? (Out of scope for this branch; current shape is informational, not cryptographic.)",
+    "How are the multi-modal future runtimes (text-to-image, etc.) shaped? (Deferred; GenerationRuntime is a generation contract, not a language contract, so a future multimodal conformer is a runtime-not-protocol concern.)"
+  ],
+  "experiments": [
+    {
+      "id": "benchmark-001-cross-provider",
+      "input": "docs/seeds/benchmarks/benchmark-001-grounding.txt (3 lines, immutable)",
+      "runs": "profile in {focused, reflective, contemplative} x runtime in {claude-cli, ollama:deepseek-v4-flash:cloud, ollama:qwen2.5:3b} x seeds {0, 1, 2}",
+      "measures": ["outcome distribution", "mean tension", "latency", "cost (if measurable)", "mean_self_similarity (reflexive)", "witness_attempts / witness_turns (reflective only)"],
+      "keep_bar": "Claude reference behavior preserved; alternative providers characterized, not required to imitate. A null result (alternative provider regresses seed-002 numbers) is a valid, recorded outcome — not a failure."
+    }
+  ]
+}

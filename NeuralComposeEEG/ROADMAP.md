@@ -1,0 +1,51 @@
+# Research Program Gates
+
+## EXP-NC-EEG-ENC-001
+
+Current scope: a deterministic source contract, four-second canonical Muse
+windows, M0/M1, runnable M2/M3 EEGPT workers and mapping controls, and a
+checkpoint-pinned M4 BENDR convolutional encoder worker. The current local
+recordings do not yet satisfy the immutable source manifest: they lack the
+completed `encoder-pilot-v1` protocol log and a declared timestamp-clock
+origin. They remain historical engineering captures, not scientific source
+data, so no physical-data metric is reported.
+
+`nc-eeg-observable-protocol-v1` is frozen for the next acquisition cycle:
+fixed observable blocks, Unix-wall-clock cues, eight-second unlabeled gaps,
+pinned stimulus hashes, live four-channel Muse S only, and categorical
+transport rejection. The first compliant recording is an engineering capture;
+the second may run M0/M1 as pipeline evidence only. Qwen, Gemma, ARC policy,
+and all live model-driven behavior remain deferred until an encoder is chosen
+through the staged offline evidence gates below.
+
+The supporting [mathematics, physics, and methods
+scope](../docs/scoping/eeg-mathematics-physics-methods-scope.md) separates the
+linear-algebra, signal-processing, and evaluation foundations needed now from
+later electroquasistatic, sensor-fusion, optimization, and shadow-policy work.
+
+Gate to encoder confirmation: protocol-complete sessions on multiple days,
+then M0, M1, M2, M3, and eventually M4 on the same session-grouped folds.
+Any pretrained condition must beat its random initialization and mapping
+controls while preserving calibration and artifact rejection. The comparison
+ledger also proves all reports used the same dataset and exact grouped split;
+it remains `insufficient_evidence` for every pilot run. It also rejects reports
+without the shared fixed-compute configuration hash and retains runtime evidence
+separately from predictive outcomes. Core ML conversion is deferred until a
+compact candidate is selected by this offline evidence.
+
+## EXP-NC-ARC-XFER-001
+
+Deferred until the encoder experiment selects a *fixed* shadow-only state
+representation. Its inputs are structured temporal state records, not raw EEG.
+The eventual comparison is Q0 deterministic policy against matched Qwen
+adapters Q1 through Q6, including equal-token unrelated-curriculum and
+shuffled-ARC-target controls. It cannot begin by fine-tuning Qwen on these
+unvalidated waveform windows.
+
+## EXP-NC-CL-001
+
+Deferred until both the encoder and shadow policy have a held-out baseline.
+It will retain episodic evidence, cross-session semantic regularities, and an
+eligible policy-training buffer separately. The base model, EEG encoder, and
+deterministic safety controller remain frozen initially; only rollbackable
+offline adapters may change after replay and session-held-out evaluation.

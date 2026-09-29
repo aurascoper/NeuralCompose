@@ -106,6 +106,44 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         func log(_ event: DialecticalTurnEvent) async { events.append(event) }
     }
 
+    /// A metadata-publishing generator — the shape
+    /// `GenerationRuntimeTextGeneratingAdapter` has in production: a struct
+    /// whose callback lives in a shared class box, returning
+    /// role-distinguishable text and firing `onMetadata` with a fixed
+    /// identity after every call.
+    private struct PublishingSpyGenerator: MetadataPublishingTextGenerating {
+        private final class CallbackBox: @unchecked Sendable {
+            var callback: (@Sendable (GenerationMetadata) -> Void)?
+        }
+        nonisolated let isLive = false
+        nonisolated let modelIdentifier: String
+        private let stabilizer: String
+        private let dreamer: String
+        private let metadata: GenerationMetadata
+        private let box = CallbackBox()
+        var onMetadata: (@Sendable (GenerationMetadata) -> Void)? {
+            get { box.callback }
+            set { box.callback = newValue }
+        }
+        init(stabilizer: String, dreamer: String? = nil, metadata: GenerationMetadata) {
+            self.stabilizer = stabilizer
+            self.dreamer = dreamer ?? stabilizer
+            self.metadata = metadata
+            self.modelIdentifier = metadata.model
+        }
+        func generate(prompt: String, maxTokens: Int, temperature: Double,
+                      cancellationID: UUID) async throws -> String {
+            box.callback?(metadata)
+            return temperature >= 0.9 ? dreamer : stabilizer
+        }
+    }
+
+    private func spyMetadata(profile: String, hash: String) -> GenerationMetadata {
+        GenerationMetadata(runtime: "spy", transport: "spy", provider: "spy",
+                           model: "spy-model", promptHash: hash,
+                           promptProfile: profile, interactionStyle: "dialectical")
+    }
+
     private func fastConfig(maxSilence: Int = 3, witnessEnabled: Bool = false) -> HypnagogicDialecticLoop.Config {
         HypnagogicDialecticLoop.Config(listenTimeout: 0.01, interTurnDelayNanos: 1_000,
                                        maxConsecutiveSilence: maxSilence,
@@ -207,6 +245,87 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         let ev = events.first { $0.witnessAttempted == true }
         XCTAssertNotNil(ev, "witnessAttempted is true even when the call throws")
         XCTAssertNil(ev?.witnessFinding, "a failed witness produces no finding")
+    }
+
+    // MARK: - Witness fingerprint (per-turn Witness provenance)
+
+    func testPoleAndWitnessFingerprintsAreCapturedSeparately() async {
+        // The persisted turn must independently attest which runtime/prompt
+        // produced the Witness finding — not only the candidates'. The bug
+        // class this guards: a "Witness" adapter that reported one prompt
+        // while transmitting another. Distinct prompt hashes on the two
+        // fingerprints of the same event are the proof the wiring is per-role.
+        let embedder = MapEmbedder(dimension: 2, table: [
+            "the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1],
+            "WITNESS_FINDING": [0.7, 0.7],
+        ])
+        let listener = SpyListener(script: ["the sea"], loopLast: true)
+        let generator = PublishingSpyGenerator(
+            stabilizer: "calm sea", dreamer: "moon river",
+            metadata: spyMetadata(profile: "wakingDialectical", hash: "pole-hash"))
+        let witness = PublishingSpyGenerator(
+            stabilizer: "WITNESS_FINDING",
+            metadata: spyMetadata(profile: "witness", hash: "witness-hash"))
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.5 }, turnLogger: logger, witness: witness,
+            config: fastConfig(witnessEnabled: true))
+        await loop.attachMetadataCaptureFromAdapter()
+        await loop.start()
+        let ok = await poll {
+            let events = await logger.events
+            return events.contains { $0.witnessGeneratorFingerprint != nil }
+        }
+        await loop.stop()
+        XCTAssertTrue(ok, "a reflective turn must record the Witness fingerprint")
+
+        let events = await logger.events
+        let ev = events.first { $0.witnessGeneratorFingerprint != nil }
+        XCTAssertEqual(ev?.generatorFingerprint?.promptHash, "pole-hash")
+        XCTAssertEqual(ev?.witnessGeneratorFingerprint?.promptHash, "witness-hash")
+        XCTAssertNotEqual(
+            ev?.generatorFingerprint?.promptHash,
+            ev?.witnessGeneratorFingerprint?.promptHash,
+            "the Witness fingerprint must not attest the pole prompt")
+        XCTAssertEqual(ev?.witnessGeneratorFingerprint?.promptProfile, "witness")
+    }
+
+    func testWitnessFingerprintIsNilWhenWitnessDisabled() async {
+        // Focused/Contemplative: even with a publishing witness *injected*,
+        // a profile that disables it must not attest a Witness identity —
+        // the fingerprint records what generated, not what was available.
+        let embedder = MapEmbedder(
+            dimension: 2, table: ["the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1]])
+        let listener = SpyListener(script: ["the sea"], loopLast: true)
+        let generator = PublishingSpyGenerator(
+            stabilizer: "calm sea", dreamer: "moon river",
+            metadata: spyMetadata(profile: "wakingDialectical", hash: "pole-hash"))
+        let witness = PublishingSpyGenerator(
+            stabilizer: "SHOULD_NOT_FIRE",
+            metadata: spyMetadata(profile: "witness", hash: "witness-hash"))
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.5 }, turnLogger: logger, witness: witness,
+            config: fastConfig(witnessEnabled: false))
+        await loop.attachMetadataCaptureFromAdapter()
+        await loop.start()
+        let ok = await poll {
+            let events = await logger.events
+            return events.contains { $0.generatorFingerprint != nil }
+        }
+        await loop.stop()
+        XCTAssertTrue(ok, "the pole fingerprint must still be captured")
+
+        let events = await logger.events
+        let ev = events.first { $0.generatorFingerprint != nil }
+        XCTAssertEqual(ev?.generatorFingerprint?.promptHash, "pole-hash")
+        XCTAssertNil(
+            ev?.witnessGeneratorFingerprint,
+            "a turn on which the Witness never ran must not attest a Witness identity")
     }
 
     func testSelfSimilarityRisesWhenRepliesCollapse() async {

@@ -103,6 +103,44 @@ jobs:
         # covered socket-free by MuseOSCDecoderTests / MindMonitorDecoderTests,
         # which still run. Run the socket integration test locally.
 
+      # The step above names five targets. The package declares nine, and the
+      # app-level fail-closed, runtime-presentation, cancellation, and headless
+      # runtime-factory regressions live in two it never selected:
+      # NeuralComposeAppTests (116 tests) and DialecticSessionTests (5).
+      #
+      # Assert they are discoverable before running them. A `--filter` that
+      # matches nothing exits 0, so a renamed, moved, or emptied target would
+      # otherwise turn into another green step that ran nothing.
+      - name: Assert A2 suites are discoverable
+        run: |
+          swift test list > /tmp/neuralcompose-tests.txt
+
+          # Sentinel classes, one per target.
+          grep -q "AppViewModelRuntimeFailClosedTests" /tmp/neuralcompose-tests.txt \
+            || { echo "::error::AppViewModelRuntimeFailClosedTests not discoverable"; exit 1; }
+          grep -q "RuntimeFactoryClaudeResolutionTests" /tmp/neuralcompose-tests.txt \
+            || { echo "::error::RuntimeFactoryClaudeResolutionTests not discoverable"; exit 1; }
+
+          # Sentinels alone would still pass if the rest of a target vanished,
+          # so floor each target's discovered count too. Floors are set below
+          # the current 116/5 so ordinary test additions never trip them.
+          app=$(grep -c '^NeuralComposeAppTests\.' /tmp/neuralcompose-tests.txt)
+          session=$(grep -c '^DialecticSessionTests\.' /tmp/neuralcompose-tests.txt)
+          echo "discovered: NeuralComposeAppTests=$app DialecticSessionTests=$session"
+          [ "$app" -ge 100 ] \
+            || { echo "::error::NeuralComposeAppTests discovered $app, expected >= 100"; exit 1; }
+          [ "$session" -ge 5 ] \
+            || { echo "::error::DialecticSessionTests discovered $session, expected >= 5"; exit 1; }
+
+      # RuntimeIdentityPresentationTests is deliberately NOT asserted here: it
+      # arrives with PR #32. Add it as a third sentinel when that lands, so the
+      # guard stays true at every revision rather than failing on this base.
+      - name: Test (A2 app and session suites)
+        run: |
+          swift test \
+            --filter NeuralComposeAppTests \
+            --filter DialecticSessionTests
+
   # Tests/eval had no CI at all before this job. Seven modules, and only
   # test_adr_references.py ran (via the direct python3 step above) — the other
   # six executed nowhere, which is how three failing assertions and an
@@ -133,6 +171,15 @@ jobs:
           # contract depends on SciPy's exact/asymptotic behaviour. An
           # unconstrained install would let a major bump change a p-value
           # without any commit here.
+          #
+          # torch and the NeuralComposeEEG requirements come first because one
+          # module here, test_local_open_weight_review.py, imports that
+          # package's test helpers, and those import torch. The CPU wheel is
+          # named explicitly: the default Linux torch pulls a ~800MB CUDA build
+          # for a runner with no GPU. The bounded pins go last so they decide
+          # the numpy and scipy versions.
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install -r NeuralComposeEEG/requirements.txt
           pip install \
             'pytest>=8,<9' \
             'numpy>=2,<3' \
@@ -152,9 +199,9 @@ jobs:
           echo "discovered: Tests/eval=${collected:-0} collection_errors=${errors:-0}"
           [ "${errors:-0}" -eq 0 ] \
             || { echo "::error::${errors} module(s) failed to collect"; exit 1; }
-          # Floor sits below the current 63 so ordinary additions never trip it.
-          [ "${collected:-0}" -ge 55 ] \
-            || { echo "::error::Tests/eval collected ${collected:-0}, expected >= 55"; exit 1; }
+          # Floor sits below the current 137 so ordinary additions never trip it.
+          [ "${collected:-0}" -ge 125 ] \
+            || { echo "::error::Tests/eval collected ${collected:-0}, expected >= 125"; exit 1; }
 
       - name: Test (eval suites)
         run: |
@@ -163,21 +210,53 @@ jobs:
           python -m pytest Tests/eval -v \
             --ignore=Tests/eval/test_joint_embedding.py
 
-      # NeuralComposeEEG is not on main yet — it arrives with lane B. Absent is
-      # expected and must be said out loud; present-but-empty is a defect, since
-      # a package whose tests silently collect nothing is the failure this whole
-      # job exists to prevent.
-      - name: Assert NeuralComposeEEG is absent or non-vacuous
+  # NeuralComposeEEG had no CI at all until this job, which is how a test
+  # importing an uncommitted module (neuralcompose_eeg.structured_state) reached
+  # a pull request unnoticed: build-and-test above is Swift-only.
+  #
+  # Linux, not macOS: nothing here is platform-specific, and the runner is both
+  # cheaper and faster.
+  #
+  # This job covers NeuralComposeEEG only. Tests/eval runs in python-eval above,
+  # which bounds the numpy and scipy majors its assertions depend on. Running
+  # it here too would test it twice, the second time in an unbounded
+  # environment.
+  python-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: NeuralComposeEEG/requirements.txt
+
+      - name: Install Python dependencies
         run: |
-          if [ ! -d NeuralComposeEEG ]; then
-            echo "NeuralComposeEEG/ absent on this branch — expected until lane B integrates it"
-            exit 0
-          fi
-          echo "NeuralComposeEEG/ present — its suite must not be vacuous"
+          # CPU wheel explicitly: the default Linux torch pulls a ~800MB CUDA
+          # build for a runner with no GPU. Installed first so the pinned
+          # requirements below see torch>=2.0 as already satisfied.
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install -r NeuralComposeEEG/requirements.txt
+          # pytest is here to count what is collectable, for the guard below.
+          pip install 'pytest>=8,<9'
+
+      # A package whose tests silently collect nothing is the failure this
+      # job exists to prevent, so count before running.
+      - name: Assert NeuralComposeEEG is non-vacuous
+        run: |
           n=$(PYTHONPATH=NeuralComposeEEG/src python -m pytest NeuralComposeEEG/tests \
                 --collect-only -q 2>/dev/null \
                 | grep -oE '^[0-9]+ tests? collected' | grep -oE '^[0-9]+' | head -1)
           echo "discovered: NeuralComposeEEG=${n:-0}"
           [ "${n:-0}" -gt 0 ] \
-            || { echo "::error::NeuralComposeEEG/ is present but collected 0 tests"; exit 1; }
-          PYTHONPATH=NeuralComposeEEG/src python -m pytest NeuralComposeEEG/tests -v
+            || { echo "::error::NeuralComposeEEG/ collected 0 tests"; exit 1; }
+
+      # Offline scientific package: canonical dataset contracts, capture
+      # manifests, and the structured-state shadow bridge. Discovered rather
+      # than enumerated so new contract suites are picked up automatically.
+      - name: Test (NeuralComposeEEG contracts)
+        run: |
+          PYTHONPATH=NeuralComposeEEG/src \
+            python -m unittest discover -s NeuralComposeEEG/tests -t . --verbose

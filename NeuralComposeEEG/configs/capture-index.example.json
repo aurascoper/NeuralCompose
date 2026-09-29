@@ -1,0 +1,30 @@
+{
+  "schema_version": "nc-eeg-capture-index-v1",
+  "dataset_id": "muse-observable-state-pilot",
+  "sessions": [
+    {
+      "participant_id": "P001",
+      "session_id": "calibration_YYYY-MM-DDTHHMMSS_muses",
+      "recording_date": "YYYY-MM-DD",
+      "recording_directory": "../../../../Documents/NeuralCompose/Recordings/calibration_YYYY-MM-DDTHHMMSS_muses",
+      "protocol_log": "../../../../Documents/NeuralCompose/Recordings/protocol-YYYYMMDD-HHMMSS.json",
+      "device_profile": "muse_s_native_ble",
+      "headset_fit_id": "fit-YYYYMMDD-001",
+      "protocol_preset": "encoder-pilot-v1",
+      "operator_notes": "",
+      "eligible_override": false
+    },
+    {
+      "participant_id": "P001",
+      "session_id": "calibration_YYYY-MM-DDTHHMMSS_muses",
+      "recording_date": "YYYY-MM-DD",
+      "recording_directory": "../../../../Documents/NeuralCompose/Recordings/calibration_YYYY-MM-DDTHHMMSS_muses",
+      "protocol_log": "../../../../Documents/NeuralCompose/Recordings/protocol-YYYYMMDD-HHMMSS.json",
+      "device_profile": "muse_s_native_ble",
+      "headset_fit_id": "fit-YYYYMMDD-002",
+      "protocol_preset": "encoder-pilot-v1",
+      "operator_notes": "",
+      "eligible_override": false
+    }
+  ]
+}

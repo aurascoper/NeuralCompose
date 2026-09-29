@@ -54,6 +54,12 @@ final class SpokenGenerationLoopTests: XCTestCase {
         func log(_ event: SpokenGenerationTraceEvent) async { events.append(event) }
     }
 
+    /// Accumulates every requested prosody vector the loop emits.
+    private actor SpyProsodyTraceLogger: ProsodyTraceLogging {
+        private(set) var events: [ProsodyTraceEvent] = []
+        func log(_ event: ProsodyTraceEvent) async { events.append(event) }
+    }
+
     private func fastConfig(useDialectic: Bool = false) -> SpokenGenerationLoop.Config {
         // ~1µs inter-utterance delay keeps the loop hot so tests observe cycles
         // quickly; production defaults to seconds.
@@ -160,6 +166,49 @@ final class SpokenGenerationLoopTests: XCTestCase {
                        "generated text (the 'what came out' half) must be captured")
         XCTAssertTrue(first.spoke, "a non-empty utterance must record spoke=true")
         XCTAssertNil(first.error, "a clean cycle must record no error")
+    }
+
+    func testProsodyTraceRecordsRequestedCadencePerPhrase() async {
+        let generator = SpyGenerator(
+            response: "Maybe this could work. This must clearly land.")
+        let speaker = SpySpeaker()
+        let prosodyTracer = SpyProsodyTraceLogger()
+        let adaptation = GenerationAdaptation(
+            maxCandidates: 3, temperature: 0.37, styleInstruction: "")
+        let loop = SpokenGenerationLoop(
+            generator: generator,
+            speaker: speaker,
+            adaptationProvider: { adaptation },
+            config: fastConfig(),
+            prosodyTracer: prosodyTracer
+        )
+
+        await loop.start()
+        _ = await poll { await prosodyTracer.events.count >= 2 }
+        await loop.stop()
+
+        let events = await prosodyTracer.events
+        XCTAssertGreaterThanOrEqual(events.count, 2)
+        XCTAssertEqual(events[0].schemaVersion, ProsodyTraceEvent.currentSchemaVersion)
+        XCTAssertEqual(events[0].sourceKind, "spoken-generation-requested-prosody")
+        XCTAssertEqual(events[0].index, 0)
+        XCTAssertEqual(events[1].index, 1)
+        XCTAssertEqual(events[0].utteranceText, "Maybe this could work.")
+        XCTAssertEqual(events[1].utteranceText, "This must clearly land.")
+        XCTAssertEqual(events[0].voiceIdentifier, "spy-voice")
+        XCTAssertEqual(events[0].synthesizerIdentifier, "stub")
+        XCTAssertNil(events[0].predicted, "no learned cadence model has run yet")
+        XCTAssertNil(events[0].measured, "requested-control trace is not acoustic measurement")
+        XCTAssertEqual(events[0].dialogueState["cycle_index"] ?? -1, 0, accuracy: 0.0001)
+        XCTAssertEqual(events[0].dialogueState["phrase_index"] ?? -1, 0, accuracy: 0.0001)
+        XCTAssertEqual(events[0].dialogueState["temperature"] ?? -1, 0.37, accuracy: 0.0001)
+        XCTAssertEqual(events[0].requested?.cadenceClass, "hedged")
+        XCTAssertEqual(events[1].requested?.cadenceClass, "committed")
+        XCTAssertLessThan(events[0].requested?.speechRate ?? 1,
+                          events[1].requested?.speechRate ?? 0,
+                          "hedged phrase should request a slower cadence")
+        XCTAssertGreaterThan(events[0].requested?.hesitation ?? 0, 0)
+        XCTAssertGreaterThan(events[1].requested?.emphasis ?? 0, 0)
     }
 
     func testTraceExposesStarvedSignatureIdenticalInputOutput() async {

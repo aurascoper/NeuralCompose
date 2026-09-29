@@ -14,9 +14,13 @@ plus per-category breakdowns and failure rates.
 import json
 import math
 import statistics
+import sys
 from pathlib import Path
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent))
+from eval_stats import cohens_d
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -37,38 +41,6 @@ def bootstrap_ci(data, confidence=0.95, n_boot=10000):
     lo = float(np.percentile(boot_means, alpha * 100))
     hi = float(np.percentile(boot_means, (1 - alpha) * 100))
     return (lo, hi)
-
-
-def cohens_d(a, b):
-    """Cohen's d effect size (pooled SD)."""
-    a, b = np.array(a, dtype=float), np.array(b, dtype=float)
-    if len(a) < 2 or len(b) < 2:
-        return float("nan")
-    # Degrees-of-freedom-weighted pooled variance. The unweighted
-    # (var_a + var_b) / 2 form coincides with this only when the groups are the
-    # same size, and this function accepts arbitrary lengths — so every
-    # unequal-n caller was dividing by the wrong denominator.
-    n_a, n_b = len(a), len(b)
-    pooled_variance = (
-        (n_a - 1) * a.var(ddof=1) + (n_b - 1) * b.var(ddof=1)
-    ) / (n_a + n_b - 2)
-    pooled_std = math.sqrt(pooled_variance)
-    mean_difference = a.mean() - b.mean()
-    if pooled_std == 0:
-        # PROJECT POLICY, not a universal definition. With both samples constant
-        # the denominator is zero and Cohen's d is strictly undefined. We report
-        # the limiting value — signed infinity — because 0.0 claimed "no effect"
-        # for the most extreme separation representable, and nan would discard
-        # the direction. Identical constants are the one genuinely zero case.
-        #
-        # Callers that PERSIST this must convert at the boundary: JSON has no
-        # Infinity literal (`json.dumps` emits a bare `Infinity`, which strict
-        # parsers reject) and CSV has no convention at all. Decide on a
-        # representation before writing it, rather than assuming the reader copes.
-        if mean_difference == 0:
-            return 0.0
-        return float("inf") if mean_difference > 0 else float("-inf")
-    return float(mean_difference / pooled_std)
 
 
 def safe_mean(values):
