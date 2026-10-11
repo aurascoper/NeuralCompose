@@ -15,4 +15,5 @@ public enum BCILog {
     public static let spectral   = Logger(subsystem: subsystem, category: "spectral")
     public static let telemetry  = Logger(subsystem: subsystem, category: "telemetry")
     public static let worldModelDemo = Logger(subsystem: subsystem, category: "worldModelDemo")
+    public static let peerBridge = Logger(subsystem: subsystem, category: "peerBridge")
 }

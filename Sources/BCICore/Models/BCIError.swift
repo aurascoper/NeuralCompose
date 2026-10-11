@@ -48,6 +48,9 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
     case worldModelDemoInferenceFailed(reason: String)
     case worldModelDemoOutputShapeUnexpected(expected: String, actual: String)
 
+    // Peer bridge (two-machine hypnagogic dialectic bridge, decision_registry.md entry 9)
+    case peerConnectionFailed(reason: String)
+
     // App-level
     case cancelled
 
@@ -107,6 +110,8 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
             return "World Model demo Core ML inference failed: \(reason)"
         case .worldModelDemoOutputShapeUnexpected(let expected, let actual):
             return "World Model demo Core ML output shape mismatch — expected \(expected), got \(actual)"
+        case .peerConnectionFailed(let reason):
+            return "Peer bridge connection failed: \(reason)"
         case .cancelled:
             return "Cancelled"
         }

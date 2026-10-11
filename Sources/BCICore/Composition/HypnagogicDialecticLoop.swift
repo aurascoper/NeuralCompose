@@ -20,10 +20,14 @@ import os
 ///
 /// Honest scope (identical to `HypnagogicDialogueLoop`): MANUAL trigger only,
 /// NOT wired to any sleep-stage detector; the generator MAY be a cloud model
-/// (the sole runtime network exception) — and note this loop makes **two**
-/// `generate()` calls per turn, one per role. Pure orchestration over injected
-/// seams; it links no AVFoundation/MLX/CLI itself. Mic and speaker alternate
-/// strictly, so the mic is never hot during playback.
+/// (one of two runtime network exceptions; `decision_registry.md` entry 8) —
+/// and note this loop makes **two** `generate()` calls per turn, one per
+/// role. Pure orchestration over injected seams; it links no
+/// AVFoundation/MLX/CLI itself. With the default mic listener and speaker,
+/// they alternate strictly, so the mic is never hot during playback. The
+/// same listener/speaker seam is also where the opt-in two-machine peer
+/// bridge plugs in (entry 9, `BCIPeerBridge`), with no change to this
+/// control flow.
 public actor HypnagogicDialecticLoop {
 
     public struct Config: Sendable {

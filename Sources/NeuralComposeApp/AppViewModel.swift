@@ -7,6 +7,7 @@ import BCIClassifier
 import BCILLM
 import BCIVoice
 import BCICloudBridge
+import BCIPeerBridge
 
 public struct CalibrationMetrics: Sendable {
     public let channelCount: Int
@@ -924,25 +925,66 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
-    /// Built lazily on first enable. Constructs the on-device mic listener and
+    /// Dials the configured two-machine bridge peer (`decision_registry.md`
+    /// entry 9) and, as the dialer, sends the fixed seed utterance once
+    /// before the loop starts listening. Returns `nil` on any failure —
+    /// logged, never thrown — so a bad bridge config degrades the same way a
+    /// denied mic authorization does, rather than crashing the loop.
+    private func connectPeerBridge(
+        _ config: PeerBridgeConfiguration
+    ) async -> (any HypnagogicListening, any SpeechSynthesizing)? {
+        let bridge = PeerBridgeConnection(
+            peerHost: config.peerHost, peerPort: config.peerPort, session: config.session)
+        do {
+            try await bridge.connect()
+            if let seed = config.seedText {
+                try await bridge.send(text: seed)
+            }
+        } catch {
+            BCILog.peerBridge.error(
+                "peer bridge connect to \(config.peerHost, privacy: .public):\(config.peerPort, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+        BCILog.peerBridge.notice(
+            "hypnagogic peer bridge connected — session=\(config.session, privacy: .public) peer=\(config.peerHost, privacy: .public):\(config.peerPort, privacy: .public)")
+        return (TCPPeerListener(bridge: bridge), TCPPeerSpeaker(bridge: bridge))
+    }
+
+    /// Built lazily on first enable. Constructs the listener/speaker pair and
     /// configured reference generator HERE (not in AppContainer), so this path
-    /// exists only after explicit opt-in. Requests mic + speech authorization
-    /// first; if denied, flips the toggle back off.
+    /// exists only after explicit opt-in. For the default mic path, requests
+    /// mic + speech authorization first and flips the toggle back off if
+    /// denied; for the peer-bridge path (entry 9), see `connectPeerBridge`.
     private func ensureHypnagogicLoopRunning() async {
         // Already running the requested mode? Nothing to do. A change tears the
         // old loop down first.
         if hypnagogicLoop != nil, hypnagogicLoopBuilt == hypnagogicMode { return }
         await ensureHypnagogicLoopStopped()
 
-        let listener = HypnagogicListener()
-        let granted = await listener.requestAuthorization()
-        guard granted else {
-            hypnagogicLoopEnabled = false   // @MainActor: safe to set directly
-            return
+        let listener: any HypnagogicListening
+        let speaker: any SpeechSynthesizing
+        if let bridgeConfig = PeerBridgeConfiguration.resolve(environment: launchEnvironment) {
+            // Two-machine dialectic bridge (decision_registry.md entry 9):
+            // swap the mic/speaker pair for a TCP peer connection. No mic
+            // authorization to request — see `connectPeerBridge`.
+            guard let bridgePair = await connectPeerBridge(bridgeConfig) else {
+                hypnagogicLoopEnabled = false
+                return
+            }
+            (listener, speaker) = bridgePair
+        } else {
+            let micListener = HypnagogicListener()
+            let granted = await micListener.requestAuthorization()
+            guard granted else {
+                hypnagogicLoopEnabled = false   // @MainActor: safe to set directly
+                return
+            }
+            // Re-check the toggle: authorization awaited, so the user may have
+            // turned it back off in the meantime.
+            guard hypnagogicLoopEnabled else { return }
+            listener = micListener
+            speaker = voiceOutput
         }
-        // Re-check the toggle: authorization awaited, so the user may have
-        // turned it back off in the meantime.
-        guard hypnagogicLoopEnabled else { return }
 
         let runtimeConfiguration = resolvedHypnagogicRuntimeConfiguration
         do {
@@ -973,7 +1015,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 loop = HypnagogicDialecticLoop(
                     listener: listener,
                     generator: dialecticResolved.generator,
-                    speaker: voiceOutput,
+                    speaker: speaker,
                     embedder: container.sentenceEmbedder,
                     roles: DialecticalRole.wakingRoles,
                     tuning: profile.tuning,
@@ -998,7 +1040,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 loop = HypnagogicDialogueLoop(
                     listener: listener,
                     generator: mirrorResolved.generator,
-                    speaker: voiceOutput
+                    speaker: speaker
                 )
                 diagnostics = HypnagogicRuntimeDiagnostics(
                     configuration: runtimeConfiguration,
