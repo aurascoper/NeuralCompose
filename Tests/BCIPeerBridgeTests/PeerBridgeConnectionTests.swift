@@ -94,10 +94,11 @@ final class PeerBridgeConnectionTests: XCTestCase {
     /// check: the Mac dials, sends the seed with `in_reply_to: nil`, hears a
     /// peer reply, and its next outgoing line answers that reply's `seq` —
     /// the exact `BridgeState` bookkeeping the GPD-side Rust session
-    /// implemented independently. `speak()` only buffers (see
-    /// `appendSpokenChunk`), so each send is driven through `listen()`,
-    /// exactly as `HypnagogicDialecticLoop.run()` does — `speak()` then
-    /// `listen()`, never `speak()` alone.
+    /// implemented independently. The seed is sent directly via `send(text:)`,
+    /// bypassing `speak()`/the chunk buffer — exactly how
+    /// `AppViewModel.connectPeerBridge` primes a real run (the Mac is always
+    /// the dialer). Everything after that goes through `speak()` then
+    /// `listen()`, never `speak()` alone, since `listen()` is what flushes.
     func testSeedThenTurnRoundTrip() async throws {
         let peer = FakePeer()
         let (listener, port) = try await startLoopbackListener { connection in
@@ -109,10 +110,7 @@ final class PeerBridgeConnectionTests: XCTestCase {
         let macListener = TCPPeerListener(bridge: bridge)
         let macSpeaker = TCPPeerSpeaker(bridge: bridge)
 
-        try await macSpeaker.speak("seed utterance")
-        // Nothing has arrived from the peer yet, so this call's own wait
-        // times out quickly — its real job is the flush at its start.
-        _ = try await macListener.listen(timeout: 0.2)
+        try await bridge.send(text: "seed utterance")
         try await waitUntil(timeout: 2) { await peer.receivedLines.count == 1 }
         var lines = await peer.receivedLines
         XCTAssertEqual(lines[0].seq, 1)
@@ -121,6 +119,9 @@ final class PeerBridgeConnectionTests: XCTestCase {
         XCTAssertEqual(lines[0].text, "seed utterance")
 
         try await peer.reply(seq: 7, text: "peer reply", inReplyTo: 1)
+        // The FIRST listen() call: its flush is the one exempt call (no
+        // prior turn to report — the seed above bypassed the buffer), so
+        // this only waits for the peer's line, it sends nothing.
         let heard = try await macListener.listen(timeout: 2)
         XCTAssertEqual(heard, "peer reply")
 
@@ -222,5 +223,51 @@ final class PeerBridgeConnectionTests: XCTestCase {
         XCTAssertEqual(lines.count, 1, "a multi-sentence reply must reach the wire as exactly one line per turn")
         XCTAssertEqual(lines.first?.text, replyText)
         XCTAssertEqual(lines.first?.seq, 1)
+    }
+
+    // MARK: - Silent-turn deadlock regression
+
+    /// A silent turn — `candidateTexts.isEmpty` at
+    /// `HypnagogicDialecticLoop.swift:323-324` (both role generators return
+    /// empty text), routing into `logSilentTurn` (`:477-505`), which calls
+    /// `speaker.speak` ZERO times unless `consecutiveSilence` has already
+    /// reached `config.maxConsecutiveSilence` (set absurdly high below so
+    /// that branch can't fire and contaminate this test with a spoken cue).
+    /// Before the fix, `flushPendingSpeech` only sent when the buffer was
+    /// non-empty, so this turn would flush nothing: the Mac's next
+    /// `listen()` would then block waiting for the peer's reply to a line
+    /// that was never sent — and the peer, waiting on exactly that line
+    /// before it speaks its own next turn, blocks too. Both sides deadlock.
+    /// This is precisely what Arm A's repetition-floor/drift-ceiling guard
+    /// produces on its first intervention, not an edge case.
+    func testSilentTurnStillEmitsOneEmptyLine() async throws {
+        let peer = FakePeer()
+        let (listener, port) = try await startLoopbackListener { connection in
+            Task { await peer.accept(connection) }
+        }
+        let bridge = PeerBridgeConnection(peerHost: "127.0.0.1", peerPort: port, session: "test-session")
+        try await bridge.connect()
+
+        let loop = HypnagogicDialecticLoop(
+            listener: TCPPeerListener(bridge: bridge),
+            generator: FixedTextGenerator(text: ""),   // empty from both roles -> candidateTexts.isEmpty -> logSilentTurn
+            speaker: TCPPeerSpeaker(bridge: bridge),
+            embedder: UnitSentenceEmbedder(),
+            config: .init(listenTimeout: 1, interTurnDelayNanos: 10_000_000, maxConsecutiveSilence: 1_000_000)
+        )
+
+        try await peer.reply(seq: 1, text: "seed utterance", inReplyTo: nil)
+
+        await loop.start()
+        try await waitUntil(timeout: 2) { await peer.receivedLines.count >= 1 }
+        try await Task.sleep(nanoseconds: 300_000_000)
+        await loop.stop()
+        listener.cancel()
+
+        let lines = await peer.receivedLines
+        XCTAssertEqual(lines.count, 1, "a silent turn must still emit exactly one wire line, not zero")
+        XCTAssertEqual(lines.first?.text, "", "a silent turn's line must carry empty text")
+        XCTAssertEqual(lines.first?.seq, 1)
+        XCTAssertEqual(lines.first?.inReplyTo, 1)
     }
 }

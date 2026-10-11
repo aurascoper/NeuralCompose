@@ -33,6 +33,21 @@ public actor PeerBridgeConnection {
     /// "turn," never "chunk" (a chunked turn would otherwise desync the
     /// GPD side's own one-line-per-turn bookkeeping).
     private var pendingSpeechChunks: [String] = []
+    /// False until `flushPendingSpeech()` has run once. Protocol invariant:
+    /// every turn emits exactly one wire line, including a silent one
+    /// (`text: ""`) — `HypnagogicDialecticLoop.runTurn` calls `logSilentTurn`
+    /// with NO `speaker.speak()` call at all when both role generators
+    /// return empty text or the competition resolves to `.silent`
+    /// (`HypnagogicDialecticLoop.swift:323-324, 458-459`). Without this,
+    /// a silent turn would flush nothing, and the next `listen()` would
+    /// block waiting for a peer that is itself waiting on this side's
+    /// line — both sides deadlocked, which Arm A's guard produces by
+    /// design on its first intervention. The one call that must NOT send
+    /// is the very first flush (there is no prior turn to report — the
+    /// seed line is sent directly via `send(text:)`, bypassing the
+    /// buffer); every flush after that sends unconditionally, joined
+    /// buffer or empty string.
+    private var hasFlushedBefore = false
 
     public init(peerHost: String, peerPort: UInt16, session: String) {
         self.session = session
@@ -167,12 +182,17 @@ public actor PeerBridgeConnection {
     /// original inter-chunk whitespace isn't recoverable; a single space is
     /// the closest reconstruction and never affects token-set measures like
     /// the GPD side's Jaccard repetition check), then clears the buffer.
-    /// A no-op when nothing is pending. Called by `TCPPeerListener` right
+    /// Sends `text: ""` when the buffer is empty — see `hasFlushedBefore`'s
+    /// doc comment for why a silent turn still has to emit a line, and why
+    /// only the very first call is exempt. Called by `TCPPeerListener` right
     /// before it waits for the next peer line, and on `cancel()`, so a
-    /// turn's reply always reaches the wire before this side either listens
-    /// again or tears the connection down.
+    /// turn's outcome (spoken or silent) always reaches the wire before
+    /// this side either listens again or tears the connection down.
     public func flushPendingSpeech() async throws {
-        guard !pendingSpeechChunks.isEmpty else { return }
+        guard hasFlushedBefore else {
+            hasFlushedBefore = true
+            return
+        }
         let text = pendingSpeechChunks.joined(separator: " ")
         pendingSpeechChunks.removeAll()
         try await send(text: text)
