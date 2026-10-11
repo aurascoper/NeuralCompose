@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Experimental, opt-in **dialectic** sibling of `HypnagogicDialogueLoop`.
 /// Where that loop collapses each turn into one mirror reply, this one runs a
@@ -76,6 +77,34 @@ public actor HypnagogicDialecticLoop {
     /// `TextGenerating` with a relaxed system prompt (`witnessSystemPrompt`). nil ⇒
     /// no witness pass. Its output is never voiced and never fed to the poles.
     private let witness: (any TextGenerating)?
+
+    /// Latest `GenerationMetadata` from the generator, if it came from a
+    /// `MetadataPublishingTextGenerating` (today:
+    /// `GenerationRuntimeTextGeneratingAdapter` in `BCICloudBridge`; in
+    /// the future: any conformer of the refinement protocol). Captured
+    /// via the adapter's `onMetadata` callback; read by `runTurn` to
+    /// populate the recorded `generatorFingerprint`. `nil` when the
+    /// generator is the legacy `TextGenerating` conformers (no metadata)
+    /// or the adapter's callback hasn't fired yet (very first turn
+    /// before any generator call).
+    ///
+    /// **Race avoidance:** the box is a `Sendable` class with a lock,
+    /// not an actor-isolated property, because the adapter's callback
+    /// is called synchronously on the same task that invoked
+    /// `generator.generate(...)` — which is on this loop's actor.
+    /// An actor-isolated `var` would require `await` from the callback
+    /// to write (via `Task { await self.recordGeneratorMetadata(...) }`),
+    /// and the `Task` would be scheduled *after* `runTurn` reads the
+    /// property, losing the metadata for that turn. The class box
+    /// keeps the read/write synchronous.
+    private let latestMetadata = MetadataBox()
+    /// The Witness's own metadata box, parallel to `latestMetadata` and never
+    /// shared with it: `latestMetadata` is documented as the generator that
+    /// produced the *candidates*, and filing the Witness's metadata there
+    /// would make the last writer win — a turn record attesting the pole
+    /// prompt for the Witness, which is the exact confusion the Witness
+    /// fingerprint exists to make impossible.
+    private let latestWitnessMetadata = MetadataBox()
     private let speaker: any SpeechSynthesizing
     private let embedder: any SentenceEmbedder
     private let roles: [DialecticalRole]
@@ -146,6 +175,68 @@ public actor HypnagogicDialecticLoop {
                                       inertia: tuning.fieldInertia, wind: tuning.glossWind)
     }
 
+    /// Records the latest `GenerationMetadata` from the adapter-wrapped
+    /// generator. The adapter calls this from its `onMetadata` callback.
+    /// The call is synchronous so the metadata is visible to the
+    /// subsequent `runTurn` read of `latestMetadata` — the callback
+    /// runs on the same task that called `generator.generate(...)`,
+    /// which is on the loop's actor, so there is no inter-task gap.
+    /// Idempotent — repeat calls just overwrite.
+    ///
+    /// `nonisolated` because the body only mutates the
+    /// `latestMetadata` box (which has its own lock); no actor
+    /// state is touched. This lets the `@Sendable` callback call
+    /// us directly without a `Task` hop.
+    public nonisolated func recordGeneratorMetadata(_ metadata: GenerationMetadata) {
+        latestMetadata.set(metadata)
+    }
+
+    /// The Witness-side sibling of `recordGeneratorMetadata`, writing to the
+    /// Witness's own box. Same synchrony argument, same `nonisolated`
+    /// rationale; only the destination differs.
+    public nonisolated func recordWitnessMetadata(_ metadata: GenerationMetadata) {
+        latestWitnessMetadata.set(metadata)
+    }
+
+    /// Convenience: if the passed-in `generator` is a
+    /// `MetadataPublishingTextGenerating` (today: any runtime wrapped
+    /// by `GenerationRuntimeTextGeneratingAdapter` in `BCICloudBridge`;
+    /// in the future: any conformer of the refinement protocol),
+    /// wires its `onMetadata` callback to this loop's
+    /// `recordGeneratorMetadata`. No-op for legacy `TextGenerating`
+    /// conformers (e.g. the pre-runtime-abstraction `ClaudeCLIGenerator`).
+    /// Callers that already know they have a publishing generator
+    /// can call this directly; others can rely on the fact that
+    /// the call is a no-op for legacy generators.
+    ///
+    /// **Why this works despite the existential-box problem:**
+    /// `GenerationRuntimeTextGeneratingAdapter` stores its
+    /// `onMetadata` callback in a class-typed `MetadataCallbackBox`.
+    /// The box is shared across all copies of the struct, so
+    /// mutating `publisher.onMetadata` (even on a local `var`
+    /// cast from the existential) writes to the same box that
+    /// the loop's stored copy will read on the next
+    /// `generate(...)` call. The cast is local-only; the box
+    /// is global. This pattern is the standard fix for "set a
+    /// callback on a struct-typed existential."
+    public func attachMetadataCaptureFromAdapter() {
+        if var publisher = generator as? any MetadataPublishingTextGenerating {
+            publisher.onMetadata = { [weak self] metadata in
+                self?.recordGeneratorMetadata(metadata)
+            }
+        }
+        // The Witness gets its own callback into its own box. This relies on
+        // the Witness being a DISTINCT adapter instance from the pole
+        // generator — which the factory guarantees, since each role resolves
+        // its own runtime; wiring one shared instance here would overwrite
+        // the pole callback (each adapter holds a single callback box).
+        if var publisher = witness as? any MetadataPublishingTextGenerating {
+            publisher.onMetadata = { [weak self] metadata in
+                self?.recordWitnessMetadata(metadata)
+            }
+        }
+    }
+
     /// Starts the loop if not already running. Idempotent.
     public func start() {
         guard loopTask == nil else { return }
@@ -208,7 +299,23 @@ public actor HypnagogicDialecticLoop {
             let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             if !text.isEmpty { candidateTexts.append((role.id, text)) }
         }
-        guard !candidateTexts.isEmpty else { return }  // both generators empty — skip, no state change
+        // RVS-001 fix: when both voices return empty text (e.g. a
+        // cloud-routed model that uses all `num_predict` tokens on
+        // its `thinking` and produces no `response`), the previous
+        // behavior was to return early without advancing
+        // `turnIndex`, which deadlocked the loop's progress check
+        // (`while await loop.turnIndex < heardLines.count`) until
+        // the 90s watchdog killed the harness. The harness then
+        // reported "0/N turns run" with no telemetry explaining
+        // why. The new behavior: log a `.silent` turn with no
+        // candidates, let `turnIndex` advance, and let the silence
+        // counter drive the cue cadence. A persistently-silent run
+        // is now visible in the rollup as N `silent` outcomes, not
+        // as a hang.
+        guard !candidateTexts.isEmpty else {
+            await logSilentTurn(heard: heard)
+            return
+        }
 
         // 2. Embed heard + every candidate in one batch.
         try Task.checkCancellation()
@@ -314,7 +421,13 @@ public actor HypnagogicDialecticLoop {
             margin: result.margin, selectionTemperature: result.selectionTemperature,
             outcome: result.outcome, glossScalar: gloss.value, spectralState: state,
             witnessFinding: witnessFinding, witnessDistance: witnessDistance,
-            selfSimilarity: selfSimilarity, witnessAttempted: witnessAttempted
+            selfSimilarity: selfSimilarity, witnessAttempted: witnessAttempted,
+            generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init),
+            // Gated on the attempt: a turn on which the Witness never ran must
+            // not attest a Witness identity, however recent the box contents.
+            witnessGeneratorFingerprint: witnessAttempted
+                ? latestWitnessMetadata.get().flatMap(GeneratorFingerprint.init)
+                : nil
         )
         await turnLogger.log(DialecticalTurnEvent(record))
 
@@ -346,6 +459,43 @@ public actor HypnagogicDialecticLoop {
                 consecutiveSilence = 0
                 try await speakChunks(nextSilenceCue(), prosody: config.prosody)
             }
+        }
+        lastTurnAt = Date()
+        turnIndex += 1
+    }
+
+    /// RVS-001: log a `.silent` turn when both voice generators
+    /// returned empty text. This is the only state change for a
+    /// silent turn: the rollup records `outcome: "silent"` and
+    /// `turnIndex` advances so the loop's progress check sees the
+    /// turn as completed. The 90s watchdog no longer fires for
+    /// these runs.
+    private func logSilentTurn(heard: String) async {
+        let competition = DialecticalCompetition(
+            index: turnIndex,
+            heard: heard,
+            scored: [],
+            tension: 0,
+            margin: 0,
+            selectionTemperature: 0,
+            outcome: .silent,
+            glossScalar: 0.5,
+            spectralState: nil,
+            witnessFinding: nil,
+            witnessDistance: nil,
+            selfSimilarity: nil,
+            witnessAttempted: config.witnessEnabled && witness != nil,
+            generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init),
+            // A candidate-less turn never reaches the Witness call, so there
+            // is no Witness generation to attest — regardless of the box.
+            witnessGeneratorFingerprint: nil
+        )
+        let event = DialecticalTurnEvent(competition)
+        await turnLogger.log(event)
+        consecutiveSilence += 1
+        if consecutiveSilence >= config.maxConsecutiveSilence {
+            consecutiveSilence = 0
+            try? await speakChunks(nextSilenceCue(), prosody: config.prosody)
         }
         lastTurnAt = Date()
         turnIndex += 1
@@ -456,5 +606,27 @@ public struct SpokenNodeEvent: Sendable, Equatable {
         self.embedding = embedding
         self.word = word
         self.turnIndex = turnIndex
+    }
+}
+
+// MARK: - Metadata capture box
+
+/// Sendable, lock-protected box for the latest `GenerationMetadata`
+/// from the generator's adapter. Used by the dialectic loop to
+/// capture provenance without crossing actor boundaries (the
+/// adapter's `onMetadata` callback is synchronous, the loop reads
+/// the box synchronously on the same task, so the metadata is
+/// visible to the same turn that produced it). `@unchecked Sendable`
+/// because the lock makes the read/write pair safe; the compiler
+/// can't prove this from the `var` alone.
+private final class MetadataBox: @unchecked Sendable {
+    private let lock = OSAllocatedUnfairLock<GenerationMetadata?>(initialState: Optional<GenerationMetadata>.none)
+
+    func set(_ metadata: GenerationMetadata) {
+        lock.withLock { $0 = metadata }
+    }
+
+    func get() -> GenerationMetadata? {
+        lock.withLock { $0 }
     }
 }

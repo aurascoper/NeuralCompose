@@ -127,6 +127,8 @@ alongside the app, not inside it.
 - `Sources/NeuralComposeApp/PrivacyIndicatorView.swift` — the toggle and
   the persistent "Logging" badge
 - `docs/architecture/PRINCIPLES.md` Principle 5 — pointer to this ADR
+- [`docs/architecture/dialectic-corpus-quarantine.md`](../dialectic-corpus-quarantine.md)
+  — local-only metadata derivatives for development-only dialectic replay
 - `docs/architecture/ROADMAP.md` Stage 4's "production telemetry" note —
   a different, narrower thing (instrumenting the routing/policy system
   once Stage 3.5 has evidence), not this feature

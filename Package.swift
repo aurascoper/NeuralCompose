@@ -131,10 +131,16 @@ let package = Package(
         // (Foundation.Process); no HTTP client, no API key on disk. Imported
         // only by NeuralComposeApp; must never become a dependency of any other
         // BCI* target.
+        //
+        // The `Prompts/` subdirectory is the source of truth for system
+        // prompts (ADR-009 invariant #1: prompt profiles are repository
+        // resources, not code on the runtime). Declared as a processed
+        // resource so each `.md` is a `Bundle.module`-accessible URL.
         .target(
             name: "BCICloudBridge",
             dependencies: ["BCICore"],
             path: "Sources/BCICloudBridge",
+            resources: [.process("Prompts")],
             swiftSettings: strictConcurrency
         ),
 
@@ -264,6 +270,13 @@ let package = Package(
             swiftSettings: strictConcurrency
         ),
 
+        .testTarget(
+            name: "DialecticSessionTests",
+            dependencies: ["DialecticSession", "BCICloudBridge", "BCICore"],
+            path: "Tests/DialecticSessionTests",
+            swiftSettings: strictConcurrency
+        ),
+
         // ── Tests ────────────────────────────────────────────────────────
         .testTarget(
             name: "BCICoreTests",
@@ -325,7 +338,13 @@ let package = Package(
         ),
         .testTarget(
             name: "NeuralComposeAppTests",
-            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice"],
+            dependencies: [
+                "NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice",
+                // Declared explicitly: the fail-closed tests import
+                // LiveRuntimeFactory. It resolved transitively before, which
+                // is an implicit dependency.
+                "BCICloudBridge",
+            ],
             path: "Tests/NeuralComposeAppTests"
         ),
     ],

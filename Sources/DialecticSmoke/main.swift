@@ -16,9 +16,15 @@ import Foundation
 let heard = CommandLine.arguments.dropFirst().first
     ?? "I keep starting projects and never finishing them."
 
-let generator = ClaudeCLIGenerator(
-    systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt
-)
+let generator: ClaudeCLIGenerator
+do {
+    generator = try ClaudeCLIGenerator(
+        systemPrompt: ClaudeCLIGenerator.wakingDialecticalSystemPrompt()
+    )
+} catch {
+    FileHandle.standardError.write(Data("● dialectic-smoke: \(error)\n".utf8))
+    exit(1)
+}
 
 print("● dialectic-smoke — model: \(generator.modelIdentifier)")
 print("● heard: \"\(heard)\"\n")

@@ -1,0 +1,37 @@
+{
+  "schema_version": "nc-eegpt-montage-v0",
+  "model_id": "eegpt",
+  "upstream": {
+    "repository": "https://github.com/BINE022/EEGPT",
+    "revision": "a0e0a8fad729e2ecf4eedb3a81548a6e6d48a705",
+    "checkpoint_filename": "eegpt_mcae_58chs_4s_large4E.ckpt",
+    "checkpoint_sha256": null
+  },
+  "geometry": {
+    "sample_rate_hz": 256,
+    "window_samples": 1024,
+    "target_channel_count": 58
+  },
+  "target_channels": [
+    "FP1", "FPZ", "FP2", "AF3", "AF4",
+    "F7", "F5", "F3", "F1", "FZ", "F2", "F4", "F6", "F8",
+    "FT7", "FC5", "FC3", "FC1", "FCZ", "FC2", "FC4", "FC6", "FT8",
+    "T7", "C5", "C3", "C1", "CZ", "C2", "C4", "C6", "T8",
+    "TP7", "CP5", "CP3", "CP1", "CPZ", "CP2", "CP4", "CP6", "TP8",
+    "P7", "P5", "P3", "P1", "PZ", "P2", "P4", "P6", "P8",
+    "PO7", "PO3", "POZ", "PO4", "PO8", "O1", "OZ", "O2"
+  ],
+  "muse_source_channels": ["TP9", "AF7", "AF8", "TP10"],
+  "approximate_target_mapping": {
+    "TP9": "TP7",
+    "AF7": "AF3",
+    "AF8": "AF4",
+    "TP10": "TP8"
+  },
+  "conditions": {
+    "a1": "learned_four_channel_adapter_with_explicit_missing_target_mask",
+    "a2": "fixed_approximate_mapping_with_explicit_target_mask",
+    "a3": "four_observed_channels_and_explicit_missing_target_mask",
+    "a4": "zero_filled_no_mask_negative_control"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "seed_id": "004",
+  "part": "runtime",
+  "content_version": 1,
+  "interaction_style": "dialectical",
+  "context_profile": "reflective",
+  "outstanding_todos": [
+    "Draft ADR-009 (docs/architecture/decision-log/ADR-009-generation-runtime.md) on this branch with the five invariants, naming rationale, Done-means list, and benchmark-governance reference. (This branch's first deliverable.)",
+    "Decouple the three system prompts from ClaudeCLIGenerator into Sources/BCICloudBridge/Prompts/*.md; add a loader and tests asserting byte-identity across runtimes.",
+    "Add the GenerationRuntime protocol (Sources/BCICore/Protocols/GenerationRuntime.swift) with generate(...) + metadata; keep TextGenerating as a legacy alias.",
+    "Add the GenerationTransport protocol (Sources/BCICore/Protocols/GenerationTransport.swift); refactor ClaudeCLIGenerator to ClaudeCLIGenerationRuntime composed over a ClaudeCLITransport.",
+    "Implement OllamaGenerationRuntime (Sources/BCICloudBridge/) composed over an OllamaHTTPTransport; model name as a config field; verify against ollama list (deepseek-v4-flash:cloud, qwen2.5:3b, qwen2.5:1.5b, qwen2.5:0.5b, deepseek-r1:1.5b).",
+    "Add GeneratorFingerprint (struct: runtime, transport, provider, model, prompt_profile, interaction_style, prompt_hash, generation_parameters) as an optional field on DialecticalTurnEvent; update codec + Scripts/session-seed.py rollup keys.",
+    "Wire dialectic-session --runtime <name> --model <model>; env-var fallback (NEURALCOMPOSE_RUNTIME). Default = claude-cli for the existing app behavior.",
+    "Add --dry-run to dialectic-session for end-to-end wiring verification before live calls.",
+    "Run benchmark-001-grounding x 3 profiles x 3 runtimes x 3 seeds; compare against seed-002 Reflective reference; characterize tradeoffs.",
+    "Draft docs/architecture/benchmark-governance.md (immutability, versioning, deprecation, lifecycle, promotion rules). ADR-009 references it.",
+    "Update the privacy banner to disclose the active runtime and call count; per-transport opt-in surface for non-local runtimes (UI change in Sources/NeuralComposeApp/ — out of scope for this branch's core work).",
+    "Update CLAUDE.md / docs/seeds/ to record the new generation-runtime architecture; deprecate the 'single provider' framing in seed-003/known_risks once a second transport is live."
+  ],
+  "current_failures": [
+    "Claude CLI rate-limited (verified 2026-07-21: 'weekly limit · resets Jul 24 at 6am (America/Chicago)'). Contemplative run on seed-003 deferred for this reason; the Ollama runtime in this branch is the architectural response, not a workaround."
+  ],
+  "known_risks": [
+    "Cross-provider comparison is not apples-to-apples. Claude and Ollama backends have different model families, different context windows, different temperature semantics. The keep-bar is architectural, not behavioral — this is the explicit choice, but it means the comparison characterizes tradeoffs, not equivalences.",
+    "Ollama's :cloud variants route through the user's Ollama account, which is its own network-egress surface. The privacy banner must disclose this distinctly from the Claude CLI egress; the per-transport opt-in design is the mitigation.",
+    "Adding the generator fingerprint to DialecticalTurnEvent is a schema change. Old logs continue to decode (the field is optional and the codec is forward-compatible), but downstream consumers of the JSONL may need to be updated to surface the new fields.",
+    "The Ollama HTTP transport must handle local-server startup races, model-not-pulled errors, and per-model context-window differences. Initial implementation targets the local API; production deployment to the :cloud variant adds an additional network-egress surface that needs its own opt-in."
+  ],
+  "benchmarks": {
+    "build_attempt_2026-07-21_worldmodel": "PASS — ./Scripts/build.sh (debug, no BrainFlow) on worldmodel/overnight-transform-ab → exit 0, 9s; .build/debug/dialectic-session present.",
+    "ollama_probe_2026-07-21": "PASS — ollama version 0.32.1 running at http://localhost:11434. Models available: deepseek-r1:1.5b, qwen2.5:1.5b, qwen2.5:3b, qwen2.5:0.5b, deepseek-v4-flash:cloud. (The cross-provider benchmark in this branch targets deepseek-v4-flash:cloud as the cloud Ollama model; qwen2.5:3b as the local Ollama model.)",
+    "claude_cli_rate_limit_2026-07-21": "RATE LIMITED — `claude -p 'ping' --model claude-sonnet-5` returned 'You\\u0027ve hit your weekly limit · resets Jul 24 at 6am (America/Chicago)'. The architectural response is documented in this branch (GenerationRuntime + Ollama transport); the rate-limit remains the immediate trigger for the work, not its long-term motivation."
+  },
+  "next_experiment": "Generate on benchmark-001-grounding with all three runtimes (claude-cli, ollama:deepseek-v4-flash:cloud, ollama:qwen2.5:3b) across all three profiles (focused, reflective, contemplative) with 3 seeds each. Compare against seed-002 Reflective reference (mean_witness_distance=0.345, no witness_silent_warn, selfSimilarity 0.71/0.74). Characterize per-keep-bar.",
+  "generated_from": {
+    "git": {
+      "branch": "feature/pluggable-generators",
+      "head": "611b07e",
+      "head_subject": "PR #21: fix(spectral) — demean each channel before the estimator artifact gate",
+      "note": "Branched from main. WorldModel branch (worldmodel/overnight-transform-ab) is the historical record of the JEPA+MPC investigation; this branch does not depend on it. benchmark-001-grounding (e1eb7f4) and the initial runtime-backends scope (28a0d20) live on the WorldModel branch; canonical copies for this branch's architectural specification land on main in a subsequent step."
+    }
+  }
+}

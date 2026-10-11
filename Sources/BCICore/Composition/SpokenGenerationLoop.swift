@@ -52,10 +52,15 @@ public actor SpokenGenerationLoop {
     /// Opt-in per-cycle trace sink. Defaults to a no-op, so the loop records
     /// nothing unless a real sink is injected (input→output diagnostics only).
     private let tracer: any SpokenGenerationTraceLogging
+    /// Opt-in prosody trace sink. Separate from `tracer` because cadence
+    /// prediction is a science target, not a generation-success diagnostic.
+    private let prosodyTracer: any ProsodyTraceLogging
 
     private var loopTask: Task<Void, Never>?
     /// Monotonic cycle counter, surfaced on each `SpokenGenerationTraceEvent`.
     private var cycleIndex = 0
+    /// Monotonic prosody-event counter, one event per requested spoken phrase.
+    private var prosodyTraceIndex = 0
     public private(set) var isRunning = false
 
     public init(
@@ -64,7 +69,8 @@ public actor SpokenGenerationLoop {
         dialectic: DialecticEngine? = nil,
         adaptationProvider: @escaping @Sendable () async -> GenerationAdaptation,
         config: Config = .init(),
-        tracer: any SpokenGenerationTraceLogging = NullSpokenGenerationTraceLogger()
+        tracer: any SpokenGenerationTraceLogging = NullSpokenGenerationTraceLogger(),
+        prosodyTracer: any ProsodyTraceLogging = NullProsodyTraceLogger()
     ) {
         self.generator = generator
         self.speaker = speaker
@@ -72,6 +78,7 @@ public actor SpokenGenerationLoop {
         self.adaptationProvider = adaptationProvider
         self.config = config
         self.tracer = tracer
+        self.prosodyTracer = prosodyTracer
     }
 
     /// Starts the loop if it is not already running. Idempotent.
@@ -131,7 +138,15 @@ public actor SpokenGenerationLoop {
                     // Confidence-wobbled prosody + sentence-boundary pauses, not
                     // one flat prosody-less utterance (the old robotic path):
                     // hedged clauses softer/slower, committed ones firmer.
-                    for (phrase, prosody) in ProsodyWobble.plan(spoken) {
+                    for (phraseIndex, planned) in ProsodyWobble.plan(spoken).enumerated() {
+                        let (phrase, prosody) = planned
+                        await logRequestedProsody(
+                            phrase: phrase,
+                            prosody: prosody,
+                            cycleIndex: cycleIndex,
+                            phraseIndex: phraseIndex,
+                            adaptation: adaptation
+                        )
                         try await speaker.speak(phrase, prosody: prosody, onWord: nil)
                     }
                     spoke = true   // set only after the full utterance was voiced
@@ -170,5 +185,43 @@ public actor SpokenGenerationLoop {
                 return   // cancelled during the delay
             }
         }
+    }
+
+    private func logRequestedProsody(
+        phrase: String,
+        prosody: SpeechProsody,
+        cycleIndex: Int,
+        phraseIndex: Int,
+        adaptation: GenerationAdaptation
+    ) async {
+        let commitment = ProsodyWobble.commitment(of: phrase)
+        let eventIndex = prosodyTraceIndex
+        prosodyTraceIndex += 1
+        await prosodyTracer.log(ProsodyTraceEvent(
+            index: eventIndex,
+            sourceKind: "spoken-generation-requested-prosody",
+            utteranceText: phrase,
+            dialogueState: [
+                "cycle_index": Double(cycleIndex),
+                "phrase_index": Double(phraseIndex),
+                "temperature": adaptation.temperature,
+                "max_tokens": Double(config.maxTokens),
+                "commitment": commitment,
+            ],
+            requested: ProsodyFeatureVector(
+                requested: prosody,
+                emphasis: max(0, commitment),
+                hesitation: max(0, -commitment),
+                cadenceClass: cadenceClass(for: commitment)
+            ),
+            voiceIdentifier: speaker.voiceIdentifier,
+            synthesizerIdentifier: speaker.isLive ? "live" : "stub"
+        ))
+    }
+
+    private func cadenceClass(for commitment: Double) -> String {
+        if commitment < -0.1 { return "hedged" }
+        if commitment > 0.1 { return "committed" }
+        return "neutral"
     }
 }

@@ -113,6 +113,27 @@ def test_mann_whitney_u_disjoint():
     assert "u_statistic" in result
 
 
+def test_cohens_d_identical_constant_groups_are_zero():
+    assert cohens_d([1, 1, 1, 1], [1, 1, 1, 1]) == 0.0
+
+
+def test_cohens_d_large_nondegenerate_effect():
+    d = cohens_d([0.9, 1.0, 1.1, 1.0], [4.9, 5.0, 5.1, 5.0])
+    assert abs(d) > 2.0
+
+
+def test_mann_whitney_u_disjoint_four_per_group():
+    # Four per group, not three: with n1 = n2 = 3 the smallest attainable
+    # two-sided p is 2/20 = 0.1, so no correct implementation can clear 0.05
+    # there however cleanly the groups separate. At four per group the exact
+    # minimum is 2/70 = 0.029.
+    result = mann_whitney_u([1, 2, 3, 4], [10, 11, 12, 13])
+    assert result["u_statistic"] == 0.0
+    assert result["p_value"] < 0.05
+    assert result["n_a"] == 4
+    assert result["n_b"] == 4
+
+
 def test_mann_whitney_u_reaches_significance_with_enough_samples():
     """The same perfect separation clears 0.05 once n permits it: at n=4 vs 4
     the floor is 2 / C(8,4) = 2/70 ≈ 0.0286."""

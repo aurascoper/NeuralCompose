@@ -1,0 +1,48 @@
+{
+  "schema_version": "nc-local-review-cascade-config-v0",
+  "configuration_version": "local-open-weight-review-v0",
+  "validator": {
+    "id": "R0",
+    "type": "deterministic"
+  },
+  "proposer": {
+    "id": "R1",
+    "model": "qwen3:0.6b",
+    "purpose": "bounded_chunk_findings"
+  },
+  "reviewer": {
+    "id": "R2",
+    "preferred_model": "qwen3:4b",
+    "fallback_model": "qwen3:1.7b",
+    "purpose": "citation_repair_and_aggregation"
+  },
+  "critic": {
+    "id": "R3",
+    "model": "gemma-family-local",
+    "purpose": "explicit_independent_adjudication",
+    "enabled_by_default": false
+  },
+  "human_gate": {
+    "id": "R4",
+    "required_for": [
+      "policy_changes",
+      "experiment_changes",
+      "scientific_claims",
+      "promotion_decisions"
+    ]
+  },
+  "chunking": {
+    "valid_records_per_chunk": 16,
+    "overlap_records": 2,
+    "conversation_memory_between_chunks": false
+  },
+  "generation": {
+    "temperature": 0.0,
+    "seed": 42,
+    "context_limit": 8192,
+    "max_output_tokens": 2048
+  },
+  "retry": {
+    "maximum_attempts": 3
+  }
+}

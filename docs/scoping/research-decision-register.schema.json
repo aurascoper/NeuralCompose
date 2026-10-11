@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NeuralCompose Research Decision Register",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "topic",
+    "pass",
+    "owner",
+    "registered_question",
+    "decision_it_can_change",
+    "required_data_gate",
+    "falsification_criterion",
+    "implementation_status",
+    "runtime_dependency_authorized"
+  ],
+  "properties": {
+    "schema_version": { "const": "nc-research-decision-register-v0" },
+    "topic": { "type": "string", "minLength": 1 },
+    "pass": { "type": "integer", "minimum": 1, "maximum": 4 },
+    "owner": { "enum": ["science", "engineering", "computation"] },
+    "registered_question": { "type": "string", "minLength": 1 },
+    "decision_it_can_change": { "type": "string", "minLength": 1 },
+    "required_data_gate": { "enum": ["D0", "D1", "D2", "D3", "post_encoder"] },
+    "falsification_criterion": { "type": "string", "minLength": 1 },
+    "implementation_status": { "enum": ["deferred", "study_only", "eligible_for_experiment"] },
+    "runtime_dependency_authorized": { "const": false }
+  }
+}

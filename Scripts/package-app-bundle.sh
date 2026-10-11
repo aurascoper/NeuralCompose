@@ -78,6 +78,26 @@ shopt -u nullglob
 if [[ -x "$REPO_ROOT/.build/$CONFIG/SpectralProbe" ]]; then
     cp "$REPO_ROOT/.build/$CONFIG/SpectralProbe" "$APP/Contents/MacOS/SpectralProbe"
 fi
+# ── Every SwiftPM resource bundle ─────────────────────────────────────────
+# Any target declaring `resources:` in Package.swift produces a
+# <Package>_<Target>.bundle next to the built binary, and the app resolves it
+# relative to Contents/Resources. Copying only the MLX bundle (as this script
+# used to) meant BCICloudBridge's prompt resources never reached a packaged
+# .app, and the app died with SIGTRAP the first time the hypnagogic loop asked
+# for a system prompt: SwiftPM's generated Bundle.module accessor calls
+# fatalError() when its bundle is absent. Sweep them all instead of naming one.
+#
+# .build/<config> is a symlink to an architecture-specific directory, so
+# resolve it first — `find` will not descend into a symlink given as its root.
+mkdir -p "$APP/Contents/Resources"
+BUILD_DIR="$(cd "$REPO_ROOT/.build/$CONFIG" && pwd -P)"
+while IFS= read -r -d '' bundle; do
+    name="$(basename "$bundle")"
+    rm -rf "$APP/Contents/Resources/$name"
+    cp -R "$bundle" "$APP/Contents/Resources/$name"
+    echo "  + resource bundle → Contents/Resources/$name"
+done < <(find "$BUILD_DIR" -maxdepth 1 -type d -name '*.bundle' -print0)
+
 CMLX_SRC=""
 for cand in \
     "$REPO_ROOT/.build/$CONFIG/mlx-swift_Cmlx.bundle" \
@@ -100,8 +120,27 @@ else
     echo "    (run ./Scripts/build-xcode-mlx.sh once to build default.metallib.)"
 fi
 
+# ── Fail the packaging run, not the user's launch ─────────────────────────
+# The prompt bundle is required: without it the hypnagogic loop cannot resolve
+# a system prompt. Assert before signing so a packaging regression is a build
+# failure here rather than a crash (or, once the loader fails closed, a
+# silently disabled feature) on the user's machine.
+REQUIRED_BUNDLES=("NeuralCompose_BCICloudBridge.bundle")
+missing=()
+for required in "${REQUIRED_BUNDLES[@]}"; do
+    [[ -d "$APP/Contents/Resources/$required" ]] || missing+=("$required")
+done
+if (( ${#missing[@]} > 0 )); then
+    echo "Error: required resource bundle(s) missing from $APP/Contents/Resources:" >&2
+    printf '  - %s\n' "${missing[@]}" >&2
+    echo "Build first (./Scripts/build.sh) so SwiftPM emits them into .build/$CONFIG/." >&2
+    exit 1
+fi
+
 # Ad-hoc sign so Gatekeeper/TCC treat this as a coherent, launchable bundle
 # instead of a loose tree of files copied around after the real build.
+# Runs last: every resource must already be in place, or --deep seals a
+# bundle that no longer matches its signature.
 codesign --force --deep -s - "$APP" >/dev/null
 
 echo "Bundled: $APP"
