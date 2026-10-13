@@ -13,6 +13,7 @@ final class PeerBridgeConnectionTests: XCTestCase {
         private var connection: NWConnection?
         private var buffer = Data()
         private(set) var receivedLines: [PeerWireLine] = []
+        var isConnected: Bool { connection != nil }
 
         func accept(_ connection: NWConnection) {
             self.connection = connection
@@ -45,8 +46,14 @@ final class PeerBridgeConnectionTests: XCTestCase {
                                      text: text, monoMs: 0, inReplyTo: inReplyTo)
             var data = try JSONEncoder().encode(line)
             data.append(0x0A)
+            // `connection` is set when the listener's handler runs `accept`, which can land
+            // after the dialer's `connect()` returns. Sending through `connection?` then did
+            // nothing and leaked this continuation, so the test hung forever.
+            guard let connection else {
+                throw BCIError.peerConnectionFailed(reason: "fake peer has not accepted a connection yet")
+            }
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, any Error>) in
-                connection?.send(content: data, completion: .contentProcessed { error in
+                connection.send(content: data, completion: .contentProcessed { error in
                     if let error { cont.resume(throwing: error) } else { cont.resume() }
                 })
             }
@@ -208,6 +215,7 @@ final class PeerBridgeConnectionTests: XCTestCase {
 
         // The peer's "seed" turn — this test only cares about the Mac's
         // OUTGOING speaking path, so the exact heard text doesn't matter.
+        try await waitUntil(timeout: 2) { await peer.isConnected }   // accept can land after connect() returns
         try await peer.reply(seq: 1, text: "seed utterance", inReplyTo: nil)
 
         await loop.start()
@@ -256,6 +264,7 @@ final class PeerBridgeConnectionTests: XCTestCase {
             config: .init(listenTimeout: 1, interTurnDelayNanos: 10_000_000, maxConsecutiveSilence: 1_000_000)
         )
 
+        try await waitUntil(timeout: 2) { await peer.isConnected }   // accept can land after connect() returns
         try await peer.reply(seq: 1, text: "seed utterance", inReplyTo: nil)
 
         await loop.start()
