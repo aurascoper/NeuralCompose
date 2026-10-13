@@ -1,5 +1,6 @@
 import Foundation
 import BCICore
+import BCICloudBridge
 
 /// The runtime choices exposed by the packaged app. These are reference
 /// generators only; neither choice changes the production composition runtime.
@@ -148,5 +149,21 @@ extension HypnagogicLoopPhase {
         case .speaking: return "Speaking"
         case .retrying: return "Retrying"
         }
+    }
+}
+
+extension HypnagogicRuntimeDiagnostics {
+    /// How a failed runtime configuration is reported. A missing or unusable
+    /// prompt resource is a packaging defect that no retry can fix, so it is
+    /// terminal (`.stopped`) and carries the error's own description, which
+    /// names every path the locator searched. `localizedDescription` would
+    /// replace that with Foundation's generic text, because
+    /// `PromptProfileError` is not a `LocalizedError`. Every other failure
+    /// keeps the retryable phase.
+    static func failure(for error: any Error) -> (phase: HypnagogicLoopPhase, message: String) {
+        if error is PromptProfileError {
+            return (.stopped, "Prompt resources unavailable: \(error)")
+        }
+        return (.retrying, "Runtime configuration failed: \(error.localizedDescription)")
     }
 }

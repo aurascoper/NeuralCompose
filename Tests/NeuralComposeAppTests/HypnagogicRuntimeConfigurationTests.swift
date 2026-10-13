@@ -1,4 +1,6 @@
 import XCTest
+import BCICore
+import BCICloudBridge
 @testable import NeuralComposeApp
 
 final class HypnagogicRuntimeConfigurationTests: XCTestCase {
@@ -39,5 +41,23 @@ final class HypnagogicRuntimeConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration.runtimeName, "claude")
         XCTAssertEqual(configuration.model, "claude-opus-test")
         XCTAssertEqual(configuration.source, .environment)
+    }
+
+    func testMissingPromptResourceIsTerminalAndNamesWhatWasSearched() {
+        let searched = "/Applications/NeuralCompose.app/Contents/Resources"
+        let (phase, message) = HypnagogicRuntimeDiagnostics.failure(
+            for: PromptProfileError.missingResource("hypnagogic.md", searched: [searched]))
+
+        XCTAssertEqual(phase, .stopped)
+        XCTAssertTrue(message.contains(searched), message)
+        XCTAssertTrue(message.contains("hypnagogic.md"), message)
+    }
+
+    func testOtherRuntimeFailuresStayRetryable() {
+        struct Transient: Error {}
+        let (phase, message) = HypnagogicRuntimeDiagnostics.failure(for: Transient())
+
+        XCTAssertEqual(phase, .retrying)
+        XCTAssertTrue(message.hasPrefix("Runtime configuration failed:"), message)
     }
 }

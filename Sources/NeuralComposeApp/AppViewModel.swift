@@ -1064,15 +1064,15 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             }
             await loop.start()
         } catch {
-            let failure = "Runtime configuration failed: \(error.localizedDescription)"
+            let (phase, failure) = HypnagogicRuntimeDiagnostics.failure(for: error)
             hypnagogicRuntimeDiagnostics = HypnagogicRuntimeDiagnostics(
                 configuration: runtimeConfiguration,
                 promptProfile: hypnagogicMode.isDialectical ? "wakingDialectical" : "hypnagogic",
                 interactionStyle: hypnagogicMode.isDialectical ? "dialectical" : "mirror",
-                phase: .retrying,
+                phase: phase,
                 lastFailure: failure
             )
-            BCILog.pipeline.error("hypnagogic runtime configuration failed: \(error.localizedDescription, privacy: .public)")
+            BCILog.pipeline.error("hypnagogic runtime configuration failed: \(failure, privacy: .public)")
             hypnagogicLoopEnabled = false
         }
     }

@@ -371,7 +371,7 @@ let package = Package(
         ),
         .testTarget(
             name: "NeuralComposeAppTests",
-            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice", "BCIPeerBridge"],
+            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice", "BCIPeerBridge", "BCICloudBridge"],
             path: "Tests/NeuralComposeAppTests"
         ),
     ],
