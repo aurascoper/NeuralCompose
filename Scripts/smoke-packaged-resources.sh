@@ -56,10 +56,14 @@ RES="$APP/Contents/Resources"
 
 echo "▸ resource layout"
 [[ -d "$RES/$BUNDLE_NAME" ]] || { echo "FAIL: $RES/$BUNDLE_NAME missing" >&2; exit 1; }
+# Older SwiftPM emits a flat bundle; Swift 6.4 (Xcode 27) emits a nested one
+# with the files under Contents/Resources. PromptResourceLocator accepts both.
+PROMPT_DIR="$RES/$BUNDLE_NAME"
+[[ -d "$PROMPT_DIR/Contents/Resources" ]] && PROMPT_DIR="$PROMPT_DIR/Contents/Resources"
 for p in "${PROMPTS[@]}"; do
-    [[ -f "$RES/$BUNDLE_NAME/$p" ]] || { echo "FAIL: $BUNDLE_NAME/$p missing" >&2; exit 1; }
-    [[ -s "$RES/$BUNDLE_NAME/$p" ]] || { echo "FAIL: $BUNDLE_NAME/$p is empty" >&2; exit 1; }
-    echo "  ✓ $BUNDLE_NAME/$p"
+    [[ -f "$PROMPT_DIR/$p" ]] || { echo "FAIL: $BUNDLE_NAME/$p missing" >&2; exit 1; }
+    [[ -s "$PROMPT_DIR/$p" ]] || { echo "FAIL: $BUNDLE_NAME/$p is empty" >&2; exit 1; }
+    echo "  ✓ ${PROMPT_DIR#"$RES/"}/$p"
 done
 
 echo "▸ signature"
