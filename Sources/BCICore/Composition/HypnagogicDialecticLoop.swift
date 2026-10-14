@@ -138,6 +138,9 @@ public actor HypnagogicDialecticLoop {
     /// Number of completed turns this loop instance — exposed for the health
     /// watchdog to detect a stalled or dead loop (no turns while listening).
     public private(set) var turnIndex = 0
+    /// Identifies this loop instance in the turn log, since `turnIndex`
+    /// restarts at 0 whenever the app rebuilds the loop.
+    public nonisolated let runID: String
     /// Wall-clock of the last completed turn (health watchdog).
     public private(set) var lastTurnAt: Date?
     private var phase: HypnagogicLoopPhase = .stopped
@@ -164,8 +167,10 @@ public actor HypnagogicDialecticLoop {
         turnLogger: any DialecticalTurnLogging = NullDialecticalTurnLogger(),
         prosodyTracer: any ProsodyTraceLogging = NullProsodyTraceLogger(),
         witness: (any TextGenerating)? = nil,
-        config: Config = .init()
+        config: Config = .init(),
+        runID: String = UUID().uuidString
     ) {
+        self.runID = runID
         self.listener = listener
         self.generator = generator
         self.witness = witness
@@ -461,7 +466,7 @@ public actor HypnagogicDialecticLoop {
                 ? latestWitnessMetadata.get().flatMap(GeneratorFingerprint.init)
                 : nil
         )
-        await turnLogger.log(DialecticalTurnEvent(record))
+        await turnLogger.log(DialecticalTurnEvent(record, runID: runID, recordedAt: Self.recordedAt()))
 
         switch result.outcome {
         case let .spoke(candidate), let .synthesized(candidate):
@@ -526,7 +531,7 @@ public actor HypnagogicDialecticLoop {
             // is no Witness generation to attest — regardless of the box.
             witnessGeneratorFingerprint: nil
         )
-        let event = DialecticalTurnEvent(competition)
+        let event = DialecticalTurnEvent(competition, runID: runID, recordedAt: Self.recordedAt())
         await turnLogger.log(event)
         consecutiveSilence += 1
         if consecutiveSilence >= config.maxConsecutiveSilence {
@@ -537,6 +542,11 @@ public actor HypnagogicDialecticLoop {
         lastFailure = nil
         lastTurnAt = Date()
         turnIndex += 1
+    }
+
+    /// The turn record's `recordedAt`: now, ISO 8601 UTC with fractional seconds.
+    static func recordedAt(_ date: Date = Date()) -> String {
+        date.ISO8601Format(.init(includingFractionalSeconds: true))
     }
 
     /// The Witness's user prompt: the heard input + both poles' candidate texts,

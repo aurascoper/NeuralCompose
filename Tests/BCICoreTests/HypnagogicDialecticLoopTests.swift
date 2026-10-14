@@ -366,6 +366,42 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         XCTAssertNil(ev.witnessDistance)
         XCTAssertNil(ev.selfSimilarity)
         XCTAssertNil(ev.spokenText)
+        XCTAssertNil(ev.runID)
+        XCTAssertNil(ev.recordedAt)
+    }
+
+    func testTurnsCarryTheirLoopsRunIDAndATimestamp() async throws {
+        // The app rebuilds the loop on every mode switch and `index` restarts at
+        // 0, so a day's log needs `runID` to tell runs apart, and `recordedAt`
+        // to order them.
+        let embedder = MapEmbedder(
+            dimension: 2, table: ["the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1]])
+        let logger = CapturingTurnLogger()
+        func makeLoop() -> HypnagogicDialecticLoop {
+            HypnagogicDialecticLoop(
+                listener: SpyListener(script: ["the sea"], loopLast: true),
+                generator: TwoRoleGenerator(stabilizer: "calm sea", dreamer: "moon river"),
+                speaker: SpySpeaker(), embedder: embedder,
+                random: { 0.5 }, turnLogger: logger, config: fastConfig())
+        }
+        let first = makeLoop()
+        let second = makeLoop()
+        XCTAssertNotEqual(first.runID, second.runID, "each loop instance is its own run")
+
+        await first.start()
+        let ok = await poll { await !logger.events.isEmpty }
+        await first.stop()
+        XCTAssertTrue(ok)
+
+        let events = await logger.events
+        let ev = try XCTUnwrap(events.first)
+        XCTAssertEqual(ev.runID, first.runID)
+        let stamp = try XCTUnwrap(ev.recordedAt)
+        XCTAssertNoThrow(try Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(stamp))
+        // Plain encoder/decoder (the harness and tests) round-trip both fields.
+        let decoded = try JSONDecoder().decode(DialecticalTurnEvent.self, from: JSONEncoder().encode(ev))
+        XCTAssertEqual(decoded.runID, ev.runID)
+        XCTAssertEqual(decoded.recordedAt, ev.recordedAt)
     }
 
     // MARK: - Tests

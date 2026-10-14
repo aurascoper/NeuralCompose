@@ -62,8 +62,19 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     /// provider/model/prompt produced the finding. Optional so every
     /// pre-Witness-fingerprint log still decodes (missing key → nil).
     public let witnessGeneratorFingerprint: GeneratorFingerprint?
+    /// Which loop instance wrote this turn. The app rebuilds the loop on every
+    /// mode switch and `index` restarts at 0, so `index` alone collides within
+    /// one day's file; `(runID, index)` does not. nil in older logs.
+    public let runID: String?
+    /// When the turn was recorded, ISO 8601 UTC with fractional seconds. A
+    /// string rather than a `Date`: the app's logger encodes dates as ISO 8601
+    /// while the harness and tests use a plain encoder/decoder, so a `Date`
+    /// field would not round-trip across them. nil in older logs.
+    public let recordedAt: String?
 
-    public init(_ c: DialecticalCompetition) {
+    public init(_ c: DialecticalCompetition, runID: String? = nil, recordedAt: String? = nil) {
+        self.runID = runID
+        self.recordedAt = recordedAt
         self.index = c.index
         self.heard = c.heard
         self.candidates = c.scored.map {
