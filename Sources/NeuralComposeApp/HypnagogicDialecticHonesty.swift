@@ -23,7 +23,7 @@ enum HypnagogicDialecticHonesty {
         let voices = reflective
             ? "three cloud calls per turn — a stabilizing voice and a dreaming voice compete, plus a third, non-voiced Witness that observes but is never spoken"
             : "two cloud calls per turn — a stabilizing voice and a dreaming voice compete"
-        return "Dialectic: \(voices), and which one speaks is non-deterministic. Nothing is persisted unless the Interaction Log is on."
+        return "Dialectic: \(voices), and which one speaks is non-deterministic. Each voice is also sent the last few exchanges of this conversation, held in memory until the loop is turned off. Nothing is persisted unless the Interaction Log is on."
     }
 
     /// Always shown under the toggle — scope + the gloss-is-not-a-read boundary.

@@ -52,6 +52,9 @@ public actor HypnagogicDialecticLoop {
         /// witness generation, no extra cloud call; the reflexive `selfSimilarity`
         /// metric is still logged regardless.
         public var witnessEnabled: Bool
+        /// How many earlier exchanges (heard + voiced reply) precede each
+        /// voice's prompt. 0 sends only the current utterance, as before.
+        public var historyExchanges: Int
 
         public init(
             listenTimeout: TimeInterval = 15,
@@ -61,8 +64,10 @@ public actor HypnagogicDialecticLoop {
             maxConsecutiveSilence: Int = 3,
             silenceCues: [String] = HypnagogicDialogueLoop.defaultSilenceCues,
             historyWindow: Int = 16,
-            witnessEnabled: Bool = false
+            witnessEnabled: Bool = false,
+            historyExchanges: Int = 4
         ) {
+            self.historyExchanges = historyExchanges
             self.listenTimeout = listenTimeout
             self.interTurnDelayNanos = interTurnDelayNanos
             self.maxTokens = maxTokens
@@ -141,6 +146,9 @@ public actor HypnagogicDialecticLoop {
     /// Identifies this loop instance in the turn log, since `turnIndex`
     /// restarts at 0 whenever the app rebuilds the loop.
     public nonisolated let runID: String
+    /// The conversation so far, as text. Injected so it can outlive this loop
+    /// instance (the app keeps one across mode switches).
+    private let history: ConversationHistory
     /// Wall-clock of the last completed turn (health watchdog).
     public private(set) var lastTurnAt: Date?
     private var phase: HypnagogicLoopPhase = .stopped
@@ -168,9 +176,11 @@ public actor HypnagogicDialecticLoop {
         prosodyTracer: any ProsodyTraceLogging = NullProsodyTraceLogger(),
         witness: (any TextGenerating)? = nil,
         config: Config = .init(),
-        runID: String = UUID().uuidString
+        runID: String = UUID().uuidString,
+        history: ConversationHistory? = nil
     ) {
         self.runID = runID
+        self.history = history ?? ConversationHistory()
         self.listener = listener
         self.generator = generator
         self.witness = witness
@@ -323,12 +333,15 @@ public actor HypnagogicDialecticLoop {
     /// One dialectical turn: generate one candidate per role, embed, score,
     /// compete, and act on the outcome.
     private func runTurn(heard: String) async throws {
-        // 1. Two generators, each shaped by the standing tension.
+        // 1. Two generators, each shaped by the standing tension, and each
+        //    shown the last few exchanges so a follow-up can be understood.
+        let earlier = history.recent(config.historyExchanges)
+        let preamble = earlier.isEmpty ? "" : Self.historyPreamble(earlier)
         var candidateTexts: [(roleID: String, text: String)] = []
         for role in roles {
             try Task.checkCancellation()
             let raw = try await generator.generate(
-                prompt: role.promptShaper(heard, standingTension),
+                prompt: preamble + role.promptShaper(heard, standingTension),
                 maxTokens: config.maxTokens,
                 temperature: role.temperature,
                 cancellationID: UUID()
@@ -472,6 +485,7 @@ public actor HypnagogicDialecticLoop {
         case let .spoke(candidate), let .synthesized(candidate):
             phase = .speaking
             consecutiveSilence = 0
+            history.append(heard: heard, spoken: candidate.text)
             memory.recordReply(text: candidate.text, embedding: candidate.embedding, turnIndex: turnIndex)
             // Block a later synthesis from re-speaking this verbatim.
             memory.recordVoiced(candidate.text)
@@ -493,6 +507,7 @@ public actor HypnagogicDialecticLoop {
             try await speakChunks(candidate.text, prosody: turnProsody,
                                   grounding: (nodeID: nodeID, embedding: candidate.embedding))
         case .silent:
+            history.append(heard: heard, spoken: nil)
             consecutiveSilence += 1
             if consecutiveSilence >= config.maxConsecutiveSilence {
                 consecutiveSilence = 0
@@ -533,6 +548,7 @@ public actor HypnagogicDialecticLoop {
         )
         let event = DialecticalTurnEvent(competition, runID: runID, recordedAt: Self.recordedAt())
         await turnLogger.log(event)
+        history.append(heard: heard, spoken: nil)
         consecutiveSilence += 1
         if consecutiveSilence >= config.maxConsecutiveSilence {
             consecutiveSilence = 0
@@ -542,6 +558,22 @@ public actor HypnagogicDialecticLoop {
         lastFailure = nil
         lastTurnAt = Date()
         turnIndex += 1
+    }
+
+    /// The text placed before each voice's prompt so the model can see the
+    /// conversation it is continuing. `exchanges` is never empty here (the caller
+    /// skips the preamble when there is no history) and is oldest first. Each
+    /// exchange is what was heard and, unless the turn was silent, what was
+    /// voiced in reply. The role prompt that follows begins "In a live dialogue,
+    /// the other person just said: …", so the preamble should read as the part of
+    /// the dialogue before that, and end with a separator such as a blank line.
+    static func historyPreamble(_ exchanges: [ConversationHistory.Exchange]) -> String {
+        var lines = ["Earlier in this conversation, oldest first. This is context only; reply to what they just said, below."]
+        for exchange in exchanges {
+            lines.append("They said: \(exchange.heard)")
+            lines.append(exchange.spoken.map { "You replied: \($0)" } ?? "You stayed silent.")
+        }
+        return lines.joined(separator: "\n") + "\n\n"
     }
 
     /// The turn record's `recordedAt`: now, ISO 8601 UTC with fractional seconds.

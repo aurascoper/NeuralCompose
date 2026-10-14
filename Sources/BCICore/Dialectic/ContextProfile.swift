@@ -92,7 +92,8 @@ public enum ContextProfile: String, CaseIterable, Sendable, Identifiable {
     public var witnessEnabled: Bool { self == .reflective }
 
     /// A loop `Config` for this profile, preserving any non-cadence fields of
-    /// `base` (listen timeout, tokens, prosody, cues, history window).
+    /// `base` (listen timeout, tokens, prosody, cues, history window, history
+    /// exchanges).
     public func loopConfig(base: HypnagogicDialecticLoop.Config = .init()) -> HypnagogicDialecticLoop.Config {
         HypnagogicDialecticLoop.Config(
             listenTimeout: base.listenTimeout,
@@ -102,7 +103,8 @@ public enum ContextProfile: String, CaseIterable, Sendable, Identifiable {
             maxConsecutiveSilence: maxConsecutiveSilence,
             silenceCues: base.silenceCues,
             historyWindow: base.historyWindow,
-            witnessEnabled: witnessEnabled
+            witnessEnabled: witnessEnabled,
+            historyExchanges: base.historyExchanges
         )
     }
 }

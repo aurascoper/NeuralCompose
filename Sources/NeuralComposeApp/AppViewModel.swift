@@ -193,6 +193,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public var hypnagogicLoopEnabled: Bool = false {
         didSet {
             guard oldValue != hypnagogicLoopEnabled else { return }
+            if !hypnagogicLoopEnabled { conversationHistory.clear() }
             reconcileHypnagogicLoop()
         }
     }
@@ -327,6 +328,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// On-device only — nothing here leaves the machine.
     private let spokenNodeRelay = AsyncMulticastChannel<SpokenNodeEvent>(capacity: 32)
     private var spokenNodeForwardTask: Task<Void, Never>?
+    /// The dialectic conversation so far, shared by every loop this view model
+    /// builds, so a mode switch keeps the thread. Cleared when the loop is turned
+    /// off and when the runtime changes, so one conversation never mixes
+    /// providers. Mirror mode neither reads nor writes it.
+    private let conversationHistory = ConversationHistory()
 
     // ── Per-start resources (recreated each call to start()) ─────────────
     private var composition: TextCompositionController?
@@ -920,6 +926,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             _ = await previous?.value
             guard let self else { return }
             await self.ensureHypnagogicLoopStopped()
+            // The new provider must not be handed the old one's replies.
+            self.conversationHistory.clear()
             guard self.hypnagogicLoopEnabled else { return }
             await self.ensureHypnagogicLoopRunning()
         }
@@ -1029,7 +1037,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     turnLogger: turnLogger,
                     prosodyTracer: prosodyTracer,
                     witness: profile.witnessEnabled ? witnessResolved.generator : nil,
-                    config: profile.loopConfig()
+                    config: profile.loopConfig(),
+                    history: conversationHistory
                 )
                 diagnostics = HypnagogicRuntimeDiagnostics(
                     configuration: runtimeConfiguration,

@@ -404,6 +404,72 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         XCTAssertEqual(decoded.recordedAt, ev.recordedAt)
     }
 
+    // MARK: - Conversation history
+
+    private let historyTable: [String: [Float]] = [
+        "the sea": [1, 0], "second line": [1, 0], "calm sea": [1, 0], "moon river": [0, 1]]
+
+    /// Runs `heard` through a fresh loop sharing `history`, returning the
+    /// generator's prompts and the voiced reply of each turn.
+    private func run(_ heard: [String], history: ConversationHistory? = nil,
+                     config: HypnagogicDialecticLoop.Config? = nil) async -> (prompts: [String], spoken: [String?]) {
+        let generator = TwoRoleGenerator(stabilizer: "calm sea", dreamer: "moon river")
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: SpyListener(script: heard.map { $0 }), generator: generator,
+            speaker: SpySpeaker(), embedder: MapEmbedder(dimension: 2, table: historyTable),
+            random: { 0.5 }, turnLogger: logger, config: config ?? fastConfig(), history: history)
+        await loop.start()
+        _ = await poll { await logger.events.count >= heard.count }
+        await loop.stop()
+        return (await generator.prompts, await logger.events.map(\.spokenText))
+    }
+
+    /// Oct 13: "reiterate on that framework" was answered with "don't reiterate
+    /// the framework at all", because each voice saw only the latest utterance.
+    /// From the second turn on, both voices see what was heard and voiced before.
+    func testVoicesSeeTheEarlierExchange() async throws {
+        let (prompts, spoken) = await run(["the sea", "second line"])
+        XCTAssertEqual(prompts.count, 4, "two voices × two turns")
+        let firstReply = try XCTUnwrap(spoken.first ?? nil)
+        for prompt in prompts[2...3] {
+            XCTAssertTrue(prompt.contains("the sea"), "earlier heard text missing:\n\(prompt)")
+            XCTAssertTrue(prompt.contains(firstReply), "earlier reply missing:\n\(prompt)")
+            XCTAssertTrue(prompt.contains("second line"), "the current utterance must still be there")
+        }
+        XCTAssertFalse(prompts[0].contains("calm sea") || prompts[0].contains("moon river"),
+                       "the first turn has no history to show")
+    }
+
+    /// The app rebuilds the loop on every mode switch; a shared history carries
+    /// the thread into the new instance.
+    func testSharedHistoryCarriesIntoANewLoopInstance() async {
+        let history = ConversationHistory()
+        _ = await run(["the sea"], history: history)
+        let (prompts, _) = await run(["second line"], history: history)
+        XCTAssertTrue(prompts.first?.contains("the sea") == true,
+                      "a rebuilt loop must see the earlier exchange:\n\(prompts.first ?? "")")
+    }
+
+    func testHistoryPreambleKeepsSilentTurnsOldestFirst() {
+        let preamble = HypnagogicDialecticLoop.historyPreamble([
+            .init(heard: "all right", spoken: nil),
+            .init(heard: "the sea", spoken: "calm sea"),
+        ])
+        XCTAssertTrue(preamble.contains("They said: all right\nYou stayed silent.\nThey said: the sea\nYou replied: calm sea"),
+                      "silent turn kept, oldest first:\n\(preamble)")
+        XCTAssertTrue(preamble.hasSuffix("\n\n"), "the role prompt must start on its own paragraph")
+    }
+
+    func testZeroHistoryExchangesSendsOnlyTheCurrentUtterance() async {
+        var config = fastConfig()
+        config.historyExchanges = 0
+        let (prompts, _) = await run(["the sea", "second line"], config: config)
+        XCTAssertEqual(prompts.count, 4)
+        XCTAssertFalse(prompts[2].contains("the sea"))
+        XCTAssertFalse(prompts[3].contains("the sea"))
+    }
+
     // MARK: - Tests
 
     func testHeardDrivesBothRolesThenSpeaksTheDecisiveBasin() async {
