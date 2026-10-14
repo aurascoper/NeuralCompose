@@ -999,15 +999,17 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 let prosodyTracer: any ProsodyTraceLogging =
                     (interactionLoggingEnabled ? (interactionLogger as? any ProsodyTraceLogging) : nil)
                     ?? NullProsodyTraceLogger()
+                // By profile, not by loaded text, so each turn's fingerprint
+                // names the prompt it was generated with instead of `custom`.
                 let dialecticResolved = try LiveRuntimeFactory.make(
                     runtimeName: runtimeConfiguration.runtimeName,
                     model: runtimeConfiguration.model,
-                    systemPrompt: try ClaudeCLIGenerator.wakingDialecticalSystemPrompt()
+                    promptProfile: .wakingDialectical
                 )
                 let witnessResolved = try LiveRuntimeFactory.make(
                     runtimeName: runtimeConfiguration.runtimeName,
                     model: runtimeConfiguration.model,
-                    systemPrompt: try ClaudeCLIGenerator.witnessSystemPrompt()
+                    promptProfile: .witness
                 )
                 BCILog.pipeline.notice(
                     "dialectic runtime: \(dialecticResolved.resolved); witness runtime: \(witnessResolved.resolved)"

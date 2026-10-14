@@ -11,21 +11,22 @@ import Foundation
 ///   2. `NEURALCOMPOSE_RUNTIME` / `NEURALCOMPOSE_MODEL` env vars.
 ///   3. Built-in defaults: `claude` / `claude-sonnet-5`.
 ///
-/// The keep-bar: the Claude path returns the *legacy*
-/// `ClaudeCLIGenerator` unchanged (the same path the live app
-/// has been using pre-branch), so the production behavior is
-/// preserved when the env vars are absent. The Ollama path
-/// composes `OllamaGenerationRuntime` over `OllamaHTTPTransport`
-/// and wraps it in the `GenerationRuntimeTextGeneratingAdapter`
-/// the harness uses (step 6, commit `4002d3e`).
+/// Both paths compose a `GenerationRuntime` (`ClaudeCLIGenerationRuntime`
+/// over `ClaudeCLITransport`, `OllamaGenerationRuntime` over
+/// `OllamaHTTPTransport`) and wrap it in the
+/// `GenerationRuntimeTextGeneratingAdapter` the harness uses (step 6,
+/// commit `4002d3e`), so every turn can record which provider, model
+/// and prompt produced it. The Claude path used to return a bare
+/// `ClaudeCLIGenerator`, which publishes no metadata, so the app's
+/// Claude turns were logged with no `generatorFingerprint` (ported
+/// from the intent of `abb0eea`). The `claude -p` argv and the
+/// executable lookup are unchanged.
 ///
 /// ADR-009 invariant #2 (runtime is transport, not semantics):
 /// the factory does NOT modify the prompt text. The system
-/// prompt bytes are loaded from the `PromptProfile` resource
-/// for the Ollama path (matching the harness); the Claude path
-/// uses the legacy `ClaudeCLIGenerator.hypnagogicSystemPrompt`
-/// default (also pre-extraction, also unchanged). Switching
-/// runtimes is a configuration change, not a semantics change.
+/// prompt bytes come from the caller or from the `PromptProfile`
+/// resource; neither runtime edits them. Switching runtimes is a
+/// configuration change, not a semantics change.
 public enum LiveRuntimeFactory {
 
     /// Resolved runtime identity (for logging / diagnostics).
@@ -49,19 +50,25 @@ public enum LiveRuntimeFactory {
     /// call into.
     ///
     /// - Parameters:
-    ///   - systemPrompt: the system prompt to use. For the
-    ///     Claude path, this is passed through to
-    ///     `ClaudeCLIGenerator(systemPrompt:)`. For the Ollama
-    ///     path, this is the text the `OllamaHTTPTransport`
-    ///     concatenates onto the user prompt with the
-    ///     `systemPromptDelimiter` (ADR-009 invariant #2). If
-    ///     `nil`, the Ollama path loads the prompt from the
-    ///     `PromptProfile` resource (same as the harness).
+    ///   - systemPrompt: caller-owned system prompt text. Recorded
+    ///     in metadata as profile `custom`, hashed over these bytes.
+    ///     For the Ollama path this is the text the
+    ///     `OllamaHTTPTransport` concatenates onto the user prompt
+    ///     with the `systemPromptDelimiter` (ADR-009 invariant #2).
+    ///   - promptProfile: the profile to load when `systemPrompt`
+    ///     is nil, recorded in metadata by name. Defaults to
+    ///     `.hypnagogic` for Claude and `.wakingDialectical` for
+    ///     Ollama, as before.
+    ///   - claudeExecutablePath: absolute path to a `claude`
+    ///     executable; nil resolves `claude` from PATH. Tests point
+    ///     it at a stub.
     public static func make(
         runtimeName: String? = ProcessInfo.processInfo.environment["NEURALCOMPOSE_RUNTIME"],
         model: String? = ProcessInfo.processInfo.environment["NEURALCOMPOSE_MODEL"],
         systemPrompt: String? = nil,
-        ollamaBaseURL: URL = URL(string: "http://localhost:11434")!
+        promptProfile: PromptProfile? = nil,
+        ollamaBaseURL: URL = URL(string: "http://localhost:11434")!,
+        claudeExecutablePath: String? = nil
     ) throws -> (generator: any TextGenerating, resolved: Resolved) {
         let resolvedName = (runtimeName ?? "claude").lowercased()
         let resolvedModel: String = {
@@ -71,45 +78,49 @@ public enum LiveRuntimeFactory {
 
         switch resolvedName {
         case "claude":
-            // Legacy path: same `ClaudeCLIGenerator` the live app
-            // used pre-branch. Preserved byte-for-byte so the
-            // production state is unchanged when the env vars
-            // are absent.
-            let gen = try ClaudeCLIGenerator(
-                model: resolvedModel,
-                systemPrompt: systemPrompt
+            // Same `claude -p` argv and PATH lookup as the legacy
+            // `ClaudeCLIGenerator`, but through the runtime + adapter,
+            // so each call publishes `GenerationMetadata`.
+            let profile = promptProfile ?? .hypnagogic
+            let promptText = try systemPrompt ?? profile.load()
+            let runtime = try systemPrompt.map {
+                try ClaudeCLIGenerationRuntime(
+                    model: resolvedModel, systemPrompt: $0, executablePath: claudeExecutablePath)
+            } ?? ClaudeCLIGenerationRuntime(
+                model: resolvedModel, promptProfile: profile, executablePath: claudeExecutablePath)
+            let adapter = GenerationRuntimeTextGeneratingAdapter(
+                runtime: runtime,
+                systemPrompt: promptText
             )
-            return (gen, Resolved(
+            return (adapter, Resolved(
                 name: "claude-cli", model: resolvedModel,
-                systemPromptSource: "legacy-static"
+                systemPromptSource: systemPrompt == nil ? "PromptProfile:\(profile.rawValue)" : "custom"
             ))
 
         case "ollama":
-            // New path: compose the `OllamaGenerationRuntime`
-            // (step 4, commit `ce68a53`) over the
-            // `OllamaHTTPTransport`, wrap in the
-            // `GenerationRuntimeTextGeneratingAdapter` (step 6,
-            // commit `4002d3e`). The system prompt bytes are
-            // loaded from the `PromptProfile` resource — the same
-            // bytes the harness sends to Ollama. ADR-009 invariant
-            // #2 is preserved: the transport concatenates the
-            // system prompt onto the user prompt with the
-            // documented delimiter, never modifies semantic
-            // intent.
-            let promptText = try systemPrompt ?? PromptProfile.wakingDialectical.load()
-            let runtime = try OllamaGenerationRuntime(
-                model: resolvedModel,
-                systemPrompt: promptText,
-                interactionStyle: "dialectical",
-                baseURL: ollamaBaseURL
-            )
+            // Compose the `OllamaGenerationRuntime` (step 4, commit
+            // `ce68a53`) over the `OllamaHTTPTransport`, wrapped in the
+            // `GenerationRuntimeTextGeneratingAdapter` (step 6, commit
+            // `4002d3e`). ADR-009 invariant #2 is preserved: the
+            // transport concatenates the system prompt onto the user
+            // prompt with the documented delimiter, never modifies
+            // semantic intent.
+            let profile = promptProfile ?? .wakingDialectical
+            let promptText = try systemPrompt ?? profile.load()
+            let runtime = try systemPrompt.map {
+                try OllamaGenerationRuntime(
+                    model: resolvedModel, systemPrompt: $0,
+                    interactionStyle: "dialectical", baseURL: ollamaBaseURL)
+            } ?? OllamaGenerationRuntime(
+                model: resolvedModel, promptProfile: profile,
+                interactionStyle: "dialectical", baseURL: ollamaBaseURL)
             let adapter = GenerationRuntimeTextGeneratingAdapter(
                 runtime: runtime,
                 systemPrompt: promptText
             )
             return (adapter, Resolved(
                 name: "ollama", model: resolvedModel,
-                systemPromptSource: "PromptProfile"
+                systemPromptSource: systemPrompt == nil ? "PromptProfile:\(profile.rawValue)" : "custom"
             ))
 
         default:
