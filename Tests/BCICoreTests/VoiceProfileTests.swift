@@ -26,6 +26,22 @@ final class VoiceProfileTests: XCTestCase {
         XCTAssertNil(p.voiceIdentifier)
         XCTAssertNil(p.prosody)
         XCTAssertNil(p.register)
+        XCTAssertNil(p.recognitionVocabulary)
+        XCTAssertNil(p.endOfUtteranceSilence)
+    }
+
+    func testRecognitionSettingsDecodeAlongsideTheExistingKeys() throws {
+        // The shape of Hunter's live profile plus the two hand-edited keys.
+        let json = Data("""
+        {"usePersonalVoice": true,
+         "voiceIdentifier": "com.apple.speech.personalvoice.5EF4C909",
+         "recognitionVocabulary": ["Oklo", "samarium"],
+         "endOfUtteranceSilence": 2.5}
+        """.utf8)
+        let p = try JSONDecoder().decode(VoiceProfile.self, from: json)
+        XCTAssertEqual(p.usePersonalVoice, true)
+        XCTAssertEqual(p.recognitionVocabulary, ["Oklo", "samarium"])
+        XCTAssertEqual(p.endOfUtteranceSilence, 2.5)
     }
 
     func testRoundTripsWithProsody() throws {

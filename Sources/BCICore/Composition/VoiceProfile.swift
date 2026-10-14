@@ -16,13 +16,22 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
     /// Authorial register name (e.g. "schopenhauer"). Applied to LLM generation on
     /// the MLX / cloud paths; a no-op on the default stub predictor.
     public var register: String?
+    /// Terms the hypnagogic listener should expect (names, jargon) — passed to
+    /// the recognizer as `contextualStrings`. Hand-edited; nil ⇒ none.
+    public var recognitionVocabulary: [String]?
+    /// Seconds without a new word before a spoken turn ends. nil ⇒
+    /// `HypnagogicListener.defaultTrailingSilence`.
+    public var endOfUtteranceSilence: Double?
 
     public init(usePersonalVoice: Bool? = nil, voiceIdentifier: String? = nil,
-                prosody: SpeechProsody? = nil, register: String? = nil) {
+                prosody: SpeechProsody? = nil, register: String? = nil,
+                recognitionVocabulary: [String]? = nil, endOfUtteranceSilence: Double? = nil) {
         self.usePersonalVoice = usePersonalVoice
         self.voiceIdentifier = voiceIdentifier
         self.prosody = prosody
         self.register = register
+        self.recognitionVocabulary = recognitionVocabulary
+        self.endOfUtteranceSilence = endOfUtteranceSilence
     }
 
     /// The canonical on-disk location, mirroring the app's other config/telemetry

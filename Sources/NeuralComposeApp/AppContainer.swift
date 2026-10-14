@@ -60,6 +60,10 @@ public struct AppContainer: Sendable {
     /// default). Deliberately excluded from `PipelineMode` — that type
     /// drives the real pipeline's status banner.
     public let worldModelDemoResolved: WorldModelDemoFactory.Resolved
+    /// `~/Documents/NeuralCompose/voice-profile.json` as loaded at launch (nil if
+    /// absent or malformed). Kept for the hypnagogic listener, which the view
+    /// model builds lazily and which reads the recognition vocabulary from it.
+    public let voiceProfile: VoiceProfile?
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
@@ -110,8 +114,10 @@ public struct AppContainer: Sendable {
         jepaTransitionCapture: any JEPATransitionCapturing = NullJEPATransitionCapture(),
         worldModelDemoResolved: WorldModelDemoFactory.Resolved = .init(
             engine: BaselineWorldModelDemoPlanner(), kind: .baseline, warning: nil
-        )
+        ),
+        voiceProfile: VoiceProfile? = nil
     ) {
+        self.voiceProfile = voiceProfile
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
         self.predictorResolved = predictorResolved
@@ -236,7 +242,8 @@ public struct AppContainer: Sendable {
             spectralEstimatorResolved: spectralEstimator,
             interactionLogger: interactionLogger,
             jepaTransitionCapture: jepaTransitionCapture,
-            worldModelDemoResolved: worldModelDemo
+            worldModelDemoResolved: worldModelDemo,
+            voiceProfile: voiceProfile
         )
     }
 

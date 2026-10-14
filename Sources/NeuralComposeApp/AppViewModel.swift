@@ -973,7 +973,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             }
             (listener, speaker) = bridgePair
         } else {
-            let micListener = HypnagogicListener()
+            let micListener = HypnagogicListener(
+                contextualStrings: container.voiceProfile?.recognitionVocabulary ?? [],
+                trailingSilence: container.voiceProfile?.endOfUtteranceSilence
+                    ?? HypnagogicListener.defaultTrailingSilence
+            )
             let granted = await micListener.requestAuthorization()
             guard granted else {
                 hypnagogicLoopEnabled = false   // @MainActor: safe to set directly
