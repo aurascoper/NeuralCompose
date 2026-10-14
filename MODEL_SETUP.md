@@ -7,6 +7,12 @@ NeuralCompose ships with no weights. Out of the box, the app uses:
 
 Drop in real models when you want them.
 
+Where the app looks (`Sources/BCICore/Models/ModelLocator.swift`):
+`$NEURALCOMPOSE_MODELS_DIR`, then `Models/` under the working directory
+(`swift run` from the repo), then `~/Library/Application Support/NeuralCompose/Models`.
+An installed app's working directory is `/`, so it only finds models in
+Application Support; copy them there with `./Scripts/install-models.sh`.
+
 ---
 
 ## 1. Core ML intent classifier
@@ -210,8 +216,8 @@ or overwritten. Unlock before upgrading torch or replacing the model by hand:
 ./Scripts/rebuild-bge.sh --lock
 ```
 
-Run the app from the repository root: the model path is relative to the
-working directory.
+`swift run` from the repository root finds it in `Models/`; for the installed
+app, run `./Scripts/install-models.sh` afterwards.
 
 ---
 

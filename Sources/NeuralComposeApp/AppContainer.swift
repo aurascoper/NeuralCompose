@@ -195,7 +195,7 @@ public struct AppContainer: Sendable {
         let sentenceEmbedderBackend: String
         do {
             sentenceEmbedder = try CoreMLSentenceEmbedder(
-                modelDirectory: URL(fileURLWithPath: "Models/BGE-small-en-v1.5")
+                modelDirectory: ModelLocator.url(for: "BGE-small-en-v1.5")
             )
             sentenceEmbedderBackend = "coreml"
         } catch {
