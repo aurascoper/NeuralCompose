@@ -83,7 +83,24 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
         "renormalization group",
         "Brett",
         "Qwen",
-        "Uncle Tom"
+        "Uncle Tom",
+        "Fast Wireframe",
+        "wireframe",
+        "Slow Core",
+        "Hollow Shell",
+        "Plasticity Shell",
+        "Gold Laya Flux",
+        "Laya",
+        "SIGReg",
+        "ST-JEMA",
+        "Tarjan",
+        "Betti",
+        "edge cycle",
+        "vertex cycle",
+        "Mahalanobis",
+        "carbonic acid",
+        "potassium hydroxide",
+        "citric acid"
     ]
 
     /// Merges any profile-specific vocabulary with `defaultRecognitionVocabulary`

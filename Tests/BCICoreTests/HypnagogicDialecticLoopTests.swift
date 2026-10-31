@@ -707,4 +707,39 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         let spokenCount = await speaker.spoken.count
         XCTAssertEqual(spokenCount, 0, "ambient backchannel must not speak over room conversation")
     }
+
+    func testFourPillarHUDAndDirectRecallQueriesInjectContextAndSelectCoherenceDeterministically() async {
+        let hudUtterance = "What is the fast wire frame slow core hollow shell gold flux edge cycle invert cycle used for"
+        XCTAssertTrue(HypnagogicDialecticLoop.isFourPillarHUDQuery(hudUtterance))
+        XCTAssertTrue(HypnagogicDialecticLoop.isDirectRecallOrClarificationQuery(hudUtterance))
+
+        let recallUtterance = "You said lemon juice or what else if not that then solder or steel wool"
+        XCTAssertFalse(HypnagogicDialecticLoop.isFourPillarHUDQuery(recallUtterance))
+        XCTAssertTrue(HypnagogicDialecticLoop.isDirectRecallOrClarificationQuery(recallUtterance))
+
+        let embedder = MapEmbedder(dimension: 2, table: [
+            hudUtterance: [1, 0],
+            "CoherenceHUD": [0.95, 0.31],
+            "DisplacementHUD": [0.92, 0.39]
+        ])
+        let listener = SpyListener(script: [hudUtterance], loopLast: true)
+        let generator = TwoRoleGenerator(stabilizer: "CoherenceHUD", dreamer: "DisplacementHUD")
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.99 }, turnLogger: logger, config: fastConfig()
+        )
+        await loop.start()
+        let logged = await poll { await logger.events.count >= 1 }
+        await loop.stop()
+        XCTAssertTrue(logged)
+
+        let prompts = await generator.prompts
+        XCTAssertTrue(prompts.first?.contains("[NeuralCompose 4-Pillar 3D/4D Viewport Reference:") == true,
+                      "HUD query must inject the 4-Pillar Viewport architectural reference into the turn preamble")
+        let event = await logger.events.first
+        XCTAssertEqual(event?.outcome, "spoke:coherence-seeking",
+                       "Direct recall / HUD queries must deterministically select coherence-seeking even when RNG draw is 0.99")
+    }
 }

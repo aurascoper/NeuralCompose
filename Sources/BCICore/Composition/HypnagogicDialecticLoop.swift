@@ -346,7 +346,12 @@ public actor HypnagogicDialecticLoop {
         let discourseNote = discourseKind == .ambientRoomConversation
             ? "[Discourse Context: Ambient room conversation with Hunter's family, friends, or coauthors (e.g. his aunt, Uncle Tom, or Brett). Respond only to the substantive conceptual topic; do not psychoanalyze overheard fragments, family names, or conversational stutters.]\n\n"
             : ""
-        let preamble = historyBlock + discourseNote
+        let hudNote = Self.isFourPillarHUDQuery(heard) ? Self.fourPillarHUDPreamble : ""
+        let recallQuery = Self.isDirectRecallOrClarificationQuery(heard)
+        let recallNote = recallQuery
+            ? "[Direct Clarification Context: The speaker is asking a direct question or asking to recall specific items from the prior turn. Explicitly restate the exact items from the prior turn or answer the literal question in your first sentence before developing your pole's perspective.]\n\n"
+            : ""
+        let preamble = historyBlock + discourseNote + hudNote + recallNote
         var candidateTexts: [(roleID: String, text: String)] = []
         for role in roles {
             try Task.checkCancellation()
@@ -420,7 +425,7 @@ public actor HypnagogicDialecticLoop {
         }
 
         let result = DialecticalDynamics.compete(
-            scored: scored, tension: tension, draw: random(), tuning: tuning,
+            scored: scored, tension: tension, draw: recallQuery ? 0.0 : random(), tuning: tuning,
             synthesis: synthesis, forceSynthesis: synthesis != nil
         )
 
@@ -598,7 +603,7 @@ public actor HypnagogicDialecticLoop {
             "yeah", "yep", "yes", "no", "nope", "okay", "ok", "mm-hmm", "uh-huh",
             "oh my god", "oh gosh", "wow", "right", "sure", "i have", "but i'm",
             "but i am", "i was", "i wasn't", "yeah i was i wasn't", "i don't know if",
-            "they come in from the", "uncle tom"
+            "they come in from the", "uncle tom", "conviction"
         ]
         if exactBackchannels.contains(lowered) {
             return .ambientBackchannel
@@ -613,6 +618,51 @@ public actor HypnagogicDialecticLoop {
         }
 
         return .directAddress
+    }
+
+    /// Detects when the speaker is asking about NeuralCompose's 4-Pillar 3D/4D
+    /// Phase-Space Viewport layers (including common speech-recognition variants
+    /// such as "fast wire frame" for "Fast Wireframe" or "invert cycle" for "VERT_CYCLE").
+    public static func isFourPillarHUDQuery(_ heard: String) -> Bool {
+        let lowered = heard.lowercased()
+        let indicators = [
+            "fast wireframe", "fast wire frame", "slow core", "hollow shell",
+            "plasticity shell", "gold flux", "gold laya flux", "laya flux",
+            "edge cycle", "vert cycle", "vertex cycle", "invert cycle",
+            "sigreg", "st-jema", "tarjan", "semantica influenced"
+        ]
+        return indicators.contains(where: { lowered.contains($0) })
+    }
+
+    /// Architectural reference injected into the turn preamble when the speaker
+    /// asks about NeuralCompose's 4-Pillar 3D/4D Phase-Space Viewport legend or toggles.
+    public static let fourPillarHUDPreamble: String = """
+    [NeuralCompose 4-Pillar 3D/4D Viewport Reference: The speaker is asking about the live 3D/4D Phase-Space Viewport layers in NeuralCompose:
+    1. Fast Wireframe W_k (tau=1.2s, sky-blue cage): fast working-memory covariance ellipsoid tracking immediate sensory, prosodic, and conversational drive.
+    2. Slow Core C_k (tau=8.0s, purple ellipsoid): slow consolidated memory core holding the long-horizon attractor.
+    3. Hollow Shell / Plasticity Shell Psi_k (mint crescent): habituation-plasticity shell between the Fast Wireframe overhang and Slow Core where novel dialectical displacement consolidates into memory.
+    4. Gold Laya Flux z_music (gold vector/ribbon): multimodal acoustic and prosodic entrainment vector coupling vocal rhythm to the phase-space trajectory.
+    5. Edge Cycle / Vertex Cycle (EDGE_CYCLE / VERT_CYCLE, first Betti number beta_1, teal loops; often transcribed by speech recognition as "invert cycle"): Tarjan biconnected semantic-graph homology cycles that hold unresolved dialectical tension, contrasted against acyclic Bridge / Tree connectors and the Semantica INFLUENCED causal chain.
+    Explain these exact NeuralCompose viewport layers directly rather than guessing a generic 3D rendering or soldering pipeline.]
+
+    """
+
+    /// Detects when the speaker is asking a direct recall, clarification, or
+    /// architectural-purpose question (e.g. "You said lemon juice or what else...",
+    /// "What is the fast wireframe ... used for") where the coherence-seeking
+    /// pole should be selected deterministically and both poles must restate
+    /// the requested items before developing their angle.
+    public static func isDirectRecallOrClarificationQuery(_ heard: String) -> Bool {
+        let lowered = heard.lowercased()
+        if isFourPillarHUDQuery(lowered) {
+            return true
+        }
+        let recallIndicators = [
+            "you said ", "what else if not", "what did you say", "which other",
+            "repeat that", "what was the other", "what is the ", "what are the ",
+            "used for"
+        ]
+        return recallIndicators.contains(where: { lowered.contains($0) })
     }
 
     /// Strips echoed prompt-template prefixes (such as `"In a live dialogue, the other person just said: \"...\""`)

@@ -644,6 +644,7 @@ public final class FunctorDialecticalViewModel: ObservableObject {
     @Published public var showTakensDelayAttractor: Bool = true
     @Published public var showPostgresVectorGraph: Bool = true
     @Published public var highlightCycleCoreBeta1: Bool = false
+    @Published public var showLayerGuidePopover: Bool = false
 
     // Diagnostic display controls
     @Published public var kymographMode: KymographDisplayMode = .neuralPlasticity
@@ -3300,19 +3301,59 @@ public struct FunctorDialecticalDashboardView: View {
 
                     // Overlay Legend in 3D Viewport
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("SIGREG WHITENED 3D PHASE SPACE (Q=20 LAYA NODES & ST-JEMA GRAPH) | Option+Scroll or Pinch to Zoom 3D")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.9))
-                        HStack(spacing: 10) {
-                            legendDot(color: Color(red: 0.22, green: 0.74, blue: 0.97), text: "Fast Wireframe W_k (tau=1.2s)")
-                            legendDot(color: Color(red: 0.66, green: 0.33, blue: 0.97), text: "Slow Core C_k (tau=8.0s)")
-                            legendDot(color: Color(red: 0.20, green: 0.83, blue: 0.60), text: "Hollow Shell Psi_k")
-                            legendDot(color: Color(red: 0.98, green: 0.78, blue: 0.15), text: "Gold Laya Flux z_music")
+                        HStack(spacing: 8) {
+                            Text("SIGREG WHITENED 3D PHASE SPACE (Q=20 LAYA NODES & ST-JEMA GRAPH) | Option+Scroll or Pinch to Zoom 3D")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.9))
+                            Button(action: { viewModel.showLayerGuidePopover.toggle() }) {
+                                Label("Layer Guide", systemImage: "questionmark.circle.fill")
+                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundColor(Color(red: 0.22, green: 0.74, blue: 0.97))
+                            .help("Explain what Fast Wireframe, Slow Core, Hollow Shell, Gold Laya Flux, and Edge/Vertex Cycles are used for")
+                            .popover(isPresented: $viewModel.showLayerGuidePopover, arrowEdge: .bottom) {
+                                fourPillarLayerGuidePopover
+                            }
                         }
                         HStack(spacing: 10) {
-                            legendDot(color: Color(red: 0.08, green: 0.72, blue: 0.65), text: "EDGE_CYCLE / VERT_CYCLE (beta_1)")
-                            legendDot(color: Color(red: 0.96, green: 0.62, blue: 0.04), text: "BRIDGE / TREE")
-                            legendDot(color: Color(red: 0.16, green: 0.96, blue: 0.52), text: "Semantica INFLUENCED Chain")
+                            legendDot(
+                                color: Color(red: 0.22, green: 0.74, blue: 0.97),
+                                text: "Fast Wireframe W_k (tau=1.2s)",
+                                tooltip: "Pillar 3 Fast Working-Memory Cage: sky-blue covariance ellipsoid (tau=1.2s) tracking rapid sensory, prosodic, and conversational drive."
+                            )
+                            legendDot(
+                                color: Color(red: 0.66, green: 0.33, blue: 0.97),
+                                text: "Slow Core C_k (tau=8.0s)",
+                                tooltip: "Pillar 3 Slow Consolidated Memory Core: purple ellipsoid (tau=8.0s) representing the stable long-horizon semantic attractor."
+                            )
+                            legendDot(
+                                color: Color(red: 0.20, green: 0.83, blue: 0.60),
+                                text: "Hollow Shell Psi_k",
+                                tooltip: "Pillar 3 Habituation-Plasticity Shell: mint crescent between the Fast Wireframe overhang and Slow Core where novel dialectical displacement consolidates into memory."
+                            )
+                            legendDot(
+                                color: Color(red: 0.98, green: 0.78, blue: 0.15),
+                                text: "Gold Laya Flux z_music",
+                                tooltip: "Pillar 4 Multimodal Laya Flux: gold acoustic/prosodic entrainment vector coupling vocal rhythm and cadence to the phase-space trajectory."
+                            )
+                        }
+                        HStack(spacing: 10) {
+                            legendDot(
+                                color: Color(red: 0.08, green: 0.72, blue: 0.65),
+                                text: "Edge Cycle / Vertex Cycle (beta_1)",
+                                tooltip: "Pillar 2 ST-JEMA Tarjan Homology (EDGE_CYCLE / VERT_CYCLE): teal biconnected cycle loops that hold unresolved dialectical tension (first Betti number beta_1)."
+                            )
+                            legendDot(
+                                color: Color(red: 0.96, green: 0.62, blue: 0.04),
+                                text: "Bridge / Tree",
+                                tooltip: "Pillar 2 Acyclic Connectors (BRIDGE / TREE): amber tree and bridge edges linking distinct conceptual basins without closing a homology loop."
+                            )
+                            legendDot(
+                                color: Color(red: 0.16, green: 0.96, blue: 0.52),
+                                text: "Semantica INFLUENCED Chain",
+                                tooltip: "Verified causal provenance chain exported to Semantica and Multica."
+                            )
                         }
                     }
                     .padding(8)
@@ -3325,16 +3366,29 @@ public struct FunctorDialecticalDashboardView: View {
                 HStack(spacing: 10) {
                     Toggle("Fast Wireframe", isOn: $viewModel.showFastWireframe)
                         .onChange(of: viewModel.showFastWireframe) { _, _ in viewModel.rebuildFrameGeometry() }
+                        .help("Toggle the sky-blue Fast Working-Memory Wireframe cage W_k (tau=1.2s)")
                     Toggle("Slow Core", isOn: $viewModel.showSlowCore)
                         .onChange(of: viewModel.showSlowCore) { _, _ in viewModel.rebuildFrameGeometry() }
+                        .help("Toggle the purple Slow Consolidated Memory Core ellipsoid C_k (tau=8.0s)")
                     Toggle("Plasticity Shell", isOn: $viewModel.showHollowPlasticityShell)
                         .onChange(of: viewModel.showHollowPlasticityShell) { _, _ in viewModel.rebuildFrameGeometry() }
+                        .help("Toggle the mint Hollow Habituation-Plasticity Shell Psi_k between Fast Wireframe and Slow Core")
                     Toggle("Q=20 Graph", isOn: $viewModel.showTarjanFunctorGraph)
                         .onChange(of: viewModel.showTarjanFunctorGraph) { _, _ in viewModel.rebuildFrameGeometry() }
+                        .help("Toggle the Q=20 SIGReg query nodes and ST-JEMA Tarjan homology edges (Edge/Vertex Cycles vs. Bridges)")
                     Toggle("Gold Laya Flux", isOn: $viewModel.showMultimodalLayaFlux)
                         .onChange(of: viewModel.showMultimodalLayaFlux) { _, _ in viewModel.rebuildFrameGeometry() }
+                        .help("Toggle the Gold Laya Flux acoustic/prosodic entrainment vector z_music")
                     Toggle("Highlight beta_1", isOn: $viewModel.highlightCycleCoreBeta1)
                         .onChange(of: viewModel.highlightCycleCoreBeta1) { _, _ in viewModel.rebuildFrameGeometry() }
+                        .help("Emphasize Edge Cycle and Vertex Cycle nodes/edges contributing to first Betti number beta_1")
+                    Spacer(minLength: 4)
+                    Button(action: { viewModel.showLayerGuidePopover.toggle() }) {
+                        Label("What are these used for?", systemImage: "info.circle")
+                            .font(.system(size: 10.5, weight: .semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
                 .font(.system(size: 11, weight: .medium))
                 .padding(.horizontal, 10)
@@ -3714,7 +3768,7 @@ public struct FunctorDialecticalDashboardView: View {
         .cornerRadius(6)
     }
 
-    private func legendDot(color: Color, text: String) -> some View {
+    private func legendDot(color: Color, text: String, tooltip: String = "") -> some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(color)
@@ -3722,6 +3776,70 @@ public struct FunctorDialecticalDashboardView: View {
             Text(text)
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundColor(.white.opacity(0.85))
+        }
+        .help(tooltip)
+    }
+
+    private var fourPillarLayerGuidePopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("4-Pillar 3D/4D Phase-Space Viewport Layer Guide")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                Spacer()
+                Text("[MODEL ILLUSTRATION - RUNG_4_MODEL]")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+            Divider()
+            layerGuideRow(
+                color: Color(red: 0.22, green: 0.74, blue: 0.97),
+                title: "Fast Wireframe W_k (tau = 1.2s)",
+                detail: "Sky-blue working-memory covariance cage tracking immediate sensory, prosodic, and conversational drive. When live input shifts rapidly, W_k tilts and balloons outward from the core."
+            )
+            layerGuideRow(
+                color: Color(red: 0.66, green: 0.33, blue: 0.97),
+                title: "Slow Core C_k (tau = 8.0s)",
+                detail: "Purple consolidated memory ellipsoid holding the long-horizon semantic attractor across dialogue turns."
+            )
+            layerGuideRow(
+                color: Color(red: 0.20, green: 0.83, blue: 0.60),
+                title: "Hollow Shell / Plasticity Shell Psi_k",
+                detail: "Mint habituation-plasticity crescent between the Fast Wireframe overhang and the Slow Core where novel dialectical displacement is actively consolidated into memory."
+            )
+            layerGuideRow(
+                color: Color(red: 0.98, green: 0.78, blue: 0.15),
+                title: "Gold Laya Flux z_music",
+                detail: "Gold multimodal acoustic and prosodic entrainment vector coupling vocal rhythm, tempo (Laya), and spectral load to the phase-space trajectory."
+            )
+            layerGuideRow(
+                color: Color(red: 0.08, green: 0.72, blue: 0.65),
+                title: "Edge Cycle / Vertex Cycle (EDGE_CYCLE / VERT_CYCLE, beta_1)",
+                detail: "Teal Tarjan biconnected semantic-graph homology loops that sustain unresolved dialectical tension (first Betti number beta_1)."
+            )
+            layerGuideRow(
+                color: Color(red: 0.96, green: 0.62, blue: 0.04),
+                title: "Bridge / Tree & Semantica INFLUENCED Chain",
+                detail: "Amber acyclic connectors linking distinct conceptual basins, paired with the emerald Semantica INFLUENCED provenance chain."
+            )
+        }
+        .padding(14)
+        .frame(width: 560)
+    }
+
+    private func layerGuideRow(color: Color, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+                .padding(.top, 3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                Text(detail)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }
