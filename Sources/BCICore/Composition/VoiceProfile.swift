@@ -42,6 +42,49 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
             .appendingPathComponent("voice-profile.json")
     }
 
+    /// Baseline domain vocabulary supplied to SFSpeechRecognizer even on cold
+    /// launches where ~/Documents/NeuralCompose/voice-profile.json is absent.
+    public static let defaultRecognitionVocabulary: [String] = [
+        "NeuralCompose",
+        "Hunter",
+        "aurascoper",
+        "GitHub",
+        "Antigravity",
+        "Ollama",
+        "Claude",
+        "Opus",
+        "Sonnet",
+        "Witness",
+        "hypnagogic",
+        "dialectic",
+        "Reflective",
+        "Contemplative",
+        "Focused",
+        "Semantica",
+        "Multica",
+        "JEPA",
+        "MPPI",
+        "MLX",
+        "EEG",
+        "Muse",
+        "Oklo",
+        "samarium"
+    ]
+
+    /// Merges any profile-specific vocabulary with `defaultRecognitionVocabulary`
+    /// while preserving order and deduplicating case-insensitively.
+    public static func effectiveRecognitionVocabulary(for profile: VoiceProfile?) -> [String] {
+        var result: [String] = []
+        var seen = Set<String>()
+        for term in (profile?.recognitionVocabulary ?? []) + defaultRecognitionVocabulary {
+            let key = term.lowercased()
+            if seen.insert(key).inserted {
+                result.append(term)
+            }
+        }
+        return result
+    }
+
     /// Load the profile, or nil if the file is absent / unreadable / malformed.
     /// Never throws — a bad profile must not block launch.
     public static func loadDefault() -> VoiceProfile? {

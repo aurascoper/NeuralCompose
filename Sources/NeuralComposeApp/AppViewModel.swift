@@ -982,7 +982,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             (listener, speaker) = bridgePair
         } else {
             let micListener = HypnagogicListener(
-                contextualStrings: container.voiceProfile?.recognitionVocabulary ?? [],
+                contextualStrings: VoiceProfile.effectiveRecognitionVocabulary(for: container.voiceProfile),
                 trailingSilence: container.voiceProfile?.endOfUtteranceSilence
                     ?? HypnagogicListener.defaultTrailingSilence
             )

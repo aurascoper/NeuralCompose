@@ -60,4 +60,18 @@ final class VoiceProfileTests: XCTestCase {
         let url = try XCTUnwrap(VoiceProfile.defaultURL())
         XCTAssertTrue(url.path.hasSuffix("Documents/NeuralCompose/voice-profile.json"), url.path)
     }
+
+    func testEffectiveRecognitionVocabularyIncludesColdRunDefaultsAndDeduplicates() {
+        let coldVocab = VoiceProfile.effectiveRecognitionVocabulary(for: nil)
+        XCTAssertTrue(coldVocab.contains("Hunter"))
+        XCTAssertTrue(coldVocab.contains("aurascoper"))
+        XCTAssertTrue(coldVocab.contains("GitHub"))
+        XCTAssertTrue(coldVocab.contains("Antigravity"))
+        XCTAssertTrue(coldVocab.contains("NeuralCompose"))
+
+        let custom = VoiceProfile(recognitionVocabulary: ["CustomTerm", "aurascoper"])
+        let merged = VoiceProfile.effectiveRecognitionVocabulary(for: custom)
+        XCTAssertEqual(merged.first, "CustomTerm")
+        XCTAssertEqual(merged.filter { $0.lowercased() == "aurascoper" }.count, 1)
+    }
 }
