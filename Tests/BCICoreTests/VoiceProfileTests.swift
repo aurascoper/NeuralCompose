@@ -78,6 +78,8 @@ final class VoiceProfileTests: XCTestCase {
         XCTAssertTrue(coldVocab.contains("genomes"))
         XCTAssertTrue(coldVocab.contains("renormalization group"))
         XCTAssertTrue(coldVocab.contains("Brett"))
+        XCTAssertTrue(coldVocab.contains("Qwen"))
+        XCTAssertTrue(coldVocab.contains("Uncle Tom"))
 
         let custom = VoiceProfile(recognitionVocabulary: ["CustomTerm", "aurascoper"])
         let merged = VoiceProfile.effectiveRecognitionVocabulary(for: custom)

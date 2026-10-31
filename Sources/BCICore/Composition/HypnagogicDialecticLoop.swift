@@ -333,10 +333,20 @@ public actor HypnagogicDialecticLoop {
     /// One dialectical turn: generate one candidate per role, embed, score,
     /// compete, and act on the outcome.
     private func runTurn(heard: String) async throws {
+        let discourseKind = Self.classifyDiscourse(heard)
+        if discourseKind == .ambientBackchannel {
+            try await logSilentTurn(heard: heard, advanceSilenceCounter: false)
+            return
+        }
+
         // 1. Two generators, each shaped by the standing tension, and each
         //    shown the last few exchanges so a follow-up can be understood.
         let earlier = history.recent(config.historyExchanges)
-        let preamble = earlier.isEmpty ? "" : Self.historyPreamble(earlier)
+        let historyBlock = earlier.isEmpty ? "" : Self.historyPreamble(earlier)
+        let discourseNote = discourseKind == .ambientRoomConversation
+            ? "[Discourse Context: Ambient room conversation with Hunter's family, friends, or coauthors (e.g. his aunt, Uncle Tom, or Brett). Respond only to the substantive conceptual topic; do not psychoanalyze overheard fragments, family names, or conversational stutters.]\n\n"
+            : ""
+        let preamble = historyBlock + discourseNote
         var candidateTexts: [(roleID: String, text: String)] = []
         for role in roles {
             try Task.checkCancellation()
@@ -346,7 +356,7 @@ public actor HypnagogicDialecticLoop {
                 temperature: role.temperature,
                 cancellationID: UUID()
             )
-            let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = Self.sanitizeGeneratedCandidate(raw, heard: heard)
             if !text.isEmpty { candidateTexts.append((role.id, text)) }
         }
         // RVS-001 fix: when both voices return empty text (e.g. a
@@ -530,7 +540,7 @@ public actor HypnagogicDialecticLoop {
     /// `turnIndex` advances so the loop's progress check sees the
     /// turn as completed. The 90s watchdog no longer fires for
     /// these runs.
-    private func logSilentTurn(heard: String) async throws {
+    private func logSilentTurn(heard: String, advanceSilenceCounter: Bool = true) async throws {
         let competition = DialecticalCompetition(
             index: turnIndex,
             heard: heard,
@@ -544,7 +554,7 @@ public actor HypnagogicDialecticLoop {
             witnessFinding: nil,
             witnessDistance: nil,
             selfSimilarity: nil,
-            witnessAttempted: config.witnessEnabled && witness != nil,
+            witnessAttempted: config.witnessEnabled && witness != nil && advanceSilenceCounter,
             generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init),
             // A candidate-less turn never reaches the Witness call, so there
             // is no Witness generation to attest — regardless of the box.
@@ -552,16 +562,92 @@ public actor HypnagogicDialecticLoop {
         )
         let event = DialecticalTurnEvent(competition, runID: runID, recordedAt: Self.recordedAt())
         await turnLogger.log(event)
-        history.append(heard: heard, spoken: nil)
-        consecutiveSilence += 1
-        if consecutiveSilence >= config.maxConsecutiveSilence {
-            consecutiveSilence = 0
-            phase = .speaking
-            try await speakChunks(nextSilenceCue(), prosody: config.prosody)
+        if advanceSilenceCounter {
+            history.append(heard: heard, spoken: nil)
+            consecutiveSilence += 1
+            if consecutiveSilence >= config.maxConsecutiveSilence {
+                consecutiveSilence = 0
+                phase = .speaking
+                try await speakChunks(nextSilenceCue(), prosody: config.prosody)
+            }
         }
         lastFailure = nil
         lastTurnAt = Date()
         turnIndex += 1
+    }
+
+    /// Discourse classification for distinguishing direct speech to NeuralCompose
+    /// from ambient room side-conversations and backchannels with family/friends.
+    public enum UtteranceDiscourseKind: String, Sendable, Equatable {
+        case directAddress
+        case ambientRoomConversation
+        case ambientBackchannel
+    }
+
+    /// Classifies a transcribed utterance into direct address, ambient room
+    /// conversation (with family/friends), or an isolated ambient backchannel/stutter
+    /// that should hold silence rather than interrupting the room.
+    public static func classifyDiscourse(_ heard: String) -> UtteranceDiscourseKind {
+        let trimmed = heard.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lowered = trimmed.lowercased()
+            .trimmingCharacters(in: .punctuationCharacters)
+        let words = lowered.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        guard !words.isEmpty else { return .ambientBackchannel }
+
+        let exactBackchannels: Set<String> = [
+            "yeah", "yep", "yes", "no", "nope", "okay", "ok", "mm-hmm", "uh-huh",
+            "oh my god", "oh gosh", "wow", "right", "sure", "i have", "but i'm",
+            "but i am", "i was", "i wasn't", "yeah i was i wasn't", "i don't know if",
+            "they come in from the", "uncle tom"
+        ]
+        if exactBackchannels.contains(lowered) {
+            return .ambientBackchannel
+        }
+
+        let ambientIndicators = [
+            "my aunt", "my uncle", "uncle tom", "my cousin", "my mom", "my dad",
+            "showing me the pictures", "while we were working"
+        ]
+        if ambientIndicators.contains(where: { lowered.contains($0) }) {
+            return .ambientRoomConversation
+        }
+
+        return .directAddress
+    }
+
+    /// Strips echoed prompt-template prefixes (such as `"In a live dialogue, the other person just said: \"...\""`)
+    /// that small local models (e.g. `qwen2.5:0.5b`) sometimes copy verbatim into their completion.
+    public static func sanitizeGeneratedCandidate(_ raw: String, heard: String) -> String {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return "" }
+
+        let prefixes = [
+            "In a live dialogue, the other person just said:",
+            "They just murmured:"
+        ]
+        for prefix in prefixes {
+            if text.lowercased().hasPrefix(prefix.lowercased()) {
+                let afterPrefix = text.dropFirst(prefix.count).trimmingCharacters(in: .whitespacesAndNewlines)
+                let quotedHeard = "\"\(heard)\""
+                if afterPrefix.lowercased().hasPrefix(quotedHeard.lowercased()) {
+                    var remainder = String(afterPrefix.dropFirst(quotedHeard.count))
+                    while let first = remainder.first, first.isWhitespace || first == "." || first == ":" || first == "-" {
+                        remainder.removeFirst()
+                    }
+                    text = remainder
+                } else if let closingQuote = afterPrefix.dropFirst().firstIndex(of: "\""),
+                          afterPrefix.first == "\"" {
+                    var remainder = String(afterPrefix[afterPrefix.index(after: closingQuote)...])
+                    while let first = remainder.first, first.isWhitespace || first == "." || first == ":" || first == "-" {
+                        remainder.removeFirst()
+                    }
+                    text = remainder
+                } else {
+                    text = afterPrefix
+                }
+            }
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// The text placed before each voice's prompt so the model can see the

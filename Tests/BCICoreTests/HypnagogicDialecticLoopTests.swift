@@ -660,4 +660,51 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         XCTAssertEqual(stopped.phase, .stopped)
         XCTAssertGreaterThanOrEqual(stopped.turnIndex, 1)
     }
+
+    func testSanitizeGeneratedCandidateStripsPromptEchoFromSmallModels() {
+        let heard = "Answer the question what are your capabilities as Qwen"
+        let echoedOnly = "In a live dialogue, the other person just said: \"\(heard)\""
+        XCTAssertEqual(HypnagogicDialecticLoop.sanitizeGeneratedCandidate(echoedOnly, heard: heard), "",
+                       "a candidate that only repeats the prompt prefix must reduce to empty string")
+
+        let echoedWithAnswer = "In a live dialogue, the other person just said: \"\(heard)\" Your capabilities as Qwen can be vast and diverse."
+        XCTAssertEqual(HypnagogicDialecticLoop.sanitizeGeneratedCandidate(echoedWithAnswer, heard: heard),
+                       "Your capabilities as Qwen can be vast and diverse.",
+                       "echoed prefix must be stripped while preserving the substantive completion")
+    }
+
+    func testClassifyDiscourseSeparatesBackchannelsAmbientRoomAndDirectAddress() {
+        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Yeah"), .ambientBackchannel)
+        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Oh my God"), .ambientBackchannel)
+        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Yeah I was I wasn't"), .ambientBackchannel)
+        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Uncle Tom"), .ambientBackchannel)
+        XCTAssertEqual(
+            HypnagogicDialecticLoop.classifyDiscourse("I was having a conversation with my aunt about family"),
+            .ambientRoomConversation
+        )
+        XCTAssertEqual(
+            HypnagogicDialecticLoop.classifyDiscourse("Does my friend model hypotheses have any relation to equifinality"),
+            .directAddress
+        )
+    }
+
+    func testAmbientBackchannelLogsSilentTurnWithoutCallingGenerator() async {
+        let embedder = MapEmbedder(dimension: 2, table: [:])
+        let listener = SpyListener(script: ["Oh my God"], loopLast: true)
+        let generator = TwoRoleGenerator(stabilizer: "S", dreamer: "D")
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.5 }, turnLogger: logger, config: fastConfig()
+        )
+        await loop.start()
+        let logged = await poll { await logger.events.count >= 1 }
+        await loop.stop()
+        XCTAssertTrue(logged, "ambient backchannel must log a silent turn")
+        let called = await generator.prompts.count
+        XCTAssertEqual(called, 0, "ambient backchannel must not invoke the generator")
+        let spokenCount = await speaker.spoken.count
+        XCTAssertEqual(spokenCount, 0, "ambient backchannel must not speak over room conversation")
+    }
 }

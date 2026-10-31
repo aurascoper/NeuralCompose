@@ -81,7 +81,9 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
         "von Bertalanffy",
         "genomes",
         "renormalization group",
-        "Brett"
+        "Brett",
+        "Qwen",
+        "Uncle Tom"
     ]
 
     /// Merges any profile-specific vocabulary with `defaultRecognitionVocabulary`
