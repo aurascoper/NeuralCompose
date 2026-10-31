@@ -13,9 +13,10 @@ public struct DialecticalMemory: Sendable {
     private var heardEmbeddings: [Embedding] = []
     private var replyEmbeddings: [Embedding] = []
     private let historyWindow: Int
+    private let graphCapacity: Int
     private let tensionCeiling: Float
 
-    /// Consecutive turns whose tension stayed at/below `tensionCeiling` — how
+    /// Consecutive turns whose tension stayed at/below `tensionCeiling` - how
     /// long the dialogue has been converging.
     public private(set) var lowTensionStreak: Int = 0
 
@@ -23,12 +24,14 @@ public struct DialecticalMemory: Sendable {
     /// must not resurface one of these verbatim: without this, an eager-synthesis
     /// profile (e.g. Focused) collapses to re-speaking the same central node
     /// every turn while the fresh candidates it just generated are discarded.
-    /// Bounded to `historyWindow`.
+    /// Bounded to `graphCapacity` so no voiced reply still resident in `graph`
+    /// is ever replayed verbatim once `turnIndex` exceeds `historyWindow`.
     private var recentlyVoiced: [String] = []
 
     public init(historyWindow: Int = 16, graphCapacity: Int = 128,
                 edgeThreshold: Float = 0.6, tensionCeiling: Float = 0.35) {
         self.historyWindow = max(1, historyWindow)
+        self.graphCapacity = max(self.historyWindow, graphCapacity)
         self.tensionCeiling = tensionCeiling
         self.graph = SemanticGraph(capacity: graphCapacity, edgeThreshold: edgeThreshold)
     }
@@ -76,12 +79,18 @@ public struct DialecticalMemory: Sendable {
         lowTensionStreak = tension <= tensionCeiling ? lowTensionStreak + 1 : 0
     }
 
+    /// Resets the convergence streak once a synthesis event has resolved the
+    /// accumulated low-tension run, preventing back-to-back synthesis replays.
+    public mutating func resetLowTensionStreak() {
+        lowTensionStreak = 0
+    }
+
     /// Records a voiced output so `synthesisCandidate` won't resurface it
     /// verbatim on a later turn. Call whenever a turn actually speaks (spoke or
     /// synthesized).
     public mutating func recordVoiced(_ text: String) {
         recentlyVoiced.append(text)
-        if recentlyVoiced.count > historyWindow { recentlyVoiced.removeFirst() }
+        if recentlyVoiced.count > graphCapacity { recentlyVoiced.removeFirst() }
     }
 
     // MARK: - Synthesis (emergent third idea)

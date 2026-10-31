@@ -65,7 +65,7 @@ public actor HypnagogicDialecticLoop {
             silenceCues: [String] = HypnagogicDialogueLoop.defaultSilenceCues,
             historyWindow: Int = 16,
             witnessEnabled: Bool = false,
-            historyExchanges: Int = 4
+            historyExchanges: Int = 10
         ) {
             self.historyExchanges = historyExchanges
             self.listenTimeout = listenTimeout
@@ -416,7 +416,11 @@ public actor HypnagogicDialecticLoop {
 
         // 4. Record the turn and act.
         memory.recordHeard(text: heard, embedding: heardEmb, turnIndex: turnIndex)
-        memory.observe(tension: tension)
+        if case .synthesized = result.outcome {
+            memory.resetLowTensionStreak()
+        } else {
+            memory.observe(tension: tension)
+        }
         standingTension = tension
 
         // Introspection (the Reflective rung — see WITNESS.md). Two ORTHOGONAL

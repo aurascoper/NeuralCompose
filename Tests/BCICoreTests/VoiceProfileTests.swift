@@ -68,6 +68,11 @@ final class VoiceProfileTests: XCTestCase {
         XCTAssertTrue(coldVocab.contains("GitHub"))
         XCTAssertTrue(coldVocab.contains("Antigravity"))
         XCTAssertTrue(coldVocab.contains("NeuralCompose"))
+        XCTAssertTrue(coldVocab.contains("automorphism"))
+        XCTAssertTrue(coldVocab.contains("Cantor space"))
+        XCTAssertTrue(coldVocab.contains("eigen-behaviors"))
+        XCTAssertTrue(coldVocab.contains("Yang-Mills"))
+        XCTAssertTrue(coldVocab.contains("Exponential Time Hypothesis"))
 
         let custom = VoiceProfile(recognitionVocabulary: ["CustomTerm", "aurascoper"])
         let merged = VoiceProfile.effectiveRecognitionVocabulary(for: custom)

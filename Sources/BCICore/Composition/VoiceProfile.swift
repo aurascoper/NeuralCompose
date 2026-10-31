@@ -68,7 +68,15 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
         "EEG",
         "Muse",
         "Oklo",
-        "samarium"
+        "samarium",
+        "automorphism",
+        "Cantor space",
+        "eigen-behaviors",
+        "Gene Ontology",
+        "symbolic dynamics",
+        "Yang-Mills",
+        "Exponential Time Hypothesis",
+        "disproof"
     ]
 
     /// Merges any profile-specific vocabulary with `defaultRecognitionVocabulary`

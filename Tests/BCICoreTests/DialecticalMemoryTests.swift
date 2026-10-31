@@ -93,5 +93,27 @@ final class DialecticalMemoryTests: XCTestCase {
         }
         XCTAssertNotNil(converged.synthesisCandidate(thesis: thesis, antithesis: antithesis, tuning: .default),
                         "sustained convergence lowers the bar and admits the synthesis")
+
+        converged.resetLowTensionStreak()
+        XCTAssertEqual(converged.lowTensionStreak, 0)
+        XCTAssertNil(converged.synthesisCandidate(thesis: thesis, antithesis: antithesis, tuning: .default),
+                     "resetting the convergence streak restores the strict synthesis bar")
+    }
+
+    func testVoicedRepliesDoNotResurfaceAfterHistoryWindowExpires() {
+        var m = DialecticalMemory(historyWindow: 4, graphCapacity: 32, tensionCeiling: 0.35)
+        let thesis = emb([1, 0, 0])
+        let antithesis = emb([0, 1, 0])
+        let bridge = emb([1, 1, 0])
+
+        for i in 0..<10 {
+            let text = "voiced-turn-\(i)"
+            m.recordReply(text: text, embedding: bridge, turnIndex: i)
+            m.recordVoiced(text)
+            m.observe(tension: 0.1)
+        }
+
+        let synth = m.synthesisCandidate(thesis: thesis, antithesis: antithesis, tuning: .default)
+        XCTAssertNil(synth, "voiced replies still inside graphCapacity must never be replayed verbatim after historyWindow turns")
     }
 }
