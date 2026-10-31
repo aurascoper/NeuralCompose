@@ -76,7 +76,12 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
         "symbolic dynamics",
         "Yang-Mills",
         "Exponential Time Hypothesis",
-        "disproof"
+        "disproof",
+        "equifinality",
+        "von Bertalanffy",
+        "genomes",
+        "renormalization group",
+        "Brett"
     ]
 
     /// Merges any profile-specific vocabulary with `defaultRecognitionVocabulary`
