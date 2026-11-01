@@ -283,12 +283,14 @@ public actor HypnagogicDialecticLoop {
 
     /// Cancels the loop, aborts any in-flight listen, and interrupts speech.
     public func stop() async {
-        loopTask?.cancel()
+        let task = loopTask
         loopTask = nil
         isRunning = false
         phase = .stopped
+        task?.cancel()
         await listener.cancel()
         await speaker.stopSpeaking()
+        phase = .stopped
     }
 
     // MARK: - Loop
@@ -499,6 +501,7 @@ public actor HypnagogicDialecticLoop {
                 : nil
         )
         await turnLogger.log(DialecticalTurnEvent(record, runID: runID, recordedAt: Self.recordedAt()))
+        try Task.checkCancellation()
 
         switch result.outcome {
         case let .spoke(candidate), let .synthesized(candidate):
@@ -599,11 +602,24 @@ public actor HypnagogicDialecticLoop {
         let words = lowered.split(whereSeparator: { $0.isWhitespace }).map(String.init)
         guard !words.isEmpty else { return .ambientBackchannel }
 
+        // Guard against acoustic loopback of the system's own silenceCue TTS.
+        let silenceCueEchoIndicators = [
+            "sinking warm and slow",
+            "let the shapes dissolve",
+            "shapes dissolve and float"
+        ]
+        if silenceCueEchoIndicators.contains(where: { lowered.contains($0) }) {
+            return .ambientBackchannel
+        }
+
         let exactBackchannels: Set<String> = [
             "yeah", "yep", "yes", "no", "nope", "okay", "ok", "mm-hmm", "uh-huh",
             "oh my god", "oh gosh", "wow", "right", "sure", "i have", "but i'm",
             "but i am", "i was", "i wasn't", "yeah i was i wasn't", "i don't know if",
-            "they come in from the", "uncle tom", "conviction"
+            "they come in from the", "uncle tom", "conviction", "stop", "next",
+            "place", "i'll", "that's", "send", "yesterday", "wake up", "good morning",
+            "where are", "how much", "i'll be there", "this is", "what the fuck",
+            "yeah yeah whatever doesn't matter"
         ]
         if exactBackchannels.contains(lowered) {
             return .ambientBackchannel
@@ -611,7 +627,9 @@ public actor HypnagogicDialecticLoop {
 
         let ambientIndicators = [
             "my aunt", "my uncle", "uncle tom", "my cousin", "my mom", "my dad",
-            "showing me the pictures", "while we were working"
+            "showing me the pictures", "while we were working",
+            "do the shower later", "pre-check the prius", "where is kitty",
+            "set an alarm", "get your pajama", "gonna talk to me first"
         ]
         if ambientIndicators.contains(where: { lowered.contains($0) }) {
             return .ambientRoomConversation
@@ -621,15 +639,15 @@ public actor HypnagogicDialecticLoop {
     }
 
     /// Detects when the speaker is asking about NeuralCompose's 4-Pillar 3D/4D
-    /// Phase-Space Viewport layers (including common speech-recognition variants
-    /// such as "fast wire frame" for "Fast Wireframe" or "invert cycle" for "VERT_CYCLE").
+    /// Phase-Space Viewport layers or Double-Tree Horizon Bridge topology.
     public static func isFourPillarHUDQuery(_ heard: String) -> Bool {
         let lowered = heard.lowercased()
         let indicators = [
             "fast wireframe", "fast wire frame", "slow core", "hollow shell",
             "plasticity shell", "gold flux", "gold laya flux", "laya flux",
             "edge cycle", "vert cycle", "vertex cycle", "invert cycle",
-            "sigreg", "st-jema", "tarjan", "semantica influenced"
+            "sigreg", "st-jema", "tarjan", "semantica influenced",
+            "double tree", "horizon bridge", "paired horizon"
         ]
         return indicators.contains(where: { lowered.contains($0) })
     }
@@ -637,13 +655,14 @@ public actor HypnagogicDialecticLoop {
     /// Architectural reference injected into the turn preamble when the speaker
     /// asks about NeuralCompose's 4-Pillar 3D/4D Phase-Space Viewport legend or toggles.
     public static let fourPillarHUDPreamble: String = """
-    [NeuralCompose 4-Pillar 3D/4D Viewport Reference: The speaker is asking about the live 3D/4D Phase-Space Viewport layers in NeuralCompose:
+    [NeuralCompose 4-Pillar 3D/4D Viewport Reference: The speaker is asking about the live 3D/4D Phase-Space Viewport layers or Glued Double-Tree Horizon Bridge in NeuralCompose:
     1. Fast Wireframe W_k (tau=1.2s, sky-blue cage): fast working-memory covariance ellipsoid tracking immediate sensory, prosodic, and conversational drive.
     2. Slow Core C_k (tau=8.0s, purple ellipsoid): slow consolidated memory core holding the long-horizon attractor.
     3. Hollow Shell / Plasticity Shell Psi_k (mint crescent): habituation-plasticity shell between the Fast Wireframe overhang and Slow Core where novel dialectical displacement consolidates into memory.
     4. Gold Laya Flux z_music (gold vector/ribbon): multimodal acoustic and prosodic entrainment vector coupling vocal rhythm to the phase-space trajectory.
     5. Edge Cycle / Vertex Cycle (EDGE_CYCLE / VERT_CYCLE, first Betti number beta_1, teal loops; often transcribed by speech recognition as "invert cycle"): Tarjan biconnected semantic-graph homology cycles that hold unresolved dialectical tension, contrasted against acyclic Bridge / Tree connectors and the Semantica INFLUENCED causal chain.
-    Explain these exact NeuralCompose viewport layers directly rather than guessing a generic 3D rendering or soldering pipeline.]
+    6. Glued Double-Tree Horizon Bridge (WorldModelDemo): two rooted binary trees of depth n_H joined at 2^n_H horizon leaves have cycle rank beta_1 = 2^n_H - 1 and 0 Tarjan bridges under both pairedHorizonLinks (collar edges) and identifyLeaves (quotient seam, cellular homotopy equivalence), whereas singleHorizonBridge remains an acyclic tree with beta_1 = 0 and all edges as Tarjan bridges.
+    Explain these exact NeuralCompose structures directly rather than guessing a generic 3D rendering or soldering pipeline.]
 
     """
 
