@@ -1,0 +1,421 @@
+{
+  "beta0" : 2,
+  "beta1" : 0,
+  "bridgeEdgeCount" : 28,
+  "bridgeEdgeKeys" : [
+    "L-0-0|L-1-0",
+    "L-0-0|L-1-1",
+    "L-1-0|L-2-0",
+    "L-1-0|L-2-1",
+    "L-1-1|L-2-2",
+    "L-1-1|L-2-3",
+    "L-2-0|L-3-0",
+    "L-2-0|L-3-1",
+    "L-2-1|L-3-2",
+    "L-2-1|L-3-3",
+    "L-2-2|L-3-4",
+    "L-2-2|L-3-5",
+    "L-2-3|L-3-6",
+    "L-2-3|L-3-7",
+    "U-0-0|U-1-0",
+    "U-0-0|U-1-1",
+    "U-1-0|U-2-0",
+    "U-1-0|U-2-1",
+    "U-1-1|U-2-2",
+    "U-1-1|U-2-3",
+    "U-2-0|U-3-0",
+    "U-2-0|U-3-1",
+    "U-2-1|U-3-2",
+    "U-2-1|U-3-3",
+    "U-2-2|U-3-4",
+    "U-2-2|U-3-5",
+    "U-2-3|U-3-6",
+    "U-2-3|U-3-7"
+  ],
+  "edges" : [
+    {
+      "a" : "L-0-0",
+      "b" : "L-1-0",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-0-0",
+      "b" : "L-1-1",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-1-0",
+      "b" : "L-2-0",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-1-0",
+      "b" : "L-2-1",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-1-1",
+      "b" : "L-2-2",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-1-1",
+      "b" : "L-2-3",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-2-0",
+      "b" : "L-3-0",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-2-0",
+      "b" : "L-3-1",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-2-1",
+      "b" : "L-3-2",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-2-1",
+      "b" : "L-3-3",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-2-2",
+      "b" : "L-3-4",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-2-2",
+      "b" : "L-3-5",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-2-3",
+      "b" : "L-3-6",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "L-2-3",
+      "b" : "L-3-7",
+      "kind" : "lowerTree"
+    },
+    {
+      "a" : "U-0-0",
+      "b" : "U-1-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-0-0",
+      "b" : "U-1-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-0",
+      "b" : "U-2-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-0",
+      "b" : "U-2-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-1",
+      "b" : "U-2-2",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-1",
+      "b" : "U-2-3",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-0",
+      "b" : "U-3-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-0",
+      "b" : "U-3-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-1",
+      "b" : "U-3-2",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-1",
+      "b" : "U-3-3",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-2",
+      "b" : "U-3-4",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-2",
+      "b" : "U-3-5",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-3",
+      "b" : "U-3-6",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-3",
+      "b" : "U-3-7",
+      "kind" : "upperTree"
+    }
+  ],
+  "index" : 1,
+  "nodes" : [
+    {
+      "id" : "L-0-0",
+      "index" : 0,
+      "level" : 0,
+      "region" : "lower",
+      "x" : 0,
+      "y" : -3
+    },
+    {
+      "id" : "L-1-0",
+      "index" : 0,
+      "level" : 1,
+      "region" : "lower",
+      "x" : -0.5,
+      "y" : -2
+    },
+    {
+      "id" : "L-1-1",
+      "index" : 1,
+      "level" : 1,
+      "region" : "lower",
+      "x" : 0.5,
+      "y" : -2
+    },
+    {
+      "id" : "L-2-0",
+      "index" : 0,
+      "level" : 2,
+      "region" : "lower",
+      "x" : -0.75,
+      "y" : -1
+    },
+    {
+      "id" : "L-2-1",
+      "index" : 1,
+      "level" : 2,
+      "region" : "lower",
+      "x" : -0.25,
+      "y" : -1
+    },
+    {
+      "id" : "L-2-2",
+      "index" : 2,
+      "level" : 2,
+      "region" : "lower",
+      "x" : 0.25,
+      "y" : -1
+    },
+    {
+      "id" : "L-2-3",
+      "index" : 3,
+      "level" : 2,
+      "region" : "lower",
+      "x" : 0.75,
+      "y" : -1
+    },
+    {
+      "id" : "L-3-0",
+      "index" : 0,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.875,
+      "y" : -0
+    },
+    {
+      "id" : "L-3-1",
+      "index" : 1,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.625,
+      "y" : -0
+    },
+    {
+      "id" : "L-3-2",
+      "index" : 2,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.375,
+      "y" : -0
+    },
+    {
+      "id" : "L-3-3",
+      "index" : 3,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.125,
+      "y" : -0
+    },
+    {
+      "id" : "L-3-4",
+      "index" : 4,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.125,
+      "y" : -0
+    },
+    {
+      "id" : "L-3-5",
+      "index" : 5,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.375,
+      "y" : -0
+    },
+    {
+      "id" : "L-3-6",
+      "index" : 6,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.625,
+      "y" : -0
+    },
+    {
+      "id" : "L-3-7",
+      "index" : 7,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.875,
+      "y" : -0
+    },
+    {
+      "id" : "U-0-0",
+      "index" : 0,
+      "level" : 0,
+      "region" : "upper",
+      "x" : 0,
+      "y" : 3
+    },
+    {
+      "id" : "U-1-0",
+      "index" : 0,
+      "level" : 1,
+      "region" : "upper",
+      "x" : -0.5,
+      "y" : 2
+    },
+    {
+      "id" : "U-1-1",
+      "index" : 1,
+      "level" : 1,
+      "region" : "upper",
+      "x" : 0.5,
+      "y" : 2
+    },
+    {
+      "id" : "U-2-0",
+      "index" : 0,
+      "level" : 2,
+      "region" : "upper",
+      "x" : -0.75,
+      "y" : 1
+    },
+    {
+      "id" : "U-2-1",
+      "index" : 1,
+      "level" : 2,
+      "region" : "upper",
+      "x" : -0.25,
+      "y" : 1
+    },
+    {
+      "id" : "U-2-2",
+      "index" : 2,
+      "level" : 2,
+      "region" : "upper",
+      "x" : 0.25,
+      "y" : 1
+    },
+    {
+      "id" : "U-2-3",
+      "index" : 3,
+      "level" : 2,
+      "region" : "upper",
+      "x" : 0.75,
+      "y" : 1
+    },
+    {
+      "id" : "U-3-0",
+      "index" : 0,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.875,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-1",
+      "index" : 1,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.625,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-2",
+      "index" : 2,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.375,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-3",
+      "index" : 3,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.125,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-4",
+      "index" : 4,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.125,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-5",
+      "index" : 5,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.375,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-6",
+      "index" : 6,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.625,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-7",
+      "index" : 7,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.875,
+      "y" : 0
+    }
+  ],
+  "title" : "Add inverted tree (unbridged) : beta0 = 2, beta1 = 0"
+}

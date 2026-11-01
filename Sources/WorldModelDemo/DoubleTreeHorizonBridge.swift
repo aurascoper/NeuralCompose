@@ -17,11 +17,15 @@ public struct HorizonBridgeEdge: Sendable, Hashable, Codable {
         self.b = max(a, b)
         self.kind = kind
     }
+
+    public var key: String {
+        "\(a)|\(b)"
+    }
 }
 
 /// A vertex in the abstract double-tree graph. Coordinates are in a
 /// normalized display coordinate system, not a spacetime metric.
-public struct HorizonBridgeNode: Sendable, Codable, Identifiable {
+public struct HorizonBridgeNode: Sendable, Codable, Identifiable, Equatable {
     public let id: String
     public let level: Int
     public let index: Int
@@ -44,6 +48,7 @@ public struct HorizonBridgeFrame: Sendable, Codable {
     public let beta0: Int
     public let beta1: Int
     public let bridgeEdgeCount: Int
+    public let bridgeEdgeKeys: [String]
 }
 
 public struct HorizonBridgeFixture: Sendable, Codable {
@@ -51,15 +56,23 @@ public struct HorizonBridgeFixture: Sendable, Codable {
     public let topology: Topology
     public let frames: [HorizonBridgeFrame]
 
-    public enum Topology: String, Sendable, Codable {
-        /// Two trees share/identify the 2^depth horizon leaf vertices.
-        /// This remains a tree (beta1=0); vertex identification alone
-        /// does not create cycles.
+    public enum Topology: String, Sendable, Codable, CaseIterable {
+        /// Quotient corresponding upper and lower horizon leaves into 2^depth shared
+        /// horizon vertices at y = 0 (matching Panel B of the reference figure).
+        /// Contracting the 2^depth disjoint horizon links of `pairedHorizonLinks` is
+        /// a cellular homotopy equivalence: V = 3*2^depth - 2, E = 4*2^depth - 4,
+        /// beta0 = 1, beta1 = 2^depth - 1, and Tarjan bridge count = 0.
         case identifyLeaves
-        /// Preserve both copies of the horizon leaves and add one matching
-        /// cross-edge per leaf pair. This produces a connected graph with
-        /// beta1=2^depth-1.
+        /// Preserve both copies of the horizon leaves (at y = +0.25 and y = -0.25)
+        /// and add one matching cross-edge per leaf pair (2^depth links total).
+        /// Produces V = 4*2^depth - 2, E = 5*2^depth - 4, beta0 = 1,
+        /// beta1 = 2^depth - 1, and Tarjan bridge count = 0.
         case pairedHorizonLinks
+        /// Preserve both copies of the horizon leaves and connect only the primary
+        /// leaf pair (index 0) with a single bridge edge. This joins the two trees
+        /// without closing any cycles: V = 4*2^depth - 2, E = 4*2^depth - 3,
+        /// beta0 = 1, beta1 = 0, and every edge is a Tarjan bridge (bridgeEdgeCount = E).
+        case singleHorizonBridge
     }
 
     public var finalFrame: HorizonBridgeFrame { frames[frames.count - 1] }
@@ -72,13 +85,21 @@ public enum DoubleTreeHorizonBridgeError: Error, Equatable {
 /// Deterministic abstract graph fixture for the NeuralCompose research demo.
 /// It is intentionally isolated from EEG, MLX, and the live generation path.
 public enum DoubleTreeHorizonBridge {
-    public static func make(depth: Int, topology: HorizonBridgeFixture.Topology = .pairedHorizonLinks) throws -> HorizonBridgeFixture {
+    /// Half-width of the central horizon collar when upper and lower leaf sets
+    /// are kept distinct (`pairedHorizonLinks` and `singleHorizonBridge`).
+    public static let horizonCollarHalfHeight: Double = 0.25
+
+    public static func make(
+        depth: Int,
+        topology: HorizonBridgeFixture.Topology = .pairedHorizonLinks
+    ) throws -> HorizonBridgeFixture {
         guard (1...10).contains(depth) else {
             throw DoubleTreeHorizonBridgeError.invalidDepth(depth)
         }
 
-        let upper = makeTree(depth: depth, inverted: false, prefix: "U")
-        let lower = makeTree(depth: depth, inverted: true, prefix: "L")
+        let separateLeafRows = (topology != .identifyLeaves)
+        let upper = makeTree(depth: depth, inverted: false, prefix: "U", separateLeafRow: separateLeafRows)
+        let lower = makeTree(depth: depth, inverted: true, prefix: "L", separateLeafRow: separateLeafRows)
         let horizonCount = 1 << depth
 
         let upperLeafIDs = (0..<horizonCount).map { "U-\(depth)-\($0)" }
@@ -87,30 +108,49 @@ public enum DoubleTreeHorizonBridge {
         var finalNodes = upper.nodes + lower.nodes
         var finalEdges = upper.edges + lower.edges
 
+        let finalTitle: String
         switch topology {
         case .identifyLeaves:
-            // Identify lower horizon leaves with their upper partners.
+            // Identify lower horizon leaves with their upper partners at y = 0.
             let mapping = Dictionary(uniqueKeysWithValues: zip(lowerLeafIDs, upperLeafIDs))
             finalNodes = finalNodes.filter { !mapping.keys.contains($0.id) }
             finalEdges = finalEdges.map { edge in
                 HorizonBridgeEdge(mapping[edge.a] ?? edge.a, mapping[edge.b] ?? edge.b, kind: edge.kind)
             }
-            // The surviving upper horizon vertices already remain in finalNodes.
+            finalTitle = "Horizon leaves identified (quotient seam) : beta1 = \(horizonCount - 1)"
         case .pairedHorizonLinks:
-            // This edge set is precisely what creates cycles. It keeps the
-            // two leaf sets distinct and joins each matched pair once.
+            // Keep both leaf sets distinct across the horizon collar and join each matched pair.
             for i in 0..<horizonCount {
                 finalEdges.append(HorizonBridgeEdge(upperLeafIDs[i], lowerLeafIDs[i], kind: .horizon))
             }
+            finalTitle = "Paired horizon links (\(horizonCount) bridges) : beta1 = \(horizonCount - 1)"
+        case .singleHorizonBridge:
+            // Single contact between upper and lower trees: connected tree with beta1 = 0.
+            finalEdges.append(HorizonBridgeEdge(upperLeafIDs[0], lowerLeafIDs[0], kind: .horizon))
+            finalTitle = "Single horizon bridge (tree control) : beta1 = 0"
         }
 
         finalEdges = deduplicated(finalEdges)
-        let upperFrame = makeFrame(index: 0, title: "Upper tree · beta1 = 0", nodes: upper.nodes, edges: upper.edges)
+        let upperFrame = makeFrame(
+            index: 0,
+            title: "Upper tree only : beta0 = 1, beta1 = 0",
+            nodes: upper.nodes,
+            edges: upper.edges
+        )
         let lowerOnlyNodes = upper.nodes + lower.nodes
         let lowerOnlyEdges = upper.edges + lower.edges
-        let lowerFrame = makeFrame(index: 1, title: "Add inverted tree · disconnected components", nodes: lowerOnlyNodes, edges: lowerOnlyEdges)
-        let finalTitle = topology == .pairedHorizonLinks ? "Horizon linked · calculated cycle rank" : "Horizon leaves identified · still a tree"
-        let final = makeFrame(index: 2, title: finalTitle, nodes: finalNodes, edges: finalEdges)
+        let lowerFrame = makeFrame(
+            index: 1,
+            title: "Add inverted tree (unbridged) : beta0 = 2, beta1 = 0",
+            nodes: lowerOnlyNodes,
+            edges: lowerOnlyEdges
+        )
+        let final = makeFrame(
+            index: 2,
+            title: finalTitle,
+            nodes: finalNodes,
+            edges: finalEdges
+        )
 
         return HorizonBridgeFixture(depth: depth, topology: topology, frames: [upperFrame, lowerFrame, final])
     }
@@ -120,7 +160,7 @@ public enum DoubleTreeHorizonBridge {
         let edges: [HorizonBridgeEdge]
     }
 
-    private static func makeTree(depth: Int, inverted: Bool, prefix: String) -> Tree {
+    private static func makeTree(depth: Int, inverted: Bool, prefix: String, separateLeafRow: Bool) -> Tree {
         var nodes: [HorizonBridgeNode] = []
         var edges: [HorizonBridgeEdge] = []
         for level in 0...depth {
@@ -128,7 +168,8 @@ public enum DoubleTreeHorizonBridge {
             for index in 0..<count {
                 let id = "\(prefix)-\(level)-\(index)"
                 let x = (Double(index) + 0.5) / Double(count) * 2.0 - 1.0
-                let signed = Double(depth - level)
+                let baseSigned = Double(depth - level)
+                let signed = separateLeafRow ? (baseSigned + horizonCollarHalfHeight) : baseSigned
                 let y = inverted ? -signed : signed
                 let region: HorizonBridgeNode.Region = level == depth ? .horizon : (inverted ? .lower : .upper)
                 nodes.append(HorizonBridgeNode(id: id, level: level, index: index, region: region, x: x, y: y))
@@ -141,20 +182,30 @@ public enum DoubleTreeHorizonBridge {
         return Tree(nodes: nodes, edges: edges)
     }
 
-    private static func makeFrame(index: Int, title: String, nodes: [HorizonBridgeNode], edges: [HorizonBridgeEdge]) -> HorizonBridgeFrame {
+    private static func makeFrame(
+        index: Int,
+        title: String,
+        nodes: [HorizonBridgeNode],
+        edges: [HorizonBridgeEdge]
+    ) -> HorizonBridgeFrame {
         let graph = Graph(nodes: nodes, edges: edges)
-        return HorizonBridgeFrame(index: index, title: title, nodes: nodes.sorted { $0.id < $1.id },
-                                  edges: edges.sorted { ($0.a, $0.b) < ($1.a, $1.b) },
-                                  beta0: graph.componentCount,
-                                  beta1: graph.edges.count - graph.nodes.count + graph.componentCount,
-                                  bridgeEdgeCount: graph.bridgeEdges.count)
+        let bridges = graph.bridgeEdges.sorted()
+        return HorizonBridgeFrame(
+            index: index,
+            title: title,
+            nodes: nodes.sorted { $0.id < $1.id },
+            edges: edges.sorted { ($0.a, $0.b) < ($1.a, $1.b) },
+            beta0: graph.componentCount,
+            beta1: graph.edges.count - graph.nodes.count + graph.componentCount,
+            bridgeEdgeCount: bridges.count,
+            bridgeEdgeKeys: bridges
+        )
     }
 
     private static func deduplicated(_ edges: [HorizonBridgeEdge]) -> [HorizonBridgeEdge] {
         var seen = Set<String>()
         return edges.filter {
-            let key = "\($0.a)|\($0.b)"
-            return seen.insert(key).inserted
+            seen.insert($0.key).inserted
         }
     }
 

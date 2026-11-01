@@ -1,0 +1,889 @@
+{
+  "beta0" : 1,
+  "beta1" : 0,
+  "bridgeEdgeCount" : 62,
+  "bridgeEdgeKeys" : [
+    "U-0-0|U-1-0",
+    "U-0-0|U-1-1",
+    "U-1-0|U-2-0",
+    "U-1-0|U-2-1",
+    "U-1-1|U-2-2",
+    "U-1-1|U-2-3",
+    "U-2-0|U-3-0",
+    "U-2-0|U-3-1",
+    "U-2-1|U-3-2",
+    "U-2-1|U-3-3",
+    "U-2-2|U-3-4",
+    "U-2-2|U-3-5",
+    "U-2-3|U-3-6",
+    "U-2-3|U-3-7",
+    "U-3-0|U-4-0",
+    "U-3-0|U-4-1",
+    "U-3-1|U-4-2",
+    "U-3-1|U-4-3",
+    "U-3-2|U-4-4",
+    "U-3-2|U-4-5",
+    "U-3-3|U-4-6",
+    "U-3-3|U-4-7",
+    "U-3-4|U-4-8",
+    "U-3-4|U-4-9",
+    "U-3-5|U-4-10",
+    "U-3-5|U-4-11",
+    "U-3-6|U-4-12",
+    "U-3-6|U-4-13",
+    "U-3-7|U-4-14",
+    "U-3-7|U-4-15",
+    "U-4-0|U-5-0",
+    "U-4-0|U-5-1",
+    "U-4-10|U-5-20",
+    "U-4-10|U-5-21",
+    "U-4-11|U-5-22",
+    "U-4-11|U-5-23",
+    "U-4-12|U-5-24",
+    "U-4-12|U-5-25",
+    "U-4-13|U-5-26",
+    "U-4-13|U-5-27",
+    "U-4-14|U-5-28",
+    "U-4-14|U-5-29",
+    "U-4-15|U-5-30",
+    "U-4-15|U-5-31",
+    "U-4-1|U-5-2",
+    "U-4-1|U-5-3",
+    "U-4-2|U-5-4",
+    "U-4-2|U-5-5",
+    "U-4-3|U-5-6",
+    "U-4-3|U-5-7",
+    "U-4-4|U-5-8",
+    "U-4-4|U-5-9",
+    "U-4-5|U-5-10",
+    "U-4-5|U-5-11",
+    "U-4-6|U-5-12",
+    "U-4-6|U-5-13",
+    "U-4-7|U-5-14",
+    "U-4-7|U-5-15",
+    "U-4-8|U-5-16",
+    "U-4-8|U-5-17",
+    "U-4-9|U-5-18",
+    "U-4-9|U-5-19"
+  ],
+  "edges" : [
+    {
+      "a" : "U-0-0",
+      "b" : "U-1-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-0-0",
+      "b" : "U-1-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-0",
+      "b" : "U-2-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-0",
+      "b" : "U-2-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-1",
+      "b" : "U-2-2",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-1",
+      "b" : "U-2-3",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-0",
+      "b" : "U-3-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-0",
+      "b" : "U-3-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-1",
+      "b" : "U-3-2",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-1",
+      "b" : "U-3-3",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-2",
+      "b" : "U-3-4",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-2",
+      "b" : "U-3-5",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-3",
+      "b" : "U-3-6",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-3",
+      "b" : "U-3-7",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-0",
+      "b" : "U-4-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-0",
+      "b" : "U-4-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-1",
+      "b" : "U-4-2",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-1",
+      "b" : "U-4-3",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-2",
+      "b" : "U-4-4",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-2",
+      "b" : "U-4-5",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-3",
+      "b" : "U-4-6",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-3",
+      "b" : "U-4-7",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-4",
+      "b" : "U-4-8",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-4",
+      "b" : "U-4-9",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-5",
+      "b" : "U-4-10",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-5",
+      "b" : "U-4-11",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-6",
+      "b" : "U-4-12",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-6",
+      "b" : "U-4-13",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-7",
+      "b" : "U-4-14",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-3-7",
+      "b" : "U-4-15",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-0",
+      "b" : "U-5-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-0",
+      "b" : "U-5-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-1",
+      "b" : "U-5-2",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-1",
+      "b" : "U-5-3",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-10",
+      "b" : "U-5-20",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-10",
+      "b" : "U-5-21",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-11",
+      "b" : "U-5-22",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-11",
+      "b" : "U-5-23",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-12",
+      "b" : "U-5-24",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-12",
+      "b" : "U-5-25",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-13",
+      "b" : "U-5-26",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-13",
+      "b" : "U-5-27",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-14",
+      "b" : "U-5-28",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-14",
+      "b" : "U-5-29",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-15",
+      "b" : "U-5-30",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-15",
+      "b" : "U-5-31",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-2",
+      "b" : "U-5-4",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-2",
+      "b" : "U-5-5",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-3",
+      "b" : "U-5-6",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-3",
+      "b" : "U-5-7",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-4",
+      "b" : "U-5-8",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-4",
+      "b" : "U-5-9",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-5",
+      "b" : "U-5-10",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-5",
+      "b" : "U-5-11",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-6",
+      "b" : "U-5-12",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-6",
+      "b" : "U-5-13",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-7",
+      "b" : "U-5-14",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-7",
+      "b" : "U-5-15",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-8",
+      "b" : "U-5-16",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-8",
+      "b" : "U-5-17",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-9",
+      "b" : "U-5-18",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-4-9",
+      "b" : "U-5-19",
+      "kind" : "upperTree"
+    }
+  ],
+  "index" : 0,
+  "nodes" : [
+    {
+      "id" : "U-0-0",
+      "index" : 0,
+      "level" : 0,
+      "region" : "upper",
+      "x" : 0,
+      "y" : 5.25
+    },
+    {
+      "id" : "U-1-0",
+      "index" : 0,
+      "level" : 1,
+      "region" : "upper",
+      "x" : -0.5,
+      "y" : 4.25
+    },
+    {
+      "id" : "U-1-1",
+      "index" : 1,
+      "level" : 1,
+      "region" : "upper",
+      "x" : 0.5,
+      "y" : 4.25
+    },
+    {
+      "id" : "U-2-0",
+      "index" : 0,
+      "level" : 2,
+      "region" : "upper",
+      "x" : -0.75,
+      "y" : 3.25
+    },
+    {
+      "id" : "U-2-1",
+      "index" : 1,
+      "level" : 2,
+      "region" : "upper",
+      "x" : -0.25,
+      "y" : 3.25
+    },
+    {
+      "id" : "U-2-2",
+      "index" : 2,
+      "level" : 2,
+      "region" : "upper",
+      "x" : 0.25,
+      "y" : 3.25
+    },
+    {
+      "id" : "U-2-3",
+      "index" : 3,
+      "level" : 2,
+      "region" : "upper",
+      "x" : 0.75,
+      "y" : 3.25
+    },
+    {
+      "id" : "U-3-0",
+      "index" : 0,
+      "level" : 3,
+      "region" : "upper",
+      "x" : -0.875,
+      "y" : 2.25
+    },
+    {
+      "id" : "U-3-1",
+      "index" : 1,
+      "level" : 3,
+      "region" : "upper",
+      "x" : -0.625,
+      "y" : 2.25
+    },
+    {
+      "id" : "U-3-2",
+      "index" : 2,
+      "level" : 3,
+      "region" : "upper",
+      "x" : -0.375,
+      "y" : 2.25
+    },
+    {
+      "id" : "U-3-3",
+      "index" : 3,
+      "level" : 3,
+      "region" : "upper",
+      "x" : -0.125,
+      "y" : 2.25
+    },
+    {
+      "id" : "U-3-4",
+      "index" : 4,
+      "level" : 3,
+      "region" : "upper",
+      "x" : 0.125,
+      "y" : 2.25
+    },
+    {
+      "id" : "U-3-5",
+      "index" : 5,
+      "level" : 3,
+      "region" : "upper",
+      "x" : 0.375,
+      "y" : 2.25
+    },
+    {
+      "id" : "U-3-6",
+      "index" : 6,
+      "level" : 3,
+      "region" : "upper",
+      "x" : 0.625,
+      "y" : 2.25
+    },
+    {
+      "id" : "U-3-7",
+      "index" : 7,
+      "level" : 3,
+      "region" : "upper",
+      "x" : 0.875,
+      "y" : 2.25
+    },
+    {
+      "id" : "U-4-0",
+      "index" : 0,
+      "level" : 4,
+      "region" : "upper",
+      "x" : -0.9375,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-1",
+      "index" : 1,
+      "level" : 4,
+      "region" : "upper",
+      "x" : -0.8125,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-10",
+      "index" : 10,
+      "level" : 4,
+      "region" : "upper",
+      "x" : 0.3125,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-11",
+      "index" : 11,
+      "level" : 4,
+      "region" : "upper",
+      "x" : 0.4375,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-12",
+      "index" : 12,
+      "level" : 4,
+      "region" : "upper",
+      "x" : 0.5625,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-13",
+      "index" : 13,
+      "level" : 4,
+      "region" : "upper",
+      "x" : 0.6875,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-14",
+      "index" : 14,
+      "level" : 4,
+      "region" : "upper",
+      "x" : 0.8125,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-15",
+      "index" : 15,
+      "level" : 4,
+      "region" : "upper",
+      "x" : 0.9375,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-2",
+      "index" : 2,
+      "level" : 4,
+      "region" : "upper",
+      "x" : -0.6875,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-3",
+      "index" : 3,
+      "level" : 4,
+      "region" : "upper",
+      "x" : -0.5625,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-4",
+      "index" : 4,
+      "level" : 4,
+      "region" : "upper",
+      "x" : -0.4375,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-5",
+      "index" : 5,
+      "level" : 4,
+      "region" : "upper",
+      "x" : -0.3125,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-6",
+      "index" : 6,
+      "level" : 4,
+      "region" : "upper",
+      "x" : -0.1875,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-7",
+      "index" : 7,
+      "level" : 4,
+      "region" : "upper",
+      "x" : -0.0625,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-8",
+      "index" : 8,
+      "level" : 4,
+      "region" : "upper",
+      "x" : 0.0625,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-4-9",
+      "index" : 9,
+      "level" : 4,
+      "region" : "upper",
+      "x" : 0.1875,
+      "y" : 1.25
+    },
+    {
+      "id" : "U-5-0",
+      "index" : 0,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.96875,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-1",
+      "index" : 1,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.90625,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-10",
+      "index" : 10,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.34375,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-11",
+      "index" : 11,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.28125,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-12",
+      "index" : 12,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.21875,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-13",
+      "index" : 13,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.15625,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-14",
+      "index" : 14,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.09375,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-15",
+      "index" : 15,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.03125,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-16",
+      "index" : 16,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.03125,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-17",
+      "index" : 17,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.09375,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-18",
+      "index" : 18,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.15625,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-19",
+      "index" : 19,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.21875,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-2",
+      "index" : 2,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.84375,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-20",
+      "index" : 20,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.28125,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-21",
+      "index" : 21,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.34375,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-22",
+      "index" : 22,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.40625,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-23",
+      "index" : 23,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.46875,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-24",
+      "index" : 24,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.53125,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-25",
+      "index" : 25,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.59375,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-26",
+      "index" : 26,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.65625,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-27",
+      "index" : 27,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.71875,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-28",
+      "index" : 28,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.78125,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-29",
+      "index" : 29,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.84375,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-3",
+      "index" : 3,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.78125,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-30",
+      "index" : 30,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.90625,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-31",
+      "index" : 31,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : 0.96875,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-4",
+      "index" : 4,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.71875,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-5",
+      "index" : 5,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.65625,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-6",
+      "index" : 6,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.59375,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-7",
+      "index" : 7,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.53125,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-8",
+      "index" : 8,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.46875,
+      "y" : 0.25
+    },
+    {
+      "id" : "U-5-9",
+      "index" : 9,
+      "level" : 5,
+      "region" : "horizon",
+      "x" : -0.40625,
+      "y" : 0.25
+    }
+  ],
+  "title" : "Upper tree only : beta0 = 1, beta1 = 0"
+}

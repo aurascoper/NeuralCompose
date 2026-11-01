@@ -1,0 +1,217 @@
+{
+  "beta0" : 1,
+  "beta1" : 0,
+  "bridgeEdgeCount" : 14,
+  "bridgeEdgeKeys" : [
+    "U-0-0|U-1-0",
+    "U-0-0|U-1-1",
+    "U-1-0|U-2-0",
+    "U-1-0|U-2-1",
+    "U-1-1|U-2-2",
+    "U-1-1|U-2-3",
+    "U-2-0|U-3-0",
+    "U-2-0|U-3-1",
+    "U-2-1|U-3-2",
+    "U-2-1|U-3-3",
+    "U-2-2|U-3-4",
+    "U-2-2|U-3-5",
+    "U-2-3|U-3-6",
+    "U-2-3|U-3-7"
+  ],
+  "edges" : [
+    {
+      "a" : "U-0-0",
+      "b" : "U-1-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-0-0",
+      "b" : "U-1-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-0",
+      "b" : "U-2-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-0",
+      "b" : "U-2-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-1",
+      "b" : "U-2-2",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-1-1",
+      "b" : "U-2-3",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-0",
+      "b" : "U-3-0",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-0",
+      "b" : "U-3-1",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-1",
+      "b" : "U-3-2",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-1",
+      "b" : "U-3-3",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-2",
+      "b" : "U-3-4",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-2",
+      "b" : "U-3-5",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-3",
+      "b" : "U-3-6",
+      "kind" : "upperTree"
+    },
+    {
+      "a" : "U-2-3",
+      "b" : "U-3-7",
+      "kind" : "upperTree"
+    }
+  ],
+  "index" : 0,
+  "nodes" : [
+    {
+      "id" : "U-0-0",
+      "index" : 0,
+      "level" : 0,
+      "region" : "upper",
+      "x" : 0,
+      "y" : 3
+    },
+    {
+      "id" : "U-1-0",
+      "index" : 0,
+      "level" : 1,
+      "region" : "upper",
+      "x" : -0.5,
+      "y" : 2
+    },
+    {
+      "id" : "U-1-1",
+      "index" : 1,
+      "level" : 1,
+      "region" : "upper",
+      "x" : 0.5,
+      "y" : 2
+    },
+    {
+      "id" : "U-2-0",
+      "index" : 0,
+      "level" : 2,
+      "region" : "upper",
+      "x" : -0.75,
+      "y" : 1
+    },
+    {
+      "id" : "U-2-1",
+      "index" : 1,
+      "level" : 2,
+      "region" : "upper",
+      "x" : -0.25,
+      "y" : 1
+    },
+    {
+      "id" : "U-2-2",
+      "index" : 2,
+      "level" : 2,
+      "region" : "upper",
+      "x" : 0.25,
+      "y" : 1
+    },
+    {
+      "id" : "U-2-3",
+      "index" : 3,
+      "level" : 2,
+      "region" : "upper",
+      "x" : 0.75,
+      "y" : 1
+    },
+    {
+      "id" : "U-3-0",
+      "index" : 0,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.875,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-1",
+      "index" : 1,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.625,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-2",
+      "index" : 2,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.375,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-3",
+      "index" : 3,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : -0.125,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-4",
+      "index" : 4,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.125,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-5",
+      "index" : 5,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.375,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-6",
+      "index" : 6,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.625,
+      "y" : 0
+    },
+    {
+      "id" : "U-3-7",
+      "index" : 7,
+      "level" : 3,
+      "region" : "horizon",
+      "x" : 0.875,
+      "y" : 0
+    }
+  ],
+  "title" : "Upper tree only : beta0 = 1, beta1 = 0"
+}
