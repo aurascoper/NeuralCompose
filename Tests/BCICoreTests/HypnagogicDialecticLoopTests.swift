@@ -677,32 +677,27 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Yeah"), .ambientBackchannel)
         XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Oh my God"), .ambientBackchannel)
         XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Yeah I was I wasn't"), .ambientBackchannel)
-        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Uncle Tom"), .ambientBackchannel)
+        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Right"), .ambientBackchannel)
         XCTAssertEqual(
             HypnagogicDialecticLoop.classifyDiscourse("Sinking warm and slow let the shapes dissolve and float away"),
             .ambientBackchannel,
             "Acoustic loopback of silenceCue must be suppressed as ambientBackchannel"
         )
-        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Wake up"), .ambientBackchannel)
+        XCTAssertEqual(
+            HypnagogicDialecticLoop.classifyDiscourse("Please bring the item to the table"),
+            .ambientBackchannel
+        )
+        XCTAssertEqual(
+            HypnagogicDialecticLoop.classifyDiscourse("Set a timer for ten minutes"),
+            .ambientBackchannel
+        )
         XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Stop"), .ambientBackchannel)
         XCTAssertEqual(
-            HypnagogicDialecticLoop.classifyDiscourse("I was having a conversation with my aunt about family"),
-            .ambientRoomConversation
-        )
-        XCTAssertEqual(
-            HypnagogicDialecticLoop.classifyDiscourse("All right let's get your pajama"),
-            .ambientRoomConversation
-        )
-        XCTAssertEqual(
-            HypnagogicDialecticLoop.classifyDiscourse("Set an alarm for"),
+            HypnagogicDialecticLoop.classifyDiscourse("I was talking with a colleague while we were working"),
             .ambientRoomConversation
         )
         XCTAssertEqual(
             HypnagogicDialecticLoop.classifyDiscourse("Does my friend model hypotheses have any relation to equifinality"),
-            .directAddress
-        )
-        XCTAssertEqual(
-            HypnagogicDialecticLoop.classifyDiscourse("So what's the falsification framework for non-dissolving revenant or residue in the equifinality of clay microbes and metals"),
             .directAddress
         )
     }

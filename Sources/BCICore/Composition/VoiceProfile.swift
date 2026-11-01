@@ -83,7 +83,6 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
         "renormalization group",
         "Brett",
         "Qwen",
-        "Uncle Tom",
         "Fast Wireframe",
         "wireframe",
         "Slow Core",
@@ -129,8 +128,6 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
         "persistent homology",
         "horizon bridge",
         "cycle rank",
-        "Ellen Wan",
-        "Andrew Hoffman",
         "Boltzmann factor"
     ]
 

@@ -346,7 +346,7 @@ public actor HypnagogicDialecticLoop {
         let earlier = history.recent(config.historyExchanges)
         let historyBlock = earlier.isEmpty ? "" : Self.historyPreamble(earlier)
         let discourseNote = discourseKind == .ambientRoomConversation
-            ? "[Discourse Context: Ambient room conversation with Hunter's family, friends, or coauthors (e.g. his aunt, Uncle Tom, or Brett). Respond only to the substantive conceptual topic; do not psychoanalyze overheard fragments, family names, or conversational stutters.]\n\n"
+            ? "[Discourse Context: Ambient room conversation with colleagues, guests, or coauthors. Respond only to the substantive conceptual topic; do not psychoanalyze overheard fragments, proper names, or conversational stutters.]\n\n"
             : ""
         let hudNote = Self.isFourPillarHUDQuery(heard) ? Self.fourPillarHUDPreamble : ""
         let recallQuery = Self.isDirectRecallOrClarificationQuery(heard)
@@ -612,24 +612,33 @@ public actor HypnagogicDialecticLoop {
             return .ambientBackchannel
         }
 
+        // Routine logistics commands map to .ambientBackchannel.
+        let routineLogisticsCommands = [
+            "please bring the item",
+            "set a timer for",
+            "schedule a reminder",
+            "pause playback",
+            "stop",
+            "next"
+        ]
+        if routineLogisticsCommands.contains(where: { lowered == $0 || lowered.hasPrefix($0 + " ") }) {
+            return .ambientBackchannel
+        }
+
         let exactBackchannels: Set<String> = [
             "yeah", "yep", "yes", "no", "nope", "okay", "ok", "mm-hmm", "uh-huh",
             "oh my god", "oh gosh", "wow", "right", "sure", "i have", "but i'm",
             "but i am", "i was", "i wasn't", "yeah i was i wasn't", "i don't know if",
-            "they come in from the", "uncle tom", "conviction", "stop", "next",
-            "place", "i'll", "that's", "send", "yesterday", "wake up", "good morning",
-            "where are", "how much", "i'll be there", "this is", "what the fuck",
-            "yeah yeah whatever doesn't matter"
+            "conviction"
         ]
         if exactBackchannels.contains(lowered) {
             return .ambientBackchannel
         }
 
         let ambientIndicators = [
-            "my aunt", "my uncle", "uncle tom", "my cousin", "my mom", "my dad",
-            "showing me the pictures", "while we were working",
-            "do the shower later", "pre-check the prius", "where is kitty",
-            "set an alarm", "get your pajama", "gonna talk to me first"
+            "talking with a colleague", "speaking to the room",
+            "in the other room", "side conversation",
+            "while we were working", "showing the slides"
         ]
         if ambientIndicators.contains(where: { lowered.contains($0) }) {
             return .ambientRoomConversation
