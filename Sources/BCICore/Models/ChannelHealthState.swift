@@ -19,6 +19,27 @@ public enum EEGChannel: String, Sendable, Hashable, CaseIterable, Codable {
         case .tp10: return "TP10"
         }
     }
+
+    /// Contralateral partner electrode on the 4-channel Muse montage
+    /// (`TP9 <-> TP10`, `AF7 <-> AF8`), mirroring `CHANNEL_PAIRS` in
+    /// `Scripts/eeg_channel_quality.py`.
+    public var contralateralPartner: EEGChannel {
+        switch self {
+        case .tp9:  return .tp10
+        case .af7:  return .af8
+        case .af8:  return .af7
+        case .tp10: return .tp9
+        }
+    }
+
+    /// Canonical label-to-label contralateral partner table mirroring
+    /// `CHANNEL_PAIRS` in `Scripts/eeg_channel_quality.py`.
+    public static let channelPairs: [String: String] = [
+        "TP9": "TP10",
+        "TP10": "TP9",
+        "AF7": "AF8",
+        "AF8": "AF7",
+    ]
 }
 
 /// Coarse signal-quality bucket for a single channel. Derived from
@@ -37,13 +58,13 @@ public enum ChannelHealthStatus: String, Sendable, Hashable, Codable {
     /// the scalp or a dry pad.
     case dead
     /// No new sample has been ingested in longer than the provider's
-    /// staleness window — the amplitude-derived bucket above (healthy /
+    /// staleness window - the amplitude-derived bucket above (healthy /
     /// saturated / dead) is frozen at whatever it last was and may no
     /// longer reflect reality. Distinct from `.dead` on purpose: a dead
     /// electrode is a contact-quality problem the amplitude genuinely
     /// shows; `.stale` means no fresh amplitude reading has arrived at
-    /// all, e.g. the transport silently stalled. Conflating the two —
-    /// the bug this case exists to fix — let a frozen "healthy" or
+    /// all, e.g. the transport silently stalled. Conflating the two -
+    /// the bug this case exists to fix - let a frozen "healthy" or
     /// "saturated" reading sit on screen indefinitely during a stalled
     /// transport, indistinguishable from the genuine thing.
     case stale

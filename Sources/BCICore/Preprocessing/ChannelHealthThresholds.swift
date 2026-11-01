@@ -65,6 +65,7 @@ public struct ChannelHealthThresholds: Sendable, Equatable {
     ///   increasing RMS order (dead → healthy → saturated).
     public func status(forRMS rms: Float, samples: Int) -> ChannelHealthStatus {
         guard samples >= minimumSamples else { return .unknown }
+        guard rms.isFinite else { return .saturated }
         if rms > saturatedRMS { return .saturated }
         if rms < deadRMS { return .dead }
         return .healthy

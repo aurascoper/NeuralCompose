@@ -6,7 +6,7 @@ import MLXNN
 /// Real, MLX-backed `SpectralStateEstimating`. Loads `Models/EEGEncoder/`,
 /// rebuilds the anchor table by re-encoding `SpectralState`'s exact
 /// descriptor phrases through the app's *live* `SentenceEmbedder` (never the
-/// Python-exported anchor vectors — those are provenance only, per
+/// Python-exported anchor vectors - those are provenance only, per
 /// `docs/evaluation/PHASE_3_6_JOINT_EMBEDDING.md`'s "Phase 4.0 note"), and
 /// classifies each window by cosine similarity against those 5 anchors.
 ///
@@ -16,7 +16,7 @@ import MLXNN
 /// embedder is actually the real BGE (`modelID == "bge-small-en-v1.5"`, not
 /// `DeterministicSentenceEmbedder`'s `"stub-hash-v1"`). Without both, the
 /// encoder's output (aligned to real BGE space) would get projected against
-/// anchors from an unrelated stub embedding space — a plausible-looking but
+/// anchors from an unrelated stub embedding space - a plausible-looking but
 /// content-free argmax. Mirrors the Python side's own `build_anchors`
 /// refusal to fabricate the text space, extended end-to-end into the
 /// runtime.
@@ -34,7 +34,7 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
             throw BCIError.embedderMetadataInvalid(
                 path: modelDirectory.path,
                 reason: "untrusted anchor space (target_space=\(config.targetSpace), " +
-                    "live embedder modelID=\(sentenceEmbedder.modelID)) — refusing to project " +
+                    "live embedder modelID=\(sentenceEmbedder.modelID)) - refusing to project " +
                     "spectral embeddings against a mismatched text space"
             )
         }
@@ -88,22 +88,7 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
             return nil
         }
 
-        // Subtract each channel's DC baseline before BOTH the artifact gate and
-        // the model. Real EEG over OSC / Mind Monitor carries a large per-channel
-        // offset (~800uV) that DC-free synthetic/processed training data never
-        // had: left in, every raw sample exceeds SpectralArtifactGate's 150uV
-        // peak threshold, so isClean rejects every window and the gloss is pinned
-        // nil regardless of electrode contact; and the ~0-mean-trained encoder
-        // (eeg_spectral.py band powers use scipy detrend="constant") would see
-        // out-of-distribution input. This is the model-path site the 17cd373
-        // amplitude-metric demean (signalQuality / FeatureExtractor / channel
-        // health) did not cover.
-        let centered = EEGWindow(
-            samples: window.samples.map(Self.demeaned),
-            sampleRate: window.sampleRate,
-            endTimestamp: window.endTimestamp,
-            sequence: window.sequence
-        )
+        let centered = Self.prepareWindow(window)
 
         guard SpectralArtifactGate.isClean(centered) else {
             return nil
@@ -136,15 +121,38 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
         return bestState
     }
 
+    /// Substitutes any dead or saturated Muse channel from its demeaned
+    /// contralateral healthy partner (`TP9 <-> TP10`, `AF7 <-> AF8`) and
+    /// subtracts each channel's DC baseline before BOTH the artifact gate and
+    /// the model.
+    nonisolated internal static func prepareWindow(
+        _ window: EEGWindow,
+        thresholds: ChannelHealthThresholds = .default
+    ) -> EEGWindow {
+        let substituted = window.substitutingBadChannels(thresholds: thresholds)
+        return EEGWindow(
+            samples: substituted.samples.map(Self.demeaned),
+            sampleRate: substituted.sampleRate,
+            endTimestamp: substituted.endTimestamp,
+            sequence: substituted.sequence
+        )
+    }
+
     /// Subtract the per-channel mean (DC baseline) so the artifact gate measures
     /// AC swing and the encoder sees ~0-mean input. Mirrors FeatureExtractor's
     /// demean (Double accumulation for precision); a no-op on already-0-mean
-    /// synthetic data.
-    private static func demeaned(_ x: [Float]) -> [Float] {
+    /// synthetic data. Any non-finite value is preserved so SpectralArtifactGate
+    /// still rejects an unsubstituted corrupted channel.
+    nonisolated private static func demeaned(_ x: [Float]) -> [Float] {
         guard !x.isEmpty else { return x }
         var sum: Double = 0
-        for v in x { sum += Double(v) }
-        let mean = Float(sum / Double(x.count))
-        return x.map { $0 - mean }
+        var finiteCount = 0
+        for v in x where v.isFinite {
+            sum += Double(v)
+            finiteCount += 1
+        }
+        guard finiteCount > 0 else { return x }
+        let mean = Float(sum / Double(finiteCount))
+        return x.map { $0.isFinite ? ($0 - mean) : $0 }
     }
 }

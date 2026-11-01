@@ -31,14 +31,15 @@ public struct JEPASpectralState: Sendable, Codable, Equatable {
     }
 
     /// Converts the app's existing raw-window representation into the compact
-    /// state persisted for offline JEPA training. Returns `nil` rather than
-    /// emitting malformed JSON when an upstream window has no channels or a
-    /// non-finite value.
+    /// state persisted for offline JEPA training. Substitutes any dead or
+    /// saturated Muse channel from its demeaned contralateral healthy partner
+    /// before extracting features. Returns `nil` rather than emitting malformed
+    /// JSON when an upstream window has no channels or a non-finite value.
     public init?(window: EEGWindow, timestamp: TimeInterval) {
         guard timestamp.isFinite, window.channelCount > 0, window.sampleCount > 0 else {
             return nil
         }
-        let features = FeatureExtractor.features(for: window)
+        let features = FeatureExtractor.features(for: window, substituteBadChannels: true)
         let channelPowers = features.rmsByChannel.map { $0 * $0 }
         let values = [features.alphaEnergy, features.betaEnergy, features.thetaEnergy] + channelPowers
         guard values.allSatisfy(\.isFinite) else { return nil }

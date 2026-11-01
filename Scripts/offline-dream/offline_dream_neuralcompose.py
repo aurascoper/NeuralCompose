@@ -125,7 +125,11 @@ def phase_1c7_memory_gate():
     venv_py = NC_DIR / "venv" / "bin" / "python3"
     py = str(venv_py) if venv_py.exists() else "python3"
     manifest_path = Path("/tmp/offline-dream-memory-gate.jsonl")
-    rc, so, se = run([py, str(gate_script), "all", "--out", str(manifest_path)], cwd=NC_DIR, timeout=120)
+    rc, so, se = run(
+        [py, str(gate_script), "autobank", "--sync-sql", "--autoforget-if-needed", "--out", str(manifest_path)],
+        cwd=NC_DIR,
+        timeout=120,
+    )
     if rc != 0 or not manifest_path.exists():
         out["errors"].append(f"memory-gate.py failed rc={rc}: {se[-500:]}")
         return out

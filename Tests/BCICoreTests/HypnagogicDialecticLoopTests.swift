@@ -2,7 +2,7 @@ import XCTest
 import Foundation
 @testable import BCICore
 
-/// Milestone 2 — the text-only dual-generation loop. Spies + an injected RNG
+/// Milestone 2 - the text-only dual-generation loop. Spies + an injected RNG
 /// keep the single point of non-determinism under control, so loop-level
 /// behavior (decisive resolution, bifurcation, input-silence cue, bounded
 /// dialectical silence) is asserted deterministically.
@@ -82,7 +82,7 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
     private struct WitnessFailure: Error {}
 
     /// A witness generator that returns a fixed sentinel (or throws) and counts
-    /// calls — so a test can assert the finding is never spoken, that gating works,
+    /// calls - so a test can assert the finding is never spoken, that gating works,
     /// and that a FAILING witness is still recorded as attempted.
     private actor WitnessSpy: TextGenerating {
         nonisolated let isLive = false
@@ -111,7 +111,7 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         func log(_ event: ProsodyTraceEvent) async { events.append(event) }
     }
 
-    /// A metadata-publishing generator — the shape
+    /// A metadata-publishing generator - the shape
     /// `GenerationRuntimeTextGeneratingAdapter` has in production: a struct
     /// whose callback lives in a shared class box, returning
     /// role-distinguishable text and firing `onMetadata` with a fixed
@@ -165,7 +165,7 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         return await predicate()
     }
 
-    // MARK: - Witness (Reflective introspection) — see WITNESS.md
+    // MARK: - Witness (Reflective introspection) - see WITNESS.md
 
     func testWitnessFiresForReflectiveButIsNeverSpoken() async {
         // The firewall invariant: the witness observes, its finding is recorded in
@@ -256,7 +256,7 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
 
     func testPoleAndWitnessFingerprintsAreCapturedSeparately() async {
         // The persisted turn must independently attest which runtime/prompt
-        // produced the Witness finding — not only the candidates'. The bug
+        // produced the Witness finding - not only the candidates'. The bug
         // class this guards: a "Witness" adapter that reported one prompt
         // while transmitting another. Distinct prompt hashes on the two
         // fingerprints of the same event are the proof the wiring is per-role.
@@ -299,7 +299,7 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
 
     func testWitnessFingerprintIsNilWhenWitnessDisabled() async {
         // Focused/Contemplative: even with a publishing witness *injected*,
-        // a profile that disables it must not attest a Witness identity —
+        // a profile that disables it must not attest a Witness identity  - 
         // the fingerprint records what generated, not what was available.
         let embedder = MapEmbedder(
             dimension: 2, table: ["the sea": [1, 0], "calm sea": [1, 0], "moon river": [0, 1]])
@@ -584,7 +584,7 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
 
     func testDialecticalSilenceIsBoundedByACue() async {
         // heard orthogonal to both poles, poles antipodal ⇒ high tension + zero
-        // margin ⇒ metastable silence every turn — which must be broken by a cue.
+        // margin ⇒ metastable silence every turn - which must be broken by a cue.
         // Candidate texts chosen so they can't appear as substrings of any cue.
         let embedder = MapEmbedder(dimension: 2, table: [
             "x": [0, 1], "poleAlpha": [1, 0], "poleOmega": [-1, 0],
@@ -605,7 +605,7 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         XCTAssertTrue(brokeSilence, "a run of stalemates must eventually be broken by a cue")
         let spoken = await speaker.spoken.joined(separator: " ")
         XCTAssertFalse(spoken.contains("poleAlpha") || spoken.contains("poleOmega"),
-                       "a stalemate voices neither pole — only the induction cue")
+                       "a stalemate voices neither pole - only the induction cue")
         await loop.stop()
     }
 
@@ -755,5 +755,50 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         let event = await logger.events.first
         XCTAssertEqual(event?.outcome, "spoke:coherence-seeking",
                        "Direct recall / HUD queries must deterministically select coherence-seeking even when RNG draw is 0.99")
+    }
+
+    func testBluetoothBrainFlowQueryAndMemoryResetAutoforgetBehavior() async {
+        let btUtterance = "Should we test out the Bluetooth muse BCI brain computer interface EEG connection to NeuralCompose"
+        XCTAssertTrue(HypnagogicDialecticLoop.isBluetoothBrainFlowOrStackQuery(btUtterance))
+        XCTAssertTrue(HypnagogicDialecticLoop.isDirectRecallOrClarificationQuery(btUtterance))
+
+        XCTAssertTrue(HypnagogicDialecticLoop.isMemoryResetCommand("Turn off"))
+        XCTAssertTrue(HypnagogicDialecticLoop.isMemoryResetCommand("Forget that"))
+        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Sex sex sex"), .ambientBackchannel)
+        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("Kind of"), .ambientBackchannel)
+        XCTAssertEqual(HypnagogicDialecticLoop.classifyDiscourse("OK I should be good I'll be down in a second"), .ambientBackchannel)
+
+        let embedder = MapEmbedder(dimension: 2, table: [
+            btUtterance: [1, 0],
+            "CoherenceBLE": [0.96, 0.28],
+            "DisplacementBLE": [0.91, 0.41]
+        ])
+        let listener = SpyListener(script: ["Turn off", btUtterance], loopLast: true)
+        let generator = TwoRoleGenerator(stabilizer: "CoherenceBLE", dreamer: "DisplacementBLE")
+        let speaker = SpySpeaker()
+        let logger = CapturingTurnLogger()
+        let history = ConversationHistory()
+        history.append(heard: "stale-1", spoken: "stale-reply-1")
+        history.append(heard: "stale-2", spoken: "stale-reply-2")
+        history.append(heard: "stale-3", spoken: "stale-reply-3")
+
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.99 }, turnLogger: logger, config: fastConfig(), history: history
+        )
+        await loop.start()
+        let logged = await poll { await logger.events.count >= 2 }
+        await loop.stop()
+        XCTAssertTrue(logged)
+
+        let events = await logger.events
+        XCTAssertEqual(events.first?.outcome, "silent", "Memory reset command 'Turn off' must log a silent turn without speaking")
+        XCTAssertEqual(events.dropFirst().first?.outcome, "spoke:coherence-seeking",
+                       "Bluetooth/BrainFlow query must deterministically select coherence-seeking")
+        let prompts = await generator.prompts
+        XCTAssertTrue(prompts.first?.contains("[NeuralCompose Bluetooth, BrainFlow, and Polyglot Stack Reference") == true,
+                      "Bluetooth/BrainFlow query must inject the Bluetooth/BrainFlow/Julia/Python/Swift reference preamble")
+        XCTAssertFalse(prompts.first?.contains("stale-1") == true,
+                       "Memory reset command must trim oldest conversation history turns via autoforgetting")
     }
 }

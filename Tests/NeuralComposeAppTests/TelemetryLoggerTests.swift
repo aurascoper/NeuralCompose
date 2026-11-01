@@ -120,4 +120,86 @@ final class TelemetryLoggerTests: XCTestCase {
             .appendingPathComponent("InteractionLogs")
         XCTAssertEqual(TelemetryLogger.defaultDirectory(), expected)
     }
+
+    func testAutobankAndAutoforgetIfNeededFiltersNoiseAndCompactsWhenThresholdExceeded() async throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let expiredTraceURL = dir.appendingPathComponent("prosody-trace-2026-08-01.jsonl")
+        try "{}".write(to: expiredTraceURL, atomically: true, encoding: .utf8)
+
+        let logger = TelemetryLogger(directory: dir)
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone.current
+        let todayStr = dayFormatter.string(from: Date())
+
+        let emb = Embedding(values: [1, 0], modelID: "test", dimension: 2, version: "1", seed: 0)
+        let validCand = DialecticalCandidate(text: "Muse S board 39 streams 256 Hz over native BLE.", embedding: emb, roleID: "coherence-seeking")
+        let validScored = ScoredCandidate(
+            candidate: validCand,
+            energy: .init(coherence: 0.9, resonance: 0.8, novelty: 0.4),
+            potential: 0.85,
+            roleFulfillment: 0.85
+        )
+
+        let validTurn = DialecticalTurnEvent(
+            DialecticalCompetition(
+                index: 1,
+                heard: "Should we test out the Bluetooth muse BCI connection to NeuralCompose",
+                scored: [validScored],
+                tension: 0.06,
+                margin: 0.12,
+                selectionTemperature: 0.0,
+                outcome: .spoke(validCand),
+                glossScalar: 0.5,
+                selfSimilarity: 0.82
+            ),
+            runID: "run-valid",
+            recordedAt: "2026-11-01T19:29:44.340Z"
+        )
+
+        let stutterTurn = DialecticalTurnEvent(
+            DialecticalCompetition(
+                index: 2,
+                heard: "Sex sex sex",
+                scored: [validScored],
+                tension: 0.04,
+                margin: 0.01,
+                selectionTemperature: 0.25,
+                outcome: .spoke(validCand),
+                glossScalar: 0.5,
+                selfSimilarity: 0.94
+            ),
+            runID: "run-valid",
+            recordedAt: "2026-11-01T19:30:10.000Z"
+        )
+
+        await logger.log(validTurn)
+        await logger.log(stutterTurn)
+
+        let report = await logger.autobankAndAutoforgetIfNeeded(
+            day: todayStr,
+            maxTransientAgeDays: 30,
+            maxSelfSimilarity: 0.92,
+            compactPrimaryIfNeeded: true,
+            collapseRatioThreshold: 0.25
+        )
+
+        XCTAssertEqual(report.prunedTransientFiles, 1, "expired transient prosody-trace file must be pruned")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: expiredTraceURL.path))
+        XCTAssertEqual(report.evaluatedTurns, 2)
+        XCTAssertEqual(report.autobankedTurns, 1)
+        XCTAssertEqual(report.forgottenTurns, 1)
+        XCTAssertTrue(report.compactedPrimaryLog)
+
+        let autobankURL = dir.appendingPathComponent("dialectic-autobank-\(todayStr).jsonl")
+        let autobankLines = try String(contentsOf: autobankURL, encoding: .utf8)
+            .split(separator: "\n", omittingEmptySubsequences: true)
+        XCTAssertEqual(autobankLines.count, 1)
+
+        let backupURL = dir.appendingPathComponent("dialectic-turns-\(todayStr).jsonl.bak")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: backupURL.path), "compacting primary log must preserve .bak snapshot")
+    }
 }

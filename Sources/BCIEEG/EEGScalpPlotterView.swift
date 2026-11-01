@@ -268,6 +268,19 @@ public final class EEGScalpPlotterView: NSView {
         redraw()
     }
 
+    // MARK: - Test support
+
+    func testableTriggerRedraw() {
+        layout()
+        redraw()
+    }
+
+    func testableLayerPathBoundingBox(channelIndex: Int) -> CGRect? {
+        guard channelIndex >= 0, channelIndex < channelLayers.count,
+              let path = channelLayers[channelIndex].path else { return nil }
+        return path.boundingBoxOfPath
+    }
+
     private func redraw() {
         guard !channelLayers.isEmpty, let container = containerLayer else { return }
         let bounds = container.bounds
@@ -277,17 +290,39 @@ public final class EEGScalpPlotterView: NSView {
         let bufLen = ringBuffers.first?.count ?? 0
         guard bufLen > 1 else { return }
         let xStep = bounds.width / CGFloat(bufLen - 1)
+        let validCount = min(Int(consumed), bufLen)
+        let validStart = bufLen - validCount
 
         for (i, shape) in channelLayers.enumerated() {
             guard i < ringBuffers.count else { continue }
             let buffer = ringBuffers[i]
+            var dcSum: Double = 0
+            var finiteCount: Int = 0
+            if validCount > 0 {
+                for j in validStart..<buffer.count {
+                    let sample = buffer[j]
+                    if sample.isFinite {
+                        dcSum += Double(sample)
+                        finiteCount += 1
+                    }
+                }
+            }
+            let dcBaseline: Float = finiteCount > 0 ? Float(dcSum / Double(finiteCount)) : 0
             let path = CGMutablePath()
             for j in 0..<buffer.count {
                 let x = CGFloat(j) * xStep
                 let midY = perChannelHeight / 2
-                // Amplitude scaling: scaleMicrovoltsPerPixel µV per pixel.
-                // Convert value (µV) to pixel offset from center.
-                let yOffset = CGFloat(buffer[j]) / CGFloat(scaleMicrovoltsPerPixel)
+                // Amplitude scaling: scaleMicrovoltsPerPixel uV per pixel.
+                // Subtract the rolling DC baseline over the populated suffix so real
+                // Muse signals (~800 uV offset) render centered around midY from the
+                // first sample without unpopulated leading zeros skewing the baseline.
+                let sampleVal: Float
+                if j >= validStart && buffer[j].isFinite {
+                    sampleVal = buffer[j] - dcBaseline
+                } else {
+                    sampleVal = 0
+                }
+                let yOffset = CGFloat(sampleVal) / CGFloat(scaleMicrovoltsPerPixel)
                 let y = midY - yOffset
                 if j == 0 {
                     path.move(to: CGPoint(x: x, y: y))

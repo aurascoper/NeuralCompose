@@ -1,0 +1,614 @@
+{
+  "schema_version": "muse-s-af7-laya-health-gate-benchmark-v1",
+  "epistemic_status": "EMPIRICAL_ENGINEERING_BENCHMARK",
+  "source_kind": "empirical_muse_s_recordings",
+  "n_recordings": 6,
+  "aggregate_summary": {
+    "mean_af7_rms_uv_off": 589.7713352004836,
+    "mean_af7_rms_uv_on": 36.882010124619505,
+    "mean_clean_window_rate_off": 0.32083333333333336,
+    "mean_clean_window_rate_on": 0.922459349593496,
+    "mean_laya_kappa_raw_off": 318.9452540311602,
+    "mean_laya_kappa_raw_on": 107.97818720025835,
+    "mean_laya_kappa_whitened_on": 1.0000000000000018
+  },
+  "recordings": [
+    {
+      "recording_id": "muse_validation_20260710-004345",
+      "n_samples": 20480,
+      "duration_s": 80.0,
+      "fs_hz": 256.0,
+      "substitution_off": {
+        "channel_rms_uv": {
+          "TP9": 19.94814572300899,
+          "AF7": 20.018542367691804,
+          "AF8": 20.04152174146165,
+          "TP10": 20.24302975388916
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "healthy",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "total_windows": 40,
+        "clean_windows": 40,
+        "clean_window_rate": 1.0,
+        "mean_band_powers_uv2": {
+          "delta": 11.381171933253412,
+          "theta": 12.980821064280263,
+          "alpha": 14.452977229600188,
+          "beta": 55.912212537745106
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 0.898141666529003,
+          "alpha_beta": 0.25849410300582115,
+          "beta_alpha": 3.868560201184666,
+          "engagement": 2.03807769957383,
+          "slow_fraction": 0.25718059255948145
+        },
+        "dominant_descriptor": "high cognitive load, elevated beta over alpha brain activity",
+        "descriptor_counts": {
+          "high cognitive load, elevated beta over alpha brain activity": 40
+        },
+        "laya_kappa_raw": 151.6128542898263,
+        "laya_kappa_whitened": 1.000000000000002,
+        "laya_sigreg_loss": 0.022094515967938478,
+        "laya_query_loss": 0.09512864719981365
+      },
+      "substitution_on": {
+        "channel_rms_uv": {
+          "TP9": 19.94814572300899,
+          "AF7": 20.018542367691804,
+          "AF8": 20.04152174146165,
+          "TP10": 20.24302975388916
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "healthy",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "substitutions_by_channel": {},
+        "total_substituted_windows": 0,
+        "total_windows": 40,
+        "clean_windows": 40,
+        "clean_window_rate": 1.0,
+        "mean_band_powers_uv2": {
+          "delta": 11.381171933253412,
+          "theta": 12.980821064280263,
+          "alpha": 14.452977229600188,
+          "beta": 55.912212537745106
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 0.898141666529003,
+          "alpha_beta": 0.25849410300582115,
+          "beta_alpha": 3.868560201184666,
+          "engagement": 2.03807769957383,
+          "slow_fraction": 0.25718059255948145
+        },
+        "dominant_descriptor": "high cognitive load, elevated beta over alpha brain activity",
+        "descriptor_counts": {
+          "high cognitive load, elevated beta over alpha brain activity": 40
+        },
+        "laya_kappa_raw": 151.6128542898263,
+        "laya_kappa_whitened": 1.000000000000002,
+        "laya_sigreg_loss": 0.022094515967938478,
+        "laya_query_loss": 0.09512864719981365
+      },
+      "deltas_on_minus_off": {
+        "af7_rms_reduction_uv": 0.0,
+        "clean_window_rate_gain": 0.0,
+        "laya_kappa_raw_reduction_ratio": 1.0,
+        "beta_power_reduction_ratio": 1.0
+      }
+    },
+    {
+      "recording_id": "muse_validation_20260710-004400",
+      "n_samples": 20480,
+      "duration_s": 80.0,
+      "fs_hz": 256.0,
+      "substitution_off": {
+        "channel_rms_uv": {
+          "TP9": 24.932458669349298,
+          "AF7": 16.51732328260577,
+          "AF8": 10.896374764705763,
+          "TP10": 24.150195218848083
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "healthy",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "total_windows": 40,
+        "clean_windows": 37,
+        "clean_window_rate": 0.925,
+        "mean_band_powers_uv2": {
+          "delta": 91.25722788223081,
+          "theta": 27.117717636753248,
+          "alpha": 19.604028912414837,
+          "beta": 47.86276068586073
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 1.3832726805328988,
+          "alpha_beta": 0.4095883444121984,
+          "beta_alpha": 2.4414757229385358,
+          "engagement": 1.0244214784489631,
+          "slow_fraction": 0.6369664243498584
+        },
+        "dominant_descriptor": "drowsy and fatigued, theta-dominant low-frequency brain activity",
+        "descriptor_counts": {
+          "high cognitive load, elevated beta over alpha brain activity": 26,
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 9,
+          "engaged and focused, beta-dominant brain activity": 2,
+          "relaxed wakefulness, alpha-dominant brain activity": 3
+        },
+        "laya_kappa_raw": 176.56125640461127,
+        "laya_kappa_whitened": 1.0000000000000016,
+        "laya_sigreg_loss": 0.26498493586726696,
+        "laya_query_loss": 0.09512223604609049
+      },
+      "substitution_on": {
+        "channel_rms_uv": {
+          "TP9": 24.932458669349298,
+          "AF7": 16.51732328260577,
+          "AF8": 10.896374764705763,
+          "TP10": 24.150195218848083
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "healthy",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "substitutions_by_channel": {},
+        "total_substituted_windows": 0,
+        "total_windows": 40,
+        "clean_windows": 37,
+        "clean_window_rate": 0.925,
+        "mean_band_powers_uv2": {
+          "delta": 91.25722788223081,
+          "theta": 27.117717636753248,
+          "alpha": 19.604028912414837,
+          "beta": 47.86276068586073
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 1.3832726805328988,
+          "alpha_beta": 0.4095883444121984,
+          "beta_alpha": 2.4414757229385358,
+          "engagement": 1.0244214784489631,
+          "slow_fraction": 0.6369664243498584
+        },
+        "dominant_descriptor": "drowsy and fatigued, theta-dominant low-frequency brain activity",
+        "descriptor_counts": {
+          "high cognitive load, elevated beta over alpha brain activity": 26,
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 9,
+          "engaged and focused, beta-dominant brain activity": 2,
+          "relaxed wakefulness, alpha-dominant brain activity": 3
+        },
+        "laya_kappa_raw": 176.56125640461127,
+        "laya_kappa_whitened": 1.0000000000000016,
+        "laya_sigreg_loss": 0.26498493586726696,
+        "laya_query_loss": 0.09512223604609049
+      },
+      "deltas_on_minus_off": {
+        "af7_rms_reduction_uv": 0.0,
+        "clean_window_rate_gain": 0.0,
+        "laya_kappa_raw_reduction_ratio": 1.0,
+        "beta_power_reduction_ratio": 1.0
+      }
+    },
+    {
+      "recording_id": "muse_validation_20260710-013446",
+      "n_samples": 21248,
+      "duration_s": 83.0,
+      "fs_hz": 256.0,
+      "substitution_off": {
+        "channel_rms_uv": {
+          "TP9": 42.2404249249773,
+          "AF7": 823.5451838466813,
+          "AF8": 13.278740824606107,
+          "TP10": 27.802155009830045
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "saturated",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "total_windows": 41,
+        "clean_windows": 0,
+        "clean_window_rate": 0.0,
+        "mean_band_powers_uv2": {
+          "delta": 20585.36659790903,
+          "theta": 10415.840327461074,
+          "alpha": 7861.044065621985,
+          "beta": 39906.61618448263
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 1.3249945224195478,
+          "alpha_beta": 0.19698598421072647,
+          "beta_alpha": 5.076503305578958,
+          "engagement": 2.1834474260593106,
+          "slow_fraction": 0.39357182649719036
+        },
+        "dominant_descriptor": "high cognitive load, elevated beta over alpha brain activity",
+        "descriptor_counts": {
+          "high cognitive load, elevated beta over alpha brain activity": 36,
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 4,
+          "relaxed wakefulness, alpha-dominant brain activity": 1
+        },
+        "laya_kappa_raw": 1266.7078093242526,
+        "laya_kappa_whitened": 1.0000000000000027,
+        "laya_sigreg_loss": 0.32346221110722356,
+        "laya_query_loss": 0.09551534198942868
+      },
+      "substitution_on": {
+        "channel_rms_uv": {
+          "TP9": 42.2404249249773,
+          "AF7": 19.408349466599475,
+          "AF8": 13.278740824606107,
+          "TP10": 27.802155009830045
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "healthy",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "substitutions_by_channel": {
+          "AF7": {
+            "substituted_from": "AF8",
+            "window_count": 41,
+            "total_seconds": 81.0
+          }
+        },
+        "total_substituted_windows": 41,
+        "total_windows": 41,
+        "clean_windows": 35,
+        "clean_window_rate": 0.8536585365853658,
+        "mean_band_powers_uv2": {
+          "delta": 156.74634051350571,
+          "theta": 34.464960973205535,
+          "alpha": 23.036020041572467,
+          "beta": 67.51574420153216
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 1.4961334855607105,
+          "alpha_beta": 0.34119478812821497,
+          "beta_alpha": 2.930877124189838,
+          "engagement": 1.1741668228658333,
+          "slow_fraction": 0.6786244356926416
+        },
+        "dominant_descriptor": "drowsy and fatigued, theta-dominant low-frequency brain activity",
+        "descriptor_counts": {
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 13,
+          "high cognitive load, elevated beta over alpha brain activity": 18,
+          "engaged and focused, beta-dominant brain activity": 3,
+          "relaxed wakefulness, alpha-dominant brain activity": 7
+        },
+        "laya_kappa_raw": 110.8103985812672,
+        "laya_kappa_whitened": 1.0000000000000016,
+        "laya_sigreg_loss": 0.29222227897479464,
+        "laya_query_loss": 0.0951769641329662
+      },
+      "deltas_on_minus_off": {
+        "af7_rms_reduction_uv": 804.1368343800818,
+        "clean_window_rate_gain": 0.8536585365853658,
+        "laya_kappa_raw_reduction_ratio": 11.431308122181893,
+        "beta_power_reduction_ratio": 591.0712628059429
+      }
+    },
+    {
+      "recording_id": "muse_validation_20260710-013820",
+      "n_samples": 21248,
+      "duration_s": 83.0,
+      "fs_hz": 256.0,
+      "substitution_off": {
+        "channel_rms_uv": {
+          "TP9": 127.2130934770195,
+          "AF7": 901.1794977629417,
+          "AF8": 61.089550073218994,
+          "TP10": 97.74125421716612
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "saturated",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "total_windows": 41,
+        "clean_windows": 0,
+        "clean_window_rate": 0.0,
+        "mean_band_powers_uv2": {
+          "delta": 10389.07049152223,
+          "theta": 10440.338785138476,
+          "alpha": 43323.14368091977,
+          "beta": 107999.06669748102
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 0.24098756226072682,
+          "alpha_beta": 0.40114368582711313,
+          "beta_alpha": 2.4928723430802338,
+          "engagement": 2.008781086039999,
+          "slow_fraction": 0.12099455885686802
+        },
+        "dominant_descriptor": "high cognitive load, elevated beta over alpha brain activity",
+        "descriptor_counts": {
+          "high cognitive load, elevated beta over alpha brain activity": 36,
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 1,
+          "engaged and focused, beta-dominant brain activity": 2,
+          "relaxed wakefulness, alpha-dominant brain activity": 2
+        },
+        "laya_kappa_raw": 133.42651672914317,
+        "laya_kappa_whitened": 1.000000000000002,
+        "laya_sigreg_loss": 0.8234853407786181,
+        "laya_query_loss": 0.09545584652194544
+      },
+      "substitution_on": {
+        "channel_rms_uv": {
+          "TP9": 127.2130934770195,
+          "AF7": 149.32990525552876,
+          "AF8": 61.089550073218994,
+          "TP10": 92.13765267615541
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "healthy",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "substitutions_by_channel": {
+          "AF7": {
+            "substituted_from": "AF8",
+            "window_count": 41,
+            "total_seconds": 81.0
+          },
+          "TP10": {
+            "substituted_from": "TP9",
+            "window_count": 1,
+            "total_seconds": 2.0
+          }
+        },
+        "total_substituted_windows": 42,
+        "total_windows": 41,
+        "clean_windows": 35,
+        "clean_window_rate": 0.8536585365853658,
+        "mean_band_powers_uv2": {
+          "delta": 7200.463198301716,
+          "theta": 1785.8886656253674,
+          "alpha": 459.7213794445331,
+          "beta": 847.580892603324
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 3.8847196267973296,
+          "alpha_beta": 0.5423923349983578,
+          "beta_alpha": 1.843683871324393,
+          "engagement": 0.3774390368712331,
+          "slow_fraction": 0.872999203704762
+        },
+        "dominant_descriptor": "drowsy and fatigued, theta-dominant low-frequency brain activity",
+        "descriptor_counts": {
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 16,
+          "neutral baseline brain activity with no dominant rhythm": 1,
+          "high cognitive load, elevated beta over alpha brain activity": 14,
+          "relaxed wakefulness, alpha-dominant brain activity": 3,
+          "engaged and focused, beta-dominant brain activity": 7
+        },
+        "laya_kappa_raw": 69.46083656965763,
+        "laya_kappa_whitened": 1.000000000000002,
+        "laya_sigreg_loss": 7.680256937004881,
+        "laya_query_loss": 0.09510118921989226
+      },
+      "deltas_on_minus_off": {
+        "af7_rms_reduction_uv": 751.8495925074129,
+        "clean_window_rate_gain": 0.8536585365853658,
+        "laya_kappa_raw_reduction_ratio": 1.9208884217128401,
+        "beta_power_reduction_ratio": 127.42036499402968
+      }
+    },
+    {
+      "recording_id": "muse_validation_20260710-014223",
+      "n_samples": 21248,
+      "duration_s": 83.0,
+      "fs_hz": 256.0,
+      "substitution_off": {
+        "channel_rms_uv": {
+          "TP9": 24.10180641897391,
+          "AF7": 905.5541722166812,
+          "AF8": 8.385362382147,
+          "TP10": 31.55285033253089
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "saturated",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "total_windows": 41,
+        "clean_windows": 0,
+        "clean_window_rate": 0.0,
+        "mean_band_powers_uv2": {
+          "delta": 2801.699485884934,
+          "theta": 9369.734417071557,
+          "alpha": 47955.38737774023,
+          "beta": 115188.3559428809
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 0.19538439640295377,
+          "alpha_beta": 0.41632148479934883,
+          "beta_alpha": 2.4019898960575308,
+          "engagement": 2.009387025031771,
+          "slow_fraction": 0.06942601374114742
+        },
+        "dominant_descriptor": "high cognitive load, elevated beta over alpha brain activity",
+        "descriptor_counts": {
+          "high cognitive load, elevated beta over alpha brain activity": 38,
+          "relaxed wakefulness, alpha-dominant brain activity": 3
+        },
+        "laya_kappa_raw": 55.625079387072,
+        "laya_kappa_whitened": 1.0000000000000018,
+        "laya_sigreg_loss": 4.608739377296326,
+        "laya_query_loss": 0.09540059769261253
+      },
+      "substitution_on": {
+        "channel_rms_uv": {
+          "TP9": 24.10180641897391,
+          "AF7": 8.385362382147,
+          "AF8": 8.385362382147,
+          "TP10": 31.55285033253089
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "healthy",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "substitutions_by_channel": {
+          "AF7": {
+            "substituted_from": "AF8",
+            "window_count": 42,
+            "total_seconds": 83.0
+          }
+        },
+        "total_substituted_windows": 42,
+        "total_windows": 41,
+        "clean_windows": 38,
+        "clean_window_rate": 0.926829268292683,
+        "mean_band_powers_uv2": {
+          "delta": 139.08409166703953,
+          "theta": 18.947664832845756,
+          "alpha": 17.745397646646488,
+          "beta": 26.774043405356945
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 1.0677509289710936,
+          "alpha_beta": 0.6627836285821571,
+          "beta_alpha": 1.5087880206127025,
+          "engagement": 0.7296759002610971,
+          "slow_fraction": 0.7802064781749775
+        },
+        "dominant_descriptor": "high cognitive load, elevated beta over alpha brain activity",
+        "descriptor_counts": {
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 11,
+          "high cognitive load, elevated beta over alpha brain activity": 12,
+          "engaged and focused, beta-dominant brain activity": 6,
+          "relaxed wakefulness, alpha-dominant brain activity": 12
+        },
+        "laya_kappa_raw": 89.24273818003513,
+        "laya_kappa_whitened": 1.000000000000002,
+        "laya_sigreg_loss": 3.5375709857845004,
+        "laya_query_loss": 0.09504914174442464
+      },
+      "deltas_on_minus_off": {
+        "af7_rms_reduction_uv": 897.1688098345342,
+        "clean_window_rate_gain": 0.926829268292683,
+        "laya_kappa_raw_reduction_ratio": 0.6233009040450544,
+        "beta_power_reduction_ratio": 4302.239829783574
+      }
+    },
+    {
+      "recording_id": "muse_validation_20260710-015723",
+      "n_samples": 21248,
+      "duration_s": 83.0,
+      "fs_hz": 256.0,
+      "substitution_off": {
+        "channel_rms_uv": {
+          "TP9": 22.672459515144716,
+          "AF7": 871.8132917262998,
+          "AF8": 7.632577993144182,
+          "TP10": 21.790366973052507
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "saturated",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "total_windows": 41,
+        "clean_windows": 0,
+        "clean_window_rate": 0.0,
+        "mean_band_powers_uv2": {
+          "delta": 27010.12988281493,
+          "theta": 11119.924006323263,
+          "alpha": 34460.03984806712,
+          "beta": 83990.6791001774
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 0.32269039894751483,
+          "alpha_beta": 0.4102840960121519,
+          "beta_alpha": 2.4373355187766594,
+          "engagement": 1.8427105244856126,
+          "slow_fraction": 0.2435168328664197
+        },
+        "dominant_descriptor": "high cognitive load, elevated beta over alpha brain activity",
+        "descriptor_counts": {
+          "engaged and focused, beta-dominant brain activity": 2,
+          "high cognitive load, elevated beta over alpha brain activity": 35,
+          "relaxed wakefulness, alpha-dominant brain activity": 2,
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 2
+        },
+        "laya_kappa_raw": 129.7380080520556,
+        "laya_kappa_whitened": 1.000000000000001,
+        "laya_sigreg_loss": 0.04531199350553288,
+        "laya_query_loss": 0.0954832250985158
+      },
+      "substitution_on": {
+        "channel_rms_uv": {
+          "TP9": 22.672459515144716,
+          "AF7": 7.632577993144182,
+          "AF8": 7.632577993144182,
+          "TP10": 21.790366973052507
+        },
+        "channel_status": {
+          "TP9": "healthy",
+          "AF7": "healthy",
+          "AF8": "healthy",
+          "TP10": "healthy"
+        },
+        "substitutions_by_channel": {
+          "AF7": {
+            "substituted_from": "AF8",
+            "window_count": 42,
+            "total_seconds": 83.0
+          }
+        },
+        "total_substituted_windows": 42,
+        "total_windows": 41,
+        "clean_windows": 40,
+        "clean_window_rate": 0.975609756097561,
+        "mean_band_powers_uv2": {
+          "delta": 174.34107898138654,
+          "theta": 40.37426037110426,
+          "alpha": 15.782414000281586,
+          "beta": 16.04618726104873
+        },
+        "mean_spectral_ratios": {
+          "theta_alpha": 2.558180285018636,
+          "alpha_beta": 0.983561623312034,
+          "beta_alpha": 1.0167131118595232,
+          "engagement": 0.28573962824208,
+          "slow_fraction": 0.8709008982707278
+        },
+        "dominant_descriptor": "drowsy and fatigued, theta-dominant low-frequency brain activity",
+        "descriptor_counts": {
+          "drowsy and fatigued, theta-dominant low-frequency brain activity": 19,
+          "high cognitive load, elevated beta over alpha brain activity": 5,
+          "engaged and focused, beta-dominant brain activity": 3,
+          "relaxed wakefulness, alpha-dominant brain activity": 14
+        },
+        "laya_kappa_raw": 50.1810391761526,
+        "laya_kappa_whitened": 1.000000000000002,
+        "laya_sigreg_loss": 0.8722656470435922,
+        "laya_query_loss": 0.09512599536837121
+      },
+      "deltas_on_minus_off": {
+        "af7_rms_reduction_uv": 864.1807137331556,
+        "clean_window_rate_gain": 0.975609756097561,
+        "laya_kappa_raw_reduction_ratio": 2.5853989909740775,
+        "beta_power_reduction_ratio": 5234.307548189989
+      }
+    }
+  ]
+}

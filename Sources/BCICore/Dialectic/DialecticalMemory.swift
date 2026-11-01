@@ -10,8 +10,8 @@ import Foundation
 public struct DialecticalMemory: Sendable {
 
     public private(set) var graph: SemanticGraph
-    private var heardEmbeddings: [Embedding] = []
-    private var replyEmbeddings: [Embedding] = []
+    public private(set) var heardEmbeddings: [Embedding] = []
+    public private(set) var replyEmbeddings: [Embedding] = []
     private let historyWindow: Int
     private let graphCapacity: Int
     private let tensionCeiling: Float
@@ -19,6 +19,13 @@ public struct DialecticalMemory: Sendable {
     /// Consecutive turns whose tension stayed at/below `tensionCeiling` - how
     /// long the dialogue has been converging.
     public private(set) var lowTensionStreak: Int = 0
+
+    /// Consecutive turns whose spoken reply collapsed onto the rolling reply
+    /// centroid (`selfSimilarity >= collapseThreshold`, default `0.85`).
+    public private(set) var reflexiveCollapseStreak: Int = 0
+
+    /// Total number of conditional autoforget events triggered in this memory instance.
+    public private(set) var autoforgetCount: Int = 0
 
     /// Texts the loop has recently *voiced* (spoken or synthesized). Synthesis
     /// must not resurface one of these verbatim: without this, an eager-synthesis
@@ -38,16 +45,16 @@ public struct DialecticalMemory: Sendable {
 
     // MARK: - Derived context
 
-    /// L2-normalized mean of recent *heard* utterances — the human's trajectory.
+    /// L2-normalized mean of recent *heard* utterances - the human's trajectory.
     public var historyCentroid: Embedding? { DialecticalDynamics.centroid(of: heardEmbeddings) }
-    /// L2-normalized mean of recent *replies* — the machine's trajectory.
+    /// L2-normalized mean of recent *replies* - the machine's trajectory.
     public var replyCentroid: Embedding? { DialecticalDynamics.centroid(of: replyEmbeddings) }
 
-    /// How much the recent replies spread apart — a wandering, un-focused
+    /// How much the recent replies spread apart - a wandering, un-focused
     /// dialogue scores high. `[0, 1]`. (Consumed by the field at milestone 5.)
     public var entropy: Float { DialecticalDynamics.tension(among: replyEmbeddings) }
 
-    /// How fast the machine's semantic position is moving — mean dissimilarity
+    /// How fast the machine's semantic position is moving - mean dissimilarity
     /// between consecutive replies. `[0, 1]`. (Consumed by the field at 5.)
     public var drift: Float {
         guard replyEmbeddings.count >= 2 else { return 0 }
@@ -93,14 +100,121 @@ public struct DialecticalMemory: Sendable {
         if recentlyVoiced.count > graphCapacity { recentlyVoiced.removeFirst() }
     }
 
+    // MARK: - Conditional Autoforgetting & Autobank Gate (when/iff needed)
+
+    /// Conditional autoforgetting ("when/iff needed"):
+    /// Tracks consecutive reflexive-collapse turns (`selfSimilarity >= collapseThreshold`,
+    /// default `0.85` matching `session-seed.py`). Iff `forceReset` is true OR
+    /// `reflexiveCollapseStreak >= sustainK` while `replyEmbeddings.count > minRetained`,
+    /// prunes the oldest half of `heardEmbeddings` and `replyEmbeddings` (retaining at
+    /// least `minRetained` recent embeddings so the reply centroid never vanishes mid-run)
+    /// and resets `reflexiveCollapseStreak`. The long-horizon `SemanticGraph` and
+    /// `recentlyVoiced` deduplication ring are preserved so synthesis can still bridge
+    /// without verbatim repetition.
+    ///
+    /// - Returns: `true` iff an autoforget prune was executed on this call.
+    @discardableResult
+    public mutating func autoforgetIfNeeded(
+        selfSimilarity: Float?,
+        collapseThreshold: Float = 0.85,
+        sustainK: Int = 2,
+        minRetained: Int = 2,
+        forceReset: Bool = false
+    ) -> Bool {
+        if let sim = selfSimilarity, sim >= collapseThreshold {
+            reflexiveCollapseStreak += 1
+        } else {
+            reflexiveCollapseStreak = 0
+        }
+
+        let keepFloor = max(1, minRetained)
+        if forceReset {
+            if heardEmbeddings.count > keepFloor {
+                heardEmbeddings.removeFirst(heardEmbeddings.count - keepFloor)
+            }
+            if replyEmbeddings.count > keepFloor {
+                replyEmbeddings.removeFirst(replyEmbeddings.count - keepFloor)
+            }
+            reflexiveCollapseStreak = 0
+            lowTensionStreak = 0
+            autoforgetCount += 1
+            return true
+        }
+
+        guard reflexiveCollapseStreak >= max(1, sustainK),
+              replyEmbeddings.count > keepFloor else {
+            return false
+        }
+
+        let targetReplyKeep = max(keepFloor, replyEmbeddings.count / 2)
+        if replyEmbeddings.count > targetReplyKeep {
+            replyEmbeddings.removeFirst(replyEmbeddings.count - targetReplyKeep)
+        }
+        let targetHeardKeep = max(keepFloor, heardEmbeddings.count / 2)
+        if heardEmbeddings.count > targetHeardKeep {
+            heardEmbeddings.removeFirst(heardEmbeddings.count - targetHeardKeep)
+        }
+        reflexiveCollapseStreak = 0
+        autoforgetCount += 1
+        return true
+    }
+
+    /// Evaluates whether a completed dialectical turn warrants banking into persistent
+    /// SQL memory / session-time autobank manifest when/iff needed.
+    /// Rejects silent turns, single-token repetition stutters, short backchannels/hedges,
+    /// routine control/transit commands, and unmitigated reflexive-collapse turns (`> 0.92`).
+    public static func shouldAutobankTurn(
+        heard: String,
+        spoken: String?,
+        outcome: String,
+        selfSimilarity: Float?,
+        maxSelfSimilarity: Float = 0.92
+    ) -> Bool {
+        let rolePrefix = outcome.split(separator: ":", maxSplits: 1).first.map(String.init) ?? ""
+        guard (rolePrefix == "spoke" || rolePrefix == "synthesized"),
+              let reply = spoken?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !reply.isEmpty else {
+            return false
+        }
+        let cleanHeard = heard.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lowered = cleanHeard.lowercased().trimmingCharacters(in: .punctuationCharacters)
+        let words = lowered.split(whereSeparator: { $0.isWhitespace })
+            .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+            .filter { !$0.isEmpty }
+        guard !words.isEmpty else {
+            return false
+        }
+        // Reject routine control/transit phrases
+        let transientPrefixes = [
+            "turn off", "turn it off", "switch off", "forget that", "clear memory",
+            "reset memory", "clear history", "reset history",
+            "ok i should be good", "okay i should be good", "i'll be down in a second",
+            "be down in a second", "be right back", "hold on a second"
+        ]
+        if transientPrefixes.contains(where: { lowered == $0 || lowered.hasPrefix($0 + " ") || lowered.contains($0) }) {
+            return false
+        }
+        // Reject single-word repetition stutters (e.g. "sex sex sex", "Sex, sex, sex.")
+        if words.count >= 2 && Set(words).count == 1 {
+            return false
+        }
+        guard words.count >= 3 else {
+            return false
+        }
+        if let sim = selfSimilarity, sim > maxSelfSimilarity {
+            return false
+        }
+        return true
+    }
+
     // MARK: - Synthesis (emergent third idea)
 
-    /// Looks for a prior idea that bridges the two current poles — one that is
+    /// Looks for a prior idea that bridges the two current poles - one that is
     /// far from each yet sits near their midpoint (`synthesisScore`). Returns it
     /// as a `.synthesized` candidate when it clears the bar: the gentle
     /// (`synthesisLowBar`) bar once the dialogue has been converging for
     /// `synthesisSustainK` turns, the strict (`synthesisHighBar`) bar otherwise.
-    /// `nil` means "no synthesis this turn — let the poles keep competing."
+    /// `nil` means "no synthesis this turn - let the poles keep competing."
     public func synthesisCandidate(thesis: Embedding, antithesis: Embedding,
                                    tuning: DialecticalDynamics.Tuning) -> DialecticalCandidate? {
         guard let query = DialecticalDynamics.centroid(of: [thesis, antithesis]) else { return nil }
@@ -109,12 +223,12 @@ public struct DialecticalMemory: Sendable {
 
         let best = graph.nearestPriorNodes(to: query, limit: 10)
             // A synthesis reconciles the poles from a prior *reply* (something the
-            // dialogue itself said) — never the user's own heard input, which
+            // dialogue itself said) - never the user's own heard input, which
             // reads as parroting their words back. `nearestPriorNodes` stays
             // kind-agnostic (it's the general recurrence primitive); the .reply
             // restriction lives here, where synthesis is chosen.
             .filter { $0.kind == .reply }
-            // Nor resurface something just voiced — the verbatim repetition an
+            // Nor resurface something just voiced - the verbatim repetition an
             // eager-synthesis profile otherwise produces.
             .filter { !recentlyVoiced.contains($0.text) }
             .map { node -> (SemanticGraph.Node, Float) in

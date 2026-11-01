@@ -10,7 +10,7 @@ import BCICore
 /// owns (see `AppViewModel.liveSampleStream()` for the single-owner
 /// invariant). Multiple providers can be constructed from the same
 /// `AsyncStream` because `AsyncStream` is a single-iteration value
-/// type — the call site should `makeSampleStream()` once and pass
+/// type; the call site should `makeSampleStream()` once and pass
 /// the resulting `AsyncStream` to each consumer.
 ///
 /// **Future Architecture.** The 4-second per-channel ring and the
@@ -25,7 +25,7 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
 
     /// Width of the per-channel sample ring, in seconds. At the
     /// default 256 Hz Muse sample rate this is 1024 floats per
-    /// channel — plenty of headroom for a 1-second RMS window plus
+    /// channel, plenty of headroom for a 1-second RMS window plus
     /// smoothing. 4 s is chosen so the same ring can answer
     /// `windowSeconds: 2.0` queries with the most recent second of
     /// context available for diagnostic timestamps.
@@ -47,15 +47,15 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
     /// (wall-clock) seconds, every channel's status is reported as
     /// `.stale` regardless of what the amplitude-derived bucket would
     /// otherwise say. See `ChannelHealthStatus.stale`'s doc comment
-    /// for why this exists — without it, a stalled transport leaves
+    /// for why this exists: without it, a stalled transport leaves
     /// the badge UI frozen on a last-known reading with no visual
     /// distinction from a genuinely current one.
     ///
     /// Deliberately shorter than `BrainFlowService`/
     /// `MindMonitorOSCStream`'s own `staleTimeoutSec` (5s default,
     /// used to decide when to actually retry the transport). This
-    /// value only gates a *display* signal — "is this reading
-    /// current" — so it can and should fire well before the
+    /// value only gates a *display* signal ("is this reading
+    /// current") so it can and should fire well before the
     /// transport-level watchdog forces a retry, giving the user an
     /// earlier heads-up that something's off.
     private let staleTimeoutSec: Double
@@ -65,7 +65,7 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
     ///     spawns a task that drains the stream into its internal
     ///     ring until the stream finishes or the provider is
     ///     deallocated. If `nil`, the provider returns `.unknown`
-    ///     for every channel until a stream is supplied — there is
+    ///     for every channel until a stream is supplied; there is
     ///     no implicit fallback to `EEGStreaming.start()`.
     ///   - channelCount: Number of channels expected per sample.
     ///   - channelLabels: Display labels for each channel, in
@@ -110,17 +110,28 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
         drainTask?.cancel()
     }
 
+    public static let channelPairs: [String: String] = EEGChannel.channelPairs
+
+    /// Per-window contralateral bad-channel substitution (`TP9 <-> TP10`,
+    /// `AF7 <-> AF8`), mirroring `Scripts/eeg_channel_quality.py`.
+    public static func substituteBadChannels(
+        in window: EEGWindow,
+        thresholds: ChannelHealthThresholds = .default
+    ) -> EEGWindow {
+        window.substitutingBadChannels(thresholds: thresholds)
+    }
+
     public func currentChannelHealth(windowSeconds: Double) async -> [ChannelHealthState] {
         let windowSamples = max(1, Int((windowSeconds > 0 ? windowSeconds : 1.0) * sampleRate))
         let states = storage.snapshot(windowSamples: windowSamples, thresholds: thresholds, channelLabels: channelLabels)
 
         // Staleness is a property of the *stream*, not any one
-        // channel — if the transport stopped delivering samples,
+        // channel: if the transport stopped delivering samples,
         // every channel is equally stale. `secondsSinceLastIngest`
         // is `nil` before the first sample ever arrives, in which
         // case the amplitude-derived `.unknown` bucket already
         // communicates "no data yet" and staleness would be
-        // redundant (and wrong — there's nothing stale about a
+        // redundant (and wrong, since there is nothing stale about a
         // provider that was only just constructed).
         guard let staleness = storage.secondsSinceLastIngest(now: Date()),
               staleness > staleTimeoutSec
@@ -151,11 +162,11 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
         private var totalAppends: Int = 0
         /// Timestamp of the most recent sample ingested. Stream-relative
         /// (see `EEGSample.timestamp`), so it cannot be compared against
-        /// `Date()` to detect staleness — `lastIngestWallClock` below is
+        /// `Date()` to detect staleness; `lastIngestWallClock` below is
         /// the real clock reading used for that.
         private var lastTimestamp: TimeInterval = 0
         /// Real wall-clock time `ingest(_:)` was last called. Distinct
-        /// from `lastTimestamp` on purpose — see that property's doc
+        /// from `lastTimestamp` on purpose; see that property's doc
         /// comment.
         private var lastIngestWallClock: Date?
         private let lock = NSLock()
@@ -202,25 +213,35 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
             let perChannel: [(rms: Float, samples: Int)] = (0..<channelCount).map { ch in
                 guard window > 0 else { return (0, 0) }
                 // First pass: per-channel DC baseline over the window. Real EEG
-                // (Muse ~800µV offset over OSC) would otherwise dominate the RMS
+                // (Muse ~800uV offset over OSC) would otherwise dominate the RMS
                 // and peg every channel to `.saturated`; RMS of the demeaned (AC)
                 // signal is the quality metric we actually want. Synthetic data
-                // is ~0-mean, so this is a no-op there.
-                var dc: Float = 0
+                // is ~0-mean, so this is a no-op there. Accumulate in Double so
+                // large windows do not suffer Float32 mantissa rounding drift.
+                var dc: Double = 0
+                var hasNonFinite = false
                 for offset in 0..<window {
                     let idx = (writeIndex &- 1 &- offset &+ capacity) % capacity
-                    dc += buffers[ch][idx]
+                    let raw = buffers[ch][idx]
+                    if !raw.isFinite {
+                        hasNonFinite = true
+                        break
+                    }
+                    dc += Double(raw)
                 }
-                dc /= Float(window)
-                var sumSq: Float = 0
+                if hasNonFinite {
+                    return (.infinity, window)
+                }
+                dc /= Double(window)
+                var sumSq: Double = 0
                 for offset in 0..<window {
                     // Most recent first: writeIndex - 1 - offset.
                     let idx = (writeIndex &- 1 &- offset &+ capacity) % capacity
-                    let v = buffers[ch][idx] - dc
+                    let v = Double(buffers[ch][idx]) - dc
                     sumSq += v * v
                 }
-                let meanSquare = sumSq / Float(window)
-                return (sqrtf(meanSquare), window)
+                let meanSquare = sumSq / Double(window)
+                return (Float(meanSquare.squareRoot()), window)
             }
             let ts = lastTimestamp
             lock.unlock()
@@ -230,7 +251,7 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
                 let status = thresholds.status(forRMS: rms, samples: samples)
                 let label = ch < channelLabels.count ? channelLabels[ch] : "ch\(ch)"
                 return ChannelHealthState(
-                    channel: channelForLabel(label),
+                    channel: channelForLabel(label, index: ch),
                     status: status,
                     rms: rms,
                     samples: samples,
@@ -240,17 +261,18 @@ public final class EEGChannelHealthProvider: ChannelHealthProviding, @unchecked 
         }
 
         /// Map a label string back to the `EEGChannel` enum when
-        /// possible. Falls back to `.tp9` for unrecognized labels
-        /// (e.g. `ch0` from the synthetic stream); the badge UI
-        /// can still render the label, but the typed identifier
-        /// is the best-effort mapping.
-        private func channelForLabel(_ label: String) -> EEGChannel {
+        /// possible. Falls back to positional `EEGChannel.allCases` mapping
+        /// for synthetic/generic labels (e.g. `syn0`..`syn3` or `ch0`..`ch3`)
+        /// so multi-channel views keyed by `\.channel` never collide on `.tp9`.
+        private func channelForLabel(_ label: String, index: Int) -> EEGChannel {
             switch label.uppercased() {
-            case "TP9":  return .tp9
-            case "AF7":  return .af7
-            case "AF8":  return .af8
-            case "TP10": return .tp10
-            default:     return .tp9
+            case "TP9", "SYN0", "CH0":  return .tp9
+            case "AF7", "SYN1", "CH1":  return .af7
+            case "AF8", "SYN2", "CH2":  return .af8
+            case "TP10", "SYN3", "CH3": return .tp10
+            default:
+                let all = EEGChannel.allCases
+                return all[max(0, index) % all.count]
             }
         }
     }

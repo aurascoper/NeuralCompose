@@ -5,12 +5,12 @@ import XCTest
 /// Tests the honesty gate directly against `SpectralStateEstimator.init`,
 /// bypassing the subprocess-probe layer entirely (already covered by
 /// `SpectralStateEstimatorFactoryTests`/`PredictorFactoryCrashSafetyTests`'
-/// style) — the gate check runs before any `.safetensors` loading, so no
+/// style) - the gate check runs before any `.safetensors` loading, so no
 /// real weights are needed to exercise it, keeping this fast and
 /// environment-independent.
 final class SpectralStateEstimatorTests: XCTestCase {
 
-    /// Minimal spy `SentenceEmbedder` — reports whatever `modelID` the test
+    /// Minimal spy `SentenceEmbedder` - reports whatever `modelID` the test
     /// wants without needing a real Core ML BGE model on disk.
     private struct FakeEmbedder: SentenceEmbedder {
         let modelID: String
@@ -96,5 +96,52 @@ final class SpectralStateEstimatorTests: XCTestCase {
         } catch {
             XCTFail("unexpected error: \(error)")
         }
+    }
+
+    func testPrepareWindowSubstitutesBadChannelAndDemeansBeforeArtifactGate() {
+        let n = 512
+        let dc: Float = 820.0
+        let healthyTP9: [Float] = (0..<n).map { i in dc + ((i % 2 == 0) ? 25.0 : -25.0) }
+        let saturatedAF7: [Float] = (0..<n).map { i in dc + ((i % 2 == 0) ? 450.0 : -450.0) }
+        let healthyAF8: [Float] = (0..<n).map { i in dc + ((i % 2 == 0) ? 20.0 : -20.0) }
+        let healthyTP10: [Float] = (0..<n).map { i in dc + ((i % 2 == 0) ? 30.0 : -30.0) }
+
+        let rawWindow = EEGWindow(
+            samples: [healthyTP9, saturatedAF7, healthyAF8, healthyTP10],
+            sampleRate: 256,
+            endTimestamp: 2.0,
+            sequence: 1
+        )
+        XCTAssertFalse(
+            SpectralArtifactGate.isClean(rawWindow),
+            "Raw window with +820 uV DC offset and saturated AF7 must fail SpectralArtifactGate before prepareWindow"
+        )
+
+        let prepared = SpectralStateEstimator.prepareWindow(rawWindow)
+        XCTAssertTrue(
+            SpectralArtifactGate.isClean(prepared),
+            "After contralateral substitution of AF7<-AF8 and per-channel DC demeaning, prepared window must pass SpectralArtifactGate"
+        )
+        for ch in prepared.samples {
+            let mean = ch.reduce(0, +) / Float(ch.count)
+            XCTAssertEqual(mean, 0.0, accuracy: 0.05)
+        }
+        XCTAssertEqual(prepared.samples[1][0], 20.0, accuracy: 0.05)
+        XCTAssertEqual(prepared.samples[1][1], -20.0, accuracy: 0.05)
+
+        // When both partners (AF7 and AF8) contain NaN, substitution cannot rescue
+        // them and SpectralArtifactGate.isClean must reject the prepared window.
+        var nanChannel = healthyAF8
+        nanChannel[10] = .nan
+        let unsubstitutable = EEGWindow(
+            samples: [healthyTP9, nanChannel, nanChannel, healthyTP10],
+            sampleRate: 256,
+            endTimestamp: 2.0,
+            sequence: 2
+        )
+        let preparedBad = SpectralStateEstimator.prepareWindow(unsubstitutable)
+        XCTAssertFalse(SpectralArtifactGate.isClean(preparedBad))
+        XCTAssertTrue(preparedBad.samples[1][0].isFinite, "Finite samples around a single NaN must remain finite after demeaning")
+        XCTAssertTrue(preparedBad.samples[1][10].isNaN)
     }
 }

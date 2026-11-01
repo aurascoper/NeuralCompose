@@ -46,6 +46,20 @@ public final class ConversationHistory: Sendable {
         exchanges.withLock { Array($0.suffix(max(0, n))) }
     }
 
+    /// Retains only the most recent `keepCount` exchanges, dropping older context
+    /// when conditional autoforgetting is triggered by reflexive collapse or a
+    /// topic/session reset cue.
+    @discardableResult
+    public func trimToRecent(_ keepCount: Int) -> Int {
+        let keep = max(0, keepCount)
+        return exchanges.withLock { list in
+            guard list.count > keep else { return 0 }
+            let dropped = list.count - keep
+            list.removeFirst(dropped)
+            return dropped
+        }
+    }
+
     public func clear() {
         exchanges.withLock { $0.removeAll() }
     }

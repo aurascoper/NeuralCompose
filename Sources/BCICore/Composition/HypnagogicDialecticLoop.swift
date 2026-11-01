@@ -6,7 +6,7 @@ import os
 /// persistent dynamical competition: on each heard utterance, every
 /// `DialecticalRole` generates a candidate from its own tension-aware prompt;
 /// the candidates are embedded and scored on shared semantic axes; and the turn
-/// resolves — by a tension-sharpened softmax sample — into *speaking* a basin,
+/// resolves - by a tension-sharpened softmax sample - into *speaking* a basin,
 /// falling *silent* on a metastable stalemate, or (once memory is wired in)
 /// voicing an emergent *synthesis*. Standing tension is carried across turns, so
 /// contradiction can persist rather than being resolved every cycle.
@@ -20,7 +20,7 @@ import os
 ///
 /// Honest scope (identical to `HypnagogicDialogueLoop`): MANUAL trigger only,
 /// NOT wired to any sleep-stage detector; the generator MAY be a cloud model
-/// (one of two runtime network exceptions; `decision_registry.md` entry 8) —
+/// (one of two runtime network exceptions; `decision_registry.md` entry 8)  - 
 /// and note this loop makes **two** `generate()` calls per turn, one per
 /// role. Pure orchestration over injected seams; it links no
 /// AVFoundation/MLX/CLI itself. With the default mic listener and speaker,
@@ -38,7 +38,7 @@ public actor HypnagogicDialecticLoop {
         /// competition-weighted blend).
         public var prosody: SpeechProsody
         /// A metastable silence can persist at most this many consecutive turns
-        /// before a soft induction cue breaks it — so the loop never stalls into
+        /// before a soft induction cue breaks it - so the loop never stalls into
         /// permanent silence.
         public var maxConsecutiveSilence: Int
         /// Rotating soft cues spoken to break a silence run or on an empty
@@ -47,7 +47,7 @@ public actor HypnagogicDialecticLoop {
         /// How many recent turns feed the history/reply centroids.
         public var historyWindow: Int
         /// Enable the introspective Witness (a non-voiced observer). Set true ONLY
-        /// for the Reflective profile — this is what makes Reflective a real rung
+        /// for the Reflective profile - this is what makes Reflective a real rung
         /// vs Focused (see `Sources/BCICore/Dialectic/WITNESS.md`). Off ⇒ no
         /// witness generation, no extra cloud call; the reflexive `selfSimilarity`
         /// metric is still logged regardless.
@@ -82,7 +82,7 @@ public actor HypnagogicDialecticLoop {
     // Injected seams.
     private let listener: any HypnagogicListening
     private let generator: any TextGenerating
-    /// The introspective Witness generator (Reflective only) — a SEPARATE
+    /// The introspective Witness generator (Reflective only) - a SEPARATE
     /// `TextGenerating` with a relaxed system prompt (`witnessSystemPrompt`). nil ⇒
     /// no witness pass. Its output is never voiced and never fed to the poles.
     private let witness: (any TextGenerating)?
@@ -100,7 +100,7 @@ public actor HypnagogicDialecticLoop {
     /// **Race avoidance:** the box is a `Sendable` class with a lock,
     /// not an actor-isolated property, because the adapter's callback
     /// is called synchronously on the same task that invoked
-    /// `generator.generate(...)` — which is on this loop's actor.
+    /// `generator.generate(...)` - which is on this loop's actor.
     /// An actor-isolated `var` would require `await` from the callback
     /// to write (via `Task { await self.recordGeneratorMetadata(...) }`),
     /// and the `Task` would be scheduled *after* `runTurn` reads the
@@ -110,7 +110,7 @@ public actor HypnagogicDialecticLoop {
     /// The Witness's own metadata box, parallel to `latestMetadata` and never
     /// shared with it: `latestMetadata` is documented as the generator that
     /// produced the *candidates*, and filing the Witness's metadata there
-    /// would make the last writer win — a turn record attesting the pole
+    /// would make the last writer win - a turn record attesting the pole
     /// prompt for the Witness, which is the exact confusion the Witness
     /// fingerprint exists to make impossible.
     private let latestWitnessMetadata = MetadataBox()
@@ -120,7 +120,7 @@ public actor HypnagogicDialecticLoop {
     private let tuning: DialecticalDynamics.Tuning
     /// The single point of non-determinism: a uniform draw in `[0, 1)`.
     private let random: @Sendable () -> Double
-    /// Fast biological clock source — the latest `SpectralState` gloss (or nil).
+    /// Fast biological clock source - the latest `SpectralState` gloss (or nil).
     /// Defaults to no bias, so the loop is fully text-driven until EEG is wired.
     private let glossProvider: @Sendable () async -> SpectralState?
     /// Opt-in persistence of each turn's competition. Null by default.
@@ -131,7 +131,7 @@ public actor HypnagogicDialecticLoop {
     private let config: Config
     /// Broadcast of spoken-node events for grounding the voice in the 3D
     /// workspace (Stage 1b): a `place` event per voiced candidate + a
-    /// `re-brighten` event per spoken word. Opt-in — nothing is produced unless
+    /// `re-brighten` event per spoken word. Opt-in - nothing is produced unless
     /// a consumer calls `spokenNodeStream()`, and it stays entirely on-device.
     private let spokenNodeChannel = AsyncMulticastChannel<SpokenNodeEvent>(capacity: 32)
 
@@ -140,7 +140,7 @@ public actor HypnagogicDialecticLoop {
     public private(set) var isRunning = false
     private var silenceIndex = 0
     private var consecutiveSilence = 0
-    /// Number of completed turns this loop instance — exposed for the health
+    /// Number of completed turns this loop instance - exposed for the health
     /// watchdog to detect a stalled or dead loop (no turns while listening).
     public private(set) var turnIndex = 0
     /// Identifies this loop instance in the turn log, since `turnIndex`
@@ -153,14 +153,14 @@ public actor HypnagogicDialecticLoop {
     public private(set) var lastTurnAt: Date?
     private var phase: HypnagogicLoopPhase = .stopped
     private var lastFailure: String?
-    /// Tension carried from the previous turn — shapes this turn's prompts.
+    /// Tension carried from the previous turn - shapes this turn's prompts.
     private var standingTension: Float = 0
     /// The semantic-graph memory the dialectic lives in (centroids, recurrence,
     /// synthesis gating). Initialized in `init` from the config + tuning.
     private var memory: DialecticalMemory
-    /// Slow semantic clock — the competition weights, evolving with inertia.
+    /// Slow semantic clock - the competition weights, evolving with inertia.
     private var field: DialecticalField
-    /// Fast biological clock — EMA-smoothed `SpectralState` gloss.
+    /// Fast biological clock - EMA-smoothed `SpectralState` gloss.
     private var gloss = SpectralGloss()
 
     public init(
@@ -213,10 +213,10 @@ public actor HypnagogicDialecticLoop {
     /// Records the latest `GenerationMetadata` from the adapter-wrapped
     /// generator. The adapter calls this from its `onMetadata` callback.
     /// The call is synchronous so the metadata is visible to the
-    /// subsequent `runTurn` read of `latestMetadata` — the callback
+    /// subsequent `runTurn` read of `latestMetadata` - the callback
     /// runs on the same task that called `generator.generate(...)`,
     /// which is on the loop's actor, so there is no inter-task gap.
-    /// Idempotent — repeat calls just overwrite.
+    /// Idempotent - repeat calls just overwrite.
     ///
     /// `nonisolated` because the body only mutates the
     /// `latestMetadata` box (which has its own lock); no actor
@@ -262,7 +262,7 @@ public actor HypnagogicDialecticLoop {
         }
         // The Witness gets its own callback into its own box. This relies on
         // the Witness being a DISTINCT adapter instance from the pole
-        // generator — which the factory guarantees, since each role resolves
+        // generator - which the factory guarantees, since each role resolves
         // its own runtime; wiring one shared instance here would overwrite
         // the pole callback (each adapter holds a single callback box).
         if var publisher = witness as? any MetadataPublishingTextGenerating {
@@ -307,7 +307,7 @@ public actor HypnagogicDialecticLoop {
                     phase = .generating
                     try await runTurn(heard: transcript)
                 } else {
-                    // Empty *input* (the user said nothing) — distinct from a
+                    // Empty *input* (the user said nothing) - distinct from a
                     // dialectical silence. Breathe with an induction cue.
                     phase = .speaking
                     try await speakChunks(nextSilenceCue(), prosody: config.prosody)
@@ -335,6 +335,12 @@ public actor HypnagogicDialecticLoop {
     /// One dialectical turn: generate one candidate per role, embed, score,
     /// compete, and act on the outcome.
     private func runTurn(heard: String) async throws {
+        if Self.isMemoryResetCommand(heard) {
+            memory.autoforgetIfNeeded(selfSimilarity: nil, forceReset: true)
+            history.trimToRecent(0)
+            try await logSilentTurn(heard: heard, advanceSilenceCounter: false)
+            return
+        }
         let discourseKind = Self.classifyDiscourse(heard)
         if discourseKind == .ambientBackchannel {
             try await logSilentTurn(heard: heard, advanceSilenceCounter: false)
@@ -349,11 +355,12 @@ public actor HypnagogicDialecticLoop {
             ? "[Discourse Context: Ambient room conversation with colleagues, guests, or coauthors. Respond only to the substantive conceptual topic; do not psychoanalyze overheard fragments, proper names, or conversational stutters.]\n\n"
             : ""
         let hudNote = Self.isFourPillarHUDQuery(heard) ? Self.fourPillarHUDPreamble : ""
+        let stackNote = Self.isBluetoothBrainFlowOrStackQuery(heard) ? Self.bluetoothBrainFlowStackPreamble : ""
         let recallQuery = Self.isDirectRecallOrClarificationQuery(heard)
         let recallNote = recallQuery
             ? "[Direct Clarification Context: The speaker is asking a direct question or asking to recall specific items from the prior turn. Explicitly restate the exact items from the prior turn or answer the literal question in your first sentence before developing your pole's perspective.]\n\n"
             : ""
-        let preamble = historyBlock + discourseNote + hudNote + recallNote
+        let preamble = historyBlock + discourseNote + hudNote + stackNote + recallNote
         var candidateTexts: [(roleID: String, text: String)] = []
         for role in roles {
             try Task.checkCancellation()
@@ -393,7 +400,7 @@ public actor HypnagogicDialecticLoop {
 
         // 3. Advance the two clocks and score against the accumulated trajectory.
         //    Fast (gloss EMA) and slow (field inertia over entropy/drift) combine
-        //    only in the field's target — biological noise can't swing the weights.
+        //    only in the field's target - biological noise can't swing the weights.
         let state = await glossProvider()
         gloss.update(state, alpha: tuning.glossEMAAlpha)
         let weights = field.advance(glossScalar: gloss.value,
@@ -440,11 +447,11 @@ public actor HypnagogicDialecticLoop {
         }
         standingTension = tension
 
-        // Introspection (the Reflective rung — see WITNESS.md). Two ORTHOGONAL
-        // signals, deliberately not one dial: (1) the reflexive metric —
+        // Introspection (the Reflective rung - see WITNESS.md). Two ORTHOGONAL
+        // signals, deliberately not one dial: (1) the reflexive metric  - 
         // `selfSimilarity`, how much this turn's utterance collapses onto the
         // dialogue's own reply centroid (logged for EVERY profile, on-device);
-        // (2) the Witness — a non-voiced observer naming what BOTH poles avoided
+        // (2) the Witness - a non-voiced observer naming what BOTH poles avoided
         // (Reflective only, one extra cloud call). Neither is ever spoken, and the
         // witness finding never re-enters the poles' prompts (so they can't game it).
         let spokenEmb: Embedding? = {
@@ -459,7 +466,7 @@ public actor HypnagogicDialecticLoop {
         var witnessFinding: String?
         var witnessDistance: Float?
         // `witnessAttempted` records that the Witness RAN this turn, independent of
-        // whether it produced a finding — so a persistently-failing witness (an
+        // whether it produced a finding - so a persistently-failing witness (an
         // all-nil Reflective run) is not silently mistaken for a Focused run in the
         // rollup (reflective_active is derived from attempts, not findings).
         let witnessAttempted = config.witnessEnabled && witness != nil
@@ -476,9 +483,9 @@ public actor HypnagogicDialecticLoop {
                     }
                 }
             } catch is CancellationError {
-                // Stopping mid-call — not a failure; the checkCancellation below aborts cleanly.
+                // Stopping mid-call - not a failure; the checkCancellation below aborts cleanly.
             } catch {
-                // A witness failure must NOT break the turn — but it must NOT be
+                // A witness failure must NOT break the turn - but it must NOT be
                 // silent either: a persistently-failing witness would make Reflective
                 // look byte-identical to Focused. Leave a trace.
                 let idx = turnIndex
@@ -511,6 +518,13 @@ public actor HypnagogicDialecticLoop {
             memory.recordReply(text: candidate.text, embedding: candidate.embedding, turnIndex: turnIndex)
             // Block a later synthesis from re-speaking this verbatim.
             memory.recordVoiced(candidate.text)
+            // Conditional autoforgetting ("when/iff needed"): if consecutive turns
+            // collapse onto the rolling reply centroid (selfSimilarity >= 0.85),
+            // prune older rolling embeddings and trim prompt history so subsequent
+            // turns escape reflexive collapse while keeping the SemanticGraph intact.
+            if memory.autoforgetIfNeeded(selfSimilarity: selfSimilarity) {
+                history.trimToRecent(2)
+            }
             // Ground the voice: place (and full-brighten) this utterance's
             // workspace node *before* speaking, then re-brighten it per word as
             // the synthesizer voices it (`speakChunks` forwards the word events).
@@ -565,7 +579,7 @@ public actor HypnagogicDialecticLoop {
             witnessAttempted: config.witnessEnabled && witness != nil && advanceSilenceCounter,
             generatorFingerprint: latestMetadata.get().flatMap(GeneratorFingerprint.init),
             // A candidate-less turn never reaches the Witness call, so there
-            // is no Witness generation to attest — regardless of the box.
+            // is no Witness generation to attest - regardless of the box.
             witnessGeneratorFingerprint: nil
         )
         let event = DialecticalTurnEvent(competition, runID: runID, recordedAt: Self.recordedAt())
@@ -592,6 +606,19 @@ public actor HypnagogicDialecticLoop {
         case ambientBackchannel
     }
 
+    /// Detects explicit session/memory reset or turn-off commands that should trigger
+    /// conditional autoforgetting of the rolling history/centroid and log a silent turn.
+    public static func isMemoryResetCommand(_ heard: String) -> Bool {
+        let lowered = heard.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .trimmingCharacters(in: .punctuationCharacters)
+        let resetCommands: Set<String> = [
+            "turn off", "turn it off", "switch off", "forget that",
+            "clear memory", "reset memory", "clear history", "reset history"
+        ]
+        return resetCommands.contains(lowered)
+    }
+
     /// Classifies a transcribed utterance into direct address, ambient room
     /// conversation (with family/friends), or an isolated ambient backchannel/stutter
     /// that should hold silence rather than interrupting the room.
@@ -599,8 +626,15 @@ public actor HypnagogicDialecticLoop {
         let trimmed = heard.trimmingCharacters(in: .whitespacesAndNewlines)
         let lowered = trimmed.lowercased()
             .trimmingCharacters(in: .punctuationCharacters)
-        let words = lowered.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        let words = lowered.split(whereSeparator: { $0.isWhitespace })
+            .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+            .filter { !$0.isEmpty }
         guard !words.isEmpty else { return .ambientBackchannel }
+
+        // Single-token repetition stutters (e.g. "sex sex sex", "Sex, sex, sex.") map to .ambientBackchannel.
+        if words.count >= 2 && Set(words).count == 1 {
+            return .ambientBackchannel
+        }
 
         // Guard against acoustic loopback of the system's own silenceCue TTS.
         let silenceCueEchoIndicators = [
@@ -612,12 +646,24 @@ public actor HypnagogicDialecticLoop {
             return .ambientBackchannel
         }
 
-        // Routine logistics commands map to .ambientBackchannel.
+        // Routine logistics commands and transit backchannels map to .ambientBackchannel.
         let routineLogisticsCommands = [
             "please bring the item",
             "set a timer for",
             "schedule a reminder",
             "pause playback",
+            "turn off",
+            "turn it off",
+            "switch off",
+            "forget that",
+            "clear memory",
+            "reset memory",
+            "clear history",
+            "reset history",
+            "ok i should be good i'll be down in a second",
+            "okay i should be good i'll be down in a second",
+            "i'll be down in a second",
+            "be right back",
             "stop",
             "next"
         ]
@@ -627,9 +673,9 @@ public actor HypnagogicDialecticLoop {
 
         let exactBackchannels: Set<String> = [
             "yeah", "yep", "yes", "no", "nope", "okay", "ok", "mm-hmm", "uh-huh",
-            "oh my god", "oh gosh", "wow", "right", "sure", "i have", "but i'm",
-            "but i am", "i was", "i wasn't", "yeah i was i wasn't", "i don't know if",
-            "conviction"
+            "oh my god", "oh gosh", "wow", "right", "sure", "kind of", "sort of",
+            "i have", "but i'm", "but i am", "i was", "i wasn't", "yeah i was i wasn't",
+            "i don't know if", "conviction"
         ]
         if exactBackchannels.contains(lowered) {
             return .ambientBackchannel
@@ -661,6 +707,20 @@ public actor HypnagogicDialecticLoop {
         return indicators.contains(where: { lowered.contains($0) })
     }
 
+    /// Detects when the speaker is asking about Bluetooth / BLE EEG connectivity
+    /// (Muse 2, Muse S, Muse S Athena, BLED112, MindMonitor OSC, g.tec Unicorn)
+    /// or the BrainFlow / Julia / Python / Swift / Rust / persistent SQL memory stack.
+    public static func isBluetoothBrainFlowOrStackQuery(_ heard: String) -> Bool {
+        let lowered = heard.lowercased()
+        let indicators = [
+            "bluetooth", "corebluetooth", "simpleble", "bled112", "brainflow",
+            "muse s", "muse 2", "muse bci", "muse eeg", "athena", "mind monitor",
+            "mindmonitor", "unicorn", "eeg connection", "bci brain computer",
+            "julia", "sql memory", "memory gate", "autobank", "autoforget"
+        ]
+        return indicators.contains(where: { lowered.contains($0) })
+    }
+
     /// Architectural reference injected into the turn preamble when the speaker
     /// asks about NeuralCompose's 4-Pillar 3D/4D Phase-Space Viewport legend or toggles.
     public static let fourPillarHUDPreamble: String = """
@@ -675,6 +735,28 @@ public actor HypnagogicDialecticLoop {
 
     """
 
+    /// Architectural reference injected into the turn preamble when the speaker asks
+    /// about Bluetooth EEG connectivity, BrainFlow, or the Julia / Python / Swift / SQL stack.
+    public static let bluetoothBrainFlowStackPreamble: String = """
+    [NeuralCompose Bluetooth, BrainFlow, and Polyglot Stack Reference (SQL memory grounded):
+    1. Bluetooth & EEG Transports (HARDWARE_SETUP.md, MuseBoardProfile.swift, BrainFlowService.swift, MindMonitorOSCStream.swift):
+       - Native BLE (macOS CoreBluetooth / SimpleBLE built with -DBUILD_BLE=ON) vs deprecated BLED112 serial dongle:
+         * Muse 2: .museTwoNativeBLE (MUSE_2_BOARD = 38) vs .museTwoBLED (MUSE_2_BLED_BOARD = 22).
+         * Muse S: .museSNativeBLE (MUSE_S_BOARD = 39, 4 dry electrodes TP9, AF7, AF8, TP10 at 256 Hz) vs .museSBLED (MUSE_S_BLED_BOARD = 21).
+         * Muse S Athena: .museSAthena (MUSE_S_ATHENA_BOARD = 67, native BLE only, other_info = "preset=p1041;low_latency=true").
+       - Multi-device disambiguation via NEURALCOMPOSE_MUSE_MAC or NEURALCOMPOSE_MUSE_SERIAL_NUMBER; zero-BLE enum verification via BrainFlowService.verifyBoardIDsAgainstBridge().
+       - MindMonitorOSCStream: UDP port 5000 over Tailscale VPN (utun*) decoding /muse/eeg from OSC bundles (bundle-unwrap fix 84f86ee, arrival jitter/heartbeat diagnostics, stall watchdog).
+       - g.tec Unicorn Hybrid Black: standard BlueZ HCI / ASUS USB-BT500 dongle bridging Unicorn -> Bluetooth -> serial -> LSL -> P300 / EEG-LeJEPA (256.0 Hz true rate after inter-segment BLE burst gap handling).
+    2. Polyglot Runtime & Scientific Stack (BrainFlow C++ / Swift / Rust / Python / Julia / SQL Memory):
+       - C++ / BrainFlow (BCIBridge): libBoardController.dylib, libMuseLib.dylib, and SimpleBLE linked via ./Scripts/build.sh --with-brainflow.
+       - Swift (Sources/BCICore, Sources/BCIEEG, Sources/NeuralComposeApp): Native runtime owner ("swift is the native, python is the wrapper"): BrainFlowService, EEGStreamFactory (graceful fallback to SyntheticEEGStream on BCIError.streamFailed), SpectralGloss fast biological clock, DialecticalField slow semantic clock, HypnagogicDialecticLoop, DialecticalMemory (with conditional autoforgetting when selfSimilarity >= 0.85), TelemetryLogger (~/Documents/NeuralCompose/InteractionLogs/dialectic-turns-<day>.jsonl), and NeuralComposeFunctorApp 3D/4D SceneKit HUD.
+       - Python (NeuralComposeEEG/, Scripts/): Offline signal/eval wrappers (eeg_spectral.py, eeg_channel_quality.py, validate-muse-physiology.py, memory-gate.py session-time SQL autobank and autoforgetting gate, semantica_multica_bridge.py).
+       - Julia (NeuralComposeScience.jl, NeuralComposeLayaJEMAFixture.jl, generate_functor_dialectical_fixture.jl, RadioPharmacology.jl): Offline scientific modeling, Goal 0/1 state-trajectory relaxation ODE fits, compartmental radiopharmacology kinetics, and 60-frame 4-Pillar Functor generation (F = F_MM o F_Mem o F_ST o F_Laya: Q = 20 Laya 4ch x 5-band query mixer with ZCA SIGReg whitening Sigma_global == I_3, ST-JEMA Tarjan bridge/cycle homology beta_0 and beta_1, Fast Wireframe tau_f = 1.2s vs Slow Core tau_s = 8.0s + Hollow Shell Psi_k).
+       - Persistent SQL Memory: Dual-persisted CoreData SQLite (ZMEMORYRECORD) and PostgreSQL (pgvector 384-d MiniLM-L6-v2 HNSW cosine <=> + GiST 3D cube metadata_coord <@ + hybrid semantic/graph scoring).
+    Ground your response in these exact NeuralCompose board profiles, transport protocols, and language boundaries.]
+
+    """
+
     /// Detects when the speaker is asking a direct recall, clarification, or
     /// architectural-purpose question (e.g. "You said lemon juice or what else...",
     /// "What is the fast wireframe ... used for") where the coherence-seeking
@@ -682,7 +764,7 @@ public actor HypnagogicDialecticLoop {
     /// the requested items before developing their angle.
     public static func isDirectRecallOrClarificationQuery(_ heard: String) -> Bool {
         let lowered = heard.lowercased()
-        if isFourPillarHUDQuery(lowered) {
+        if isFourPillarHUDQuery(lowered) || isBluetoothBrainFlowOrStackQuery(lowered) {
             return true
         }
         let recallIndicators = [
@@ -801,7 +883,7 @@ public actor HypnagogicDialecticLoop {
         }
     }
 
-    /// Indices of the two most semantically opposed candidate embeddings — the
+    /// Indices of the two most semantically opposed candidate embeddings - the
     /// poles a synthesis would have to bridge.
     private func mostOpposedPair(_ embeddings: [Embedding]) -> (Int, Int) {
         var best = (0, 1)
@@ -817,7 +899,7 @@ public actor HypnagogicDialecticLoop {
 
     // MARK: - Speech
 
-    /// A private stream of spoken-node events — the grounding signal the 3D
+    /// A private stream of spoken-node events - the grounding signal the 3D
     /// workspace subscribes to (Stage 1b). Each call returns its own
     /// `AsyncStream`; `nonisolated` because the channel is a `Sendable` `let`,
     /// mirroring the raw-sample fan-out (`AppViewModel.liveSampleStream()`).
@@ -828,7 +910,7 @@ public actor HypnagogicDialecticLoop {
 
     /// Speaks `text` chunk-by-chunk. When `grounding` is supplied, each word the
     /// synthesizer reaches re-brightens the utterance's workspace node via a
-    /// `SpokenNodeEvent` (best-effort — synthesizers without word timing simply
+    /// `SpokenNodeEvent` (best-effort - synthesizers without word timing simply
     /// never fire it, and the initial `place` event already lit the node).
     private func speakChunks(_ text: String, prosody: SpeechProsody,
                              grounding: (nodeID: String, embedding: Embedding)? = nil) async throws {
@@ -862,19 +944,19 @@ public actor HypnagogicDialecticLoop {
 }
 
 /// A spoken-node event emitted by `HypnagogicDialecticLoop` as it voices a
-/// winning candidate — the grounding signal the 3D workspace consumes to place
+/// winning candidate - the grounding signal the 3D workspace consumes to place
 /// and light a concept node per utterance, so speech carries a spatial-semantic
 /// referent rather than prosody alone. Carries the candidate's already-computed
 /// sentence embedding (for placement) so nothing is re-embedded. Purely local;
 /// never leaves the device.
 public struct SpokenNodeEvent: Sendable, Equatable {
-    /// Stable per-utterance id — the workspace's node key. One spoken turn ⇒ one
+    /// Stable per-utterance id - the workspace's node key. One spoken turn ⇒ one
     /// node; also the `node:<id>` vocabulary the session-time memory gate
     /// (Stage 2) namespaces on.
     public let nodeID: String
     /// The full spoken candidate text (the node's label).
     public let text: String
-    /// The candidate's sentence embedding — the workspace projects this to 3D.
+    /// The candidate's sentence embedding - the workspace projects this to 3D.
     public let embedding: Embedding
     /// `nil` when the node is first voiced (place + full-brighten); the word
     /// being spoken now when the synthesizer reaches it (re-brighten). Best-

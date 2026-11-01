@@ -2,11 +2,11 @@ import Foundation
 import BCICore
 
 /// Appends one JSON line per `TelemetryEvent` to a local, never-transmitted
-/// file — see `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`
+/// file - see `docs/architecture/decision-log/ADR-005-local-interaction-logging.md`
 /// for why this is compliant with the project's "no telemetry" principle
 /// (that principle is about network egress; this never leaves the machine).
 ///
-/// No `static let shared` — this codebase's composition root is
+/// No `static let shared` - this codebase's composition root is
 /// `AppContainer` (`CLAUDE.md`), so instances are constructed and held the
 /// same way every other dependency is. Callers are expected to gate on the
 /// opt-in `AppViewModel.interactionLoggingEnabled` toggle themselves; this
@@ -61,7 +61,7 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
     }
 
     /// Per-cycle spoken-loop traces go to their own `spoken-trace-<day>.jsonl`
-    /// stream — the input→output diagnostic for broken-vs-starved. Like the
+    /// stream - the input→output diagnostic for broken-vs-starved. Like the
     /// dialectic stream it carries no timestamp, so the day is stamped at write.
     public func log(_ event: SpokenGenerationTraceEvent) async {
         write(event, prefix: "spoken-trace",
@@ -81,7 +81,7 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
             let handle = try fileHandle(prefix: prefix, day: day)
             var data = try encoder.encode(event)
             data.append(0x0A) // newline
-            // `write(contentsOf:)`, not `write(_:)` — the latter raises an
+            // `write(contentsOf:)`, not `write(_:)` - the latter raises an
             // uncatchable Objective-C NSException on failure (disk full,
             // permission revoked) instead of a Swift `Error`, which this
             // catch block could not actually intercept.
@@ -107,5 +107,152 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
         handle.seekToEndOfFile()
         streams[prefix] = (day, handle)
         return handle
+    }
+
+    // MARK: - Conditional Autobank & Autoforgetting ("when/iff needed")
+
+    /// Summary of an autobank and conditional autoforgetting pass over interaction logs.
+    public struct AutobankAndAutoforgetReport: Sendable, Equatable {
+        /// Number of expired transient trace files (`spoken-trace-*`, `prosody-trace-*`, `health-*`) removed.
+        public let prunedTransientFiles: Int
+        /// Total dialectical turns inspected for the target day.
+        public let evaluatedTurns: Int
+        /// Warrant-bearing turns written to `dialectic-autobank-<day>.jsonl`.
+        public let autobankedTurns: Int
+        /// Turns filtered out (silent, stutter, backchannel, control/transit, or reflexive collapse).
+        public let forgottenTurns: Int
+        /// True iff the primary `dialectic-turns-<day>.jsonl` file was compacted in place.
+        public let compactedPrimaryLog: Bool
+
+        public init(
+            prunedTransientFiles: Int,
+            evaluatedTurns: Int,
+            autobankedTurns: Int,
+            forgottenTurns: Int,
+            compactedPrimaryLog: Bool
+        ) {
+            self.prunedTransientFiles = prunedTransientFiles
+            self.evaluatedTurns = evaluatedTurns
+            self.autobankedTurns = autobankedTurns
+            self.forgottenTurns = forgottenTurns
+            self.compactedPrimaryLog = compactedPrimaryLog
+        }
+    }
+
+    /// Executes session-time conditional autobanking and autoforgetting ("when/iff needed"):
+    /// 1. Prunes expired transient trace files (`spoken-trace-<day>.jsonl`,
+    ///    `prosody-trace-<day>.jsonl`, `health-<day>.jsonl`) older than `maxTransientAgeDays`
+    ///    when `maxTransientAgeDays > 0`.
+    /// 2. Evaluates `dialectic-turns-<day>.jsonl` via `DialecticalMemory.shouldAutobankTurn`
+    ///    and writes eligible turns to `dialectic-autobank-<day>.jsonl` whenever at least one
+    ///    eligible turn exists.
+    /// 3. Compacts `dialectic-turns-<day>.jsonl` in place iff `compactPrimaryIfNeeded == true`
+    ///    and forgotten/collapsed turns exceed `collapseRatioThreshold` ( preserving a `.bak`
+    ///    snapshot before atomic replacement).
+    @discardableResult
+    public func autobankAndAutoforgetIfNeeded(
+        day: String? = nil,
+        maxTransientAgeDays: Int = 30,
+        maxSelfSimilarity: Float = 0.92,
+        compactPrimaryIfNeeded: Bool = false,
+        collapseRatioThreshold: Float = 0.25,
+        referenceDate: Date = Date()
+    ) -> AutobankAndAutoforgetReport {
+        let targetDay = day ?? dayFormatter.string(from: referenceDate)
+        var prunedFiles = 0
+
+        if maxTransientAgeDays > 0,
+           let entries = try? FileManager.default.contentsOfDirectory(atPath: directory.path) {
+            let transientPrefixes = ["spoken-trace-", "prosody-trace-", "health-"]
+            let cutoff = referenceDate.addingTimeInterval(-Double(maxTransientAgeDays) * 86_400.0)
+            for name in entries where name.hasSuffix(".jsonl") {
+                guard let matchedPrefix = transientPrefixes.first(where: { name.hasPrefix($0) }) else {
+                    continue
+                }
+                let dayPart = String(name.dropFirst(matchedPrefix.count).dropLast(".jsonl".count))
+                guard let fileDate = dayFormatter.date(from: dayPart), fileDate < cutoff else {
+                    continue
+                }
+                let streamKey = String(matchedPrefix.dropLast())
+                if let openStream = streams[streamKey], openStream.day == dayPart {
+                    openStream.handle.closeFile()
+                    streams.removeValue(forKey: streamKey)
+                }
+                let fileURL = directory.appendingPathComponent(name)
+                if (try? FileManager.default.removeItem(at: fileURL)) != nil {
+                    prunedFiles += 1
+                }
+            }
+        }
+
+        let primaryURL = directory.appendingPathComponent("dialectic-turns-\(targetDay).jsonl")
+        guard FileManager.default.fileExists(atPath: primaryURL.path),
+              let content = try? String(contentsOf: primaryURL, encoding: .utf8) else {
+            return AutobankAndAutoforgetReport(
+                prunedTransientFiles: prunedFiles,
+                evaluatedTurns: 0,
+                autobankedTurns: 0,
+                forgottenTurns: 0,
+                compactedPrimaryLog: false
+            )
+        }
+
+        let decoder = JSONDecoder()
+        let rawLines = content.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+        var keptLines: [String] = []
+        var evaluated = 0
+        var forgotten = 0
+
+        for line in rawLines {
+            guard let data = line.data(using: .utf8),
+                  let event = try? decoder.decode(DialecticalTurnEvent.self, from: data) else {
+                continue
+            }
+            evaluated += 1
+            if DialecticalMemory.shouldAutobankTurn(
+                heard: event.heard,
+                spoken: event.spokenText,
+                outcome: event.outcome,
+                selfSimilarity: event.selfSimilarity,
+                maxSelfSimilarity: maxSelfSimilarity
+            ) {
+                keptLines.append(line)
+            } else {
+                forgotten += 1
+            }
+        }
+
+        if !keptLines.isEmpty {
+            let autobankURL = directory.appendingPathComponent("dialectic-autobank-\(targetDay).jsonl")
+            let payload = keptLines.joined(separator: "\n") + "\n"
+            try? payload.write(to: autobankURL, atomically: true, encoding: .utf8)
+        }
+
+        var compacted = false
+        if compactPrimaryIfNeeded,
+           evaluated > 0,
+           forgotten > 0,
+           Float(forgotten) / Float(evaluated) >= collapseRatioThreshold {
+            if let openStream = streams["dialectic-turns"], openStream.day == targetDay {
+                openStream.handle.closeFile()
+                streams.removeValue(forKey: "dialectic-turns")
+            }
+            let backupURL = directory.appendingPathComponent("dialectic-turns-\(targetDay).jsonl.bak")
+            if !FileManager.default.fileExists(atPath: backupURL.path) {
+                try? FileManager.default.copyItem(at: primaryURL, to: backupURL)
+            }
+            let compactedPayload = keptLines.isEmpty ? "" : (keptLines.joined(separator: "\n") + "\n")
+            if (try? compactedPayload.write(to: primaryURL, atomically: true, encoding: .utf8)) != nil {
+                compacted = true
+            }
+        }
+
+        return AutobankAndAutoforgetReport(
+            prunedTransientFiles: prunedFiles,
+            evaluatedTurns: evaluated,
+            autobankedTurns: keptLines.count,
+            forgottenTurns: forgotten,
+            compactedPrimaryLog: compacted
+        )
     }
 }

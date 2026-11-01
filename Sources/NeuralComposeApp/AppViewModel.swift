@@ -18,17 +18,18 @@ public struct CalibrationMetrics: Sendable {
 }
 
 /// Coarse signal-health bucket derived from per-channel RMS each window.
-/// "Healthy" range is 5–200 µV — below = electrode lifted / dry, above =
-/// muscle/motion contamination or 50/60 Hz interference.
+/// "Healthy" range is 2-200 uV (`ChannelHealthThresholds.default`) - below =
+/// electrode lifted / dry, above = muscle/motion contamination or 50/60 Hz
+/// interference.
 public enum SignalQuality: Sendable, Equatable {
-    case healthy   // ≥3/4 channels in range
-    case poor      // 1–2 channels in range
+    case healthy   // >=3/4 channels in range
+    case poor      // 1-2 channels in range
     case lost      // 0 channels in range
 }
 
 /// Owns the live pipeline lifecycle. The view model itself stays on
 /// `@MainActor` so SwiftUI observation is straightforward, but the heavy
-/// loops — EEG ingestion, windowing, classification, smoothing — all run on
+/// loops - EEG ingestion, windowing, classification, smoothing - all run on
 /// **detached** tasks so they never block the UI executor.
 ///
 /// Restart-safe: every `start()` call recreates the `BoundedAsyncChannel<EEGWindow>`
@@ -40,13 +41,13 @@ public enum SignalQuality: Sendable, Equatable {
 /// unexpectedly and we are not already running synthetic, the streamTask
 /// swaps in `EEGStreamFactory.makeSynthetic()` and continues, updating
 /// `pipelineMode` so the privacy banner reflects the degraded state.
-/// The single hypnagogic interaction mode — one axis, replacing the old
+/// The single hypnagogic interaction mode - one axis, replacing the old
 /// `InteractionStyle × ContextProfile` split. `mirror` is the plain reply
 /// (`HypnagogicDialogueLoop`, ONE cloud call/turn); `focused` / `reflective` /
 /// `contemplative` run the dialectic competition (`HypnagogicDialecticLoop`,
 /// persistent tension, non-deterministic resolution, TWO cloud calls/turn) at
 /// the matching `ContextProfile` tuning. "Dialectical" is no longer a separate
-/// toggle: choosing `reflective` — the canonical dialectical behaviour — *is*
+/// toggle: choosing `reflective` - the canonical dialectical behaviour - *is*
 /// choosing dialectical.
 public enum HypnagogicMode: String, CaseIterable, Sendable, Identifiable {
     case mirror, focused, reflective, contemplative
@@ -79,14 +80,14 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var highlightIndex: Int = 0
     @Published public private(set) var isPredicting: Bool = false
     @Published public private(set) var lastCommittedWord: String?
-    /// Mirrors `TextCompositionController.Snapshot.commitSequence` — the
+    /// Mirrors `TextCompositionController.Snapshot.commitSequence` - the
     /// actual signal `telemetryEvent` compares, since `lastCommittedWord`
     /// alone can't tell "no new commit" apart from "the user genuinely
     /// committed the same word twice in a row."
     private var lastCommitSequence: UInt64 = 0
     @Published public private(set) var pipelineMode: PipelineMode
     /// Reserved for genuine *live* pipeline failures (EEG stream drops,
-    /// calibration/Track-B start failures, etc.) — never populated from
+    /// calibration/Track-B start failures, etc.) - never populated from
     /// one-time startup substitution notices. See `startupWarning` for
     /// those. `PrivacyIndicatorView` keys its red "hard error" severity off
     /// this field specifically, so it must stay narrow.
@@ -117,7 +118,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// Off by default ("shadow mode"): `detectedAdaptation` is always kept
     /// current from live `signalQuality` so the badge is informative from
     /// launch, but it only reaches the predictor (`appliedAdaptation`) once
-    /// the user explicitly opts in here — lets the detection be judged
+    /// the user explicitly opts in here - lets the detection be judged
     /// against lived experience before it's trusted to change output.
     @Published public var adaptiveComplexityEnabled: Bool = false {
         didSet { applyAdaptiveGeneration() }
@@ -125,13 +126,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// What the current `signalQuality` maps to via `SignalQualityGenerationRules`,
     /// regardless of whether adaptive mode is enabled.
     @Published public private(set) var detectedAdaptation: GenerationAdaptation = .raw
-    /// What's actually been pushed to the composition controller — equals
+    /// What's actually been pushed to the composition controller - equals
     /// `.raw` whenever `adaptiveComplexityEnabled` is false.
     @Published public private(set) var appliedAdaptation: GenerationAdaptation = .raw
-    /// Milestone B state source — always kept current regardless of the
+    /// Milestone B state source - always kept current regardless of the
     /// toggle, same shadow-mode invariant as `detectedAdaptation`. `nil`
     /// means the estimator has no opinion (stub, missing weights, wrong
-    /// shape, artifact-contaminated window, or untrusted anchor space) —
+    /// shape, artifact-contaminated window, or untrusted anchor space)  - 
     /// `applyAdaptiveGeneration()` falls back to `signalQuality` in that case.
     @Published public private(set) var detectedSpectralState: SpectralState?
 
@@ -151,7 +152,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// coupled to the narrower interaction-log toggle.
     ///
     /// Clears the underlying ring buffer on every transition (both
-    /// enabling and disabling) — `JEPASpectralStateRingBuffer`'s `isFull`
+    /// enabling and disabling) - `JEPASpectralStateRingBuffer`'s `isFull`
     /// used to be a one-way latch that never reset, so toggling this off
     /// and back on could return stale pre-toggle-off data as if it were a
     /// freshly-completed window, splicing unrelated chronological data
@@ -166,7 +167,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// Separate, explicit opt-in for the synthetic-task JEPA+MPC planning
     /// demo (see `WorldModel/README.md`, `Sources/WorldModelDemo/`). Unlike
     /// `jepaTransitionCaptureEnabled`, this gates no data collection at
-    /// all — it only controls whether the self-contained synthetic-task
+    /// all - it only controls whether the self-contained synthetic-task
     /// demo window actually runs its closed-loop simulation and calls the
     /// real on-device predictor for its illustrative panel (see
     /// `WorldModelMPCDemoView`). Off by default; unrelated to
@@ -176,8 +177,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     /// Experimental, opt-in spoken-generation loop (see `SpokenGenerationLoop`,
     /// `SpokenGenerationHonesty`). Off by default and session-scoped like every
-    /// other opt-in here. Owns a running `Task`, so — unlike the view-lifecycle
-    /// `worldModelDemoEnabled` — it needs a `didSet` to start/stop that loop.
+    /// other opt-in here. Owns a running `Task`, so - unlike the view-lifecycle
+    /// `worldModelDemoEnabled` - it needs a `didSet` to start/stop that loop.
     @Published public var spokenGenerationLoopEnabled: Bool = false {
         didSet {
             guard oldValue != spokenGenerationLoopEnabled else { return }
@@ -189,7 +190,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// `HypnagogicDialogueLoop`). Off by default and session-scoped. It captures
     /// microphone audio during listen turns and sends transcript text only to the
     /// explicitly configured reference runtime. Audio stays on-device; nothing is
-    /// persisted. Manual trigger only — NOT wired to any sleep-stage detector.
+    /// persisted. Manual trigger only - NOT wired to any sleep-stage detector.
     @Published public var hypnagogicLoopEnabled: Bool = false {
         didSet {
             guard oldValue != hypnagogicLoopEnabled else { return }
@@ -201,7 +202,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// The hypnagogic interaction mode when the loop is enabled: `mirror` (plain
     /// reply, one cloud call/turn) or `focused` / `reflective` / `contemplative`
     /// (the dialectic loop at that tuning, two cloud calls/turn). Changing it
-    /// while active rebuilds the loop. Defaults to the plain mirror — the
+    /// while active rebuilds the loop. Defaults to the plain mirror - the
     /// lower-egress option.
     @Published public var hypnagogicMode: HypnagogicMode = .mirror {
         didSet {
@@ -230,7 +231,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             interactionStyle: "mirror"
         )
 
-    // ── Track B (imagined speech) — additive, never touches Track A state ─
+    // ── Track B (imagined speech) - additive, never touches Track A state ─
     @Published public private(set) var isImaginedSpeechRecording: Bool = false
     @Published public private(set) var imaginedSpeechState: ImaginedSpeechProtocolState = .init(
         phase: .idle, target: nil, trialIndex: 0, totalTrials: 0,
@@ -240,17 +241,17 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var imaginedDroppedSampleCount: Int = 0
     @Published public private(set) var imaginedSessionURL: URL?
 
-    // ── Voice I/O — push-to-talk dictation + explicit-trigger TTS. Event-
+    // ── Voice I/O - push-to-talk dictation + explicit-trigger TTS. Event-
     //    driven only: `isDictating` is true only while the mic button is
     //    held, never as a background/continuous state. `voiceWarning` is
     //    kept separate from `lastError`, which stays reserved for EEG/
-    //    classifier/predictor pipeline health — voice degradation is an
+    //    classifier/predictor pipeline health - voice degradation is an
     //    on-demand concern, not a pipeline health signal. ─────────────────
     @Published public private(set) var isDictating: Bool = false
     @Published public private(set) var isSpeaking: Bool = false
     @Published public private(set) var voiceWarning: String?
 
-    // ── Voice command listening — push-to-talk ASR → AppCommand. Same
+    // ── Voice command listening - push-to-talk ASR → AppCommand. Same
     //    privacy posture as dictation: mic open only between explicit
     //    start/stop pairs, never a continuous stream. `isCommanding` is
     //    the banner flag; `commandWarning` is its own field (mirrors
@@ -260,7 +261,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var isCommanding: Bool = false
     @Published public private(set) var commandWarning: String?
 
-    // ── Semantic dialectic engine — explicit-trigger thesis/antithesis/
+    // ── Semantic dialectic engine - explicit-trigger thesis/antithesis/
     //    synthesis refinement of the composed sentence. Never runs
     //    automatically (see `DialecticEngine`'s doc comment for why: three
     //    sequential LLM decode passes are too slow for the carousel's hot
@@ -309,7 +310,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// adaptation closure can capture a fully-initialized `self`. Nil while off.
     private var spokenLoop: SpokenGenerationLoop?
     /// Serializes start/stop of `spokenLoop` so a fast toggle on→off can never
-    /// leave a started loop with no handle to stop it — each reconcile awaits the
+    /// leave a started loop with no handle to stop it - each reconcile awaits the
     /// previous one, then applies the latest toggle value.
     private var spokenLoopReconcile: Task<Void, Never>?
     /// Experimental hypnagogic loop + its serializing reconcile task, mirroring
@@ -325,7 +326,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// 3D workspace subscribes here once at bind time, decoupled from loop
     /// lifetime: each dialectic loop's `spokenNodeStream()` is forwarded into
     /// this channel, so the subscription survives mode changes and rebuilds.
-    /// On-device only — nothing here leaves the machine.
+    /// On-device only - nothing here leaves the machine.
     private let spokenNodeRelay = AsyncMulticastChannel<SpokenNodeEvent>(capacity: 32)
     private var spokenNodeForwardTask: Task<Void, Never>?
     /// The dialectic conversation so far, shared by every loop this view model
@@ -363,8 +364,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private var metricsTask: Task<Void, Never>?
     private var healthTask: Task<Void, Never>?
     /// Always-on watchdog file writer (health.json + health-<day>.jsonl). Not
-    /// gated by any opt-in — it records diagnostic metadata only, no transcripts.
+    /// gated by any opt-in - it records diagnostic metadata only, no transcripts.
     private let healthLogger = HealthLogger()
+    /// Count of consecutive windows producing the exact same non-nil `SpectralState`,
+    /// used by the health watchdog to flag stalled zero-variance spectral output.
+    internal private(set) var consecutiveIdenticalSpectralWindows: Int = 0
 
     public init(
         container: AppContainer,
@@ -415,14 +419,14 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         } else if let w = container.predictorResolved.warning {
             self.startupWarning = w
         } else if let w = container.spectralEstimatorResolved.warning {
-            // Previously dropped entirely — a real probe crash/timeout/init
+            // Previously dropped entirely - a real probe crash/timeout/init
             // failure here silently fell back to the stub estimator with
             // zero UI indication, unlike every sibling subsystem's
             // equivalent failure path.
             self.startupWarning = w
         }
         // Route the voice-output/input launch warnings to the RENDERED
-        // startupWarning (PrivacyIndicatorView) — the same precedent this change
+        // startupWarning (PrivacyIndicatorView) - the same precedent this change
         // set for the spectral estimator above. Otherwise the actionable "record a
         // Personal Voice / install a neural voice" hint lands in `voiceWarning`,
         // which no view binds, and never reaches the user. Don't clobber an
@@ -441,6 +445,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     public func start() async {
         guard !isRunning else { return }
         isRunning = true
+        consecutiveIdenticalSpectralWindows = 0
+        detectedSpectralState = nil
         await windowing.reset()
         await smoother.reset()
 
@@ -464,7 +470,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         applyAdaptiveGeneration()
         // Opt-in, default no-op: honour NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART so a
         // scripted live run can start the loop without the UI toggle (all auth +
-        // egress-disclosure gates preserved). Fires once — start() is guarded.
+        // egress-disclosure gates preserved). Fires once - start() is guarded.
         applyHypnagogicAutostartFromEnvironment()
 
         // ── snapshots → UI (MainActor) ────────────────────────────────────
@@ -485,7 +491,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             }
         }
 
-        // ── metrics polling — 4 Hz (off-main, then hop for UI write) ──────
+        // ── metrics polling - 4 Hz (off-main, then hop for UI write) ──────
         let metricsRef = self.metrics
         metricsTask = Task.detached(priority: .utility) { [weak self] in
             while !Task.isCancelled {
@@ -496,14 +502,17 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             }
         }
 
-        // ── health watchdog — 0.5 Hz (off-main): assemble a HealthSnapshot from
+        // ── health watchdog - 0.5 Hz (off-main): assemble a HealthSnapshot from
         //    the resolved backend kinds + pipeline state + EEG throughput, write
         //    it to health.json, and publish it for the degraded banner. Always
         //    on; observes only, never changes runtime behaviour.
         let healthLoggerRef = healthLogger
         let healthStartedAt = Date()
         let wantedProfile = (ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] ?? "synthetic").lowercased()
-        let expectedLive = wantedProfile.contains("muse") || wantedProfile.contains("athena")
+        let expectedLive = wantedProfile.contains("muse")
+            || wantedProfile.contains("athena")
+            || wantedProfile.contains("osc")
+            || wantedProfile.contains("mindmonitor")
         var lastWindowCount = metricsRef.snapshot().windowing.count
         var lastWindowAt = healthStartedAt
         healthTask = Task.detached(priority: .utility) { [weak self] in
@@ -534,7 +543,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         streamTask = Task.detached(priority: .userInitiated) {
             [weak self, windowing, metrics = metricsRef, channel, samples, spectralEstimatorRef, jepaTransitionCaptureRef] in
             var current = initialResolved
-            // Movement (accel/gyro) — parallel to the EEG sample loop, OSC-only.
+            // Movement (accel/gyro) - parallel to the EEG sample loop, OSC-only.
             // The IMU channel outlives per-attempt EEG stop()/start() cycles, so
             // it's drained once here (not per retry) and forwarded to the active
             // recorder, gated on the same isCalibrating as EEG recording. Cancelled
@@ -562,6 +571,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 samplesThisAttempt = 0
                 do {
                     let stream = try await current.stream.start()
+                    if let bf = current.stream as? BrainFlowService,
+                       bf.activeProfile != current.profile {
+                        await Self.publishMode(current: current, container: containerRef, on: self)
+                    }
                     for try await sample in stream {
                         if Task.isCancelled { break }
                         samplesThisAttempt += 1
@@ -570,7 +583,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
                         // Record sample if in calibration mode (Track A) or
                         // in imagined-speech recording (Track B). The two
-                        // recorders are independent sinks — both, neither, or
+                        // recorders are independent sinks - both, neither, or
                         // either can be active. Track A's path is byte-
                         // identical to before; Track B is an additive fork.
                         let (isCalibrating, recorder, trackB) = await MainActor.run {
@@ -580,7 +593,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                         }
                         // The first sample of an attempt that follows a
                         // prior failure (liveRetries > 0) is the
-                        // "reconnected" moment — the live link is
+                        // "reconnected" moment - the live link is
                         // producing samples again. Logged before
                         // liveRetries gets reset below (samplesThisAttempt
                         // >= 256 branch) so this only fires once per
@@ -616,24 +629,19 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                 // window. Cheap and avoids needing the full CalibrationMetrics
                                 // struct when not recording.
                                 let quality = Self.signalQuality(of: window)
-                                // Milestone B state source — always run regardless of
+                                // Substitute dead/saturated channels with their healthy
+                                // contralateral partner (TP9<->TP10, AF7<->AF8) before
+                                // downstream spectral estimation, JEPA capture, and
+                                // classification so a single lifted electrode does not poison
+                                // spatial features. Raw window is kept for calibration recording.
+                                let cleanedWindow = Self.preprocessWindow(window)
+                                // Milestone B state source - always run regardless of
                                 // adaptiveComplexityEnabled (shadow mode), same invariant as
                                 // signalQuality/detectedAdaptation. Stub estimator returns nil
                                 // immediately; the real one gates on shape/artifact internally.
-                                let spectral = await spectralEstimatorRef.estimate(window: window)
+                                let spectral = await spectralEstimatorRef.estimate(window: cleanedWindow)
                                 await MainActor.run {
-                                    var changed = false
-                                    if self?.signalQuality != quality {
-                                        self?.signalQuality = quality
-                                        changed = true
-                                    }
-                                    if self?.detectedSpectralState != spectral {
-                                        self?.detectedSpectralState = spectral
-                                        changed = true
-                                    }
-                                    if changed {
-                                        self?.applyAdaptiveGeneration()
-                                    }
+                                    self?.recordWindowEvaluation(quality: quality, spectral: spectral)
                                 }
 
                                 // The compact JEPA state is derived from the
@@ -645,7 +653,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                 }
                                 if jepaCaptureEnabled,
                                    let state = JEPASpectralState(
-                                       window: window,
+                                       window: cleanedWindow,
                                        timestamp: Date().timeIntervalSince1970
                                    ) {
                                     jepaTransitionCaptureRef.ingest(state)
@@ -661,12 +669,10 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                     }
                                 }
 
-                                let result = channel.send(window)
+                                let result = channel.send(cleanedWindow)
                                 if result.droppedBufferedElement {
                                     await MainActor.run { self?.droppedWindowCount += 1 }
                                 }
-                            } else {
-                                metrics.recordWindowing(durationMicros: elapsedMicros(since: started))
                             }
                         } catch let bci as BCIError {
                             metrics.recordError(bci)
@@ -674,7 +680,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                         }
                     }
                     // Clean completion: for live, the Muse likely auto-powered
-                    // off — fall through to retry/fallback. For synthetic,
+                    // off - fall through to retry/fallback. For synthetic,
                     // a clean exit means we're done.
                 } catch let bci as BCIError {
                     metrics.recordError(bci)
@@ -689,7 +695,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 if current.acquisition == .synthetic { break }   // already at last resort
 
                 // Live stream stopped (error or clean completion). Retry the
-                // live source a few times — Muse S powers itself off after
+                // live source a few times - Muse S powers itself off after
                 // ~30 s of poor signal and reconnects when contact returns,
                 // and reconnecting beats a silent fallback to synthetic.
                 // A productive attempt (≥256 samples ≈ 1 s of data) resets
@@ -703,7 +709,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     (self?.isCalibrating ?? false, self?.calibrationRecorder)
                 }
                 if liveRetries > maxLiveRetries {
-                    BCILog.pipeline.notice("Live stream exhausted \(maxLiveRetries) retries — falling back to synthetic")
+                    BCILog.pipeline.notice("Live stream exhausted \(maxLiveRetries) retries - falling back to synthetic")
                     if isCalibratingNow, let recorderNow {
                         await recorderNow.recordTransportEvent(
                             .fellBackToSynthetic, at: Date().timeIntervalSince1970,
@@ -771,7 +777,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     /// Sets `lastError` on the main actor. Invoked from the detached pipeline
     /// tasks via `await self?.setLastError(...)` rather than
-    /// `MainActor.run { self?.lastError = ... }` — a direct isolated-method call
+    /// `MainActor.run { self?.lastError = ... }` - a direct isolated-method call
     /// hops to the main actor without tripping Swift 6 region isolation's
     /// "sending 'self' risks causing data races" on the closure capture (the
     /// closure would capture `self`, which the detached task also uses across
@@ -797,7 +803,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     /// Built lazily on first enable (not in `init`, so the adaptation closure
     /// captures a fully-initialized `self`). Steers generation with a
-    /// **signal-quality-only** adaptation (`SignalQualityGenerationRules` — an
+    /// **signal-quality-only** adaptation (`SignalQualityGenerationRules` - an
     /// electrode-contact / hardware-confidence bucket), deliberately NOT the
     /// combined `detectedAdaptation`, which folds in the heuristic spectral
     /// state; that keeps the loop's "not a brain read" caveat true.
@@ -815,18 +821,18 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             if let sink = interactionLogger as? any SpokenGenerationTraceLogging {
                 tracer = sink
             } else {
-                // Enabled, but the injected logger can't take spoken traces — make
+                // Enabled, but the injected logger can't take spoken traces - make
                 // the no-op VISIBLE rather than silently dropping the stream (the
                 // exact silent-failure class this trace exists to eliminate).
                 BCILog.pipeline.notice(
-                    "interaction logging enabled but the injected logger does not support spoken-generation traces — spoken-trace stream disabled")
+                    "interaction logging enabled but the injected logger does not support spoken-generation traces - spoken-trace stream disabled")
                 tracer = NullSpokenGenerationTraceLogger()
             }
             if let sink = interactionLogger as? any ProsodyTraceLogging {
                 prosodyTracer = sink
             } else {
                 BCILog.pipeline.notice(
-                    "interaction logging enabled but the injected logger does not support prosody traces — prosody-trace stream disabled")
+                    "interaction logging enabled but the injected logger does not support prosody traces - prosody-trace stream disabled")
                 prosodyTracer = NullProsodyTraceLogger()
             }
         } else {
@@ -854,7 +860,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     /// Opt-in autostart override (default: no-op) for a scriptable, reproducible
-    /// hypnagogic run — the co-development loop's launch hook. Set
+    /// hypnagogic run - the co-development loop's launch hook. Set
     /// `NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART=<style>[:<profile>]`, e.g.
     /// `dialectical:focused`, to enable the loop at launch WITHOUT the UI toggle.
     /// Every existing gate still holds: enabling flows through the same
@@ -881,7 +887,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
         hypnagogicMode = mode
         BCILog.pipeline.notice(
-            "hypnagogic autostart: enabling \(mode.rawValue, privacy: .public) — cloud-egress banner shows while active")
+            "hypnagogic autostart: enabling \(mode.rawValue, privacy: .public) - cloud-egress banner shows while active")
         hypnagogicLoopEnabled = true   // → reconcileHypnagogicLoop() (auth prompt + banner)
     }
 
@@ -935,8 +941,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     /// Dials the configured two-machine bridge peer (`decision_registry.md`
     /// entry 9) and, as the dialer, sends the fixed seed utterance once
-    /// before the loop starts listening. Returns `nil` on any failure —
-    /// logged, never thrown — so a bad bridge config degrades the same way a
+    /// before the loop starts listening. Returns `nil` on any failure  - 
+    /// logged, never thrown - so a bad bridge config degrades the same way a
     /// denied mic authorization does, rather than crashing the loop.
     private func connectPeerBridge(
         _ config: PeerBridgeConfiguration
@@ -954,7 +960,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             return nil
         }
         BCILog.peerBridge.notice(
-            "hypnagogic peer bridge connected — session=\(config.session, privacy: .public) peer=\(config.peerHost, privacy: .public):\(config.peerPort, privacy: .public)")
+            "hypnagogic peer bridge connected - session=\(config.session, privacy: .public) peer=\(config.peerHost, privacy: .public):\(config.peerPort, privacy: .public)")
         return (TCPPeerListener(bridge: bridge), TCPPeerSpeaker(bridge: bridge))
     }
 
@@ -974,7 +980,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         if let bridgeConfig = PeerBridgeConfiguration.resolve(environment: launchEnvironment) {
             // Two-machine dialectic bridge (decision_registry.md entry 9):
             // swap the mic/speaker pair for a TCP peer connection. No mic
-            // authorization to request — see `connectPeerBridge`.
+            // authorization to request - see `connectPeerBridge`.
             guard let bridgePair = await connectPeerBridge(bridgeConfig) else {
                 hypnagogicLoopEnabled = false
                 return
@@ -1106,12 +1112,39 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// read (see `SpectralState.honestyCaveat`).
     private func currentSpectralGlossState() -> SpectralState? { detectedSpectralState }
 
+    /// Updates `signalQuality`, `detectedSpectralState`, and
+    /// `consecutiveIdenticalSpectralWindows` for a newly emitted EEG window,
+    /// then refreshes `detectedAdaptation`/`appliedAdaptation` if changed.
+    internal func recordWindowEvaluation(quality: SignalQuality, spectral: SpectralState?) {
+        var changed = false
+        if signalQuality != quality {
+            signalQuality = quality
+            changed = true
+        }
+        if let s = spectral {
+            if detectedSpectralState == s {
+                consecutiveIdenticalSpectralWindows += 1
+            } else {
+                consecutiveIdenticalSpectralWindows = 1
+            }
+        } else {
+            consecutiveIdenticalSpectralWindows = 0
+        }
+        if detectedSpectralState != spectral {
+            detectedSpectralState = spectral
+            changed = true
+        }
+        if changed {
+            applyAdaptiveGeneration()
+        }
+    }
+
     /// Assembles a `HealthSnapshot` from the resolved backend kinds, the pipeline
-    /// mode, EEG throughput, and the dialectic loop's turn liveness. Read-only —
+    /// mode, EEG throughput, and the dialectic loop's turn liveness. Read-only -
     /// the watchdog observes runtime state, never changes it.
-    private func assembleHealthSnapshot(now: Date, uptime: Double,
-                                        windowsPerSecond wps: Double,
-                                        expectedLive: Bool) async -> HealthSnapshot {
+    internal func assembleHealthSnapshot(now: Date, uptime: Double,
+                                         windowsPerSecond wps: Double,
+                                         expectedLive: Bool) async -> HealthSnapshot {
         let mode = pipelineMode
         let estimatorKind = container.spectralEstimatorResolved.kind.rawValue
         let embedderKind = container.sentenceEmbedderKind
@@ -1129,11 +1162,17 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         let loopRunning = hypnagogicLoop != nil
         let secondsSinceLastTurn = lastTurnAt.map { now.timeIntervalSince($0) }
 
-        // Gloss stuck: a live MLX estimator that still produces no state while
-        // windows are flowing (past warmup) — the exact failure that hid behind
-        // glossScalar == 0.5 all night.
+        // Gloss stuck: a live MLX estimator that either produces no state while
+        // windows are flowing (past warmup) or remains pinned at an identical
+        // zero-variance state across hundreds of consecutive windows.
         let state = detectedSpectralState
-        let glossStuck = estimatorKind == "mlx" && state == nil && wps > 0 && uptime > 8
+        let glossStuck = Self.isGlossStuck(
+            estimatorKind: estimatorKind,
+            spectralState: state,
+            windowsPerSecond: wps,
+            uptimeSeconds: uptime,
+            consecutiveIdenticalWindows: consecutiveIdenticalSpectralWindows
+        )
 
         let degraded = HealthSnapshot.degradedReasons(
             acquisition: mode.acquisition.rawValue, expectedLive: expectedLive,
@@ -1158,7 +1197,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     public func stop() async {
         // Always silence the experimental spoken loop, even when the pipeline
-        // itself isn't running — its lifecycle is independent of `isRunning`.
+        // itself isn't running - its lifecycle is independent of `isRunning`.
         if spokenGenerationLoopEnabled { spokenGenerationLoopEnabled = false }
         if hypnagogicLoopEnabled { hypnagogicLoopEnabled = false }
         guard isRunning else { return }
@@ -1183,6 +1222,8 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         if let c = composition { await c.finish() }
         composition = nil
 
+        consecutiveIdenticalSpectralWindows = 0
+        detectedSpectralState = nil
         isRunning = false
     }
 
@@ -1193,13 +1234,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     ///
     /// **Single-owner invariant.** `AppViewModel` is the canonical owner
     /// of the active EEG stream. Live BrainFlow sessions are
-    /// single-consumer — only `AppViewModel.start()` calls
+    /// single-consumer - only `AppViewModel.start()` calls
     /// `EEGStreaming.start()`. Visualization consumers (the plotter, the
     /// channel-health provider) receive replicated samples through this
     /// broadcast fan-out, not by calling `.start()` themselves. Calling
     /// `EEGStreaming.start()` a second time on a live `BrainFlowService`
     /// would open a second BLE/BrainFlow session and clobber the
-    /// supervisor's `pollTask` — do not do it.
+    /// supervisor's `pollTask` - do not do it.
     ///
     /// The returned stream:
     /// - is one subscriber of an `AsyncMulticastChannel<EEGSample>`; each
@@ -1214,14 +1255,14 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     /// Raw (pre-smoothing) classifier output, broadcast independently of the
-    /// FSM/carousel path — see `classifierChannel`. Diagnostic use only
+    /// FSM/carousel path - see `classifierChannel`. Diagnostic use only
     /// (e.g. the 3D workspace visualizer); the production intent pipeline
     /// does not read from this.
     public func liveClassifierStream() -> AsyncStream<IntentPrediction> {
         classifierChannel?.subscribe() ?? AsyncStream<IntentPrediction> { $0.finish() }
     }
 
-    /// Spoken-node events from the active dialectic loop (Stage 1d) — the
+    /// Spoken-node events from the active dialectic loop (Stage 1d) - the
     /// grounding signal the 3D workspace consumes to place + light concept
     /// nodes per voiced word. A stable relay: subscribing once survives loop
     /// mode changes and rebuilds, and stays quiet (but live) when no dialectic
@@ -1299,7 +1340,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     // MARK: - Track B (Imagined Speech)
 
     /// Start a Track B session: open the recorder, start the protocol, and
-    /// spin up two consumer tasks — one that mirrors protocol state into the
+    /// spin up two consumer tasks - one that mirrors protocol state into the
     /// @Published properties (UI), one that forwards the same state to the
     /// recorder (data). Both consume separate iterations of the same
     /// AsyncStream so neither blocks the other.
@@ -1351,7 +1392,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
         // Single consumer of the protocol's state stream: updates UI AND
         // forwards to the recorder. Doing it in one task guarantees the
-        // recorder sees phase changes in the same order the UI does — no
+        // recorder sees phase changes in the same order the UI does - no
         // chance of the recorder closing a trial window before the UI knows
         // about it (or vice versa).
         let states = proto.states
@@ -1412,7 +1453,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     // MARK: - Voice I/O
 
     /// Begins push-to-talk dictation. Requests mic/speech authorization on
-    /// first use (not at app launch — see `VoiceInputFactory.live()`'s doc
+    /// first use (not at app launch - see `VoiceInputFactory.live()`'s doc
     /// comment), then opens the mic. Call on button-press.
     public func startDictation() async {
         guard !isDictating, composition != nil else { return }
@@ -1445,7 +1486,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     /// Begins push-to-talk voice command listening. Requests
-    /// mic/speech authorization on first use (not at app launch —
+    /// mic/speech authorization on first use (not at app launch  - 
     /// see `VoiceCommandFactory.live()`'s doc comment), then opens
     /// the mic. Call on button-press. The recognizer is *not* the
     /// dictation service; this is a separate `SFSpeechRecognizer`
@@ -1486,7 +1527,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             // the existing voice-dictation log pattern (see
             // `BCILog.voice.notice` calls in `VoiceCommandFactory`).
             // This becomes the dataset for evaluating fuzzy /
-            // embedding recognizers — every transcript is a labeled
+            // embedding recognizers - every transcript is a labeled
             // example (transcript -> command, or transcript ->
             // rejection).
             BCILog.voice.notice("voice command recognition: transcript=\(result.transcript) command=\(result.command?.id ?? "nil") rejection=\(result.rejectionReason?.rawValue ?? "none")")
@@ -1511,7 +1552,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         await voiceCommandInput.cancelCommand()
     }
 
-    /// Reads the current composed sentence aloud. Explicit-trigger only —
+    /// Reads the current composed sentence aloud. Explicit-trigger only  - 
     /// never invoked automatically on word commit.
     public func speak() async {
         await speak(text: composedText)
@@ -1519,7 +1560,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     /// Speaks arbitrary `text` in the resolved voice (the Personal Voice when
     /// active) with the Stage-2 confidence-wobble. Backs the composed-sentence
-    /// path above and external triggers — the `neuralcompose://speak?text=` URL
+    /// path above and external triggers - the `neuralcompose://speak?text=` URL
     /// scheme (→ a Siri Shortcut). No-ops on empty text or while already speaking.
     public func speak(text: String) async {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1541,7 +1582,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     // MARK: - Semantic Dialectic Engine
 
     /// Runs the three-pass thesis/antithesis/synthesis refinement over the
-    /// current composed sentence. Explicit-trigger only — see
+    /// current composed sentence. Explicit-trigger only - see
     /// `DialecticEngine`'s doc comment for why this never runs
     /// automatically.
     public func refineComposedText() async {
@@ -1558,7 +1599,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     /// Accepts the current suggestion's synthesis as the new composed text
-    /// — a replace, not an append (see
+    /// - a replace, not an append (see
     /// `TextCompositionController.applyRefinement`).
     public func acceptRefinement() async {
         guard let refinement = refinementSuggestion, let composition else { return }
@@ -1593,22 +1634,47 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         let channelLabels = container.streamResolved.profile.channelLabels.isEmpty
             ? ["ch0", "ch1", "ch2", "ch3"]
             : container.streamResolved.profile.channelLabels
+        return Self.computeCalibrationMetrics(window: window, channelLabels: channelLabels)
+    }
+
+    nonisolated static func computeCalibrationMetrics(
+        window: EEGWindow,
+        channelLabels: [String] = ["TP9", "AF7", "AF8", "TP10"]
+    ) -> CalibrationMetrics {
+        let resolvedLabels = channelLabels.isEmpty
+            ? ["ch0", "ch1", "ch2", "ch3"]
+            : channelLabels
 
         var rms: [Float] = []
         var peak: [Float] = []
 
         for ch in window.samples {
-            let samples = ch
-            let sumSq = samples.reduce(0.0) { $0 + Float($1 * $1) }
-            let rmsVal = sqrt(sumSq / Float(samples.count))
-            let peakVal = samples.map(abs).max() ?? 0
+            let finiteSamples = ch.filter(\.isFinite)
+            guard !finiteSamples.isEmpty else {
+                rms.append(0)
+                peak.append(0)
+                continue
+            }
+            let n = Double(finiteSamples.count)
+            var sum: Double = 0
+            for v in finiteSamples { sum += Double(v) }
+            let mean = sum / n
+            var sumSq: Double = 0
+            var peakVal: Double = 0
+            for v in finiteSamples {
+                let ac = Double(v) - mean
+                sumSq += ac * ac
+                let absAC = abs(ac)
+                if absAC > peakVal { peakVal = absAC }
+            }
+            let rmsVal = Float((sumSq / n).squareRoot())
             rms.append(rmsVal)
-            peak.append(peakVal)
+            peak.append(Float(peakVal))
         }
 
         return CalibrationMetrics(
             channelCount: window.channelCount,
-            channelLabels: channelLabels,
+            channelLabels: resolvedLabels,
             rms: rms,
             peak: peak,
             samplesPerSec: window.sampleRate
@@ -1616,25 +1682,42 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     }
 
     /// Bucket per-channel RMS into healthy/poor/lost. A channel counts as
-    /// "in range" when its RMS sits in 5–200 µV; below = electrode lifted or
-    /// dry pad, above = muscle / mains interference.
-    private nonisolated static func signalQuality(of window: EEGWindow) -> SignalQuality {
+    /// "in range" when its demeaned RMS sits between `thresholds.deadRMS`
+    /// (default 2.0 uV) and `thresholds.saturatedRMS` (default 200.0 uV);
+    /// below = electrode lifted or dry pad, above = muscle / mains interference.
+    nonisolated static func signalQuality(
+        of window: EEGWindow,
+        thresholds: ChannelHealthThresholds = .default
+    ) -> SignalQuality {
         var inRange = 0
         for ch in window.samples {
-            let n = Float(ch.count)
+            let n = Double(ch.count)
             if n == 0 { continue }
             // Real EEG (e.g. Muse over OSC / Mind Monitor) carries a large
-            // per-channel DC baseline (~800µV) that synthetic data never had.
-            // Subtract it so RMS measures the AC signal amplitude, not the
-            // offset — otherwise every channel sits far above the 200µV ceiling
-            // and a perfectly good stream is misreported as `.lost`.
-            var mean: Float = 0
-            for v in ch { mean += v }
+            // per-channel DC baseline (~800 uV) that synthetic data never had.
+            // Subtract it in Double precision so RMS measures the AC signal
+            // amplitude, not the offset; otherwise every channel sits far above
+            // the 200 uV ceiling and a good stream is misreported as `.lost`.
+            var hasNonFinite = false
+            var mean: Double = 0
+            for v in ch {
+                if !v.isFinite {
+                    hasNonFinite = true
+                    break
+                }
+                mean += Double(v)
+            }
+            if hasNonFinite { continue }
             mean /= n
-            var sumSq: Float = 0
-            for v in ch { let d = v - mean; sumSq += d * d }
-            let rms = (sumSq / n).squareRoot()
-            if rms >= 5 && rms <= 200 { inRange += 1 }
+            var sumSq: Double = 0
+            for v in ch {
+                let d = Double(v) - mean
+                sumSq += d * d
+            }
+            let rms = Float((sumSq / n).squareRoot())
+            if rms.isFinite && rms >= thresholds.deadRMS && rms <= thresholds.saturatedRMS {
+                inRange += 1
+            }
         }
         switch inRange {
         case 3...: return .healthy
@@ -1643,10 +1726,39 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
+    /// Substitutes dead or saturated channels in a 4-channel Muse window with
+    /// their demeaned healthy contralateral partner (`TP9<->TP10`, `AF7<->AF8`).
+    nonisolated static func preprocessWindow(
+        _ window: EEGWindow,
+        thresholds: ChannelHealthThresholds = .default
+    ) -> EEGWindow {
+        EEGChannelHealthProvider.substituteBadChannels(in: window, thresholds: thresholds)
+    }
+
+    /// Evaluates whether the spectral gloss estimator is stuck (either returning
+    /// `nil` past warmup while windows flow, or pinned at an identical non-nil
+    /// state with zero variance across `maxZeroVarianceWindows` consecutive windows).
+    nonisolated static func isGlossStuck(
+        estimatorKind: String,
+        spectralState: SpectralState?,
+        windowsPerSecond: Double,
+        uptimeSeconds: Double,
+        consecutiveIdenticalWindows: Int = 0,
+        maxZeroVarianceWindows: Int = 600
+    ) -> Bool {
+        guard estimatorKind == "mlx", windowsPerSecond > 0, uptimeSeconds > 8 else {
+            return false
+        }
+        if spectralState == nil {
+            return true
+        }
+        return maxZeroVarianceWindows > 0 && consecutiveIdenticalWindows >= maxZeroVarianceWindows
+    }
+
     /// Publishes `viewModel.pipelineMode`, called at the top of every
     /// supervisor loop iteration (initial start and every retry). Must
     /// compute `transportDetail` the same way `AppContainer.pipelineMode`
-    /// does — this is the value that's actually displayed once the app is
+    /// does - this is the value that's actually displayed once the app is
     /// running, so if this doesn't compute it, nothing does: the initial
     /// `viewModel.pipelineMode` set from `container.pipelineMode` gets
     /// overwritten by this on the very first loop iteration, before OSC's
@@ -1656,10 +1768,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         container: AppContainer,
         on viewModel: AppViewModel?
     ) async {
+        let resolvedProfile = (current.stream as? BrainFlowService)?.activeProfile ?? current.profile
         let mode = PipelineMode(
             acquisition: current.acquisition,
             transport: current.transport,
-            sourceProfile: current.profile,
+            sourceProfile: resolvedProfile,
             classifier: container.classifierResolved.kind,
             predictor: container.predictorResolved.kind,
             transportDetail: AppContainer.transportDetail(for: current.stream)
@@ -1670,7 +1783,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private func apply(snapshot snap: TextCompositionController.Snapshot) {
         // Captured before overwriting: `self.composedText`/`lastCommittedWord`
         // still hold the *previous* snapshot's values here, which is exactly
-        // "the context right before this commit" — TextCompositionController
+        // "the context right before this commit" - TextCompositionController
         // itself never exposes a pre-commit string, so this is reconstructed
         // from the snapshot stream rather than threading a new parameter
         // through BCICore.
@@ -1709,7 +1822,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// Pure: given the snapshot stream's before/after state plus the
     /// currently-published BCI context, decides whether this snapshot
     /// represents a genuine new word commit and, if so, builds the event to
-    /// log — `nil` on carousel ticks/prediction refreshes that don't change
+    /// log - `nil` on carousel ticks/prediction refreshes that don't change
     /// `lastCommittedWord`. Kept free of `self`/`interactionLoggingEnabled`
     /// so it's unit-testable with plain values, no pipeline or actor
     /// required (see `Tests/NeuralComposeAppTests/AppViewModelTelemetryTests.swift`).
@@ -1718,7 +1831,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// adaptation was actually in effect (`appliedAdaptation`, `.raw` unless
     /// `adaptiveComplexityEnabled`), not just what was detected.
     ///
-    /// Compares `commitSequence`, not `lastCommittedWord`'s text — two
+    /// Compares `commitSequence`, not `lastCommittedWord`'s text - two
     /// genuine, temporally-distinct commits of the same word (e.g.
     /// committing "the" twice in a row) are a real, legitimate case that a
     /// text-equality check cannot distinguish from "no new commit

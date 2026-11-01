@@ -1,0 +1,119 @@
+{
+  "schema_version": "interaction-logs-manifest-v1",
+  "date": "2026-11-01",
+  "epistemic_status": "ENGINEERING_TELEMETRY_QUARANTINED",
+  "eligible_for_science": false,
+  "eligible_for_encoder_training": false,
+  "purpose": "Synchronize 2026-11-01 interaction logs and memory-gate autobank manifest for Fable 5.1 /boost and /migrate-workflows /teamwork orchestration.",
+  "autobank_summary": {
+    "date": "2026-11-01",
+    "dialectic_turns_total_2026_11_01": 40,
+    "dialectic_turns_autobanked_2026_11_01": 18,
+    "dialectic_turns_autoforgotten_2026_11_01": 22,
+    "autobank_manifest_payloads_total": 47,
+    "autobank_manifest_by_source": {
+      "app-dialectic": 18,
+      "report": 1,
+      "world-model": 28
+    },
+    "max_self_similarity_threshold": 0.92
+  },
+  "files": [
+    {
+      "filename": "dialectic-turns-2026-11-01.jsonl",
+      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
+      "repo_paths": [
+        "InteractionLogs/dialectic-turns-2026-11-01.jsonl",
+        "Tests/Fixtures/InteractionLogs/dialectic-turns-2026-11-01.jsonl"
+      ],
+      "raw_source_lines": 39,
+      "repo_lines": 39,
+      "raw_source_sha256": "0af1d1f4525bab7c15388cacc7cb907928e071a4d3d5cb16307d2cbdde10ebf2",
+      "repo_sanitized_sha256": "a6666a8c7c90972786b80c9a57332d5d10c5c2efcd2b5daa99a40b8905f21938",
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false,
+      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
+      "dash_invariant": "zero_em_or_en_dashes"
+    },
+    {
+      "filename": "dialectic-autobank-2026-11-01.jsonl",
+      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/dialectic-autobank-2026-11-01.jsonl",
+      "repo_paths": [
+        "InteractionLogs/dialectic-autobank-2026-11-01.jsonl",
+        "Tests/Fixtures/InteractionLogs/dialectic-autobank-2026-11-01.jsonl"
+      ],
+      "raw_source_lines": 18,
+      "repo_lines": 18,
+      "raw_source_sha256": "f7f02b838a4895480b3e846e75c287d4fb5c5c6abba21c497b12f78d13bf06a3",
+      "repo_sanitized_sha256": "f7f02b838a4895480b3e846e75c287d4fb5c5c6abba21c497b12f78d13bf06a3",
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false,
+      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
+      "dash_invariant": "zero_em_or_en_dashes"
+    },
+    {
+      "filename": "prosody-trace-2026-11-01.jsonl",
+      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/prosody-trace-2026-11-01.jsonl",
+      "repo_paths": [
+        "InteractionLogs/prosody-trace-2026-11-01.jsonl",
+        "Tests/Fixtures/InteractionLogs/prosody-trace-2026-11-01.jsonl"
+      ],
+      "raw_source_lines": 32,
+      "repo_lines": 32,
+      "raw_source_sha256": "0c3360790d946c8a99d40e4e0947484ac2482860735bf2a0c8d3137a8c9c7985",
+      "repo_sanitized_sha256": "cbfd9bb7e1b2cdebaff3bdc54c10c1e638202dca9d58d26d88799703c185e1f8",
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false,
+      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
+      "dash_invariant": "zero_em_or_en_dashes"
+    },
+    {
+      "filename": "health-2026-11-01.jsonl",
+      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/health-2026-11-01.jsonl",
+      "repo_paths": [
+        "InteractionLogs/health-2026-11-01.jsonl",
+        "Tests/Fixtures/InteractionLogs/health-2026-11-01.jsonl"
+      ],
+      "raw_source_lines": 376,
+      "repo_lines": 376,
+      "raw_source_sha256": "1c1da54e46505b01b082835296a3d7a30b7efe6a32a6280be8012efc49f5a7e5",
+      "repo_sanitized_sha256": "1c1da54e46505b01b082835296a3d7a30b7efe6a32a6280be8012efc49f5a7e5",
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false,
+      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
+      "dash_invariant": "zero_em_or_en_dashes"
+    },
+    {
+      "filename": "equifinal-dialectic-turns.jsonl",
+      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/equifinal-dialectic-turns.jsonl",
+      "repo_paths": [
+        "InteractionLogs/equifinal-dialectic-turns.jsonl",
+        "Tests/Fixtures/InteractionLogs/equifinal-dialectic-turns.jsonl"
+      ],
+      "raw_source_lines": 412,
+      "repo_lines": 276,
+      "raw_source_sha256": "9873de48653ef6ed8e8e56b283faca22849ecbabfb5f2d3fef2509115d6de7fb",
+      "repo_sanitized_sha256": "54953cd28b1d9eb900d87435eb6ff8f2ea09a052ed79f0b22fed82d1d5122aaf",
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false,
+      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
+      "dash_invariant": "zero_em_or_en_dashes"
+    },
+    {
+      "filename": "autobank-manifest-2026-11-01.jsonl",
+      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/autobank-manifest-2026-11-01.jsonl",
+      "repo_paths": [
+        "InteractionLogs/autobank-manifest-2026-11-01.jsonl",
+        "Tests/Fixtures/InteractionLogs/autobank-manifest-2026-11-01.jsonl"
+      ],
+      "raw_source_lines": 47,
+      "repo_lines": 47,
+      "raw_source_sha256": "3094e1fbc915d348a404c52d38820f2add8c4288539b580f5e6f3ac39c117658",
+      "repo_sanitized_sha256": "3094e1fbc915d348a404c52d38820f2add8c4288539b580f5e6f3ac39c117658",
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false,
+      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
+      "dash_invariant": "zero_em_or_en_dashes"
+    }
+  ]
+}

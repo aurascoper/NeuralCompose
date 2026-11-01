@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-eeg_spectral.py — shared spectral-feature + state-descriptor derivation for the
+eeg_spectral.py - shared spectral-feature + state-descriptor derivation for the
 4-channel Muse S montage (TP9, AF7, AF8, TP10).
 
 Phase 3.6 of NeuralCompose aligns a *continuous* EEG-window embedding with a
 *text* embedding space. The text target for each rolling 2-second window is a
-natural-language "spectral state descriptor" derived — self-supervised — from
+natural-language "spectral state descriptor" derived - self-supervised - from
 that window's own Power Spectral Density: band powers → ratios → descriptor.
 This module owns that derivation so the trainer (train_joint_embedding.py) and
 any later analysis share one definition of "what state does this window look
@@ -15,7 +15,7 @@ Honesty note (kept on the record): descriptors are *primarily spectral*
 (e.g. "alpha-dominant"). The cognitive adjectives ("relaxed wakefulness",
 "high cognitive load", "drowsy / fatigued") are a heuristic gloss so the
 resulting BGE-small-en-v1.5 embeddings read naturally as Phase 4.0 prompt
-prefixes — they are NOT a validated cognitive-state classifier. Band powers on
+prefixes - they are NOT a validated cognitive-state classifier. Band powers on
 a 4-electrode montage are physically real; the state-word mapping is an
 interpretive convenience. Band definitions mirror analyze-eeg-session.py::BANDS.
 """
@@ -24,7 +24,7 @@ from __future__ import annotations
 import numpy as np
 from scipy import signal
 
-# Mirror analyze-eeg-session.py::BANDS — keep in sync if those change.
+# Mirror analyze-eeg-session.py::BANDS - keep in sync if those change.
 BANDS = {
     "delta": (0.5, 4.0),
     "theta": (4.0, 8.0),
@@ -51,7 +51,7 @@ def band_power(freqs: np.ndarray, psd: np.ndarray, band: tuple[float, float]) ->
 def welch_band_powers(window: np.ndarray, fs: float) -> dict[str, float]:
     """Mean band powers across channels for one window.
 
-    `window` is [n_channels, n_samples] — the trainer's per-window layout.
+    `window` is [n_channels, n_samples] - the trainer's per-window layout.
     Returns {band_name: mean_power_across_channels} for the four BANDS.
     """
     window = np.asarray(window, dtype=np.float64)
@@ -63,7 +63,7 @@ def welch_band_powers(window: np.ndarray, fs: float) -> dict[str, float]:
     for ch in range(n_channels):
         # Welch already tapers each segment with a Hann window (limits the
         # spectral leakage a finite epoch causes) and removes the segment mean
-        # (detrend="constant" — kills DC/baseline drift). Both are scipy defaults;
+        # (detrend="constant" - kills DC/baseline drift). Both are scipy defaults;
         # stated explicitly so a future edit can't silently drop them.
         freqs, psd = signal.welch(window[ch], fs=fs, nperseg=nperseg,
                                   window="hann", detrend="constant")
@@ -76,8 +76,8 @@ def spectral_ratios(band_powers: dict[str, float]) -> dict[str, float]:
     """Derive interpretable, epsilon-guarded band ratios from mean band powers.
 
     These are *relative* measures (band/band, band/total): a broadband amplitude
-    change — e.g. electrode-impedance drift multiplying every band by a common
-    gain — cancels in the ratio. (This does NOT cancel band-*specific* artifacts
+    change - e.g. electrode-impedance drift multiplying every band by a common
+    gain - cancels in the ratio. (This does NOT cancel band-*specific* artifacts
     like a blink dumping energy into delta; reject those with window_is_clean.)
     """
     delta = band_powers.get("delta", 0.0)
@@ -91,7 +91,7 @@ def spectral_ratios(band_powers: dict[str, float]) -> dict[str, float]:
         "beta_alpha": beta / (alpha + _EPS),
         # Pope et al. engagement index: beta / (alpha + theta).
         "engagement": beta / (alpha + theta + _EPS),
-        # Fraction of low-frequency (delta + theta) power — a drowsiness proxy.
+        # Fraction of low-frequency (delta + theta) power - a drowsiness proxy.
         "slow_fraction": (delta + theta) / total,
     }
 
@@ -106,15 +106,19 @@ ARTIFACT_PEAK_UV = 150.0
 
 
 def window_is_clean(window: np.ndarray, threshold_uv: float = ARTIFACT_PEAK_UV) -> bool:
-    """True if no channel in the window swings beyond +/-threshold_uv.
+    """True if all samples are finite and no channel swings beyond +/-threshold_uv.
 
-    `window` is [channels, samples]. Use to drop blink/EOG/movement artifacts
-    before computing spectral features — band ratios cancel a broadband gain
-    change (impedance drift) but NOT a band-specific spike like a blink.
+    `window` is [channels, samples]. Per-channel DC mean is subtracted first so
+    raw ~800 uV Muse baselines do not masquerade as blink/movement artifacts
+    (matching SpectralStateEstimator.swift). Use to drop blink/EOG/movement
+    artifacts before computing spectral features - band ratios cancel a
+    broadband gain change (impedance drift) but NOT a band-specific spike like a
+    blink.
     """
     w = np.asarray(window, dtype=np.float64)
-    if w.size == 0:
+    if w.size == 0 or not np.all(np.isfinite(w)):
         return False
+    w = w - np.mean(w, axis=-1, keepdims=True)
     return bool(np.max(np.abs(w)) <= threshold_uv)
 
 
@@ -135,7 +139,7 @@ def descriptor_for_ratios(ratios: dict[str, float]) -> str:
 
     ── DOMAIN-JUDGMENT CORE (Phase 3.6) ─────────────────────────────────────
     This heuristic decides which spectral signature reads as which cognitive
-    gloss — and therefore *what text each EEG window is aligned to*. The
+    gloss - and therefore *what text each EEG window is aligned to*. The
     thresholds below are deliberate, tunable defaults: the single place where
     the montage owner's judgment most changes behaviour. Adjust the cut points
     (or swap in per-subject calibration) as real recordings inform them; the

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-eeg_channel_quality.py — shared per-channel quality classification and
+eeg_channel_quality.py: shared per-channel quality classification and
 bad-channel substitution for the 4-channel Muse S montage
 (TP9, AF7, AF8, TP10).
 
@@ -10,7 +10,7 @@ train-intent-classifier.py) and the live Swift app classify channel
 health the same way. If those Swift thresholds change, update the
 constants below to match.
 
-Substitution is a consumption-time concern only — it never touches raw
+Substitution is a consumption-time concern only; it never touches raw
 recordings on disk (CalibrationRecorder.swift's CSV writer is untouched)
 and it must never replace the raw-data-based per-channel diagnostics
 computed elsewhere (e.g. analyze-eeg-session.py's assess_channel_quality),
@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 # Mirrors ChannelHealthThresholds.swift's `.default`
-# (Sources/BCICore/Preprocessing/ChannelHealthThresholds.swift) — keep in
+# (Sources/BCICore/Preprocessing/ChannelHealthThresholds.swift); keep in
 # sync if those values change.
 DEAD_RMS_UV = 2.0
 SATURATED_RMS_UV = 200.0
@@ -50,6 +50,8 @@ def classify_window_quality(rms: float, n_samples: int) -> str:
     "unknown" / "healthy" / "saturated" / "dead"."""
     if n_samples < MIN_SAMPLES:
         return "unknown"
+    if not np.isfinite(rms):
+        return "saturated"
     if rms > SATURATED_RMS_UV:
         return "saturated"
     if rms < DEAD_RMS_UV:
@@ -72,16 +74,20 @@ def substitute_bad_channels(
     channels: list[str],
     fs: float,
     window_s: float = 2.0,
+    demean: bool = True,
 ) -> tuple[pd.DataFrame, list[SubstitutionEvent]]:
     """Per-window, adaptive bad-channel substitution.
 
     For each channel and each non-overlapping `window_s` window, classify
-    that window's RMS via `classify_window_quality`. If the window is
-    "saturated" or "dead" and the channel's paired channel (per
-    CHANNEL_PAIRS) is present and itself healthy for that same window,
-    replace the bad channel's samples in that window with the paired
-    channel's samples. A channel whose pair is also bad in that window is
-    left untouched — never substitute garbage with equally-bad garbage.
+    that window's RMS via `classify_window_quality`. When `demean=True`,
+    each window's per-channel DC mean is subtracted before computing RMS
+    (matching EEGChannelHealthProvider.swift on raw ~800 uV DC-offset Muse
+    streams). If the window is "saturated" or "dead" and the channel's
+    paired channel (per CHANNEL_PAIRS) is present and itself healthy for
+    that same window, replace the bad channel's samples in that window
+    with the paired channel's samples. A channel whose pair is also bad
+    in that window is left untouched; never substitute garbage with
+    equally-bad garbage.
 
     Returns a new DataFrame (the input is not mutated) and a log of every
     substitution made, so nothing here is silent.
@@ -90,6 +96,16 @@ def substitute_bad_channels(
     win = max(int(window_s * fs), MIN_SAMPLES)
     n = len(df)
     events: list[SubstitutionEvent] = []
+
+    def _window_rms(arr: np.ndarray) -> float:
+        if len(arr) == 0:
+            return 0.0
+        vals = arr.astype(np.float64, copy=False)
+        if not np.all(np.isfinite(vals)):
+            return float("inf")
+        if demean:
+            vals = vals - np.mean(vals)
+        return float(np.sqrt(np.mean(vals ** 2)))
 
     for ch in channels:
         pair = CHANNEL_PAIRS.get(ch)
@@ -103,12 +119,12 @@ def substitute_bad_channels(
             seg = x[start:end]
             if len(seg) == 0:
                 continue
-            rms = float(np.sqrt(np.mean(seg ** 2)))
+            rms = _window_rms(seg)
             status = classify_window_quality(rms, len(seg))
             if status not in ("saturated", "dead"):
                 continue
             pair_seg = px[start:end]
-            pair_rms = float(np.sqrt(np.mean(pair_seg ** 2))) if len(pair_seg) else 0.0
+            pair_rms = _window_rms(pair_seg)
             if classify_window_quality(pair_rms, len(pair_seg)) != "healthy":
                 continue
             out.iloc[start:end, col_idx] = pair_seg
