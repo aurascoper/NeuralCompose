@@ -32,8 +32,11 @@ def test_corpus_governance_manifest_schema_and_tiers():
     t1 = tiers["pre_1931_public_domain"]
     assert t1["max_publication_year"] == 1930
     assert t1["full_text_prose_allowed"] is True
+    req_fields = set(t1["required_provenance_fields"])
     for work in t1["canonical_seed_works"]:
         assert work["publication_year"] <= 1930
+        assert req_fields.issubset(work.keys()), f"Missing required provenance fields in {work['work_id']}"
+        assert len(work["sha256_digest"]) == 64
 
     # Tier 2: Post-1930 Vocabulary-Only
     t2 = tiers["vocabulary_only_modern"]
@@ -47,6 +50,10 @@ def test_corpus_governance_manifest_schema_and_tiers():
     assert disp["eligible_for_encoder_training"] is False
     assert disp["eligible_for_science"] is False
     assert disp["development_only_permanent"] is True
+
+    swift_gate_path, swift_gate_sym = t3["warrant_and_autoforget_gate"]["swift_gate"].split("::")
+    swift_src = (REPO_ROOT / swift_gate_path).read_text()
+    assert f"func {swift_gate_sym}" in swift_src
 
 
 def test_voice_profile_cold_vocabulary_satisfies_tier2_constraints():

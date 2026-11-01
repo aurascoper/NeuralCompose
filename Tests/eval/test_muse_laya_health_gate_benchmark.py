@@ -55,6 +55,22 @@ def test_healthy_recording_is_noop():
     )
 
 
+def test_bilateral_simultaneous_saturation_fails_closed():
+    df = make_synthetic_saturated_af7_df(n_seconds=20, fs=256.0, seed=19)
+    # Saturate both AF7 and AF8 simultaneously (> 200 uV RMS)
+    df["AF8"] = -df["AF7"] * 0.96
+    res = evaluate_recording_off_vs_on(df, "synthetic_bilateral_af7_af8_saturated", fs=256.0)
+
+    off = res["substitution_off"]
+    on = res["substitution_on"]
+    assert off["channel_status"]["AF7"] == "saturated"
+    assert off["channel_status"]["AF8"] == "saturated"
+    assert on["total_substituted_windows"] == 0
+    assert on["channel_status"]["AF7"] == "saturated"
+    assert on["channel_status"]["AF8"] == "saturated"
+    assert on["clean_window_rate"] == 0.0
+
+
 def test_exported_benchmark_reports_exist_and_have_zero_dashes():
     json_path = REPO_ROOT / "Evaluation" / "reports" / "muse_s_af7_laya_health_gate_benchmark.json"
     md_path = REPO_ROOT / "Evaluation" / "reports" / "muse_s_af7_laya_health_gate_benchmark.md"

@@ -1,7 +1,7 @@
 import XCTest
 @testable import BCICore
 
-/// Stage 4 — persisted voice preferences. These pin that a partial/absent profile
+/// Stage 4  -  persisted voice preferences. These pin that a partial/absent profile
 /// degrades gracefully (every key optional → env-var/auto-select fallback) and
 /// that prosody round-trips, so a hand- or script-written voice-profile.json can't
 /// silently fail to load.

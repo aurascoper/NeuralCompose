@@ -4,12 +4,12 @@
 
 This directory contains the synchronized `2026-11-01` interaction telemetry logs and session-time `claude-mind` autobank manifest exported from `~/Documents/NeuralCompose/InteractionLogs/` for Fable 5.1 (`/boost`, `/migrate-workflows`, and `/teamwork` multi-agent verification):
 
-- `dialectic-turns-2026-11-01.jsonl` (40 lines across runs `23BF5B65`, `F518FBE3`, and `B5C2F73F`)
+- `dialectic-turns-2026-11-01.jsonl` (39 privacy-scrubbed lines from 40 raw turns across runs `23BF5B65`, `F518FBE3`, and `B5C2F73F`)
 - `dialectic-autobank-2026-11-01.jsonl` (18 quality-warranted spoken turns passing `Scripts/memory-gate.py` and `DialecticalMemory.evaluateAutobankWarrant`)
 - `autobank-manifest-2026-11-01.jsonl` (47 idempotent `mcp__claude-mind__remember` payloads: 18 `app-dialectic`, 28 `world-model`, 1 `report`)
-- `prosody-trace-2026-11-01.jsonl` (32 prosodic contour traces)
-- `health-2026-11-01.jsonl` (366 runtime health and Muse S channel quality snapshots)
-- `equifinal-dialectic-turns.jsonl` (privacy-scrubbed equifinal dialectical decision chain records)
+- `prosody-trace-2026-11-01.jsonl` (32 privacy-scrubbed prosodic contour traces from 33 raw records)
+- `health-2026-11-01.jsonl` (397 runtime health and Muse S channel quality snapshots)
+- `equifinal-dialectic-turns.jsonl` (276 privacy-scrubbed equifinal dialectical decision chain records from 412 raw records)
 - `INTERACTION_LOGS_MANIFEST_2026-11-01.json` (SHA-256 digests and ADR-005 quarantine metadata)
 
 ## Governance Invariants

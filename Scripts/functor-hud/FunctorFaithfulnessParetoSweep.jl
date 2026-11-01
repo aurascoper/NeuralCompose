@@ -165,42 +165,55 @@ end
     _build_cycle_filament_field(beta1::Int, n_grid::Int = 32) -> Array{Float32, 3}
 
 Synthesizes a 3D cubical cycle-handle field carrying `beta1` independent topological
-handles (1-cycles) arranged on a connected 3x3 cycle-basis lattice in `[-3.5, 3.5]^3`.
+handles (1-cycles) arranged on a connected 3x3x2 3D boustrophedon cycle-basis lattice
+in `[-3.5, 3.5]^3` (supporting `beta1` up to 18).
 """
 function _build_cycle_filament_field(beta1::Int, n_grid::Int = 32)::Array{Float32, 3}
     coords = collect(range(-3.5, 3.5; length = n_grid))
     vol = zeros(Float32, n_grid, n_grid, n_grid)
-    centers = (-1.95, 0.0, 1.95)
     r_loop = 0.62
     sigma_tube = 0.24
     inv_2s2 = 1.0 / (2.0 * sigma_tube^2)
 
-    snake_centers = (
-        (-1.95, -1.95), (0.0, -1.95), (1.95, -1.95),
-        (1.95,   0.00), (0.0,  0.00), (-1.95, 0.00),
-        (-1.95,  1.95), (0.0,  1.95), (1.95,  1.95),
+    snake_centers_3d = (
+        # Layer 1 (z = 0.0): handles 1..9
+        (-1.95, -1.95, 0.0), ( 0.00, -1.95, 0.0), ( 1.95, -1.95, 0.0),
+        ( 1.95,  0.00, 0.0), ( 0.00,  0.00, 0.0), (-1.95,  0.00, 0.0),
+        (-1.95,  1.95, 0.0), ( 0.00,  1.95, 0.0), ( 1.95,  1.95, 0.0),
+        # Layer 2 (z = 1.65): handles 10..18 (reverse boustrophedon traversal from (1.95, 1.95))
+        ( 1.95,  1.95, 1.65), ( 0.00,  1.95, 1.65), (-1.95,  1.95, 1.65),
+        (-1.95,  0.00, 1.65), ( 0.00,  0.00, 1.65), ( 1.95,  0.00, 1.65),
+        ( 1.95, -1.95, 1.65), ( 0.00, -1.95, 1.65), (-1.95, -1.95, 1.65),
     )
-    loop_list = collect(snake_centers[1:clamp(beta1, 0, 9)])
+    loop_list = collect(snake_centers_3d[1:clamp(beta1, 0, length(snake_centers_3d))])
 
     @inbounds for iz in 1:n_grid, iy in 1:n_grid, ix in 1:n_grid
         x, y, z = coords[ix], coords[iy], coords[iz]
         val = 0.0
-        for (idx, (cx, cy)) in enumerate(loop_list)
+        for (idx, (cx, cy, cz)) in enumerate(loop_list)
             r_loc = sqrt((x - cx)^2 + (y - cy)^2)
-            d2 = (r_loc - r_loop)^2 + z * z
+            d2 = (r_loc - r_loop)^2 + (z - cz)^2
             val = max(val, exp(-d2 * inv_2s2))
             if idx > 1
-                px, py = loop_list[idx - 1]
-                # Bridge segment connecting outer rims of consecutive cycle handles
-                ux, uy = cx - px, cy - py
-                len_u = sqrt(ux * ux + uy * uy)
-                ux /= len_u; uy /= len_u
-                p1x, p1y = px + r_loop * ux, py + r_loop * uy
-                p2x, p2y = cx - r_loop * ux, cy - r_loop * uy
-                seg_len = max(1.0e-6, len_u - 2.0 * r_loop)
-                t_proj = clamp((x - p1x) * ux + (y - p1y) * uy, 0.0, seg_len)
-                bx, by = p1x + t_proj * ux, p1y + t_proj * uy
-                d2_br = (x - bx)^2 + (y - by)^2 + z * z
+                px, py, pz = loop_list[idx - 1]
+                ux, uy, uz = cx - px, cy - py, cz - pz
+                len_xy = sqrt(ux * ux + uy * uy)
+                if len_xy > 1.0e-6
+                    # In-plane bridge segment connecting outer rims of consecutive cycle handles
+                    ux_xy, uy_xy = ux / len_xy, uy / len_xy
+                    p1x, p1y, p1z = px + r_loop * ux_xy, py + r_loop * uy_xy, pz
+                    p2x, p2y, p2z = cx - r_loop * ux_xy, cy - r_loop * uy_xy, cz
+                else
+                    # Vertical inter-layer bridge attached to outer rim at +x so loop interior stays open
+                    p1x, p1y, p1z = px + r_loop, py, pz
+                    p2x, p2y, p2z = cx + r_loop, cy, cz
+                end
+                vx, vy, vz = p2x - p1x, p2y - p1y, p2z - p1z
+                seg_len = max(1.0e-6, sqrt(vx * vx + vy * vy + vz * vz))
+                vx /= seg_len; vy /= seg_len; vz /= seg_len
+                t_proj = clamp((x - p1x) * vx + (y - p1y) * vy + (z - p1z) * vz, 0.0, seg_len)
+                bx, by, bz = p1x + t_proj * vx, p1y + t_proj * vy, p1z + t_proj * vz
+                d2_br = (x - bx)^2 + (y - by)^2 + (z - bz)^2
                 val = max(val, exp(-d2_br * inv_2s2))
             end
         end
@@ -308,7 +321,14 @@ if abspath(PROGRAM_FILE) == @__FILE__
         @test p_faithful.exact_match_fraction == 1.0
         @test p_pure_fil.mean_abs_beta1_defect == 0.0
         @test p_forgetful.is_pareto_optimal && p_faithful.is_pareto_optimal && !p_pure_fil.is_pareto_optimal
-        @printf("[PASS] Functor Pareto Sweep: forgetful (gamma=0) defect=%.2f -> Pareto-faithful (gamma=0.75, theta=0.50) defect=%.2f (100%% exact match across beta_1=%s)\n",
+        for high_b1 in (10, 12, 15, 18)
+            fil_high = FunctorFaithfulnessParetoSweep._build_cycle_filament_field(high_b1, 32)
+            hom_high = compute_cubical_homology_3d(BitArray(fil_high .>= 0.50f0))
+            @test hom_high.b0 == 1
+            @test hom_high.b1 == high_b1
+            @test hom_high.b2 == 0
+        end
+        @printf("[PASS] Functor Pareto Sweep: forgetful (gamma=0) defect=%.2f -> Pareto-faithful (gamma=0.75, theta=0.50) defect=%.2f (100%% exact match across beta_1=%s + higher-genus beta_1 in 10..18)\n",
                 p_forgetful.mean_abs_beta1_defect, p_faithful.mean_abs_beta1_defect, string(rep.true_beta1))
     end
 end

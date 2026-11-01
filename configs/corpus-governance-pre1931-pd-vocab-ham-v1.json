@@ -27,35 +27,40 @@
           "title": "The Principles of Psychology",
           "author": "William James",
           "publication_year": 1890,
-          "public_domain_basis": "pre_1931_published_1890"
+          "public_domain_basis": "pre_1931_published_1890",
+          "sha256_digest": "f1907a8e0e43919c8719ca82a452697f420f95e9226f50d52b633c61dc14f741"
         },
         {
           "work_id": "poincare_1895_analysis_situs",
           "title": "Analysis Situs",
           "author": "Henri Poincare",
           "publication_year": 1895,
-          "public_domain_basis": "pre_1931_published_1895"
+          "public_domain_basis": "pre_1931_published_1895",
+          "sha256_digest": "8c5d9a12b17f62c03d991c7d86399b91b55264f9538eb24cb6c8e0f1053bd82a"
         },
         {
           "work_id": "bergson_1896_matiere_et_memoire",
           "title": "Matter and Memory",
           "author": "Henri Bergson",
           "publication_year": 1896,
-          "public_domain_basis": "pre_1931_published_1896"
+          "public_domain_basis": "pre_1931_published_1896",
+          "sha256_digest": "a3f0418276b7c547299f809b2c1a8b9496e49d2730262df1f7d19244059d65d2"
         },
         {
           "work_id": "berger_1929_elektrenkephalogramm",
           "title": "Uber das Elektrenkephalogramm des Menschen",
           "author": "Hans Berger",
           "publication_year": 1929,
-          "public_domain_basis": "pre_1931_published_1929"
+          "public_domain_basis": "pre_1931_published_1929",
+          "sha256_digest": "d7b2101a8b683b921c39a9b3d6c4e129f02a5b6248e79a261490801e2b8f5413"
         },
         {
           "work_id": "whitehead_1929_process_and_reality",
           "title": "Process and Reality",
           "author": "Alfred North Whitehead",
           "publication_year": 1929,
-          "public_domain_basis": "pre_1931_published_1929"
+          "public_domain_basis": "pre_1931_published_1929",
+          "sha256_digest": "52c8711479c2697254e6b1a3d0f94e2c76a0b48c19e2d83a756f092c3e1b4480"
         }
       ]
     },

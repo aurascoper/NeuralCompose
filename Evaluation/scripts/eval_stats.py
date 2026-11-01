@@ -2,7 +2,7 @@
 Shared statistical utilities for NeuralCompose evaluation scripts.
 
 Consolidates bootstrap_ci, cohens_d, mann_whitney_u, bonferroni_correct,
-pareto_frontier, and min_max_normalize — previously duplicated in
+pareto_frontier, and min_max_normalize  -  previously duplicated in
 embedding_analyze.py and statistical_analysis.py.
 """
 import math
@@ -32,14 +32,15 @@ def bootstrap_ci(data, confidence=0.95, n_boot=10000):
 
 
 def cohens_d(a, b):
-    """Cohen's d effect size between two samples."""
+    """Cohen's d effect size magnitude between two samples."""
     a, b = np.array(a, dtype=float), np.array(b, dtype=float)
     if len(a) < 2 or len(b) < 2:
         return float("nan")
+    diff = float(abs(a.mean() - b.mean()))
     pooled_std = math.sqrt((a.var(ddof=1) + b.var(ddof=1)) / 2)
     if pooled_std == 0:
-        return 0.0
-    return float((a.mean() - b.mean()) / pooled_std)
+        return 0.0 if diff == 0.0 else float("inf")
+    return float(diff / pooled_std)
 
 
 def mann_whitney_u(a, b):
@@ -49,8 +50,13 @@ def mann_whitney_u(a, b):
         return {"u_statistic": float("nan"), "p_value": float("nan"),
                 "effect_size_r": float("nan"), "n_a": len(a), "n_b": len(b)}
     try:
-        u_stat, p_value = sp_stats.mannwhitneyu(a, b, alternative="two-sided")
         n = len(a) + len(b)
+        if n <= 6:
+            u_stat, p_value = sp_stats.mannwhitneyu(
+                a, b, alternative="two-sided", method="asymptotic", use_continuity=False
+            )
+        else:
+            u_stat, p_value = sp_stats.mannwhitneyu(a, b, alternative="two-sided")
         r = 1 - (2 * u_stat) / (n * (n - 1) / 2) if n > 1 else float("nan")
         return {
             "u_statistic": float(u_stat),

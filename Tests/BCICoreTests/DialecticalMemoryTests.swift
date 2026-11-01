@@ -238,5 +238,23 @@ final class DialecticalMemoryTests: XCTestCase {
             ),
             "turns exceeding maxSelfSimilarity collapse threshold must not be autobanked"
         )
+
+        let w1 = DialecticalMemory.evaluateAutobankWarrant(
+            heard: "Three words here",
+            spoken: "One",
+            outcome: "spoke:coherence-seeking",
+            selfSimilarity: 0.40
+        )
+        XCTAssertFalse(w1.eligible)
+        XCTAssertEqual(w1.reason, "short_backchannel_or_hedge")
+
+        let w2 = DialecticalMemory.evaluateAutobankWarrant(
+            heard: "Three words here",
+            spoken: "Two words",
+            outcome: "spoke:coherence-seeking",
+            selfSimilarity: 0.40
+        )
+        XCTAssertTrue(w2.eligible)
+        XCTAssertEqual(w2.reason, "warranted")
     }
 }

@@ -3,7 +3,7 @@ import Foundation
 /// Persisted voice preferences, read once at launch from
 /// `~/Documents/NeuralCompose/voice-profile.json` (written by
 /// `Scripts/voice-profile.py`). Every field is optional, so an absent file or a
-/// missing key falls back to the env vars / auto-selection — the profile only
+/// missing key falls back to the env vars / auto-selection  -  the profile only
 /// *overrides* what it specifies. This lets the chosen Personal Voice, a default
 /// prosody, and an authorial register persist across launches without env flags.
 public struct VoiceProfile: Codable, Sendable, Equatable {
@@ -16,7 +16,7 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
     /// Authorial register name (e.g. "schopenhauer"). Applied to LLM generation on
     /// the MLX / cloud paths; a no-op on the default stub predictor.
     public var register: String?
-    /// Terms the hypnagogic listener should expect (names, jargon) — passed to
+    /// Terms the hypnagogic listener should expect (names, jargon)  -  passed to
     /// the recognizer as `contextualStrings`. Hand-edited; nil ⇒ none.
     public var recognitionVocabulary: [String]?
     /// Seconds without a new word before a spoken turn ends. nil ⇒
@@ -146,14 +146,14 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
     }
 
     /// Load the profile, or nil if the file is absent / unreadable / malformed.
-    /// Never throws — a bad profile must not block launch.
+    /// Never throws  -  a bad profile must not block launch.
     public static func loadDefault() -> VoiceProfile? {
         // Absent file → nil silently (the intended, launch-safe fallback to env/auto).
         guard let url = defaultURL(), let data = try? Data(contentsOf: url) else { return nil }
         do {
             return try JSONDecoder().decode(VoiceProfile.self, from: data)
         } catch {
-            // Present but undecodable (e.g. a hand-edit typo) — still don't block
+            // Present but undecodable (e.g. a hand-edit typo)  -  still don't block
             // launch, but leave a breadcrumb so a silently-ignored profile isn't a
             // mystery, matching the app's "log why we fell back" discipline elsewhere.
             BCILog.voice.notice("voice-profile.json present but undecodable; using env/auto defaults: \(error.localizedDescription, privacy: .public)")

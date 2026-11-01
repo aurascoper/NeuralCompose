@@ -160,29 +160,37 @@ public struct DialecticalMemory: Sendable {
     }
 
     /// Evaluates whether a completed dialectical turn warrants banking into persistent
-    /// SQL memory / session-time autobank manifest when/iff needed.
-    /// Rejects silent turns, single-token repetition stutters, short backchannels/hedges,
-    /// routine control/transit commands, and unmitigated reflexive-collapse turns (`> 0.92`).
-    public static func shouldAutobankTurn(
+    /// SQL memory / session-time autobank manifest when/iff needed, returning both the
+    /// boolean decision and the canonical reason code matching `Scripts/memory-gate.py`.
+    /// Rejects silent turns, single-token repetition stutters, short backchannels/hedges
+    /// (`< 3` heard words or `< 5` combined heard+spoken substantive tokens), routine
+    /// control/transit commands, and unmitigated reflexive-collapse turns (`> 0.92`).
+    public static func evaluateAutobankWarrant(
         heard: String,
         spoken: String?,
         outcome: String,
         selfSimilarity: Float?,
         maxSelfSimilarity: Float = 0.92
-    ) -> Bool {
+    ) -> (eligible: Bool, reason: String) {
         let rolePrefix = outcome.split(separator: ":", maxSplits: 1).first.map(String.init) ?? ""
-        guard (rolePrefix == "spoke" || rolePrefix == "synthesized"),
-              let reply = spoken?.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard rolePrefix == "spoke" || rolePrefix == "synthesized" else {
+            return (false, "silent_turn")
+        }
+        guard let reply = spoken?.trimmingCharacters(in: .whitespacesAndNewlines),
               !reply.isEmpty else {
-            return false
+            return (false, "empty_spoken")
         }
         let cleanHeard = heard.trimmingCharacters(in: .whitespacesAndNewlines)
         let lowered = cleanHeard.lowercased().trimmingCharacters(in: .punctuationCharacters)
         let words = lowered.split(whereSeparator: { $0.isWhitespace })
             .map { $0.trimmingCharacters(in: .punctuationCharacters) }
             .filter { !$0.isEmpty }
+        let spokenWords = reply.lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+            .filter { !$0.isEmpty }
         guard !words.isEmpty else {
-            return false
+            return (false, "short_backchannel_or_hedge")
         }
         // Reject routine control/transit phrases
         let transientPrefixes = [
@@ -192,19 +200,37 @@ public struct DialecticalMemory: Sendable {
             "be down in a second", "be right back", "hold on a second"
         ]
         if transientPrefixes.contains(where: { lowered == $0 || lowered.hasPrefix($0 + " ") || lowered.contains($0) }) {
-            return false
+            return (false, "transient_control_or_transit")
         }
         // Reject single-word repetition stutters (e.g. "sex sex sex", "Sex, sex, sex.")
         if words.count >= 2 && Set(words).count == 1 {
-            return false
+            return (false, "single_token_stutter")
         }
-        guard words.count >= 3 else {
-            return false
+        guard words.count >= 3, (words.count + spokenWords.count) >= 5 else {
+            return (false, "short_backchannel_or_hedge")
         }
         if let sim = selfSimilarity, sim > maxSelfSimilarity {
-            return false
+            return (false, String(format: "reflexive_collapse_gt_%.2f", maxSelfSimilarity))
         }
-        return true
+        return (true, "warranted")
+    }
+
+    /// Evaluates whether a completed dialectical turn warrants banking into persistent
+    /// SQL memory / session-time autobank manifest when/iff needed.
+    public static func shouldAutobankTurn(
+        heard: String,
+        spoken: String?,
+        outcome: String,
+        selfSimilarity: Float?,
+        maxSelfSimilarity: Float = 0.92
+    ) -> Bool {
+        evaluateAutobankWarrant(
+            heard: heard,
+            spoken: spoken,
+            outcome: outcome,
+            selfSimilarity: selfSimilarity,
+            maxSelfSimilarity: maxSelfSimilarity
+        ).eligible
     }
 
     // MARK: - Synthesis (emergent third idea)

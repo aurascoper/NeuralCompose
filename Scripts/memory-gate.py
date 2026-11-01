@@ -118,6 +118,8 @@ def should_autobank_turn(
     clean_spoken = (spoken or "").strip()
     if not clean_spoken:
         return False, "empty_spoken"
+    spoken_words = [re.sub(r"^[^\w]+|[^\w]+$", "", w) for w in clean_spoken.lower().split()]
+    spoken_words = [w for w in spoken_words if w]
     clean_heard = (heard or "").strip()
     lowered = re.sub(r"^[^\w]+|[^\w]+$", "", clean_heard.lower())
     words = [re.sub(r"^[^\w]+|[^\w]+$", "", w) for w in lowered.split()]
@@ -129,7 +131,7 @@ def should_autobank_turn(
             return False, "transient_control_or_transit"
     if len(words) >= 2 and len(set(words)) == 1:
         return False, "single_token_stutter"
-    if len(words) < 3:
+    if len(words) < 3 or (len(words) + len(spoken_words)) < 5:
         return False, "short_backchannel_or_hedge"
     if isinstance(self_similarity, (int, float)) and float(self_similarity) > max_self_similarity:
         return False, f"reflexive_collapse_gt_{max_self_similarity:.2f}"
