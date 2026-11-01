@@ -95,7 +95,7 @@ public enum DoubleTreeHorizonBridge {
             finalEdges = finalEdges.map { edge in
                 HorizonBridgeEdge(mapping[edge.a] ?? edge.a, mapping[edge.b] ?? edge.b, kind: edge.kind)
             }
-            finalNodes += upper.nodes.filter { $0.level == depth }
+            // The surviving upper horizon vertices already remain in finalNodes.
         case .pairedHorizonLinks:
             // This edge set is precisely what creates cycles. It keeps the
             // two leaf sets distinct and joins each matched pair once.
@@ -108,8 +108,9 @@ public enum DoubleTreeHorizonBridge {
         let upperFrame = makeFrame(index: 0, title: "Upper tree · beta1 = 0", nodes: upper.nodes, edges: upper.edges)
         let lowerOnlyNodes = upper.nodes + lower.nodes
         let lowerOnlyEdges = upper.edges + lower.edges
-        let lowerFrame = makeFrame(index: 1, title: "Add inverted tree · before horizon links", nodes: lowerOnlyNodes, edges: lowerOnlyEdges)
-        let final = makeFrame(index: 2, title: "Horizon linked · calculated cycle rank", nodes: finalNodes, edges: finalEdges)
+        let lowerFrame = makeFrame(index: 1, title: "Add inverted tree · disconnected components", nodes: lowerOnlyNodes, edges: lowerOnlyEdges)
+        let finalTitle = topology == .pairedHorizonLinks ? "Horizon linked · calculated cycle rank" : "Horizon leaves identified · still a tree"
+        let final = makeFrame(index: 2, title: finalTitle, nodes: finalNodes, edges: finalEdges)
 
         return HorizonBridgeFixture(depth: depth, topology: topology, frames: [upperFrame, lowerFrame, final])
     }
@@ -214,7 +215,7 @@ public enum DoubleTreeHorizonBridge {
                 }
             }
 
-            for node in nodes.keys where discovery[node] == nil {
+            for node in nodes.keys.sorted() where discovery[node] == nil {
                 visit(node, parent: nil)
             }
             return bridges
