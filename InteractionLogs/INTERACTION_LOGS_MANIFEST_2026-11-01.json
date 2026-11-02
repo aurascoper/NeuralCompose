@@ -1,194 +1,156 @@
 {
   "schema_version": "interaction-logs-manifest-v1",
-  "date": "2026-11-01",
-  "epistemic_status": "ENGINEERING_TELEMETRY_QUARANTINED",
+  "session_date": "2026-11-01/2026-11-02",
+  "generated_at_utc": "2026-11-02T06:56:00Z",
+  "adr_reference": "ADR-005",
   "eligible_for_science": false,
   "eligible_for_encoder_training": false,
-  "purpose": "Synchronize complete 2026-11-01 / 2026-11-02 interaction logs (through Turn L156), non-recursive poller synthesis v2 (with ASR phonetic recovery and macOS swap/compressor telemetry), Golden Recording reconciliation synthesis, and Basilisk / Vizard / CSPICE / SPICE.jl / SmallModularBioReactors.jl and Symbolics.jl / Turing.jl / JACC.jl / Enzyme.jl / Grassmann.jl / NeuroJAX / EvoJAX / NeuroARC.jl interface turns.",
-  "autobank_summary": {
-    "date": "2026-11-01",
-    "dialectic_turns_total_2026_11_01": 156,
-    "dialectic_turns_autobanked_2026_11_01": 127,
-    "dialectic_turns_autoforgotten_2026_11_01": 29,
-    "poller_rescued_turns_L75_to_end": 82,
-    "poller_asr_phonetic_recoveries_applied": 52,
-    "autobank_manifest_payloads_total": 159,
-    "autobank_manifest_by_source": {
-      "app-dialectic": 127,
-      "golden-reconcile": 3,
-      "report": 1,
-      "world-model": 28
-    },
-    "max_self_similarity_threshold": 0.92
-  },
-  "key_interface_turns": {
-    "basilisk_vizard_spice_smbr": {
-      "dialectic_turn_lines": [
-        75,
-        115,
-        147,
-        149,
-        151,
-        152,
-        153,
-        154,
-        155,
-        156
-      ],
-      "equifinal_decision_ids": [
-        "dec_283_a8fb9b767438",
-        "dec_033_e3f767676871",
-        "dec_1072_9d50f54567e5",
-        "dec_1095_ab2847b568e5",
-        "dec_1096_ec22486ca648",
-        "dec_1097_d6a201d06bb1",
-        "dec_1098_69841fc32a76",
-        "dec_1099_60159eae0f3b",
-        "dec_1100_a5247a2dbdf8"
-      ],
-      "summary": "CU Boulder AVS Lab & LASP Basilisk (BSK) C/C++ + SWIG Python spacecraft simulation framework (L75, L151-L153), Vizard Unity 3D astrodynamics visualizer + NASA NAIF SPICE.jl Julia ephemeris kernels (.bsp, .tpc, .tls, .tsc, .ck, .fk) (L115, L154), Three-Clock Law integration of SPICE kernels and Basilisk timelines with M7 mission clocks without sampling aliasing (L147), and SmallModularBioReactors.jl closed-loop M7 calibration evidence rig (L149)."
-    },
-    "julia_symbolic_differentiable_neuroarc_stack": {
-      "dialectic_turn_lines": [
-        140,
-        141,
-        142,
-        143,
-        144,
-        145,
-        146
-      ],
-      "summary": "Google Pixel 8a wireless Julia/Tailscale debugging (L140-L141), Symbolics.jl closed-form saturation Jacobian (L142), Turing.jl Bayesian inference + JACC.jl GPU/CPU portable array dispatch + Enzyme.jl LLVM automatic differentiation (L143), Grassmann.jl exterior/bivector algebra across TP9/TP10 (L144), Python JAX / NeuroJAX / EvoJAX decorators vs Julia-native kernels (L145), and NeuroARC.jl differentiable recurrence across state-space trajectories (L146)."
-    }
-  },
+  "privacy_scrubbed": true,
+  "typography_em_en_dash_count": 0,
   "files": [
     {
       "filename": "dialectic-turns-2026-11-01.jsonl",
-      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
       "repo_paths": [
         "InteractionLogs/dialectic-turns-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/dialectic-turns-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 156,
+      "repo_sanitized_sha256": "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7",
+      "repo_bytes": 459622,
       "repo_lines": 156,
-      "raw_source_sha256": "1575cab632e0fe76a3b145e74a8650d431a1f13a7ee5bc78755853931ea7f451",
-      "repo_sanitized_sha256": "add23acc67644897762a02c367f1d70a3e6cab2e46394601ea1c0274859c5d95",
       "eligible_for_science": false,
-      "eligible_for_encoder_training": false,
-      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
-      "dash_invariant": "zero_em_or_en_dashes"
+      "eligible_for_encoder_training": false
+    },
+    {
+      "filename": "dialectic-turns-2026-11-02.jsonl",
+      "repo_paths": [
+        "InteractionLogs/dialectic-turns-2026-11-02.jsonl",
+        "Tests/Fixtures/InteractionLogs/dialectic-turns-2026-11-02.jsonl"
+      ],
+      "repo_sanitized_sha256": "746172b03907b52ae15e82ab4d6b2bfccbb049223f1b301b3444a41e446d5870",
+      "repo_bytes": 54268,
+      "repo_lines": 15,
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false
     },
     {
       "filename": "dialectic-autobank-2026-11-01.jsonl",
-      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/dialectic-autobank-2026-11-01.jsonl",
       "repo_paths": [
         "InteractionLogs/dialectic-autobank-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/dialectic-autobank-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 127,
-      "repo_lines": 127,
-      "raw_source_sha256": "80750254c927ce0ee87a386681e7af516a3a52b625e7465662bfbe6d2d67ada4",
-      "repo_sanitized_sha256": "80750254c927ce0ee87a386681e7af516a3a52b625e7465662bfbe6d2d67ada4",
+      "repo_sanitized_sha256": "3337c81c676d55b8cb0380a2181214f690dbcd447e9ddc9a407cdd19d07e4364",
+      "repo_bytes": 393170,
+      "repo_lines": 125,
       "eligible_for_science": false,
-      "eligible_for_encoder_training": false,
-      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
-      "dash_invariant": "zero_em_or_en_dashes"
+      "eligible_for_encoder_training": false
+    },
+    {
+      "filename": "dialectic-autobank-2026-11-02.jsonl",
+      "repo_paths": [
+        "InteractionLogs/dialectic-autobank-2026-11-02.jsonl",
+        "Tests/Fixtures/InteractionLogs/dialectic-autobank-2026-11-02.jsonl"
+      ],
+      "repo_sanitized_sha256": "746172b03907b52ae15e82ab4d6b2bfccbb049223f1b301b3444a41e446d5870",
+      "repo_bytes": 54268,
+      "repo_lines": 15,
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false
     },
     {
       "filename": "prosody-trace-2026-11-01.jsonl",
-      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/prosody-trace-2026-11-01.jsonl",
       "repo_paths": [
         "InteractionLogs/prosody-trace-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/prosody-trace-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 146,
+      "repo_sanitized_sha256": "6f6370818d825eb41c1905cb909bb4b234e30e3fa49999b7689231e6b67b27aa",
+      "repo_bytes": 176573,
       "repo_lines": 146,
-      "raw_source_sha256": "4e1aaaf1ffb8b15c08850f46e52bc991b6211832f9e071bb3db2a18eccfc4f20",
-      "repo_sanitized_sha256": "afc9ca90641cb618a45720b6b0b25834ce628b8b68473f680d132728251a0787",
       "eligible_for_science": false,
-      "eligible_for_encoder_training": false,
-      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
-      "dash_invariant": "zero_em_or_en_dashes"
+      "eligible_for_encoder_training": false
+    },
+    {
+      "filename": "prosody-trace-2026-11-02.jsonl",
+      "repo_paths": [
+        "InteractionLogs/prosody-trace-2026-11-02.jsonl",
+        "Tests/Fixtures/InteractionLogs/prosody-trace-2026-11-02.jsonl"
+      ],
+      "repo_sanitized_sha256": "5c3636bca87821d485f2e6dc61bcb6b0faf0a8530557590ec53e04925a1a6ee2",
+      "repo_bytes": 18879,
+      "repo_lines": 15,
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false
     },
     {
       "filename": "health-2026-11-01.jsonl",
-      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/health-2026-11-01.jsonl",
       "repo_paths": [
         "InteractionLogs/health-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/health-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 964,
-      "repo_lines": 964,
-      "raw_source_sha256": "afd6ec932c64e719ad8f0b3025dd2dea70d4a2ea25c859dd042576a6c488e53d",
       "repo_sanitized_sha256": "afd6ec932c64e719ad8f0b3025dd2dea70d4a2ea25c859dd042576a6c488e53d",
+      "repo_bytes": 514234,
+      "repo_lines": 964,
       "eligible_for_science": false,
-      "eligible_for_encoder_training": false,
-      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
-      "dash_invariant": "zero_em_or_en_dashes"
+      "eligible_for_encoder_training": false
     },
     {
       "filename": "equifinal-dialectic-turns.jsonl",
-      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/equifinal-dialectic-turns.jsonl",
       "repo_paths": [
         "InteractionLogs/equifinal-dialectic-turns.jsonl",
         "Tests/Fixtures/InteractionLogs/equifinal-dialectic-turns.jsonl"
       ],
-      "raw_source_lines": 1437,
-      "repo_lines": 1437,
-      "raw_source_sha256": "bd6545d3f9172285448717ead8ab9260c2447c0aceb719f69783c80eb9076729",
-      "repo_sanitized_sha256": "9b687c1adcdc2b98bb4c8ffc5288dca9032ea85511215d147250dc4b2291dbb3",
+      "repo_sanitized_sha256": "abc847d54b192251ef1d8a3a43bb66586629f6ffe0780d6ad94ab41a5595def3",
+      "repo_bytes": 3046609,
+      "repo_lines": 1452,
       "eligible_for_science": false,
-      "eligible_for_encoder_training": false,
-      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
-      "dash_invariant": "zero_em_or_en_dashes"
+      "eligible_for_encoder_training": false
     },
     {
       "filename": "autobank-manifest-2026-11-01.jsonl",
-      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/autobank-manifest-2026-11-01.jsonl",
       "repo_paths": [
         "InteractionLogs/autobank-manifest-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/autobank-manifest-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 159,
-      "repo_lines": 159,
-      "raw_source_sha256": "e9ff9fc85319a87e36c0fdaf2181134b014d296335ed33be8602ce704926866d",
-      "repo_sanitized_sha256": "e9ff9fc85319a87e36c0fdaf2181134b014d296335ed33be8602ce704926866d",
+      "repo_sanitized_sha256": "8886ca6f73ce8f33426938238358abee384a8499d550fb4c2c93f4acf38b4419",
+      "repo_bytes": 122698,
+      "repo_lines": 172,
       "eligible_for_science": false,
-      "eligible_for_encoder_training": false,
-      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
-      "dash_invariant": "zero_em_or_en_dashes"
+      "eligible_for_encoder_training": false
+    },
+    {
+      "filename": "autobank-manifest-2026-11-02.jsonl",
+      "repo_paths": [
+        "InteractionLogs/autobank-manifest-2026-11-02.jsonl",
+        "Tests/Fixtures/InteractionLogs/autobank-manifest-2026-11-02.jsonl"
+      ],
+      "repo_sanitized_sha256": "6ba031166a745602997fcdced5bc5710560b68df2a05ba810eff24a66b2552a1",
+      "repo_bytes": 13860,
+      "repo_lines": 18,
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false
     },
     {
       "filename": "golden-reconciliation-synthesis.json",
-      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/golden-reconciliation-synthesis.json",
       "repo_paths": [
         "InteractionLogs/golden-reconciliation-synthesis.json",
         "Tests/Fixtures/InteractionLogs/golden-reconciliation-synthesis.json"
       ],
-      "raw_source_lines": 45,
+      "repo_sanitized_sha256": "c7c52f1d931b5c61284858ddf1fe6ad7724b6bd99c0f276e6c518fccd1b9278e",
+      "repo_bytes": 1969,
       "repo_lines": 45,
-      "raw_source_sha256": "32261074254c8e47d15feedf538831c3b288ed48a520c9ba946d77d8bb7e48cd",
-      "repo_sanitized_sha256": "32261074254c8e47d15feedf538831c3b288ed48a520c9ba946d77d8bb7e48cd",
       "eligible_for_science": false,
-      "eligible_for_encoder_training": false,
-      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
-      "dash_invariant": "zero_em_or_en_dashes"
+      "eligible_for_encoder_training": false
     },
     {
       "filename": "poller-self-improvement-synthesis-v2.json",
-      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/poller-self-improvement-synthesis-v2.json",
       "repo_paths": [
         "InteractionLogs/poller-self-improvement-synthesis-v2.json",
         "Tests/Fixtures/InteractionLogs/poller-self-improvement-synthesis-v2.json"
       ],
-      "raw_source_lines": 2982,
-      "repo_lines": 2982,
-      "raw_source_sha256": "cabed1fdbb4d26b2c4e747461b6db33b1b70d7406102ed634172bbf22df2beca",
-      "repo_sanitized_sha256": "cabed1fdbb4d26b2c4e747461b6db33b1b70d7406102ed634172bbf22df2beca",
+      "repo_sanitized_sha256": "c47ec7c5e94509aacb599e6e4a0da21951ce0c2d463acde773c7db498587e010",
+      "repo_bytes": 320292,
+      "repo_lines": 3599,
       "eligible_for_science": false,
-      "eligible_for_encoder_training": false,
-      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
-      "dash_invariant": "zero_em_or_en_dashes"
+      "eligible_for_encoder_training": false
     }
   ]
 }

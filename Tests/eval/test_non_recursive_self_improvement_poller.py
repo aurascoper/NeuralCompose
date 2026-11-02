@@ -260,3 +260,42 @@ def test_poller_single_pass_idempotency_and_watermark(tmp_path: Path):
     wm_flushed = json.loads(wm_fp.read_text(encoding="utf-8"))
     assert wm_flushed["last_processed_line"] == 76
 
+
+def test_rollover_2026_11_02_and_basilisk_m7_verified_audit():
+    # Verify PII redaction scrubs Hunter and Kendra
+    scrubbed = poller._sanitize_dashes("Hello Hunter and Kendra on Hunter's MacBook Air")
+    assert "hunter" not in scrubbed.lower()
+    assert "kendra" not in scrubbed.lower()
+
+    # Verify 2026-11-02 L1..L11 ASR phonetic recoveries
+    rec_l1 = poller.apply_asr_phonetic_recovery(
+        "In velocities by one E3 2M over S at the boundary and carry the IAU frame DCM separately", 157
+    )
+    assert rec_l1["has_phonetic_recovery"] is True
+
+    rec_l2 = poller.apply_asr_phonetic_recovery(
+        "Is pro factor in this do the conversion and exactly one function with a unit test against a basis generated state for the same epoch", 158
+    )
+    assert rec_l2["has_phonetic_recovery"] is True
+
+    rec_l4 = poller.apply_asr_phonetic_recovery(
+        "Help me also instruct Antigravity Gemini for argon to orchestrate a sub agent for the open foam version", 160
+    )
+    assert rec_l4["has_phonetic_recovery"] is True
+
+    rec_l8 = poller.apply_asr_phonetic_recovery(
+        "So again on the Matlab categories we have cogeneration and simulant product family and simulator link and Simca electrical", 164
+    )
+    assert rec_l8["has_phonetic_recovery"] is True
+
+    # Verify synthesis-v2 JSON includes basilisk_m7_planetary_reference_verified_audit and utc_midnight_rollover_2026_11_02_audit
+    repo_synth = Path(__file__).resolve().parents[2] / "InteractionLogs" / "poller-self-improvement-synthesis-v2.json"
+    synth_data = json.loads(repo_synth.read_text(encoding="utf-8"))
+    assert "basilisk_m7_planetary_reference_verified_audit" in synth_data
+    audit = synth_data["basilisk_m7_planetary_reference_verified_audit"]
+    assert len(audit["verified_claims_banked"]["m7_budget_closure_invariant_7_criteria"]) == 7
+    assert "unverified_not_banked until spkpos is checked on a known body" in audit["unverified_claims_gated"]["status"]
+    assert "utc_midnight_rollover_2026_11_02_audit" in synth_data
+    assert synth_data["utc_midnight_rollover_2026_11_02_audit"]["total_lines_in_file"] >= 11
+
+

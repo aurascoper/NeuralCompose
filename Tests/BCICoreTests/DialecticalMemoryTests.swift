@@ -337,6 +337,30 @@ final class DialecticalMemoryTests: XCTestCase {
         )
         XCTAssertTrue(recL156.canonicalHeard.contains("CSPICE"))
         XCTAssertTrue(recL156.canonicalHeard.contains("SPICE.jl"))
+
+        // 2026-11-02 L1..L11 UTC rollover ASR phonetic recovery (1e3 to m/s, Basilisk-generated state, SPICE.jl, Vizard, OpenMC, OpenFOAM, Simulink, Simscape)
+        let recRolloverL1L3 = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "In velocities by one E3 2M over S against a basis generated state for spice stock jail Colonels and visitor visualization visitor with open MC"
+        )
+        XCTAssertTrue(recRolloverL1L3.canonicalHeard.contains("1e3 to m/s"))
+        XCTAssertTrue(recRolloverL1L3.canonicalHeard.contains("Basilisk-generated state"))
+        XCTAssertTrue(recRolloverL1L3.canonicalHeard.contains("SPICE.jl ephemeris kernels"))
+        XCTAssertTrue(recRolloverL1L3.canonicalHeard.contains("Vizard 3D visualization"))
+        XCTAssertTrue(recRolloverL1L3.canonicalHeard.contains("OpenMC (Monte Carlo particle transport)"))
+
+        let recRolloverL4L11 = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "for argon to orchestrate open phone calls and sign out for for all my workflows with cogeneration simulant product family tested measurement mat lab and slink student suite simulator link and Simca electrical"
+        )
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("for our run to orchestrate"))
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("OpenFOAM CFD solver runs"))
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("sign up for for all my workflows"))
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("Code Generation (MATLAB Coder / Simulink Coder)"))
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("Simulink Product Family"))
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("Test and Measurement"))
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("MATLAB and Simulink Student Suite"))
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("Simulink"))
+        XCTAssertTrue(recRolloverL4L11.canonicalHeard.contains("Simscape Electrical"))
     }
 }
+
 

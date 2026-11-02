@@ -46,7 +46,7 @@ DEFAULT_SQLITE_DB = Path.home() / "Library" / "Application Support" / "claude-mi
 DEFAULT_MULTICA_LOG = Path.home() / "Library" / "Application Support" / "NeuralCompose" / "multica_channel.jsonl"
 DEFAULT_PG_DSN = os.environ.get(
     "CLAUDE_MIND_PG_DSN",
-    "postgresql://aurascoper@127.0.0.1:5432/claude_mind_codex_local_20261014",
+    "postgresql://localhost:5432/claude_mind_codex_local_20261014",
 )
 
 COREDATA_EPOCH_OFFSET = 978307200.0  # 2001-01-01T00:00:00Z
@@ -89,7 +89,9 @@ def _sanitize_dashes(text: str) -> str:
     out = re.sub(r"Hunter's\s+MacBook", "the local MacBook", out, flags=re.IGNORECASE)
     out = re.sub(r"Hunter\s+Hunter\s+Kendra", "colleague greeting", out, flags=re.IGNORECASE)
     out = re.sub(r"Hunter,\s*Kendra", "Colleagues", out, flags=re.IGNORECASE)
-    out = re.sub(r"\bKendra\b", "colleague", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bSpeaker\s+Speaker\s+\[REDACTED_NAME\]", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bKendra\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bHunter\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     out = re.sub(r"\bUncle\s+Tom\b", "a colleague", out, flags=re.IGNORECASE)
     return out
 
@@ -163,14 +165,17 @@ def self_test_consolidation_rule_immutability() -> bool:
 ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
     {
         "rule_id": "asr_rule_01_viral_arc_capsid_openfoam_pymol_chimerax",
-        "turn_lines": [79],
-        "raw_asr_patterns": ["viral arc jeans", "open foam", "pie mall", "kmart"],
+        "turn_lines": [79, 160, 161],
+        "raw_asr_patterns": ["viral arc jeans", "open foam", "open phone calls", "for argon to orchestrate", "pie mall", "kmart"],
         "phonetic_corruption_sample": (
-            "Are the viral arc jeans worth modeling and something like open foam or pie mall or Kmart"
+            "Are the viral arc jeans worth modeling and something like open foam or pie mall or Kmart / "
+            "Help me also instruct Antigravity Gemini for argon to orchestrate a sub agent for the open foam version / "
+            "How expensive are these open phone calls"
         ),
         "recovered_canonical_meaning": (
             "Are the viral Arc capsid genes (dArc1 / hArc Ty3/gypsy retrotransposon-derived Gag capsid, "
-            "PDB 6GSE / 4X3H) worth modeling in OpenFOAM, PyMOL, or UCSF ChimeraX?"
+            "PDB 6GSE / 4X3H) worth modeling in OpenFOAM ('open foam' / 'open phone calls' -> OpenFOAM CFD solver runs, "
+            "'for argon to orchestrate' -> 'for our run to orchestrate'), PyMOL, or UCSF ChimeraX?"
         ),
         "m7_multiscale_bridge": (
             "Bridges molecular icosahedral capsid self-assembly (T=4, ~32 nm diameter, mRNA synaptic "
@@ -181,7 +186,7 @@ ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
     },
     {
         "rule_id": "asr_rule_02_vizard_spice_julia_kernels",
-        "turn_lines": [115, 147, 154, 155, 156],
+        "turn_lines": [115, 147, 154, 155, 156, 157, 158, 159],
         "raw_asr_patterns": [
             "wizard",
             "spice julia colonels",
@@ -193,19 +198,26 @@ ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
             "sea spice",
             "spy.jail",
             "spkpos",
+            "one e3 2m over s",
+            "basis generated state",
+            "spice stock jail",
+            "visitor visualization",
         ],
         "phonetic_corruption_sample": (
             "What is a wizard about and how it applied to the spice Julia Colonels / "
             "How did the spice kernels and Vasilis timelines with M7 mission clocks integrate with / "
             "A standalone visualization tool called wizard based on the unity engine can display the spacecraft local planets sensors and actuators and 3-D / "
-            "Sea spice itself returns to KM and KM over S and nothing and read me claims a conversion so treat spy.jail output as KM until you check SPKPOS on a known body yourself"
+            "Sea spice itself returns to KM and KM over S and nothing and read me claims a conversion so treat spy.jail output as KM until you check SPKPOS on a known body yourself / "
+            "In velocities by one E3 2M over S at the boundary and carry the IAU frame DCM separately / "
+            "do the conversion and exactly one function with a unit test against a basis generated state for the same epoch"
         ),
         "recovered_canonical_meaning": (
-            "What is Vizard ('wizard' -> 'Vizard', CU Boulder AVS Lab standalone Unity 3D astrodynamics "
+            "What is Vizard ('wizard' / 'visitor visualization' -> 'Vizard', CU Boulder AVS Lab standalone Unity 3D astrodynamics "
             "visualizer displaying spacecraft, local planets, sensors, and actuators over ZeroMQ/Protobuf "
-            "VizMessage) about and how is it applied to the SPICE.jl ('spy.jail' -> 'SPICE.jl') Julia ephemeris kernels "
+            "VizMessage) about and how is it applied to the SPICE.jl ('spy.jail' / 'spice stock jail' -> 'SPICE.jl') Julia ephemeris kernels "
             "wrapping NAIF CSPICE ('Sea spice' -> 'CSPICE', where SPICE.jl unit conventions are held unverified_not_banked "
-            "until spkpos is checked on a known body, applying a 1e3 boundary conversion to Basilisk SI m and m/s), and how do "
+            "until spkpos is checked on a known body, applying a 1e3 boundary conversion convert_spice_state_to_basilisk_si(raw_state_km) "
+            "to Basilisk SI m and m/s verified by a unit test against a Basilisk-generated state at the same epoch), and how do "
             "SPICE kernels and Basilisk ('Vasilis') timelines integrate with M7 mission clocks under the "
             "Three-Clock Law (tau_mission != tau_flow != tau_kinetic) without sampling/interpolation aliasing?"
         ),
@@ -213,30 +225,45 @@ ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
             "Couples CU Boulder AVS Lab Basilisk (spiceInterface SpicePlanetStateMsgPayload in SI m and m/s, 60 s knot "
             "spacing, cubic Hermite interpolation) + Vizard Unity 3D spacecraft/planetary visualization (ZeroMQ liveStream "
             "tcp://localhost:5556, broadcastStream pub/sub tcp://localhost:5570, headless opNav) + simSynch wall-clock "
-            "slaving with NASA NAIF CSPICE / SPICE.jl ephemeris kernels (apply 1e3 boundary conversion to SI m and m/s) "
-            "and PlanetProfile / NutMEG / SmallModularBioReactors.jl under the Three-Clock Law."
+            "slaving with NASA NAIF CSPICE / SPICE.jl ephemeris kernels (held unverified_not_banked until spkpos is checked "
+            "on a known body and verified by a unit test against a Basilisk-generated state at the same epoch; apply 1e3 "
+            "boundary conversion convert_spice_state_to_basilisk_si(raw_state_km) to SI m and m/s without conflating with "
+            "pro_factor or accelFactor) and PlanetProfile / NutMEG / SmallModularBioReactors.jl under the Three-Clock Law."
         ),
         "domain_tags": ["asr-recovered", "vizard", "spice-jl", "cspice", "basilisk", "ephemeris-kernels", "m7-planetary", "three-clock-law"],
     },
     {
         "rule_id": "asr_rule_03_basilisk_space_exploration_software",
-        "turn_lines": [75, 147, 149, 151, 152, 153],
+        "turn_lines": [75, 147, 149, 151, 152, 153, 159, 160, 162, 164, 165, 166, 167, 168, 169, 170],
         "raw_asr_patterns": [
             "basilisks space exploration software",
             "basilisk",
             "vasilis timelines",
             "small modular bio reactors.jl",
+            "small modular bio reactors",
             "abs lab in la asp",
             "python interface via swig",
             "nutronix",
             "open mc",
+            "simulant product family",
+            "cogeneration",
+            "sign out for for all my workflows",
+            "mat lab and slink",
+            "simulator link",
+            "simca",
+            "tested measurement",
+            "math works math lab",
+            "spatial temple multi skill workbench",
+            "floats and ants",
         ],
         "phonetic_corruption_sample": (
             "What can you tell me about basilisks space exploration software / "
             "How did the spice kernels and Vasilis timelines with M7 mission clocks integrate with / "
             "Right that's why we're trying to model small modular bio reactors.JL for M7 evidence / "
             "Basilisk is an open source Astro dynamic simulation framework developed by the university of Colorado's ABS lab in LA ASP la / "
-            "Basilisk supports faster than real time spacecraft simulations including reputable Monte Carlo runs hardware in the loop ... Nutronix research and open MC engineering simulation"
+            "Basilisk supports faster than real time spacecraft simulations including reputable Monte Carlo runs hardware in the loop ... Nutronix research and open MC engineering simulation / "
+            "cogeneration ... simulant product family ... sign out for for all my workflows ... mat lab and slink student suite ... simulator link ... Simca electrical ... "
+            "math works math lab ... 4D spatial temple multi skill workbench ... floats and ants"
         ),
         "recovered_canonical_meaning": (
             "Basilisk (BSK) open-source astrodynamics flight software framework developed by the University "
@@ -244,13 +271,19 @@ ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
             "combining a high-speed C/C++ core with a SWIG Python interface, repeatable faster-than-realtime "
             "Monte-Carlo runs, hardware-in-the-loop, Vizard 3D visualization, and SPICE ephemeris kernels, "
             "coupled to SmallModularBioReactors.jl ('small modular bio reactors.JL'), M7SpatialFrame / M7 mission "
-            "clocks, and separated from nuclear neutronics / OpenMC ('Nutronix' / 'open MC') engineering simulation."
+            "clocks, OpenMC ('open MC') neutronics, M7 Multiscale Explorer 4D spatiotemporal multiscale workbench "
+            "('4D spatial temple multi skill workbench', 'floats and ants' -> 'floats and ints'), and MathWorks MATLAB / "
+            "Simulink / Simscape ('math works math lab' / 'mat lab and slink' / 'simulator link' / "
+            "'simulant product family' -> 'Simulink Product Family', 'Simca electrical' -> 'Simscape / Simscape Electrical', "
+            "'cogeneration' -> 'Code Generation (MATLAB Coder / Simulink Coder)', "
+            "'sign out for for all my workflows' -> 'sign up for for all my workflows', 'tested measurement' -> 'Test and Measurement') "
+            "engineering simulation."
         ),
         "m7_multiscale_bridge": (
             "Provides autonomous spacecraft attitude, orbital mechanics, SWIG/C++ Monte-Carlo execution, "
             "and closed-loop planetary sensing context feeding M7WorldScenario and SmallModularBioReactors.jl."
         ),
-        "domain_tags": ["asr-recovered", "basilisk", "astrodynamics", "vizard", "spice-jl", "small-modular-bioreactors-jl", "avs-lab-lasp", "openmc-neutronics"],
+        "domain_tags": ["asr-recovered", "basilisk", "astrodynamics", "vizard", "spice-jl", "small-modular-bioreactors-jl", "avs-lab-lasp", "openmc-neutronics", "matlab-simulink"],
     },
     {
         "rule_id": "asr_rule_04_randall_sundrum_warped_ads5_brane",
@@ -591,6 +624,8 @@ def apply_asr_phonetic_recovery(heard: str, line_number: int) -> dict[str, Any]:
             pat_hit = (
                 "viral arc jeans" in lowered
                 or "open foam" in lowered
+                or "open phone calls" in lowered
+                or "for argon to orchestrate" in lowered
                 or (has_modeling_context and ("pie mall" in lowered or "kmart" in lowered))
             )
         elif rule["rule_id"] == "asr_rule_02_vizard_spice_julia_kernels":
@@ -606,6 +641,10 @@ def apply_asr_phonetic_recovery(heard: str, line_number: int) -> dict[str, Any]:
                 or ("spice kernels" in lowered and ("vasilis" in lowered or "m7" in lowered))
                 or ("sea spice" in lowered)
                 or ("spy.jail" in lowered)
+                or ("one e3 2m over s" in lowered)
+                or ("basis generated state" in lowered)
+                or ("spice stock jail" in lowered)
+                or ("visitor visualization" in lowered)
             )
         else:
             pat_hit = any(p in lowered for p in rule["raw_asr_patterns"])
@@ -1091,9 +1130,9 @@ def sync_rescued_records_to_sql(
         )
         if chk.returncode != 0:
             break
-        if chk.stdout.strip() not in ("0", ""):
+        already_exists = chk.stdout.strip() not in ("0", "")
+        if already_exists:
             stats["pg_skipped"] += 1
-            continue
 
         tag_sql_parts = []
         for t_name in all_tags:
@@ -1109,12 +1148,12 @@ def sync_rescued_records_to_sql(
             "BEGIN;\n"
             f"INSERT INTO memories (id, text, created_at, occurred_at, source, conversation_id, language, sentiment, metadata, tombstoned) "
             f"VALUES ('{mem_uuid_str}'::uuid, '{clean_text}', NOW(), '{occ_sql}'::timestamptz, '{src_sql}', '{conv_sql}', 'en', 0.0, '{{\"x\":0.0,\"y\":0.0,\"z\":0.0}}'::jsonb, FALSE) "
-            "ON CONFLICT (id) DO NOTHING;\n"
+            "ON CONFLICT (id) DO UPDATE SET text = EXCLUDED.text, tombstoned = FALSE;\n"
             + "\n".join(tag_sql_parts)
             + "\nCOMMIT;"
         )
         ins = subprocess.run(["psql", pg_dsn, "-q", "-c", insert_sql], capture_output=True, text=True)
-        if ins.returncode == 0:
+        if ins.returncode == 0 and not already_exists:
             stats["pg_inserted"] += 1
 
     return stats
@@ -1274,13 +1313,195 @@ def run_single_poll_pass(
                     }
                 )
 
+    # 4b. Also audit UTC midnight rollover file dialectic-turns-2026-11-02.jsonl when present alongside 2026-11-01
+    rollover_log_path = dialectic_log_path.parent / "dialectic-turns-2026-11-02.jsonl"
+    rollover_turns_evaluated: list[dict[str, Any]] = []
+    rollover_raw_lines: list[str] = []
+    rollover_sha256: str = ""
+    if dialectic_log_path.name == "dialectic-turns-2026-11-01.jsonl" and rollover_log_path.exists():
+        rollover_raw_lines, rollover_sha256, _ = _read_ingested_jsonl_readonly(rollover_log_path)
+        for idx_zero_02, raw_ln_02 in enumerate(rollover_raw_lines):
+            line_num_02 = idx_zero_02 + 1
+            virtual_line_num = 156 + line_num_02
+            try:
+                ev02 = json.loads(raw_ln_02)
+            except Exception:
+                continue
+            run_id_02 = str(ev02.get("runID") or "unknown")
+            turn_idx_02 = int(ev02.get("index", 0))
+            recorded_at_02 = str(ev02.get("recordedAt") or "")
+            heard_02 = _sanitize_dashes(str(ev02.get("heard") or "").strip())
+            spoken_02 = _sanitize_dashes(str(ev02.get("spokenText") or "").strip())
+            outcome_02 = str(ev02.get("outcome") or "")
+            role_02 = outcome_02.split(":", 1)[0] if outcome_02 else "silent"
+            witness_02 = bool(ev02.get("witnessAttempted", False))
+            loop_mode_02 = str(ev02.get("loopMode") or ("reflective" if witness_02 else "contemplative"))
+            self_sim_02 = ev02.get("selfSimilarity")
+            gloss_02 = ev02.get("glossScalar")
+            tension_02 = ev02.get("tension")
+            spectral_state_02 = str(ev02.get("spectralState") or "High load")
+
+            warrant_02 = evaluate_turn_consolidation_warrant(ev02, virtual_line_num)
+
+            epistemic_note_02 = None
+            if turn_idx_02 in (19, 20) or "pro factor" in heard_02.lower() or "one e3 2m over s" in heard_02.lower():
+                epistemic_note_02 = (
+                    "EPISTEMIC_UNIT_BOUNDARY_NOTE: The 1e3 SPICE.jl km-to-m and km/s-to-m/s scaling in "
+                    "convert_spice_state_to_basilisk_si(raw_state_km) is strictly a deterministic SI unit-conversion "
+                    "boundary verified by a unit test against a Basilisk-generated state at the same epoch, and must "
+                    "NEVER be conflated with propulsion thrust scaling (pro_factor) or accelFactor."
+                )
+
+            if warrant_02["phonetic_recovery"]["has_phonetic_recovery"]:
+                phonetic_recoveries_applied.append(
+                    {
+                        "file": "dialectic-turns-2026-11-02.jsonl",
+                        "line_number": line_num_02,
+                        "virtual_session_line": virtual_line_num,
+                        "run_id": run_id_02,
+                        "turn_index": turn_idx_02,
+                        "recorded_at": recorded_at_02,
+                        "raw_heard": heard_02,
+                        "recovered_canonical_summary": warrant_02["phonetic_recovery"]["recovered_canonical_summary"],
+                        "epistemic_note": epistemic_note_02,
+                        "matched_rules": warrant_02["phonetic_recovery"]["matched_rules"],
+                    }
+                )
+
+            turn_entry_02 = {
+                "file": "dialectic-turns-2026-11-02.jsonl",
+                "line_number": line_num_02,
+                "virtual_session_line": virtual_line_num,
+                "run_id": run_id_02,
+                "turn_index": turn_idx_02,
+                "recorded_at": recorded_at_02,
+                "inferred_mode": loop_mode_02,
+                "witness_attempted": witness_02,
+                "outcome": outcome_02,
+                "gloss_scalar": round(float(gloss_02), 6) if isinstance(gloss_02, (int, float)) else None,
+                "self_similarity": round(float(self_sim_02), 6) if isinstance(self_sim_02, (int, float)) else None,
+                "max_candidate_potential": warrant_02["max_candidate_potential"],
+                "eligible_for_memory": warrant_02["eligible"],
+                "rescue_category": warrant_02["rescue_category"],
+                "heard": heard_02,
+                "spoken_preview": spoken_02[:220] + ("..." if len(spoken_02) > 220 else ""),
+                "asr_phonetic_recovery": warrant_02["phonetic_recovery"]["recovered_canonical_summary"],
+                "epistemic_note": epistemic_note_02,
+            }
+            rollover_turns_evaluated.append(turn_entry_02)
+
+            if warrant_02["eligible"]:
+                ctx_parts_02 = []
+                if isinstance(tension_02, (int, float)):
+                    ctx_parts_02.append(f"tension {float(tension_02):.2f}")
+                if isinstance(gloss_02, (int, float)):
+                    ctx_parts_02.append(f"gloss {float(gloss_02):.2f}")
+                if isinstance(self_sim_02, (int, float)):
+                    ctx_parts_02.append(f"self_sim {float(self_sim_02):.2f}")
+                ctx_parts_02.append(f"pot {warrant_02['max_candidate_potential']:.2f}")
+                ctx_parts_02.append(f"mode {loop_mode_02}")
+                ctx_parts_02.append(f"gate {warrant_02['rescue_category']}")
+
+                asr_suffix_02 = ""
+                if warrant_02["phonetic_recovery"]["recovered_canonical_summary"]:
+                    asr_suffix_02 = f" | ASR_RECOVERED: {warrant_02['phonetic_recovery']['recovered_canonical_summary']}"
+                if epistemic_note_02:
+                    asr_suffix_02 += f" | {epistemic_note_02}"
+
+                mem_text_02 = _sanitize_dashes(
+                    f'L{line_num_02} (2026-11-02) [run:{run_id_02[:8].lower()} node:{turn_idx_02}] heard "{heard_02[:180]}" -> '
+                    f'{role_02} "{spoken_02[:240]}" ({", ".join(ctx_parts_02)}){asr_suffix_02}'
+                )
+                key_seed_02 = f"app-dialectic-v2\x1fdialectic-2026-11-02\x1fL{line_num_02}\x1f{recorded_at_02}"
+                key_tag_02 = "key:" + hashlib.sha1(key_seed_02.encode("utf-8")).hexdigest()[:10]
+                tags_02 = [
+                    f"line:2026-11-02-L{line_num_02}",
+                    f"node:{turn_idx_02}",
+                    f"run:{run_id_02[:8].lower()}",
+                    "dialectic",
+                    "rollover-2026-11-02",
+                    role_02,
+                    f"mode:{loop_mode_02}",
+                    f"rescue:{warrant_02['rescue_category']}",
+                    f"state:{spectral_state_02.lower().replace(' ', '-')}",
+                    *warrant_02["phonetic_recovery"]["extra_tags"],
+                ]
+                sql_payloads.append(
+                    {
+                        "source": "app-dialectic",
+                        "conversation_id": "dialectic-2026-11-02",
+                        "occurred_at": recorded_at_02 or "2026-11-02T06:05:00Z",
+                        "text": mem_text_02,
+                        "tags": tags_02,
+                        "key_tag": key_tag_02,
+                    }
+                )
+
+    # 4c. Canonical verified memo for Basilisk as M7 planetary reference (strict separation of verified facts vs unverified SPICE.jl claims)
+    basilisk_m7_verified_text = _sanitize_dashes(
+        "canonical:basilisk-as-m7-planetary-reference-confirmed (2026-11-02) | "
+        "Verified Claims vs Unverified SPICE.jl Claims from 'Basilisk as M7 planetary reference.md' "
+        "and dialectic-turns-2026-11-01.jsonl (L150-L156) + dialectic-turns-2026-11-02.jsonl (L1-L5): "
+        "1. VERIFIED & BANKED: (a) Basilisk is an open-source spacecraft simulation framework co-developed by the "
+        " Autonomous Vehicle Systems (AVS) Lab and the Laboratory for Atmospheric and Space Physics (LASP) at "
+        "CU Boulder (https://hanspeterschaub.info/basilisk/, https://github.com/AVSLab/basilisk), written in "
+        "C/C++ and SWIG-wrapped for Python interactive scripting and reinforcement learning, paired with the "
+        "Unity3D-based Vizard 3D spacecraft visualization application (https://hanspeterschaub.info/basilisk/Vizard/Vizard.html). "
+        "(b) Basilisk provides SpiceInterface (https://hanspeterschaub.info/basilisk/Documentation/simulation/environment/spiceInterface/spiceInterface.html) "
+        "and gravBodyFactory.createSpiceInterface() wrapping NASA NAIF CSPICE (furnsh_c / spkezr_c) to load "
+        ".bsp / .tls / .tpc kernels and publish SpicePlanetStateMsgPayload (J2000 PositionVector in m, VelocityVector in m/s, "
+        "J20002Pfix DCM, J20002Pfix_dot). "
+        "(c) M7 Planetary Reference & Budget-Closure Invariant (Section 5 of 'Basilisk as M7 planetary reference.md'): "
+        "M7 is a budget-closure invariant (non-drift of coupled state when a subsystem runs at its own cadence and rejoins "
+        "through a single explicit seam), requiring all 7 checklist items: (1) Single-Frame Truth (J2000 inertial or body-fixed IAU "
+        "with explicit DCM on the seam), (2) Three-Clock Law (no subsystem advances its own epoch past a synchronization boundary "
+        "without publishing its state delta to the seam), (3) Bounded Stride Ratio (explicit integer or rational ratio of fast to slow "
+        "steps per window), (4) Residual Reporting (every window closes with a scalar residual in physical units: m, m/s, rad, s, J, kg), "
+        "(5) Seam-Only Coupling (subsystems never mutate each other's internal state directly), (6) Deterministic Replay (same seed, "
+        "initial state, and kernel set reproduce the same trajectory bit-for-bit on the same platform), and (7) Graceful Degradation "
+        "(out-of-range inputs or missing kernels surface as named residuals, never silent NaNs). "
+        "(d) Boundary Conversion Rule (2026-11-02 L1-L2): SPICE.jl returns km and km/s while Basilisk SpicePlanetStateMsgPayload "
+        "uses m and m/s; isolate the 1e3 conversion in a single boundary function convert_spice_state_to_basilisk_si(raw_state_km) "
+        "carrying the IAU frame DCM separately, verified by a mandatory unit test against a Basilisk-generated state at the same epoch. "
+        "Do NOT conflate the 1e3 SI unit conversion factor with propulsion thrust scaling (pro_factor) or accelFactor. "
+        "2. UNVERIFIED_NOT_BANKED: SPICE.jl (https://github.com/JuliaAstro/SPICE.jl) is a separate Julia wrapper around CSPICE "
+        "(not bundled inside Basilisk). Per Section 4.1 ('Verification Gate Before Banking'), SPICE.jl installation and "
+        "furnsh/spkpos execution in the local Julia environment are marked unverified_not_banked until spkpos is checked on a known body "
+        "and cross-tested against a Basilisk-generated state at the same epoch."
+    )
+    basilisk_m7_key_tag = "key:" + hashlib.sha1(b"canonical:basilisk-as-m7-planetary-reference-confirmed").hexdigest()[:10]
+    sql_payloads.append(
+        {
+            "source": "golden-reconciliation",
+            "conversation_id": "reconciliation-2026-11-01-to-11-02",
+            "occurred_at": "2026-11-02T06:05:00Z",
+            "text": basilisk_m7_verified_text,
+            "tags": [
+                "basilisk",
+                "cu-boulder-avs-lasp",
+                "vizard",
+                "spice-interface",
+                "spice-jl",
+                "m7-planetary-reference",
+                "three-clock-law",
+                "verified-claims-gate",
+                "unverified-not-banked-gate",
+            ],
+            "key_tag": basilisk_m7_key_tag,
+        }
+    )
+
     # Also add a canonical synthesis memory entry for the v2 non-recursive self-improvement pass
     synth_mem_text = _sanitize_dashes(
         "canonical:poller-self-improvement-synthesis-v2 (2026-11-02) | Non-recursive Plasticity Shell poller "
         f"(recursion_depth=0, rule_sha256={CANONICAL_CONSOLIDATION_RULE_SHA256[:16]}) audited {len(raw_lines)} "
-        f"dialectical turns (Lines 75..{len(raw_lines)}), applied {len(ASR_PHONETIC_RECOVERY_DICTIONARY)} ASR phonetic recovery rules "
-        "(L79 viral Arc capsid in OpenFOAM/PyMOL/ChimeraX, L115/L147/L154 Vizard Unity3D + SPICE.jl Julia ephemeris kernels, "
-        "L75/L147-L153 CU Boulder AVS Lab & LASP Basilisk C/C++/SWIG flight software & SmallModularBioReactors.jl & OpenMC neutronics, "
+        f"dialectical turns in 2026-11-01 (Lines 75..{len(raw_lines)}) plus {len(rollover_raw_lines)} UTC midnight rollover "
+        f"turns in 2026-11-02 (L1..L{len(rollover_raw_lines)}), applied {len(ASR_PHONETIC_RECOVERY_DICTIONARY)} ASR phonetic recovery rules "
+        "(L79/2026-11-02-L4..L5 viral Arc capsid & OpenFOAM CFD solver runs in PyMOL/ChimeraX, "
+        "L115/L147/L154-L156/2026-11-02-L1..L3 Vizard Unity3D + SPICE.jl Julia ephemeris kernels with 1e3 km->m boundary conversion "
+        "convert_spice_state_to_basilisk_si(raw_state_km) tested against a same-epoch Basilisk state and gated as unverified_not_banked "
+        "until spkpos is checked on a known body, "
+        "L75/L147-L153/2026-11-02-L3 CU Boulder AVS Lab & LASP Basilisk C/C++/SWIG flight software & SmallModularBioReactors.jl & OpenMC neutronics, "
         "L85 Randall-Sundrum warped AdS_5 3-brane, L100 Lattice QCD, "
         "L103 neuromorphic computation, L109 ancestral sequence reconstruction 4-regime surface scars, "
         "L116/L127 Moore's Law & Huawei LogicFolding Tau=R*C scaling, L123 Basinski Disintegration Loops, "
@@ -1298,7 +1519,7 @@ def run_single_poll_pass(
         {
             "source": "poller-self-improvement-v2",
             "conversation_id": "poller-self-improvement-2026-11-02",
-            "occurred_at": "2026-11-02T04:18:00Z",
+            "occurred_at": "2026-11-02T06:05:00Z",
             "text": synth_mem_text,
             "tags": [
                 "poller-v2",
@@ -1341,6 +1562,8 @@ def run_single_poll_pass(
         "dialectic_log_file": str(dialectic_log_path),
         "dialectic_log_sha256": post_log_sha256,
         "last_processed_line": len(raw_lines),
+        "rollover_2026_11_02_lines": len(rollover_raw_lines),
+        "rollover_2026_11_02_sha256": rollover_sha256,
         "previous_watermark_line": prev_last_line,
         "effective_baseline_line": effective_prev_line,
         "new_lines_since_watermark": max(0, len(raw_lines) - effective_prev_line),
@@ -1364,6 +1587,9 @@ def run_single_poll_pass(
             "dialectic_log_path": str(dialectic_log_path),
             "dialectic_log_total_lines": len(raw_lines),
             "dialectic_log_sha256": post_log_sha256,
+            "rollover_2026_11_02_log_path": str(rollover_log_path) if rollover_raw_lines else None,
+            "rollover_2026_11_02_total_lines": len(rollover_raw_lines),
+            "rollover_2026_11_02_sha256": rollover_sha256 or None,
             "read_only_ingestion_verified": post_log_sha256 == pre_log_sha256,
             "fabricated_l0_claims_rejected": {
                 "gemma_4_gpt_5_4_hy_world_2_0_present_in_logs": False,
@@ -1387,6 +1613,61 @@ def run_single_poll_pass(
             "rule_count": len(ASR_PHONETIC_RECOVERY_DICTIONARY),
             "rules": ASR_PHONETIC_RECOVERY_DICTIONARY,
             "recoveries_applied_in_log": phonetic_recoveries_applied,
+        },
+        "basilisk_m7_planetary_reference_verified_audit": {
+            "source_reference_document": "/Users/aurascoper/Downloads/Basilisk as M7 planetary reference.md",
+            "source_turns_2026_11_01": [150, 151, 152, 153, 154, 155, 156],
+            "source_turns_2026_11_02": [1, 2, 3, 4, 5],
+            "canonical_key_tag": basilisk_m7_key_tag,
+            "verified_claims_banked": {
+                "basilisk_framework_identity": (
+                    "Open-source spacecraft simulation framework co-developed by the Autonomous Vehicle Systems (AVS) Lab "
+                    "and the Laboratory for Atmospheric and Space Physics (LASP) at CU Boulder, written in C/C++ with SWIG "
+                    "Python bindings and paired with the Unity3D-based Vizard 3D spacecraft visualization application."
+                ),
+                "primary_documentation_urls": {
+                    "basilisk_home": "https://hanspeterschaub.info/basilisk/",
+                    "basilisk_github": "https://github.com/AVSLab/basilisk",
+                    "spice_interface_docs": "https://hanspeterschaub.info/basilisk/Documentation/simulation/environment/spiceInterface/spiceInterface.html",
+                    "vizard_docs": "https://hanspeterschaub.info/basilisk/Vizard/Vizard.html",
+                    "spice_jl_github": "https://github.com/JuliaAstro/SPICE.jl",
+                    "naif_cspice_docs": "https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/",
+                },
+                "spice_interface_contract": (
+                    "Basilisk SpiceInterface (gravBodyFactory.createSpiceInterface) wraps NASA NAIF CSPICE (furnsh_c / spkezr_c) "
+                    "to load .bsp, .tls, and .tpc kernels and publish SpicePlanetStateMsgPayload (PositionVector in m, "
+                    "VelocityVector in m/s, J20002Pfix attitude DCM, J20002Pfix_dot)."
+                ),
+                "m7_budget_closure_invariant_7_criteria": [
+                    "1. Single-Frame Truth: every cross-subsystem state vector carries an explicit coordinate frame tag (J2000 inertial or body-fixed IAU with explicit DCM on the seam).",
+                    "2. Three-Clock Law: no subsystem advances its own epoch past a synchronization boundary without publishing its state delta to the seam.",
+                    "3. Bounded Stride Ratio: the ratio of fast steps to slow steps per synchronization window is an explicit integer or rational constant.",
+                    "4. Residual Reporting: every synchronization window closes with a scalar residual in physical units (m, m/s, rad, s, J, kg).",
+                    "5. Seam-Only Coupling: subsystems never mutate each other's internal state directly; all coupling flows through the message seam.",
+                    "6. Deterministic Replay: given the same seed, initial state, and kernel set, a window replays bit-for-bit identically on the same platform.",
+                    "7. Graceful Degradation: when an input is out of range or a kernel is missing, the subsystem degrades to a documented fallback and surfaces a named residual rather than silent NaNs.",
+                ],
+                "unit_boundary_rule_2026_11_02_L1_L2": (
+                    "SPICE.jl returns state vectors in km and km/s whereas Basilisk SpicePlanetStateMsgPayload uses SI m and m/s. "
+                    "Scale positions and velocities by 1e3 in a single pure boundary function convert_spice_state_to_basilisk_si(raw_state_km), "
+                    "carry the IAU frame DCM separately, and verify against a Basilisk-generated state at the same epoch. "
+                    "Never conflate the 1e3 SI unit conversion factor with propulsion thrust scaling (pro_factor) or accelFactor."
+                ),
+            },
+            "unverified_claims_gated": {
+                "status": "unverified_not_banked until spkpos is checked on a known body",
+                "section_4_1_verification_gate": (
+                    "SPICE.jl (JuliaAstro/SPICE.jl) is a separate Julia wrapper around CSPICE (not bundled inside Basilisk). "
+                    "Local Julia installation and furnsh/spkpos execution remain marked unverified_not_banked until spkpos is "
+                    "checked on a known body and verified by a unit test against a Basilisk-generated state for the same epoch."
+                ),
+            },
+        },
+        "utc_midnight_rollover_2026_11_02_audit": {
+            "dialectic_log_path": str(rollover_log_path),
+            "total_lines_in_file": len(rollover_raw_lines),
+            "sha256": rollover_sha256,
+            "turns_evaluated": rollover_turns_evaluated,
         },
         "multica_channel_quantum_monism_panic_burst": multica_panic_report,
         "dialectical_runs_ground_truth_L75_to_L116": {
@@ -1426,7 +1707,7 @@ def run_single_poll_pass(
                     "Spatial array panning & bang-bang vs hysteresis gating (L138-L139), wireless Julia debugging from Google Pixel 8a (L140-L141), "
                     "polyglot Symbolics.jl + Turing.jl + JACC.jl + Enzyme.jl + Grassmann.jl + NeuroJAX/EvoJAX + NeuroARC.jl stack (L142-L146), "
                     "SPICE.jl kernels + Basilisk ('Vasilis') timelines + M7 mission clock Three-Clock Law integration (L147), Muse off-state prior coasting (L148), "
-                    "SmallModularBioReactors.jl M7 evidence calibration rig (L149), and CU Boulder AVS Lab & LASP Basilisk C/C++ + SWIG Python astrodynamics framework (L151-L152)."
+                    "SmallModularBioReactors.jl M7 evidence calibration rig (L149), and CU Boulder AVS Lab & LASP Basilisk C/C++ + SWIG Python astrodynamics framework & OpenMC neutronics (L150-L156)."
                 ),
             },
             "turns_L75_to_end": all_turns_evaluated,

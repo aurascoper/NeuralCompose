@@ -822,7 +822,20 @@ public actor HypnagogicDialecticLoop {
         ("visitor visualization", "Vizard visualization"),
         ("one e3 2m over s", "1e3 to m/s"),
         ("basis generated state", "Basilisk-generated state"),
-        ("open phone calls", "OpenFOAM CFD solver runs")
+        ("open phone calls", "OpenFOAM CFD solver runs"),
+        ("simulant product family", "Simulink Product Family"),
+        ("cogeneration", "Code Generation (MATLAB Coder / Simulink Coder)"),
+        ("for argon to orchestrate", "for our run to orchestrate"),
+        ("sign out for for all my workflows", "sign up for for all my workflows"),
+        ("tested measurement", "Test and Measurement"),
+        ("mat lab and slink student suite", "MATLAB and Simulink Student Suite"),
+        ("mat lab and slink", "MATLAB and Simulink"),
+        ("simulator link", "Simulink"),
+        ("simca electrical", "Simscape Electrical"),
+        ("simca", "Simscape"),
+        ("math works math lab", "MathWorks MATLAB"),
+        ("spatial temple multi skill workbench", "spatiotemporal multiscale workbench"),
+        ("floats and ants", "floats and ints")
     ]
 
 

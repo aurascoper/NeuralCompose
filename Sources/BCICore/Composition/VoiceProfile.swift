@@ -46,7 +46,10 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
     /// launches where ~/Documents/NeuralCompose/voice-profile.json is absent.
     public static let defaultRecognitionVocabulary: [String] = [
         "NeuralCompose",
-        "Hunter",
+        "Basilisk",
+        "Vizard",
+        "SPICE.jl",
+        "Simulink",
         "aurascoper",
         "GitHub",
         "Antigravity",

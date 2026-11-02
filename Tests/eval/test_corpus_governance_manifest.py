@@ -72,7 +72,7 @@ def test_voice_profile_cold_vocabulary_satisfies_tier2_constraints():
     terms = re.findall(r'"([^"]+)"', block_match.group(1))
     assert len(terms) >= 20
 
-    forbidden_private = {"uncle tom", "ellen wan", "andrew hoffman"}
+    forbidden_private = {"uncle tom", "ellen wan", "andrew hoffman", "hunter", "kendra"}
     for term in terms:
         assert "\u2014" not in term and "\u2013" not in term
         assert len(term) <= max_chars, f"Term exceeds {max_chars} chars: {term}"
@@ -101,7 +101,7 @@ def test_synchronized_interaction_logs_and_manifest_integrity():
             text = content_bytes.decode("utf-8")
             assert "\u2014" not in text and "\u2013" not in text
             lower_text = text.lower()
-            for priv in ("kendra", "uncle tom", "ellen wan", "andrew hoffman", "hunter's macbook", "hunter hunter"):
+            for priv in ("kendra", "hunter", "uncle tom", "ellen wan", "andrew hoffman", "hunter's macbook", "hunter hunter"):
                 assert priv not in lower_text, f"Unscrubbed private identifier {priv!r} in {rel_path}"
             lines = [ln for ln in text.splitlines() if ln.strip()]
             assert len(lines) == entry["repo_lines"], f"Line count mismatch for {rel_path}"

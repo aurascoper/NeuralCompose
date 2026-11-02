@@ -187,3 +187,22 @@ def test_sqlite_autobank_and_autoforget_roundtrip(tmp_path: Path):
     )
     assert af["sqlite_candidates"] == 1
     assert af["sqlite_tombstoned"] == 1
+
+    # Verify PII redaction and short high-potential guard (len(words) >= 3 required even for high potential)
+    scrubbed = mg._sanitize_dashes("Hunter and Kendra tested Speaker Speaker [REDACTED_NAME]")
+    assert "hunter" not in scrubbed.lower()
+    assert "kendra" not in scrubbed.lower()
+    assert "speaker speaker" not in scrubbed.lower()
+
+    short_ok, short_reason = mg.should_autobank_turn(
+        heard="Two words",
+        spoken="Long enough spoken response here to exceed five total words",
+        outcome="spoke:coherence-seeking",
+        self_similarity=0.93,
+        max_self_similarity=0.92,
+        witness_attempted=True,
+        max_candidate_potential=1.68,
+    )
+    assert short_ok is False
+    assert short_reason == "short_backchannel_or_hedge"
+
