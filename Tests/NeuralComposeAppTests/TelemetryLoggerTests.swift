@@ -231,4 +231,52 @@ final class TelemetryLoggerTests: XCTestCase {
         let backupURL = dir.appendingPathComponent("dialectic-turns-\(todayStr).jsonl.bak")
         XCTAssertTrue(FileManager.default.fileExists(atPath: backupURL.path), "compacting primary log must preserve .bak snapshot")
     }
+
+    func testLogSanitizesEmAndEnDashesAtWriteTime() async throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let logger = TelemetryLogger(directory: dir)
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone.current
+        let todayStr = dayFormatter.string(from: Date())
+
+        let emb = Embedding(values: [1, 0], modelID: "test", dimension: 2, version: "1", seed: 0)
+        let cand = DialecticalCandidate(
+            text: "Translation isn't the failure\u{2014}M7.1 is a header\u{2013}float is a type.",
+            embedding: emb,
+            roleID: "displacement-seeking"
+        )
+        let scored = ScoredCandidate(
+            candidate: cand,
+            energy: .init(coherence: 0.93, resonance: 0.85, novelty: 0.10),
+            potential: 1.73,
+            roleFulfillment: 0.90
+        )
+        let turn = DialecticalTurnEvent(
+            DialecticalCompetition(
+                index: 34,
+                heard: "Saying things like M71M8\u{2014}header versus float\u{2013}classification",
+                scored: [scored],
+                tension: 0.04,
+                margin: 0.01,
+                selectionTemperature: 0.48,
+                outcome: .spoke(cand),
+                glossScalar: 0.1,
+                witnessFinding: "Both treat M71M8\u{2014}or float\u{2013}decimal as sorted.",
+                selfSimilarity: 0.90,
+                witnessAttempted: true
+            ),
+            runID: "run-dash-test",
+            recordedAt: "2026-11-02T06:58:31.206Z"
+        )
+
+        await logger.log(turn)
+
+        let logURL = dir.appendingPathComponent("dialectic-turns-\(todayStr).jsonl")
+        let contents = try String(contentsOf: logURL, encoding: .utf8)
+        XCTAssertFalse(contents.contains("\u{2014}"), "JSONL must not contain em-dash")
+        XCTAssertFalse(contents.contains("\u{2013}"), "JSONL must not contain en-dash")
+        XCTAssertTrue(contents.contains(" - "), "Em-dashes and en-dashes must be sanitized to ' - '")
+    }
 }

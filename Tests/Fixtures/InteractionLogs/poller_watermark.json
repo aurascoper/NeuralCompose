@@ -1,0 +1,21 @@
+{
+  "schema": "neuralcompose-non-recursive-poller-watermark-v2",
+  "updated_at_utc": "2026-11-02T07:57:41.710489+00:00",
+  "dialectic_log_file": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
+  "dialectic_log_sha256": "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7",
+  "last_processed_line": 156,
+  "rollover_2026_11_02_lines": 28,
+  "rollover_2026_11_02_sha256": "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013",
+  "previous_watermark_line": 156,
+  "effective_baseline_line": 156,
+  "new_lines_since_watermark": 0,
+  "log_rotation_or_truncation_detected": false,
+  "monotonic_progression_verified": true,
+  "recursion_depth": 0,
+  "consolidation_rule_immutable": true,
+  "consolidation_rule_sha256": "e8a9db6b2aab85c36530ca4ec9c91172cce4873f5e7c37dc58312c7be110a793",
+  "negative_tamper_self_test_passed": true,
+  "rescued_turns_L75_to_end": 82,
+  "sqlite_max_z_pk": 1081,
+  "session_memory_ordinal_max": 231
+}

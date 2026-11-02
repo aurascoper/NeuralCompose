@@ -1,0 +1,70 @@
+{
+  "schema": "neuralcompose-matlab-alara-hippocratism-bridge-v1",
+  "generatedAt": "2026-11-02T07:57:29.555868+00:00",
+  "matlab_app_path": "/Applications/MATLAB_R2026b.app",
+  "matlab_installed_on_disk": true,
+  "matlab_version": "26.2.0.3433840",
+  "matlab_release": "R2026b",
+  "matlab_bridge_script": "/Users/aurascoper/Developer/NeuralCompose/Scripts/matlab_alara_bridge.m",
+  "installed_student_suite_products": [
+    "Control System Toolbox 26.2",
+    "Curve Fitting Toolbox 26.2",
+    "DSP System Toolbox 26.2",
+    "Deep Learning Toolbox 26.2",
+    "Image Processing Toolbox 26.2",
+    "MATLAB 26.2",
+    "Optimization Toolbox 26.2",
+    "Parallel Computing Toolbox 26.2",
+    "Signal Processing Toolbox 26.2",
+    "Simscape 26.2",
+    "Simscape Electrical 26.2",
+    "Simulink 26.2",
+    "Statistics and Machine Learning Toolbox 26.2",
+    "Symbolic Math Toolbox 26.2"
+  ],
+  "smbr_matlab_r2026b_verification_receipt": {
+    "receipt_path": "/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures/m7_matlab_r2026b_verification_receipt.json",
+    "present": true,
+    "all_checks_passed": true,
+    "installed_toolbox_count": 14,
+    "tarjan_bridge_dag_valid": true,
+    "health_physics_alara_valid": true
+  },
+  "acyclic_tarjan_bridge": {
+    "stages": [
+      "OpenFOAM_CFD",
+      "USGS_PHREEQC",
+      "Julia_FlowCytometry_SMBR",
+      "MATLAB_Simulink_Simscape"
+    ],
+    "is_acyclic_dag": true,
+    "recursion_depth": 0,
+    "openfoam_wall_shear_Pa": 0.42,
+    "phreeqc_pH": 7.18,
+    "phreeqc_pe": -3.45,
+    "julia_cytometry_fsc_ssc_ratio": 1.384
+  },
+  "health_physics_alara_gate": {
+    "principle": "ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora DHN-Melanin Radioprotection)",
+    "source_dose_rate_mSv_hr": 2.5,
+    "reference_radius_m": 0.5,
+    "standoff_distance_m": 2.5,
+    "inverse_square_factor": 0.04,
+    "shield_thickness_cm": 12.0,
+    "linear_attenuation_cm_inv": 0.18,
+    "beer_lambert_buildup_factor": 0.239876,
+    "neurospora_melanin_quenching_fraction": 0.35,
+    "shielded_dose_rate_mSv_hr": 0.015592,
+    "exposure_time_hr": 0.25,
+    "cumulative_dose_mSv": 0.003898,
+    "alara_constraint_mSv": 0.05,
+    "alara_compliant": true
+  },
+  "hippocratism_primum_non_nocere_gate": {
+    "maxim": "Primum Non Nocere (First, Do No Harm - Epistemic & Operational Hippocratism)",
+    "non_recursive_external_referent_only": true,
+    "unverified_claims_quarantined": true,
+    "spice_jl_unit_status": "unverified_not_banked until spkpos is checked on a known body",
+    "primum_non_nocere_verified": true
+  }
+}

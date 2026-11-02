@@ -1,13 +1,13 @@
 import Foundation
 
-/// Opt-in record of one dialectical turn — the "history of transformations"
+/// Opt-in record of one dialectical turn - the "history of transformations"
 /// the plan calls for: not just the chosen reply, but the thesis, the
 /// antithesis, their scored energies, the tension, and which basin (or silence,
 /// or synthesis) resolved it. A trajectory of these is a path through the
 /// dialogue's semantic space.
 ///
 /// Deliberately parallel to `TelemetryEvent` (word-commit logging) rather than
-/// an extension of it, and — like that type — it carries only text + scalar
+/// an extension of it, and - like that type - it carries only text + scalar
 /// scores, never raw embeddings. It is written only when the interaction-logging
 /// toggle is on (see `DialecticalTurnLogging`).
 public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
@@ -30,8 +30,8 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     /// The `SpectralState` gloss scalar in force this turn (0.5 = neutral / no
     /// EEG). A bias signal, never a cognitive read.
     public let glossScalar: Float
-    /// Raw estimator state behind `glossScalar` — the badge label
-    /// ("Relaxed" / "Neutral" / …) or nil when the estimator produced nothing
+    /// Raw estimator state behind `glossScalar` - the badge label
+    /// ("Relaxed" / "Neutral" / ...) or nil when the estimator produced nothing
     /// (stub / no EEG). Disambiguates a real "Neutral" from an absent state,
     /// which `glossScalar` (0.5 for both) cannot. Optional so old logs still decode.
     public let spectralState: String?
@@ -39,14 +39,14 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     public let outcome: String
     /// The words actually voiced (nil on a silent turn).
     public let spokenText: String?
-    /// The Witness's observation ("what both poles avoided") — Reflective profile
+    /// The Witness's observation ("what both poles avoided") - Reflective profile
     /// only, nil otherwise. Text only. Optional so old logs still decode.
     public let witnessFinding: String?
     /// Reflective metric: distance of the witness finding from the spoken text.
     public let witnessDistance: Float?
     /// Reflexive metric: how much the utterance collapsed toward the reply centroid.
     public let selfSimilarity: Float?
-    /// Whether the Witness ran this turn (Reflective) — distinguishes a broken /
+    /// Whether the Witness ran this turn (Reflective) - distinguishes a broken /
     /// finding-less witness from a disabled one. nil in pre-Witness logs.
     public let witnessAttempted: Bool?
     /// The generator identity that produced the candidates this turn
@@ -54,13 +54,13 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     /// interactionStyle / promptHash). Optional so pre-fingerprint
     /// logs still decode. See `Sources/BCICore/Telemetry/GeneratorFingerprint.swift`.
     public let generatorFingerprint: GeneratorFingerprint?
-    /// The Witness generator's identity this turn — persisted separately
+    /// The Witness generator's identity this turn - persisted separately
     /// because `generatorFingerprint` attests only to the candidates'
     /// generator, and the Witness bug being guarded against was precisely
-    /// "reported Witness prompt ≠ prompt actually transmitted". With this
+    /// "reported Witness prompt != prompt actually transmitted". With this
     /// field a persisted Reflective turn can independently prove which
     /// provider/model/prompt produced the finding. Optional so every
-    /// pre-Witness-fingerprint log still decodes (missing key → nil).
+    /// pre-Witness-fingerprint log still decodes (missing key -> nil).
     public let witnessGeneratorFingerprint: GeneratorFingerprint?
     /// Which loop instance wrote this turn. The app rebuilds the loop on every
     /// mode switch and `index` restarts at 0, so `index` alone collides within
@@ -72,13 +72,21 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     /// field would not round-trip across them. nil in older logs.
     public let recordedAt: String?
 
+    /// Replaces em-dashes (`\u{2014}`) and en-dashes (`\u{2013}`) with `" - "` so
+    /// serialized JSONL telemetry never emits raw typographic dashes at the source.
+    public static func sanitizeDashes(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\u{2014}", with: " - ")
+            .replacingOccurrences(of: "\u{2013}", with: " - ")
+    }
+
     public init(_ c: DialecticalCompetition, runID: String? = nil, recordedAt: String? = nil) {
         self.runID = runID
         self.recordedAt = recordedAt
         self.index = c.index
-        self.heard = c.heard
+        self.heard = Self.sanitizeDashes(c.heard)
         self.candidates = c.scored.map {
-            Candidate(text: $0.candidate.text, roleID: $0.candidate.roleID,
+            Candidate(text: Self.sanitizeDashes($0.candidate.text), roleID: $0.candidate.roleID,
                       coherence: $0.energy.coherence, resonance: $0.energy.resonance,
                       novelty: $0.energy.novelty, potential: $0.potential)
         }
@@ -87,7 +95,7 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
         self.selectionTemperature = c.selectionTemperature
         self.glossScalar = c.glossScalar
         self.spectralState = c.spectralState?.badgeLabel
-        self.witnessFinding = c.witnessFinding
+        self.witnessFinding = c.witnessFinding.map(Self.sanitizeDashes)
         self.witnessDistance = c.witnessDistance
         self.selfSimilarity = c.selfSimilarity
         self.witnessAttempted = c.witnessAttempted
@@ -96,10 +104,10 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
         switch c.outcome {
         case let .spoke(cand):
             self.outcome = "spoke:\(cand.roleID)"
-            self.spokenText = cand.text
+            self.spokenText = Self.sanitizeDashes(cand.text)
         case let .synthesized(cand):
             self.outcome = "synthesized:\(cand.roleID)"
-            self.spokenText = cand.text
+            self.spokenText = Self.sanitizeDashes(cand.text)
         case .silent:
             self.outcome = "silent"
             self.spokenText = nil
@@ -107,7 +115,7 @@ public struct DialecticalTurnEvent: Codable, Sendable, Equatable {
     }
 }
 
-/// Sink for `DialecticalTurnEvent`s — the opt-in persistence seam, parallel to
+/// Sink for `DialecticalTurnEvent`s - the opt-in persistence seam, parallel to
 /// `InteractionLogging`. The default `NullDialecticalTurnLogger` drops
 /// everything, so the loop persists nothing unless a real sink is injected.
 public protocol DialecticalTurnLogging: Sendable {

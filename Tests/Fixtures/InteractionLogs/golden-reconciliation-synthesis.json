@@ -1,6 +1,6 @@
 {
   "schema": "golden-reconciliation-program-synthesis-v1",
-  "generatedAt": "2026-11-02T06:56:53.593125+00:00",
+  "generatedAt": "2026-11-02T07:57:42.050444+00:00",
   "goldenBaseline": {
     "stem": "golden_20260710-141352",
     "sessionID": "calibration_2026-07-10T141352_muses",
@@ -21,7 +21,7 @@
   "liveSessionReconciliation": {
     "acquisition": "localMuse",
     "transport": "ble",
-    "signalQuality": "healthy",
+    "signalQuality": "lost",
     "fullyLive": true,
     "classifierKind": "coreML",
     "predictorKind": "mlx",
@@ -29,7 +29,7 @@
     "estimatorKind": "mlx",
     "activeSpectralState": "High load",
     "spectralStateCounts": {
-      "High load": 15
+      "High load": 28
     },
     "glossScalarRange": [
       0.1,
@@ -40,6 +40,7 @@
     "rule_1_partial_contact_rescue": "If signalQuality in {poor, lost} and finiteCount(channel) == 512: normalize cleanest finite channel AC RMS -> 35.0 uV, demean, clamp [-150, +150] uV -> EEGEncoder(MLX) -> BGE-384 cosine argmax.",
     "rule_2_language_model_coupling": "adaptiveComplexityEnabled = true: map (SpectralState, SignalQuality) -> AdaptiveGenerationConfig (High load -> concise low-branching candidates; Relaxed/Focused -> full candidate expansion).",
     "rule_3_visual_intelligence_functor_bridge": "Root UnifiedNeuralComposeRootView observes AppViewModel.currentIntent and detectedSpectralState -> FunctorDialecticalController.stepLiveSensorToyDrive + triggerEquifinalTurn -> FastWireframe / SlowCore / PlasticityShell.",
-    "rule_4_claude_mind_transfer": "memory-gate.py autobank --sync-sql --autoforget-if-needed banks warrant-bearing turns and golden reconciliation into SQLite ZMEMORYRECORD + PostgreSQL pgvector memories + SyncBundleV1 Ed25519 envelope."
+    "rule_4_claude_mind_transfer": "memory-gate.py autobank --sync-sql --autoforget-if-needed banks warrant-bearing turns and golden reconciliation into SQLite ZMEMORYRECORD + PostgreSQL pgvector memories + SyncBundleV1 Ed25519 envelope.",
+    "rule_5_matlab_alara_hippocratism_gate": "MATLAB R2026b (26.2.0.3433840 Student Suite) 4-Stage Tarjan Acyclic Bridge (OpenFOAM_CFD -> USGS_PHREEQC -> Julia_FlowCytometry_SMBR -> MATLAB_Simulink_Simscape, recursion_depth == 0) governed by Health-Physics ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora DHN-Melanin Radioprotection) & Epistemic/Operational Hippocratism (Primum Non Nocere: external referent only, unverified_not_banked quarantine)."
   }
 }

@@ -76,16 +76,31 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
               day: dayFormatter.string(from: Date()), id: "prosody-\(event.index)")
     }
 
+    /// Replaces em-dashes (`\u{2014}`) and en-dashes (`\u{2013}`) with `" - "` so
+    /// live telemetry JSONL streams never emit raw typographic dashes to disk.
+    public static func sanitizeDashes(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\u{2014}", with: " - ")
+            .replacingOccurrences(of: "\u{2013}", with: " - ")
+    }
+
+    private func appendLine(_ rawLine: String, to handle: FileHandle) throws {
+        let sanitized = Self.sanitizeDashes(rawLine)
+        var data = Data(sanitized.utf8)
+        data.append(0x0A) // newline
+        // `write(contentsOf:)`, not `write(_:)` - the latter raises an
+        // uncatchable Objective-C NSException on failure (disk full,
+        // permission revoked) instead of a Swift `Error`, which this
+        // catch block could not actually intercept.
+        try handle.write(contentsOf: data)
+    }
+
     private func write<E: Encodable>(_ event: E, prefix: String, day: String, id: String) {
         do {
             let handle = try fileHandle(prefix: prefix, day: day)
-            var data = try encoder.encode(event)
-            data.append(0x0A) // newline
-            // `write(contentsOf:)`, not `write(_:)` - the latter raises an
-            // uncatchable Objective-C NSException on failure (disk full,
-            // permission revoked) instead of a Swift `Error`, which this
-            // catch block could not actually intercept.
-            try handle.write(contentsOf: data)
+            let encoded = try encoder.encode(event)
+            let line = String(decoding: encoded, as: UTF8.self)
+            try appendLine(line, to: handle)
         } catch {
             BCILog.telemetry.error("TelemetryLogger: failed to write \(prefix, privacy: .public) event \(id, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
@@ -204,7 +219,8 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
         var forgotten = 0
 
         for line in rawLines {
-            guard let data = line.data(using: .utf8),
+            let cleanLine = Self.sanitizeDashes(line)
+            guard let data = cleanLine.data(using: .utf8),
                   let event = try? decoder.decode(DialecticalTurnEvent.self, from: data) else {
                 continue
             }
@@ -218,7 +234,7 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
                 witnessAttempted: event.witnessAttempted ?? true,
                 maxCandidatePotential: event.candidates.map(\.potential).max() ?? 0.0
             ) {
-                keptLines.append(line)
+                keptLines.append(cleanLine)
             } else {
                 forgotten += 1
             }

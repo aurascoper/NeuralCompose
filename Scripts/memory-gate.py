@@ -96,8 +96,10 @@ TRANSIENT_CONTROL_OR_TRANSIT_PHRASES = (
 def _sanitize_dashes(text: str) -> str:
     """Enforce zero em-dashes, zero en-dashes, and scrub private household/device identifiers."""
     out = text.replace("\u2014", " - ").replace("\u2013", "-")
-    out = re.sub(r"Hunter['\u2019]s\s+MacBook\s+Air", "the local MacBook Air", out, flags=re.IGNORECASE)
-    out = re.sub(r"Hunter['\u2019]s\s+MacBook", "the local MacBook", out, flags=re.IGNORECASE)
+    out = re.sub(r"Hunter['\u2019]?s[-\s]+MacBook[-\s]+Air", "the local MacBook Air", out, flags=re.IGNORECASE)
+    out = re.sub(r"Hunter['\u2019]?s[-\s]+MacBook", "the local MacBook", out, flags=re.IGNORECASE)
+    out = re.sub(r"markhunterkinder", "markcollaboratorkinder", out, flags=re.IGNORECASE)
+    out = re.sub(r"user_hunter_role", "user_collaborator_role", out, flags=re.IGNORECASE)
     out = re.sub(r"Hunter\s+Hunter\s+Kendra", "colleague greeting", out, flags=re.IGNORECASE)
     out = re.sub(r"Hunter,\s*Kendra", "Colleagues", out, flags=re.IGNORECASE)
     out = re.sub(r"Speaker\s+Speaker\s+\[REDACTED_NAME\]", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
@@ -234,6 +236,15 @@ class RememberPayload:
 
     def key(self) -> str:
         clean_text = _sanitize_dashes(self.text)
+        if clean_text.startswith("canonical:basilisk-as-m7-planetary-reference-confirmed"):
+            h = hashlib.sha1(b"canonical:basilisk-as-m7-planetary-reference-confirmed").hexdigest()[:10]
+            return f"key:{h}"
+        if clean_text.startswith("canonical:matlab-r2026b-alara-health-physics-hippocratism-gate"):
+            h = hashlib.sha1(b"canonical:matlab-r2026b-alara-health-physics-hippocratism-gate").hexdigest()[:10]
+            return f"key:{h}"
+        if clean_text.startswith("canonical:golden-reconciliation-program-synthesis"):
+            h = hashlib.sha1(f"canonical:golden-reconciliation-program-synthesis:{self.conversation_id}".encode()).hexdigest()[:10]
+            return f"key:{h}"
         h = hashlib.sha1(
             f"{self.source}\x1f{self.conversation_id}\x1f{self.occurred_at}\x1f{clean_text}".encode()
         ).hexdigest()[:10]
@@ -628,6 +639,13 @@ def golden_reconciliation_payloads(telemetry_dir: Path, today: str) -> Iterator[
                 "memory-gate.py autobank --sync-sql --autoforget-if-needed banks warrant-bearing turns and golden reconciliation "
                 "into SQLite ZMEMORYRECORD + PostgreSQL pgvector memories + SyncBundleV1 Ed25519 envelope."
             ),
+            "rule_5_matlab_alara_hippocratism_gate": (
+                "MATLAB R2026b (26.2.0.3433840 Student Suite) 4-Stage Tarjan Acyclic Bridge "
+                "(OpenFOAM_CFD -> USGS_PHREEQC -> Julia_FlowCytometry_SMBR -> MATLAB_Simulink_Simscape, recursion_depth == 0) "
+                "governed by Health-Physics ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora DHN-Melanin "
+                "Radioprotection) & Epistemic/Operational Hippocratism (Primum Non Nocere: external referent only, "
+                "unverified_not_banked quarantine)."
+            ),
         },
     }
     try:
@@ -755,10 +773,24 @@ def sync_payloads_to_sql(
             )
             existing = cur.fetchone()
             if existing is not None:
-                if existing[1] != clean_text:
+                if existing[1] != clean_text and not str(existing[1]).startswith("canonical:basilisk-as-m7-planetary-reference-confirmed"):
                     cur.execute("UPDATE ZMEMORYRECORD SET ZTEXT = ? WHERE Z_PK = ?", (clean_text, int(existing[0])))
                 stats["sqlite_skipped"] += 1
                 continue
+
+            if p.source == "app-dialectic" and p.conversation_id in ("dialectic-2026-11-01", "dialectic-2026-11-02"):
+                occ_cd_check = _parse_iso_to_epoch(p.occurred_at) - COREDATA_EPOCH_OFFSET
+                cur.execute(
+                    """
+                    SELECT Z_PK FROM ZMEMORYRECORD
+                    WHERE ZCONVERSATIONID = ? AND ABS(ZOCCURREDAT - ?) < 0.05 AND ZTEXT LIKE 'L% [run:%'
+                    LIMIT 1
+                    """,
+                    (p.conversation_id, occ_cd_check),
+                )
+                if cur.fetchone() is not None:
+                    stats["sqlite_skipped"] += 1
+                    continue
 
             cur.execute("SELECT COALESCE(MAX(Z_PK), 0) + 1 FROM ZMEMORYRECORD")
             mem_pk = int(cur.fetchone()[0])
@@ -812,7 +844,10 @@ def sync_payloads_to_sql(
         occ_sql = p.occurred_at.replace("'", "''")
         all_tags = list(dict.fromkeys([*p.tags, key_tag]))
 
-        check_sql = f"SELECT COUNT(*) FROM memories WHERE id = '{mem_uuid_str}'::uuid;"
+        check_sql = (
+            f"SELECT COUNT(*) FROM memories WHERE id = '{mem_uuid_str}'::uuid "
+            f"OR (conversation_id = '{conv_sql}' AND occurred_at = '{occ_sql}'::timestamptz AND text LIKE 'L% [run:%');"
+        )
         chk = subprocess.run(
             ["psql", pg_dsn, "-t", "-A", "-c", check_sql],
             capture_output=True,
@@ -821,6 +856,12 @@ def sync_payloads_to_sql(
         if chk.returncode != 0:
             break
         already_exists = chk.stdout.strip() not in ("0", "")
+        if already_exists and (
+            (p.source == "app-dialectic" and p.conversation_id in ("dialectic-2026-11-01", "dialectic-2026-11-02"))
+            or p.text.startswith("canonical:basilisk-as-m7-planetary-reference-confirmed")
+        ):
+            stats["pg_skipped"] += 1
+            continue
 
         tag_sql_parts = []
         for t_name in all_tags:

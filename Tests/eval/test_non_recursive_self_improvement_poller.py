@@ -288,6 +288,82 @@ def test_rollover_2026_11_02_and_basilisk_m7_verified_audit():
     )
     assert rec_l8["has_phonetic_recovery"] is True
 
+    rec_l14 = poller.apply_asr_phonetic_recovery(
+        "What is it floats and ants that are decimals", 170
+    )
+    assert rec_l14["has_phonetic_recovery"] is True
+    assert "floats and ints" in (rec_l14["recovered_canonical_summary"] or "")
+
+    rec_l15 = poller.apply_asr_phonetic_recovery(
+        "Yeah that's problematic I mean I have a problem with your prophecy and that's OK", 171
+    )
+    assert rec_l15["has_phonetic_recovery"] is True
+
+    rec_l16 = poller.apply_asr_phonetic_recovery(
+        "Yeah I'm I just that's lost in translation on me because it's saying things like M71M8 I think you mean to say in 7.1 as a header versus a float or ant that classification in your metacognition", 172
+    )
+    assert rec_l16["has_phonetic_recovery"] is True
+
+    rec_l18 = poller.apply_asr_phonetic_recovery(
+        "What about selfish gene ancestral reconstruction", 174
+    )
+    assert rec_l18["has_phonetic_recovery"] is True
+
+    rec_l19 = poller.apply_asr_phonetic_recovery(
+        "Yeah I may be a little misguided and I think Nathaniel Confort might also be misguided as", 175
+    )
+    assert rec_l19["has_phonetic_recovery"] is True
+    assert "Nathaniel Comfort" in (rec_l19["recovered_canonical_summary"] or "")
+
+    rec_l20 = poller.apply_asr_phonetic_recovery(
+        "Non-recursive self improvements for the Oklo viewer and Matt lab and basil skin you know those pipelines with lizard and open foam", 176
+    )
+    assert rec_l20["has_phonetic_recovery"] is True
+    rule_ids_l20 = {r["rule_id"] for r in rec_l20["matched_rules"]}
+    assert "asr_rule_01_viral_arc_capsid_openfoam_pymol_chimerax" in rule_ids_l20
+    assert "asr_rule_02_vizard_spice_julia_kernels" in rule_ids_l20
+    assert "asr_rule_03_basilisk_space_exploration_software" in rule_ids_l20
+
+    rec_l21 = poller.apply_asr_phonetic_recovery(
+        "How would we integrate of open foam in pH REEQC and flow cytometry pipeline that we already have set up in Julia onto Matt lab now that it's open for Antigravity to do so you can command them", 177
+    )
+    assert rec_l21["has_phonetic_recovery"] is True
+    rule_ids_l21 = {r["rule_id"] for r in rec_l21["matched_rules"]}
+    assert "asr_rule_01_viral_arc_capsid_openfoam_pymol_chimerax" in rule_ids_l21
+    assert "asr_rule_03_basilisk_space_exploration_software" in rule_ids_l21
+
+    rec_alara = poller.apply_asr_phonetic_recovery(
+        "so we need to have you and neural compose working in MATLAB ASAP and ALARA when it comes to health physics hippocratisms", 178
+    )
+    assert rec_alara["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_alara["matched_rules"]}
+
+    rec_l22 = poller.apply_asr_phonetic_recovery("Orderbook and balance engine", 178)
+    assert rec_l22["has_phonetic_recovery"] is True
+
+    rec_l23 = poller.apply_asr_phonetic_recovery(
+        "The hyper liquid account is now funded with $150 approximately of USDC", 179
+    )
+    assert rec_l23["has_phonetic_recovery"] is True
+    assert "Hyperliquid" in (rec_l23["recovered_canonical_summary"] or "")
+
+    rec_l24 = poller.apply_asr_phonetic_recovery(
+        "Write this other is a potentially MEXC6 boundary execution and yield control center that's staking $51", 180
+    )
+    assert rec_l24["has_phonetic_recovery"] is True
+    assert "MEXC" in (rec_l24["recovered_canonical_summary"] or "")
+
+    rec_l25 = poller.apply_asr_phonetic_recovery("What should they be for each", 181)
+    assert rec_l25["has_phonetic_recovery"] is True
+
+    alara_rep = poller.evaluate_matlab_alara_hippocratism_gate()
+    assert alara_rep["matlab_bridge_script"].endswith("/Scripts/matlab_alara_bridge.m")
+    assert alara_rep["smbr_matlab_r2026b_verification_receipt"]["all_checks_passed"] is True
+    assert alara_rep["acyclic_tarjan_bridge"]["is_acyclic_dag"] is True
+    assert alara_rep["acyclic_tarjan_bridge"]["recursion_depth"] == 0
+    assert alara_rep["health_physics_alara_gate"]["alara_compliant"] is True
+    assert alara_rep["hippocratism_primum_non_nocere_gate"]["primum_non_nocere_verified"] is True
+
     # Verify synthesis-v2 JSON includes basilisk_m7_planetary_reference_verified_audit and utc_midnight_rollover_2026_11_02_audit
     repo_synth = Path(__file__).resolve().parents[2] / "InteractionLogs" / "poller-self-improvement-synthesis-v2.json"
     synth_data = json.loads(repo_synth.read_text(encoding="utf-8"))
@@ -296,6 +372,10 @@ def test_rollover_2026_11_02_and_basilisk_m7_verified_audit():
     assert len(audit["verified_claims_banked"]["m7_budget_closure_invariant_7_criteria"]) == 7
     assert "unverified_not_banked until spkpos is checked on a known body" in audit["unverified_claims_gated"]["status"]
     assert "utc_midnight_rollover_2026_11_02_audit" in synth_data
-    assert synth_data["utc_midnight_rollover_2026_11_02_audit"]["total_lines_in_file"] >= 11
+    assert synth_data["utc_midnight_rollover_2026_11_02_audit"]["total_lines_in_file"] >= 25
+    assert "matlab_r2026b_alara_hippocratism_gate" in synth_data
+
+
+
 
 
