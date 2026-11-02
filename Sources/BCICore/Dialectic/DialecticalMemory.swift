@@ -208,12 +208,15 @@ public struct DialecticalMemory: Sendable {
         if words.count >= 2 && Set(words).count == 1 {
             return (false, "single_token_stutter")
         }
-        // Secondary contemplative-mode warrant rule: when witnessAttempted == false and
-        // maxCandidatePotential >= 1.40 with selfSimilarity in [0.85, 0.96] (or nil on turn 0)
-        // and substantive spoken synthesis (>= 25 spoken words), rescue contemplative turns.
+        // Secondary contemplative-mode and high-potential warrant rules:
+        // (a) Contemplative mode (!witnessAttempted && maxCandidatePotential >= 1.40 && selfSimilarity in 0.85...0.96)
+        // (b) High-potential dialectical turns (maxCandidatePotential >= 1.60 && selfSimilarity in 0.85...0.96, e.g. L145, L151-L153)
+        let simVal = selfSimilarity ?? 0.90
         let isContemplativeHighPotential = !witnessAttempted &&
             maxCandidatePotential >= 1.40 &&
-            ((selfSimilarity ?? 0.90) >= 0.85 && (selfSimilarity ?? 0.90) <= 0.96)
+            (simVal >= 0.85 && simVal <= 0.96)
+        let isHighPotentialRescue = maxCandidatePotential >= 1.60 &&
+            (simVal >= 0.85 && simVal <= 0.96)
         if !isContemplativeHighPotential {
             guard words.count >= 3, (words.count + spokenWords.count) >= 5 else {
                 return (false, "short_backchannel_or_hedge")
@@ -226,6 +229,9 @@ public struct DialecticalMemory: Sendable {
         if let sim = selfSimilarity, sim > maxSelfSimilarity {
             if isContemplativeHighPotential {
                 return (true, "warranted_contemplative")
+            }
+            if isHighPotentialRescue {
+                return (true, "warranted_high_potential")
             }
             return (false, String(format: "reflexive_collapse_gt_%.2f", maxSelfSimilarity))
         }

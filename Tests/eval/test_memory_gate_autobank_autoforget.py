@@ -76,6 +76,17 @@ def test_should_autobank_turn_warrant_and_collapse_gates():
     assert ok is False
     assert reason.startswith("reflexive_collapse_gt_")
 
+    ok, reason = mg.should_autobank_turn(
+        heard="Basilisk is an open source Astro dynamic simulation framework developed by the university of Colorado's ABS lab in LA ASP la",
+        spoken="Basilisk pairs a fast C/C++ modular dynamics core with SWIG-wrapped Python scripting for closed-loop spacecraft GNC.",
+        outcome="spoke:coherence-seeking",
+        self_similarity=0.9355,
+        witness_attempted=True,
+        max_candidate_potential=1.6701,
+    )
+    assert ok is True
+    assert reason == "warranted_high_potential"
+
 
 def test_dialectic_payloads_disambiguates_multi_run_and_strips_dashes(tmp_path: Path):
     log_fp = tmp_path / "dialectic-turns-2026-11-01.jsonl"

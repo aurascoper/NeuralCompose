@@ -94,8 +94,16 @@ TRANSIENT_CONTROL_OR_TRANSIT_PHRASES = (
 
 
 def _sanitize_dashes(text: str) -> str:
-    """Enforce zero em-dashes and zero en-dashes across all emitted payloads."""
-    return text.replace("\u2014", " - ").replace("\u2013", "-")
+    """Enforce zero em-dashes, zero en-dashes, and scrub private household/device identifiers."""
+    out = text.replace("\u2014", " - ").replace("\u2013", "-")
+    out = out.replace("Hunter Hunter Kendra", "colleague greeting")
+    out = out.replace("Hunter, Kendra", "Colleagues")
+    out = out.replace("Hunter's MacBook Air", "the local MacBook Air")
+    out = out.replace("Hunter\u2019s MacBook Air", "the local MacBook Air")
+    out = out.replace("Kendra", "colleague")
+    out = out.replace("Uncle Tom", "Family Member")
+    return out
+
 
 
 # -- Warrant & Conditional Autoforgetting Gate ("when/iff needed") -----------
@@ -113,7 +121,8 @@ def should_autobank_turn(
 
     Mirrors `DialecticalMemory.shouldAutobankTurn` in Swift so runtime and
     session-time gates agree on the exact same criteria, including the
-    secondary contemplative-mode warrant rule (!witness_attempted && max_candidate_potential >= 1.40).
+    secondary contemplative-mode warrant rule (!witness_attempted && max_candidate_potential >= 1.40)
+    and high-potential rescue rule (max_candidate_potential >= 1.60 && 0.85 <= self_similarity <= 0.96).
     """
     role = outcome.split(":", 1)[0] if outcome else ""
     if role not in ("spoke", "synthesized"):
@@ -140,7 +149,11 @@ def should_autobank_turn(
         and float(max_candidate_potential) >= 1.40
         and 0.85 <= sim_val <= 0.96
     )
-    if not is_contemplative_high_pot:
+    is_high_potential_rescue = (
+        float(max_candidate_potential) >= 1.60
+        and 0.85 <= sim_val <= 0.96
+    )
+    if not (is_contemplative_high_pot or is_high_potential_rescue):
         if len(words) < 3 or (len(words) + len(spoken_words)) < 5:
             return False, "short_backchannel_or_hedge"
     else:
@@ -149,6 +162,8 @@ def should_autobank_turn(
     if isinstance(self_similarity, (int, float)) and float(self_similarity) > max_self_similarity:
         if is_contemplative_high_pot:
             return True, "warranted_contemplative"
+        if is_high_potential_rescue:
+            return True, "warranted_high_potential"
         return False, f"reflexive_collapse_gt_{max_self_similarity:.2f}"
     return True, ("warranted_contemplative" if is_contemplative_high_pot else "warranted")
 
@@ -287,10 +302,11 @@ def dialectic_payloads(
             if not spoken:
                 continue
 
+            cands = ev.get("candidates") or []
+            max_pot = max((float(c.get("potential", 0.0)) for c in cands), default=0.0)
+            reason = "warranted"
             if not include_unfiltered:
-                cands = ev.get("candidates") or []
-                max_pot = max((float(c.get("potential", 0.0)) for c in cands), default=0.0)
-                eligible, _ = should_autobank_turn(
+                eligible, reason = should_autobank_turn(
                     heard=heard,
                     spoken=spoken,
                     outcome=outcome,
@@ -318,6 +334,13 @@ def dialectic_payloads(
                 ctx.append(f"self_sim {self_sim:.2f}")
             if state:
                 ctx.append(f"state {state}")
+            if (
+                isinstance(self_sim, (int, float))
+                and float(self_sim) > max_self_similarity
+                and reason in ("warranted_contemplative", "warranted_high_potential")
+            ):
+                ctx.append(f"pot {max_pot:.2f}")
+                ctx.append(f"gate {reason}")
             text = _sanitize_dashes(" -> ".join(parts) + (f" ({', '.join(ctx)})" if ctx else ""))
             tags = [f"node:{idx}", "dialectic", role]
             run_id = str(ev.get("runID") or "").strip()
@@ -325,6 +348,8 @@ def dialectic_payloads(
                 tags.append(f"run:{run_id[:8].lower()}")
             if state:
                 tags.append(f"state:{state}")
+            if reason in ("warranted_contemplative", "warranted_high_potential"):
+                tags.append(f"gate:{reason}")
             recorded_at = str(ev.get("recordedAt") or "").strip()
             occurred = recorded_at if recorded_at else iso_at(date, line_ordinal)
             yield RememberPayload(
@@ -625,6 +650,39 @@ def golden_reconciliation_payloads(telemetry_dir: Path, today: str) -> Iterator[
             f"state:{str(live_spec).lower().replace(' ', '-')}",
         ],
         conversation_id=f"golden-reconcile-{today}",
+    )
+
+    basilisk_m7_text = _sanitize_dashes(
+        f"canonical:basilisk-as-m7-planetary-reference-confirmed ({today}) | "
+        "Confirmed (primary URLs): (1) Basilisk spiceInterface (spiceInterface.html) emits SpicePlanetStateMsgPayload "
+        "with PositionVector[3] in SI m, VelocityVector[3] in m/s, J2000Current in s, planet-fixed DCM J20002Pfix[3][3] "
+        "and J20002Pfix_dot[3][3], default IAU_+planet frames (60 s knot spacing, cubic Hermite interpolation; apply 1e3 "
+        "boundary conversion if coupling km/km/s kernels). (2) Vizard (Vizard.html, vizInterface.html) Unity Freeware "
+        "protobuf over ZeroMQ (PING, SIM_UPDATE, OK, REQUEST_INPUT, VIZARD_INPUT, REQUEST_IMAGE_): liveStream=True "
+        "lockstep tcp://localhost:5556, broadcastStream=True pub/sub tcp://localhost:5570 (read-only tap for Julia/HUD), "
+        "noDisplay=True headless opNav. (3) simSynch (simSynch.html) wall-clock slaving with acceleration factor. "
+        "(4) Confirmed coupling precedents: PlanetProfile (Styczinski et al. 2023 doi:10.1029/2022ea002748, spiceypy + "
+        "MoonMag), NutMEG (Higgins & Cockell 2020 PMC7653372, P_M(T) calibrated 288..371 K, flag < 280 K uncalibrated; "
+        "280..330 K methanogen biomass 1e9->1e6 cells/L, CH4 62->3 uM, peak growth 0.007->0.14 h^-1, ATP yield 0.5..1.5 "
+        "mol ATP/mol CO2, Enceladus P ~ 1e-10 M), Affholder et al. 2021 (Enceladus H2/CH4 Bayesian flux closure), "
+        "Sauterey et al. 2022 (Mars H2-methanogen habitability). (5) Traceable 7 budget-closure criteria. (6) Unconfirmed "
+        "(unverified_not_banked): SPICE.jl km units, simSynch.h field names, Europa precedent. (7) ARC Finals Gate: "
+        "r4-salt3 finishes ~8 AM CST; select before 5:59 PM CST Monday (A=31.94 triple-pass, B=r4-salt3 if >29.72 else r2-salt1)."
+    )
+    yield RememberPayload(
+        source="golden-reconcile",
+        text=_truncate(basilisk_m7_text, 1500),
+        occurred_at=iso_at(today, 2),
+        tags=[
+            "golden-reconcile",
+            "basilisk-m7-planetary-reference",
+            "astrodynamics-basilisk-vizard-spice",
+            "nutmeg-bioenergetics",
+            "planetprofile-spiceypy",
+            "arc-prize-2026-finals",
+            "verified-claims-only",
+        ],
+        conversation_id=f"basilisk-m7-reference-{today}",
     )
 
 

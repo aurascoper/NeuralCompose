@@ -4,19 +4,62 @@
   "epistemic_status": "ENGINEERING_TELEMETRY_QUARANTINED",
   "eligible_for_science": false,
   "eligible_for_encoder_training": false,
-  "purpose": "Synchronize 2026-11-01 interaction logs and memory-gate autobank manifest for Fable 5.1 /boost and /migrate-workflows /teamwork orchestration.",
+  "purpose": "Synchronize complete 2026-11-01 / 2026-11-02 interaction logs (through Turn L156), non-recursive poller synthesis v2 (with ASR phonetic recovery and macOS swap/compressor telemetry), Golden Recording reconciliation synthesis, and Basilisk / Vizard / CSPICE / SPICE.jl / SmallModularBioReactors.jl and Symbolics.jl / Turing.jl / JACC.jl / Enzyme.jl / Grassmann.jl / NeuroJAX / EvoJAX / NeuroARC.jl interface turns.",
   "autobank_summary": {
     "date": "2026-11-01",
-    "dialectic_turns_total_2026_11_01": 40,
-    "dialectic_turns_autobanked_2026_11_01": 18,
-    "dialectic_turns_autoforgotten_2026_11_01": 22,
-    "autobank_manifest_payloads_total": 47,
+    "dialectic_turns_total_2026_11_01": 156,
+    "dialectic_turns_autobanked_2026_11_01": 127,
+    "dialectic_turns_autoforgotten_2026_11_01": 29,
+    "poller_rescued_turns_L75_to_end": 82,
+    "poller_asr_phonetic_recoveries_applied": 52,
+    "autobank_manifest_payloads_total": 159,
     "autobank_manifest_by_source": {
-      "app-dialectic": 18,
+      "app-dialectic": 127,
+      "golden-reconcile": 3,
       "report": 1,
       "world-model": 28
     },
     "max_self_similarity_threshold": 0.92
+  },
+  "key_interface_turns": {
+    "basilisk_vizard_spice_smbr": {
+      "dialectic_turn_lines": [
+        75,
+        115,
+        147,
+        149,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156
+      ],
+      "equifinal_decision_ids": [
+        "dec_283_a8fb9b767438",
+        "dec_033_e3f767676871",
+        "dec_1072_9d50f54567e5",
+        "dec_1095_ab2847b568e5",
+        "dec_1096_ec22486ca648",
+        "dec_1097_d6a201d06bb1",
+        "dec_1098_69841fc32a76",
+        "dec_1099_60159eae0f3b",
+        "dec_1100_a5247a2dbdf8"
+      ],
+      "summary": "CU Boulder AVS Lab & LASP Basilisk (BSK) C/C++ + SWIG Python spacecraft simulation framework (L75, L151-L153), Vizard Unity 3D astrodynamics visualizer + NASA NAIF SPICE.jl Julia ephemeris kernels (.bsp, .tpc, .tls, .tsc, .ck, .fk) (L115, L154), Three-Clock Law integration of SPICE kernels and Basilisk timelines with M7 mission clocks without sampling aliasing (L147), and SmallModularBioReactors.jl closed-loop M7 calibration evidence rig (L149)."
+    },
+    "julia_symbolic_differentiable_neuroarc_stack": {
+      "dialectic_turn_lines": [
+        140,
+        141,
+        142,
+        143,
+        144,
+        145,
+        146
+      ],
+      "summary": "Google Pixel 8a wireless Julia/Tailscale debugging (L140-L141), Symbolics.jl closed-form saturation Jacobian (L142), Turing.jl Bayesian inference + JACC.jl GPU/CPU portable array dispatch + Enzyme.jl LLVM automatic differentiation (L143), Grassmann.jl exterior/bivector algebra across TP9/TP10 (L144), Python JAX / NeuroJAX / EvoJAX decorators vs Julia-native kernels (L145), and NeuroARC.jl differentiable recurrence across state-space trajectories (L146)."
+    }
   },
   "files": [
     {
@@ -26,10 +69,10 @@
         "InteractionLogs/dialectic-turns-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/dialectic-turns-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 40,
-      "repo_lines": 39,
-      "raw_source_sha256": "a49b087653fd1ebf081c4d3d9aa9dea6642add52eba93c42ba3ead3f844cbefc",
-      "repo_sanitized_sha256": "a6666a8c7c90972786b80c9a57332d5d10c5c2efcd2b5daa99a40b8905f21938",
+      "raw_source_lines": 156,
+      "repo_lines": 156,
+      "raw_source_sha256": "1575cab632e0fe76a3b145e74a8650d431a1f13a7ee5bc78755853931ea7f451",
+      "repo_sanitized_sha256": "add23acc67644897762a02c367f1d70a3e6cab2e46394601ea1c0274859c5d95",
       "eligible_for_science": false,
       "eligible_for_encoder_training": false,
       "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
@@ -42,10 +85,10 @@
         "InteractionLogs/dialectic-autobank-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/dialectic-autobank-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 18,
-      "repo_lines": 18,
-      "raw_source_sha256": "f7f02b838a4895480b3e846e75c287d4fb5c5c6abba21c497b12f78d13bf06a3",
-      "repo_sanitized_sha256": "f7f02b838a4895480b3e846e75c287d4fb5c5c6abba21c497b12f78d13bf06a3",
+      "raw_source_lines": 127,
+      "repo_lines": 127,
+      "raw_source_sha256": "80750254c927ce0ee87a386681e7af516a3a52b625e7465662bfbe6d2d67ada4",
+      "repo_sanitized_sha256": "80750254c927ce0ee87a386681e7af516a3a52b625e7465662bfbe6d2d67ada4",
       "eligible_for_science": false,
       "eligible_for_encoder_training": false,
       "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
@@ -58,10 +101,10 @@
         "InteractionLogs/prosody-trace-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/prosody-trace-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 33,
-      "repo_lines": 32,
-      "raw_source_sha256": "3963982090c1a1fc4614929bfd6c5bfdda4b5244c7bf3e31f869428624b1480e",
-      "repo_sanitized_sha256": "cbfd9bb7e1b2cdebaff3bdc54c10c1e638202dca9d58d26d88799703c185e1f8",
+      "raw_source_lines": 146,
+      "repo_lines": 146,
+      "raw_source_sha256": "4e1aaaf1ffb8b15c08850f46e52bc991b6211832f9e071bb3db2a18eccfc4f20",
+      "repo_sanitized_sha256": "afc9ca90641cb618a45720b6b0b25834ce628b8b68473f680d132728251a0787",
       "eligible_for_science": false,
       "eligible_for_encoder_training": false,
       "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
@@ -74,10 +117,10 @@
         "InteractionLogs/health-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/health-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 397,
-      "repo_lines": 397,
-      "raw_source_sha256": "eed20bd66b230bb306b3cf88e0e6553908b688fea0024ae2af1379f18201f2b4",
-      "repo_sanitized_sha256": "eed20bd66b230bb306b3cf88e0e6553908b688fea0024ae2af1379f18201f2b4",
+      "raw_source_lines": 964,
+      "repo_lines": 964,
+      "raw_source_sha256": "afd6ec932c64e719ad8f0b3025dd2dea70d4a2ea25c859dd042576a6c488e53d",
+      "repo_sanitized_sha256": "afd6ec932c64e719ad8f0b3025dd2dea70d4a2ea25c859dd042576a6c488e53d",
       "eligible_for_science": false,
       "eligible_for_encoder_training": false,
       "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
@@ -90,10 +133,10 @@
         "InteractionLogs/equifinal-dialectic-turns.jsonl",
         "Tests/Fixtures/InteractionLogs/equifinal-dialectic-turns.jsonl"
       ],
-      "raw_source_lines": 412,
-      "repo_lines": 276,
-      "raw_source_sha256": "9873de48653ef6ed8e8e56b283faca22849ecbabfb5f2d3fef2509115d6de7fb",
-      "repo_sanitized_sha256": "54953cd28b1d9eb900d87435eb6ff8f2ea09a052ed79f0b22fed82d1d5122aaf",
+      "raw_source_lines": 1437,
+      "repo_lines": 1437,
+      "raw_source_sha256": "bd6545d3f9172285448717ead8ab9260c2447c0aceb719f69783c80eb9076729",
+      "repo_sanitized_sha256": "9b687c1adcdc2b98bb4c8ffc5288dca9032ea85511215d147250dc4b2291dbb3",
       "eligible_for_science": false,
       "eligible_for_encoder_training": false,
       "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
@@ -106,10 +149,42 @@
         "InteractionLogs/autobank-manifest-2026-11-01.jsonl",
         "Tests/Fixtures/InteractionLogs/autobank-manifest-2026-11-01.jsonl"
       ],
-      "raw_source_lines": 47,
-      "repo_lines": 47,
-      "raw_source_sha256": "3094e1fbc915d348a404c52d38820f2add8c4288539b580f5e6f3ac39c117658",
-      "repo_sanitized_sha256": "3094e1fbc915d348a404c52d38820f2add8c4288539b580f5e6f3ac39c117658",
+      "raw_source_lines": 159,
+      "repo_lines": 159,
+      "raw_source_sha256": "e9ff9fc85319a87e36c0fdaf2181134b014d296335ed33be8602ce704926866d",
+      "repo_sanitized_sha256": "e9ff9fc85319a87e36c0fdaf2181134b014d296335ed33be8602ce704926866d",
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false,
+      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
+      "dash_invariant": "zero_em_or_en_dashes"
+    },
+    {
+      "filename": "golden-reconciliation-synthesis.json",
+      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/golden-reconciliation-synthesis.json",
+      "repo_paths": [
+        "InteractionLogs/golden-reconciliation-synthesis.json",
+        "Tests/Fixtures/InteractionLogs/golden-reconciliation-synthesis.json"
+      ],
+      "raw_source_lines": 45,
+      "repo_lines": 45,
+      "raw_source_sha256": "32261074254c8e47d15feedf538831c3b288ed48a520c9ba946d77d8bb7e48cd",
+      "repo_sanitized_sha256": "32261074254c8e47d15feedf538831c3b288ed48a520c9ba946d77d8bb7e48cd",
+      "eligible_for_science": false,
+      "eligible_for_encoder_training": false,
+      "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",
+      "dash_invariant": "zero_em_or_en_dashes"
+    },
+    {
+      "filename": "poller-self-improvement-synthesis-v2.json",
+      "source_path_redacted": "~/Documents/NeuralCompose/InteractionLogs/poller-self-improvement-synthesis-v2.json",
+      "repo_paths": [
+        "InteractionLogs/poller-self-improvement-synthesis-v2.json",
+        "Tests/Fixtures/InteractionLogs/poller-self-improvement-synthesis-v2.json"
+      ],
+      "raw_source_lines": 2982,
+      "repo_lines": 2982,
+      "raw_source_sha256": "cabed1fdbb4d26b2c4e747461b6db33b1b70d7406102ed634172bbf22df2beca",
+      "repo_sanitized_sha256": "cabed1fdbb4d26b2c4e747461b6db33b1b70d7406102ed634172bbf22df2beca",
       "eligible_for_science": false,
       "eligible_for_encoder_training": false,
       "quarantine_policy": "ADR-005 / docs/architecture/dialectic-corpus-quarantine.md",

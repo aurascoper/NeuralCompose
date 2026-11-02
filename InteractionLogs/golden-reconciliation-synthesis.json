@@ -1,0 +1,45 @@
+{
+  "schema": "golden-reconciliation-program-synthesis-v1",
+  "generatedAt": "2026-11-02T06:18:11.185688+00:00",
+  "goldenBaseline": {
+    "stem": "golden_20260710-141352",
+    "sessionID": "calibration_2026-07-10T141352_muses",
+    "profile": "muses",
+    "sampleRateHz": 256,
+    "sampleRows": 77973,
+    "sha256Prefix": "d5d714acbaf64280",
+    "demeanedChannelRMSMicrovolts": {
+      "TP9": 162.12,
+      "AF7": 175.41,
+      "AF8": 175.06,
+      "TP10": 146.31
+    },
+    "windowLabelDistribution": {
+      "none": 305
+    }
+  },
+  "liveSessionReconciliation": {
+    "acquisition": "localMuse",
+    "transport": "ble",
+    "signalQuality": "lost",
+    "fullyLive": true,
+    "classifierKind": "coreML",
+    "predictorKind": "mlx",
+    "embedderKind": "coreml",
+    "estimatorKind": "mlx",
+    "activeSpectralState": "High load",
+    "spectralStateCounts": {
+      "High load": 2
+    },
+    "glossScalarRange": [
+      0.1,
+      0.1
+    ]
+  },
+  "synthesizedRoutingProgram": {
+    "rule_1_partial_contact_rescue": "If signalQuality in {poor, lost} and finiteCount(channel) == 512: normalize cleanest finite channel AC RMS -> 35.0 uV, demean, clamp [-150, +150] uV -> EEGEncoder(MLX) -> BGE-384 cosine argmax.",
+    "rule_2_language_model_coupling": "adaptiveComplexityEnabled = true: map (SpectralState, SignalQuality) -> AdaptiveGenerationConfig (High load -> concise low-branching candidates; Relaxed/Focused -> full candidate expansion).",
+    "rule_3_visual_intelligence_functor_bridge": "Root UnifiedNeuralComposeRootView observes AppViewModel.currentIntent and detectedSpectralState -> FunctorDialecticalController.stepLiveSensorToyDrive + triggerEquifinalTurn -> FastWireframe / SlowCore / PlasticityShell.",
+    "rule_4_claude_mind_transfer": "memory-gate.py autobank --sync-sql --autoforget-if-needed banks warrant-bearing turns and golden reconciliation into SQLite ZMEMORYRECORD + PostgreSQL pgvector memories + SyncBundleV1 Ed25519 envelope."
+  }
+}

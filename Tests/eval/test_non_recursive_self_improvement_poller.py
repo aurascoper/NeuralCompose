@@ -91,6 +91,42 @@ def test_asr_phonetic_recovery_dictionary_covers_all_14_rules():
     assert r143["has_phonetic_recovery"] is True
     assert "asr_rule_14_symbolics_turing_jacc_enzyme_neurojax_evojax_neuroarc" in _matched_ids(r143)
 
+    r147 = poller.apply_asr_phonetic_recovery(
+        "How did the spice kernels and Vasilis timelines with M7 mission clocks integrate with",
+        147,
+    )
+    assert r147["has_phonetic_recovery"] is True
+    assert "asr_rule_02_vizard_spice_julia_kernels" in _matched_ids(r147)
+    assert "asr_rule_03_basilisk_space_exploration_software" in _matched_ids(r147)
+
+    r151 = poller.apply_asr_phonetic_recovery(
+        "Basilisk is an open source Astro dynamic simulation framework developed by the university of Colorado's ABS lab in LA ASP la",
+        151,
+    )
+    assert r151["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in _matched_ids(r151)
+
+    r153 = poller.apply_asr_phonetic_recovery(
+        "Basilisk supports faster than real time spacecraft simulations including reputable Monte Carlo runs hardware in the loop and complex guidance control research all this could be relevant to Nutronix research and open MC engineering simulation",
+        153,
+    )
+    assert r153["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in _matched_ids(r153)
+
+    r154 = poller.apply_asr_phonetic_recovery(
+        "A standalone visualization tool called wizard based on the unity engine can display the spacecraft local planets sensors and actuators and 3-D",
+        154,
+    )
+    assert r154["has_phonetic_recovery"] is True
+    assert "asr_rule_02_vizard_spice_julia_kernels" in _matched_ids(r154)
+
+    r156 = poller.apply_asr_phonetic_recovery(
+        "Sea spice itself returns to KM and KM over S and nothing and read me claims a conversion so treat spy.jail output as KM until you check SPKPOS on a known body yourself",
+        156,
+    )
+    assert r156["has_phonetic_recovery"] is True
+    assert "asr_rule_02_vizard_spice_julia_kernels" in _matched_ids(r156)
+
 
 def test_poller_single_pass_idempotency_and_watermark(tmp_path: Path):
     log_fp = tmp_path / "dialectic-turns-2026-11-01.jsonl"
@@ -151,7 +187,8 @@ def test_poller_single_pass_idempotency_and_watermark(tmp_path: Path):
             "candidates": [{"role": "Thesis", "potential": 1.62}],
         }
     )
-    log_fp.write_text("\n".join(json.dumps(t) for t in turns) + "\n", encoding="utf-8")
+    base_content = "\n".join(json.dumps(t) for t in turns) + "\n"
+    log_fp.write_text(base_content, encoding="utf-8")
 
     res1 = poller.run_single_poll_pass(
         dialectic_log_path=log_fp,
@@ -178,3 +215,48 @@ def test_poller_single_pass_idempotency_and_watermark(tmp_path: Path):
         sync_sql=True,
     )
     assert res2["claude_mind_sql_rescue_telemetry"]["sqlite_inserted"] == 0
+
+    # Simulate TelemetryLogger.swift mid-flush writing an incomplete 76th JSONL line at EOF
+    log_fp.write_text(base_content + '{"index": 75, "runID": "1824FBDB", "heard": "partial mid-flush', encoding="utf-8")
+    res_mid_flush = poller.run_single_poll_pass(
+        dialectic_log_path=log_fp,
+        watermark_path=wm_fp,
+        synthesis_out_path=synth_fp,
+        sqlite_path=db_fp,
+        pg_dsn="postgresql://invalid/none",
+        sync_sql=True,
+    )
+    assert res_mid_flush["ground_truth_verification"]["dialectic_log_total_lines"] == 75
+    wm_mid = json.loads(wm_fp.read_text(encoding="utf-8"))
+    assert wm_mid["last_processed_line"] == 75
+    assert wm_mid["monotonic_progression_verified"] is True
+
+    # Complete the 76th JSONL line and verify the next poll pass advances watermark to 76
+    turn76 = {
+        "index": 75,
+        "runID": "1824FBDB-C680-4103-B25D-98298A60D6E8",
+        "recordedAt": "2026-11-02T05:53:47.089Z",
+        "heard": "A standalone visualization tool called wizard based on the unity engine can display the spacecraft local planets sensors and actuators and 3-D",
+        "spokenText": "Vizard renders spacecraft, local planets, sensor cones, and actuator gimbals in Unity 3D over ZeroMQ Protobuf streams from Basilisk.",
+        "outcome": "spoke:coherence-seeking",
+        "loopMode": "reflective",
+        "witnessAttempted": True,
+        "tension": 0.08,
+        "glossScalar": 0.42,
+        "selfSimilarity": 0.84,
+        "candidates": [{"role": "Thesis", "potential": 1.60}],
+    }
+    log_fp.write_text(base_content + json.dumps(turn76) + "\n", encoding="utf-8")
+    res_flushed = poller.run_single_poll_pass(
+        dialectic_log_path=log_fp,
+        watermark_path=wm_fp,
+        synthesis_out_path=synth_fp,
+        sqlite_path=db_fp,
+        pg_dsn="postgresql://invalid/none",
+        sync_sql=True,
+    )
+    assert res_flushed["ground_truth_verification"]["dialectic_log_total_lines"] == 76
+    assert res_flushed["dialectical_runs_ground_truth_L75_to_L116"]["rescued_or_warranted_count_L75_to_end"] == 2
+    wm_flushed = json.loads(wm_fp.read_text(encoding="utf-8"))
+    assert wm_flushed["last_processed_line"] == 76
+

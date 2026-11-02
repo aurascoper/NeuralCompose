@@ -801,7 +801,20 @@ public actor HypnagogicDialecticLoop {
         ("neuro jacks", "NeuroJAX"),
         ("evo jacks", "EvoJAX"),
         ("neuro arc.jl", "NeuroARC.jl"),
-        ("tp nine", "TP9")
+        ("tp nine", "TP9"),
+        ("vasilis timelines", "Basilisk timelines"),
+        ("vasilis", "Basilisk"),
+        ("small modular bio reactors.jl", "SmallModularBioReactors.jl"),
+        ("bio reactors.jl", "SmallModularBioReactors.jl"),
+        ("abs lab in la asp la", "AVS Lab and LASP"),
+        ("abs lab in la asp", "AVS Lab and LASP"),
+        ("abs lab", "AVS Lab"),
+        ("c/c plus plus", "C/C++"),
+        ("reputable monte carlo", "reproducible Monte Carlo"),
+        ("nutronix", "neutronics"),
+        ("open mc", "OpenMC"),
+        ("sea spice", "CSPICE"),
+        ("spy.jail", "SPICE.jl")
     ]
 
 
@@ -811,9 +824,11 @@ public actor HypnagogicDialecticLoop {
         var result = heard
         let lowered = heard.lowercased()
         var matched: [String] = []
-        // Contextual guard: only expand "wizard" -> "Vizard" when paired with spice / julia / colonels / basilisk / kernel
+        // Contextual guard: only expand "wizard" -> "Vizard" when paired with spice / julia / colonels / basilisk / kernel / unity / spacecraft / planet / sensor / actuator
         let hasSpiceOrAstroContext = lowered.contains("spice") || lowered.contains("colonel") ||
-            lowered.contains("kernel") || lowered.contains("basilisk") || lowered.contains("vizard")
+            lowered.contains("kernel") || lowered.contains("basilisk") || lowered.contains("vizard") ||
+            lowered.contains("unity") || lowered.contains("spacecraft") || lowered.contains("planet") ||
+            lowered.contains("sensor") || lowered.contains("actuator") || lowered.contains("astro") || lowered.contains("vasilis")
         // Contextual guard: only expand "kmart" -> "ChimeraX" or "pie mall" -> "PyMOL" when in a scientific/modeling context
         let hasModelingOrBioContext = lowered.contains("model") || lowered.contains("gene") ||
             lowered.contains("jeans") || lowered.contains("arc") || lowered.contains("capsid") ||
@@ -844,14 +859,17 @@ public actor HypnagogicDialecticLoop {
     public static func isAstrodynamicsOrM7MultiscaleQuery(_ heard: String) -> Bool {
         let lowered = heard.lowercased()
         if (lowered.contains("wizard") || lowered.contains("vizard")) &&
-           (lowered.contains("spice") || lowered.contains("colonel") || lowered.contains("kernel") || lowered.contains("julia")) {
+           (lowered.contains("spice") || lowered.contains("colonel") || lowered.contains("kernel") ||
+            lowered.contains("julia") || lowered.contains("unity") || lowered.contains("spacecraft") ||
+            lowered.contains("planet") || lowered.contains("sensor") || lowered.contains("actuator")) {
             return true
         }
         let indicators = [
-            "basilisk", "vizard", "spice.jl", "spice julia", "julia colonels",
+            "basilisk", "vasilis", "vizard", "spice.jl", "spice julia", "julia colonels", "spice kernels",
+            "simsynch", "planetprofile", "nutmeg", "affholder", "sauterey", "small modular bio", "bio reactors.jl", "smbr",
             "viral arc", "arc jeans", "openfoam", "open foam", "pymol", "pie mall", "chimerax",
             "logic folding", "disintegration loops", "centennial goch", "santaneel ghosh",
-            "palmer nana spheres", "polymer nanospheres"
+            "palmer nana spheres", "polymer nanospheres", "avs lab", "abs lab", "nutronix", "open mc"
         ]
         return indicators.contains(where: { lowered.contains($0) })
     }
@@ -859,21 +877,25 @@ public actor HypnagogicDialecticLoop {
     /// Architectural reference injected into the turn preamble when the speaker asks about
     /// Basilisk, Vizard, SPICE.jl Julia ephemeris kernels, or Viral Arc Capsid / OpenFOAM / PyMOL / ChimeraX.
     public static let astrodynamicsAndM7MultiscalePreamble: String = """
-    [Astrodynamics (Basilisk + Vizard + SPICE.jl) & M7 Multiscale (Viral Arc Capsid + OpenFOAM + PyMOL + ChimeraX + LogicFolding) Reference:
+    [Astrodynamics (Basilisk + Vizard + SPICE.jl + PlanetProfile + NutMEG) & M7 Multiscale Reference (Verified Claims Memo "Basilisk as M7 planetary reference.md"):
     1. ASR Phonetic Recovery Notice:
-       - "wizard ... spice Julia Colonels" is an ASR phonetic corruption of "Vizard ... SPICE Julia kernels (SPICE.jl)".
-       - "viral arc jeans ... open foam or pie mall or Kmart" is an ASR phonetic corruption of "viral Arc capsid gene in OpenFOAM, PyMOL, or ChimeraX".
-       - "Baczynski ... and tropic signal ... logic folding to subvert more law" maps to William Basinski's The Disintegration Loops, thermodynamic entropic signal, and Huawei LogicFolding (Tau = R*C 3D hybrid-bonding scaling) to subvert Moore's Law.
-    2. Basilisk + Vizard + SPICE.jl Astrodynamics Architecture:
-       - Basilisk (CU Boulder Autonomous Vehicle Systems / AVS Lab): modular C/C++ and Python spacecraft flight software and astrodynamics simulation framework using message-passing modules.
-       - Vizard: CU Boulder AVS Lab's Unity3D-based spacecraft and planetary astrodynamics visualization application that streams simulation state from Basilisk or Julia over ZeroMQ / Protobuf (VizMessage) sockets to render 3D attitude, camera frustums, reaction wheels, thrusters, and planetary bodies (Earth, Mars, Enceladus, Europa).
-       - SPICE.jl (Julia wrapper for NASA NAIF CSPICE toolkit): loads and queries planetary, lunar, and spacecraft ephemeris kernels (.bsp SPK trajectory kernels, .tpc PCK planetary constants, .tls LSK leapseconds, .ck CK orientation, .fk FK reference frames) via furnsh, spkezr, spkpos, and pxform, feeding exact orbital irradiance, eclipse, and tidal-flexing boundary conditions into M7WorldScenario.
+       - "wizard ... spice Julia Colonels" / "Vasilis timelines" -> "Vizard ... SPICE Julia kernels (SPICE.jl)" / "Basilisk timelines".
+       - "viral arc jeans ... open foam or pie mall or Kmart" -> "viral Arc capsid gene in OpenFOAM, PyMOL, or ChimeraX".
+       - "Baczynski ... and tropic signal ... logic folding to subvert more law" -> William Basinski's The Disintegration Loops, thermodynamic entropic signal, and Huawei LogicFolding (Tau = R*C 3D hybrid-bonding scaling) to subvert Moore's Law.
+    2. Confirmed Basilisk + Vizard + SPICE + Bioenergetics Architecture (Banked Ground Truth):
+       - Basilisk spiceInterface: emits SpicePlanetStateMsgPayload with PositionVector[3] in SI m, VelocityVector[3] in m/s, J2000Current in s, planet-fixed DCM J20002Pfix[3][3] and J20002Pfix_dot[3][3], default "IAU_" + planet frames (60 s knot spacing, cubic Hermite interpolation).
+       - Vizard (CU Boulder AVS Lab Unity-based Freeware, protobuf over ZeroMQ; vizInterface handshake strings PING, SIM_UPDATE, OK, REQUEST_INPUT, VIZARD_INPUT, REQUEST_IMAGE_): 3 live modes: liveStream=True lockstep on tcp://localhost:5556, broadcastStream=True publish/subscribe on tcp://localhost:5570 (non-blocking read-only tap for a Julia or NeuralCompose HUD subscriber), and noDisplay=True headless opNav.
+       - simSynch: slaves simulation to wall clock with an acceleration factor (scenarioBasicOrbitStream).
+       - Confirmed Coupling Precedents:
+         * PlanetProfile (Styczinski, Vance & Melwani Daswani 2023, doi:10.1029/2022ea002748): pulls SpiceyPy and MoonMag as a real SPICE-to-interior coupling precedent.
+         * NutMEG (Higgins & Cockell 2020, PMC7653372): maintenance power P_M(T) gate calibrated 288..371 K (flag < 280 K as uncalibrated); across 280..330 K methanogen steady-state biomass drops 1e9 -> 1e6 cells/L, total CH4 drops 62 -> 3 uM, peak growth rate rises 0.007 -> 0.14 h^-1, ATP yield 0.5..1.5 mol ATP/mol CO2, Enceladus dissolved P ~ 1e-10 M.
+         * Affholder et al. 2021: Enceladus Cassini plume H2/CH4 Bayesian flux-closure precedent.
+         * Sauterey et al. 2022: Mars subsurface H2-methanogen habitability and cooling feedback precedent.
+       - Section 5 Traceable 7 Budget-Closure Criteria: (1) Catabolic energy supply from local chemistry; (2) Explicit temperature-dependent maintenance power P_M(T) with < 280 K out-of-range flag; (3) Net growth after maintenance matching 280..330 K biomass/CH4/rate shifts; (4) Nutrient limitation gate CO2, H2, P ~ 1e-10 M; (5) ATP yield uncertainty range 0.5..1.5 mol ATP/mol CO2; (6) Material closure against observable flux via Bayes factor; (7) Interior state self-consistent with SPICE geometry via PlanetProfile.
+       - Unconfirmed Claims Held Unbanked (do not assert as verified): SPICE.jl km units (apply 1e3 boundary conversion rule to SI m and m/s), simSynch.h internal C++ field names, and any Europa coupling precedent (unverified_not_banked).
     3. Viral Arc Capsid Gene (dArc1 / hArc) in OpenFOAM, PyMOL, ChimeraX, and M7Multiscale:
-       - Arc (Activity-Regulated Cytoskeleton-Associated Protein) is a domesticated Ty3/gypsy retrotransposon Gag capsid gene that self-assembles into icosahedral virus-like capsids (T=4, ~32 nm diameter, PDB 6GSE / 4X3H) encapsulating mRNA for intercellular synaptic transfer via extracellular vesicles.
-       - PyMOL and UCSF ChimeraX (plus SobolevMacromolecule) model the molecular capsid assembly, NTD/CTD domain interfaces, and ancestral sequence reconstruction (ASR), while OpenFOAM models interstitial / synaptic-cleft Stokes-advection-diffusion transport (Re << 1, Peclet Pe = L*U/D_capsid) coupled to M7Multiscale.
-    4. Huawei LogicFolding & Tau (tau = R*C) 3D Hybrid-Bonding Scaling vs Moore's Law:
-       - LogicFolding uses fine-grained 3D wafer-to-wafer hybrid bonding and vertical transistor/CFET stacking to minimize interconnect RC time constants (tau = R*C) without EUV planar shrinking, trading 2D wire delay for vertical z-axis interlayer parasitic capacitance and thermal crosstalk.
-    Address the literal Vizard + SPICE.jl ephemeris kernel, Viral Arc + OpenFOAM/PyMOL/ChimeraX, or LogicFolding Tau = R*C architecture directly in your first sentence.]
+       - Arc is a domesticated Ty3/gypsy retrotransposon Gag capsid gene self-assembling into icosahedral virus-like capsids (T=4, ~32 nm diameter, PDB 6GSE / 4X3H) for synaptic mRNA transfer, modeled in PyMOL / ChimeraX / OpenFOAM.
+    Address the literal Vizard + Basilisk spiceInterface + SPICE.jl + NutMEG/PlanetProfile, Viral Arc + OpenFOAM/PyMOL/ChimeraX, or LogicFolding Tau = R*C architecture directly in your first sentence.]
 
     """
 

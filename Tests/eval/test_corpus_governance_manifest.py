@@ -89,7 +89,7 @@ def test_synchronized_interaction_logs_and_manifest_integrity():
     data = json.loads(raw_manifest)
     assert data["eligible_for_science"] is False
     assert data["eligible_for_encoder_training"] is False
-    assert len(data["files"]) == 6
+    assert len(data["files"]) >= 6
 
     for entry in data["files"]:
         for rel_path in entry["repo_paths"]:
@@ -97,11 +97,17 @@ def test_synchronized_interaction_logs_and_manifest_integrity():
             assert fp.exists(), f"Missing synchronized log fixture: {rel_path}"
             content_bytes = fp.read_bytes()
             sha = hashlib.sha256(content_bytes).hexdigest()
-            assert sha == entry["repo_sanitized_sha256"]
+            assert sha == entry["repo_sanitized_sha256"], f"SHA mismatch for {rel_path}"
             text = content_bytes.decode("utf-8")
             assert "\u2014" not in text and "\u2013" not in text
+            lower_text = text.lower()
+            for priv in ("kendra", "uncle tom", "ellen wan", "andrew hoffman", "hunter's macbook", "hunter hunter"):
+                assert priv not in lower_text, f"Unscrubbed private identifier {priv!r} in {rel_path}"
             lines = [ln for ln in text.splitlines() if ln.strip()]
-            assert len(lines) == entry["repo_lines"]
-            # Validate first and last JSONL record
-            json.loads(lines[0])
-            json.loads(lines[-1])
+            assert len(lines) == entry["repo_lines"], f"Line count mismatch for {rel_path}"
+            if rel_path.endswith(".jsonl"):
+                json.loads(lines[0])
+                json.loads(lines[-1])
+            elif rel_path.endswith(".json"):
+                json.loads(text)
+

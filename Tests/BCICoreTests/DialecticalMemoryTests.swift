@@ -311,6 +311,32 @@ final class DialecticalMemoryTests: XCTestCase {
         )
         XCTAssertTrue(recL132And134.canonicalHeard.contains("feel modulus"))
         XCTAssertTrue(recL132And134.canonicalHeard.contains("Phase B sleep"))
+
+        // High-potential rescue rule (witnessAttempted && maxCandidatePotential >= 1.60 && selfSimilarity in 0.85...0.96, rescuing L145, L151, L152, L153)
+        let wHighPot = DialecticalMemory.evaluateAutobankWarrant(
+            heard: "Basilisk is an open source Astro dynamic simulation framework developed by the university of Colorado's ABS lab in LA ASP la",
+            spoken: "Basilisk pairs a fast C/C++ modular dynamics core with SWIG-wrapped Python scripting for closed-loop spacecraft GNC.",
+            outcome: "spoke:coherence-seeking",
+            selfSimilarity: 0.9355,
+            maxSelfSimilarity: 0.92,
+            witnessAttempted: true,
+            maxCandidatePotential: 1.6701
+        )
+        XCTAssertTrue(wHighPot.eligible)
+        XCTAssertEqual(wHighPot.reason, "warranted_high_potential")
+
+        // L147..L156 ASR phonetic recovery (Basilisk, SmallModularBioReactors.jl, Vizard Unity 3D, CSPICE, SPICE.jl)
+        let recL154 = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "A standalone visualization tool called wizard based on the unity engine can display the spacecraft local planets sensors and actuators and 3-D"
+        )
+        XCTAssertTrue(recL154.canonicalHeard.contains("Vizard"))
+        XCTAssertTrue(HypnagogicDialecticLoop.isAstrodynamicsOrM7MultiscaleQuery("A standalone visualization tool called wizard based on the unity engine can display the spacecraft local planets sensors and actuators and 3-D"))
+
+        let recL156 = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "Sea spice itself returns to KM and KM over S and nothing and read me claims a conversion so treat spy.jail output as KM until you check SPKPOS on a known body yourself"
+        )
+        XCTAssertTrue(recL156.canonicalHeard.contains("CSPICE"))
+        XCTAssertTrue(recL156.canonicalHeard.contains("SPICE.jl"))
     }
 }
 

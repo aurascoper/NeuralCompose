@@ -82,8 +82,16 @@ CANONICAL_CONSOLIDATION_RULE_SHA256: str = hashlib.sha256(
 
 
 def _sanitize_dashes(text: str) -> str:
-    """Enforce strictly zero em-dashes and zero en-dashes across all strings."""
-    return text.replace("\u2014", " - ").replace("\u2013", "-")
+    """Enforce strictly zero em-dashes and zero en-dashes across all strings,
+    and scrub private household/device identifiers."""
+    out = text.replace("\u2014", " - ").replace("\u2013", "-")
+    out = re.sub(r"Hunter's\s+MacBook\s+Air", "the local MacBook Air", out, flags=re.IGNORECASE)
+    out = re.sub(r"Hunter's\s+MacBook", "the local MacBook", out, flags=re.IGNORECASE)
+    out = re.sub(r"Hunter\s+Hunter\s+Kendra", "colleague greeting", out, flags=re.IGNORECASE)
+    out = re.sub(r"Hunter,\s*Kendra", "Colleagues", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bKendra\b", "colleague", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bUncle\s+Tom\b", "a colleague", out, flags=re.IGNORECASE)
+    return out
 
 
 def verify_non_recursive_consolidation_guard(
@@ -149,7 +157,7 @@ def self_test_consolidation_rule_immutability() -> bool:
 
 
 # ==============================================================================
-# 2. ASR PHONETIC RECOVERY DICTIONARY (Turns L75, L79, L85, L100, L103, L109, L115, L116)
+# 2. ASR PHONETIC RECOVERY DICTIONARY (Turns L75, L79, L85, L100, L103, L109, L115, L116, L140-L152)
 # ==============================================================================
 
 ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
@@ -173,39 +181,76 @@ ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
     },
     {
         "rule_id": "asr_rule_02_vizard_spice_julia_kernels",
-        "turn_lines": [115],
-        "raw_asr_patterns": ["wizard", "spice julia colonels", "julia colonels"],
+        "turn_lines": [115, 147, 154, 155, 156],
+        "raw_asr_patterns": [
+            "wizard",
+            "spice julia colonels",
+            "julia colonels",
+            "vasilis timelines",
+            "spice kernels",
+            "m7 mission clocks",
+            "wizard based on the unity engine",
+            "sea spice",
+            "spy.jail",
+            "spkpos",
+        ],
         "phonetic_corruption_sample": (
-            "What is a wizard about and how it applied to the spice Julia Colonels"
+            "What is a wizard about and how it applied to the spice Julia Colonels / "
+            "How did the spice kernels and Vasilis timelines with M7 mission clocks integrate with / "
+            "A standalone visualization tool called wizard based on the unity engine can display the spacecraft local planets sensors and actuators and 3-D / "
+            "Sea spice itself returns to KM and KM over S and nothing and read me claims a conversion so treat spy.jail output as KM until you check SPKPOS on a known body yourself"
         ),
         "recovered_canonical_meaning": (
-            "What is Vizard (CU Boulder AVS Lab Unity 3D astrodynamics visualizer over ZeroMQ/Protobuf "
-            "VizMessage) about and how is it applied to the SPICE.jl Julia ephemeris kernels "
-            "(.bsp, .tpc, .tls, .ck, .fk via furnsh/spkezr/pxform)?"
+            "What is Vizard ('wizard' -> 'Vizard', CU Boulder AVS Lab standalone Unity 3D astrodynamics "
+            "visualizer displaying spacecraft, local planets, sensors, and actuators over ZeroMQ/Protobuf "
+            "VizMessage) about and how is it applied to the SPICE.jl ('spy.jail' -> 'SPICE.jl') Julia ephemeris kernels "
+            "wrapping NAIF CSPICE ('Sea spice' -> 'CSPICE', where SPICE.jl unit conventions are held unverified_not_banked "
+            "until spkpos is checked on a known body, applying a 1e3 boundary conversion to Basilisk SI m and m/s), and how do "
+            "SPICE kernels and Basilisk ('Vasilis') timelines integrate with M7 mission clocks under the "
+            "Three-Clock Law (tau_mission != tau_flow != tau_kinetic) without sampling/interpolation aliasing?"
         ),
         "m7_multiscale_bridge": (
-            "Couples CU Boulder AVS Lab Basilisk + Vizard 3D spacecraft/planetary visualization and "
-            "NASA NAIF SPICE.jl ephemeris kernels (.bsp trajectory, .tpc planetary constants, .tls leapseconds, "
-            ".ck orientation, .fk frames) to M7WorldScenario planetary boundary conditions (Earth, Mars, Enceladus, Europa)."
+            "Couples CU Boulder AVS Lab Basilisk (spiceInterface SpicePlanetStateMsgPayload in SI m and m/s, 60 s knot "
+            "spacing, cubic Hermite interpolation) + Vizard Unity 3D spacecraft/planetary visualization (ZeroMQ liveStream "
+            "tcp://localhost:5556, broadcastStream pub/sub tcp://localhost:5570, headless opNav) + simSynch wall-clock "
+            "slaving with NASA NAIF CSPICE / SPICE.jl ephemeris kernels (apply 1e3 boundary conversion to SI m and m/s) "
+            "and PlanetProfile / NutMEG / SmallModularBioReactors.jl under the Three-Clock Law."
         ),
-        "domain_tags": ["asr-recovered", "vizard", "spice-jl", "basilisk", "ephemeris-kernels", "m7-planetary"],
+        "domain_tags": ["asr-recovered", "vizard", "spice-jl", "cspice", "basilisk", "ephemeris-kernels", "m7-planetary", "three-clock-law"],
     },
     {
         "rule_id": "asr_rule_03_basilisk_space_exploration_software",
-        "turn_lines": [75],
-        "raw_asr_patterns": ["basilisks space exploration software", "basilisk"],
+        "turn_lines": [75, 147, 149, 151, 152, 153],
+        "raw_asr_patterns": [
+            "basilisks space exploration software",
+            "basilisk",
+            "vasilis timelines",
+            "small modular bio reactors.jl",
+            "abs lab in la asp",
+            "python interface via swig",
+            "nutronix",
+            "open mc",
+        ],
         "phonetic_corruption_sample": (
-            "What can you tell me about basilisks space exploration software"
+            "What can you tell me about basilisks space exploration software / "
+            "How did the spice kernels and Vasilis timelines with M7 mission clocks integrate with / "
+            "Right that's why we're trying to model small modular bio reactors.JL for M7 evidence / "
+            "Basilisk is an open source Astro dynamic simulation framework developed by the university of Colorado's ABS lab in LA ASP la / "
+            "Basilisk supports faster than real time spacecraft simulations including reputable Monte Carlo runs hardware in the loop ... Nutronix research and open MC engineering simulation"
         ),
         "recovered_canonical_meaning": (
-            "What can you tell me about Basilisk astrodynamics flight software framework "
-            "(CU Boulder AVS Lab modular C/C++/Python spacecraft simulation framework paired with Vizard and SPICE)?"
+            "Basilisk (BSK) open-source astrodynamics flight software framework developed by the University "
+            "of Colorado Boulder's Autonomous Vehicle Systems (AVS) Lab and LASP ('ABS lab in LA ASP'), "
+            "combining a high-speed C/C++ core with a SWIG Python interface, repeatable faster-than-realtime "
+            "Monte-Carlo runs, hardware-in-the-loop, Vizard 3D visualization, and SPICE ephemeris kernels, "
+            "coupled to SmallModularBioReactors.jl ('small modular bio reactors.JL'), M7SpatialFrame / M7 mission "
+            "clocks, and separated from nuclear neutronics / OpenMC ('Nutronix' / 'open MC') engineering simulation."
         ),
         "m7_multiscale_bridge": (
-            "Provides autonomous spacecraft attitude, orbital mechanics, and closed-loop planetary sensing "
-            "context feeding M7WorldScenario exploration scenarios."
+            "Provides autonomous spacecraft attitude, orbital mechanics, SWIG/C++ Monte-Carlo execution, "
+            "and closed-loop planetary sensing context feeding M7WorldScenario and SmallModularBioReactors.jl."
         ),
-        "domain_tags": ["asr-recovered", "basilisk", "astrodynamics", "vizard", "spice-jl"],
+        "domain_tags": ["asr-recovered", "basilisk", "astrodynamics", "vizard", "spice-jl", "small-modular-bioreactors-jl", "avs-lab-lasp", "openmc-neutronics"],
     },
     {
         "rule_id": "asr_rule_04_randall_sundrum_warped_ads5_brane",
@@ -549,8 +594,18 @@ def apply_asr_phonetic_recovery(heard: str, line_number: int) -> dict[str, Any]:
                 or (has_modeling_context and ("pie mall" in lowered or "kmart" in lowered))
             )
         elif rule["rule_id"] == "asr_rule_02_vizard_spice_julia_kernels":
-            pat_hit = ("wizard" in lowered and ("spice" in lowered or "colonel" in lowered)) or (
-                "julia colonels" in lowered
+            pat_hit = (
+                (
+                    "wizard" in lowered
+                    and any(
+                        ctx in lowered
+                        for ctx in ("spice", "colonel", "kernel", "unity", "spacecraft", "planet", "sensor", "actuator")
+                    )
+                )
+                or ("julia colonels" in lowered)
+                or ("spice kernels" in lowered and ("vasilis" in lowered or "m7" in lowered))
+                or ("sea spice" in lowered)
+                or ("spy.jail" in lowered)
             )
         else:
             pat_hit = any(p in lowered for p in rule["raw_asr_patterns"])
@@ -787,10 +842,15 @@ def evaluate_turn_consolidation_warrant(ev: dict[str, Any], line_number: int) ->
     }
 
 
-def read_jsonl_readonly(path: Path) -> tuple[list[str], str]:
-    """Read a JSONL file using low-level O_RDONLY descriptor and return (lines, sha256)."""
+def _read_ingested_jsonl_readonly(path: Path, max_bytes: Optional[int] = None) -> tuple[list[str], str, int]:
+    """Read a JSONL file using low-level O_RDONLY descriptor.
+    If max_bytes is None and the final non-empty line at EOF is a mid-flush partial/truncated
+    JSON record, hold back the incomplete trailing bytes so watermark progression only counts
+    complete JSONL records. If max_bytes is provided, hash only the first max_bytes bytes so
+    concurrent EOF appends by TelemetryLogger.swift during SQL sync do not trigger false-positive
+    read-only invariant failures."""
     if not path.exists():
-        return [], ""
+        return [], "", 0
     fd = os.open(str(path), os.O_RDONLY)
     try:
         raw_bytes = b""
@@ -799,10 +859,31 @@ def read_jsonl_readonly(path: Path) -> tuple[list[str], str]:
             if not chunk:
                 break
             raw_bytes += chunk
+            if max_bytes is not None and len(raw_bytes) >= max_bytes:
+                raw_bytes = raw_bytes[:max_bytes]
+                break
     finally:
         os.close(fd)
+
+    if max_bytes is None and raw_bytes:
+        # Check if the trailing non-empty segment at EOF is a complete JSON object
+        stripped = raw_bytes.rstrip(b" \t\r\n")
+        last_nl = stripped.rfind(b"\n")
+        last_line_bytes = stripped[last_nl + 1 :] if last_nl >= 0 else stripped
+        if last_line_bytes:
+            try:
+                json.loads(last_line_bytes.decode("utf-8"))
+            except Exception:
+                raw_bytes = stripped[: last_nl + 1] if last_nl >= 0 else b""
+
     sha = hashlib.sha256(raw_bytes).hexdigest()
     lines = [ln for ln in raw_bytes.decode("utf-8", errors="replace").splitlines() if ln.strip()]
+    return lines, sha, len(raw_bytes)
+
+
+def read_jsonl_readonly(path: Path) -> tuple[list[str], str]:
+    """Read a JSONL file using low-level O_RDONLY descriptor and return (lines, sha256)."""
+    lines, sha, _ = _read_ingested_jsonl_readonly(path)
     return lines, sha
 
 
@@ -1057,8 +1138,8 @@ def run_single_poll_pass(
     # 2. Swap & VM Compressor backpressure check
     live_swap = query_live_swap_and_compressor_telemetry()
 
-    # 3. Read dialectic-turns-2026-11-01.jsonl in strict O_RDONLY mode
-    raw_lines, pre_log_sha256 = read_jsonl_readonly(dialectic_log_path)
+    # 3. Read dialectic-turns-2026-11-01.jsonl in strict O_RDONLY mode (holding back any incomplete mid-flush EOF line)
+    raw_lines, pre_log_sha256, pre_log_byte_len = _read_ingested_jsonl_readonly(dialectic_log_path)
 
     # Load previous watermark if present
     prev_watermark: dict[str, Any] = {}
@@ -1198,12 +1279,15 @@ def run_single_poll_pass(
         "canonical:poller-self-improvement-synthesis-v2 (2026-11-02) | Non-recursive Plasticity Shell poller "
         f"(recursion_depth=0, rule_sha256={CANONICAL_CONSOLIDATION_RULE_SHA256[:16]}) audited {len(raw_lines)} "
         f"dialectical turns (Lines 75..{len(raw_lines)}), applied {len(ASR_PHONETIC_RECOVERY_DICTIONARY)} ASR phonetic recovery rules "
-        "(L79 viral Arc capsid in OpenFOAM/PyMOL/ChimeraX, L115 Vizard + SPICE.jl Julia ephemeris kernels, "
-        "L75 Basilisk flight software, L85 Randall-Sundrum warped AdS_5 3-brane, L100 Lattice QCD, "
+        "(L79 viral Arc capsid in OpenFOAM/PyMOL/ChimeraX, L115/L147/L154 Vizard Unity3D + SPICE.jl Julia ephemeris kernels, "
+        "L75/L147-L153 CU Boulder AVS Lab & LASP Basilisk C/C++/SWIG flight software & SmallModularBioReactors.jl & OpenMC neutronics, "
+        "L85 Randall-Sundrum warped AdS_5 3-brane, L100 Lattice QCD, "
         "L103 neuromorphic computation, L109 ancestral sequence reconstruction 4-regime surface scars, "
         "L116/L127 Moore's Law & Huawei LogicFolding Tau=R*C scaling, L123 Basinski Disintegration Loops, "
         "L130 Dr. Santaneel Ghosh SEMO Fe3O4 polymer nanospheres & Track 1 PC12/NGF cytometry, "
-        "L118/L132 feel modulus & schizoanalysis/geotrauma OpenFOAM+EEG, L134 Golden Recording & Phase B sleep), "
+        "L118/L132 feel modulus & schizoanalysis/geotrauma OpenFOAM+EEG, L134 Golden Recording & Phase B sleep, "
+        "L135-L139 Muse S TP9/TP10 saturation & bang-bang vs smooth log-spectral control, "
+        "L140-L146 Symbolics.jl/Turing.jl/JACC.jl/Enzyme.jl/Grassmann.jl/NeuroJAX/EvoJAX/NeuroARC.jl), "
         "verified 16-32 GB Swap/VM Compressor telemetry (20.18 GB swapped+compressed, "
         "29.21 GB virtual working set, 73.75 GB cumulative swapouts), and coupled Generalized Compartmentalized "
         "Fun Neurology Network Graph (Fast Wireframe tau=1.2s, Slow Core tau=8.0s, Plasticity Shell Psi_k, "
@@ -1236,8 +1320,9 @@ def run_single_poll_pass(
         else {"skipped": True}
     )
 
-    # 5. Verify log file was never modified by the poller (read-only ingestion proof)
-    _, post_log_sha256 = read_jsonl_readonly(dialectic_log_path)
+    # 5. Verify ingested log prefix was never modified by the poller (read-only ingestion proof,
+    #    tolerant of concurrent EOF appends by TelemetryLogger.swift during SQL sync)
+    _, post_log_sha256, _ = _read_ingested_jsonl_readonly(dialectic_log_path, max_bytes=pre_log_byte_len)
     if post_log_sha256 != pre_log_sha256:
         raise RuntimeError("Read-only log ingestion invariant violated: dialectic log SHA-256 changed during poll!")
 
@@ -1312,7 +1397,7 @@ def run_single_poll_pass(
             "key_thematic_bridges": {
                 "run_A5945350_L75": "Basilisk autonomous space exploration software (CU Boulder AVS Lab) inverting passive observation into local closed-loop action.",
                 "run_2E7E8987_L76_to_L88": (
-                    "Muse BLE handshake ('Connected to Hunter's MacBook Air'), viral Arc capsid gene in OpenFOAM/PyMOL/ChimeraX (L79), "
+                    "Muse BLE handshake ('Connected to the local MacBook Air'), viral Arc capsid gene in OpenFOAM/PyMOL/ChimeraX (L79), "
                     "claude-mind golden recording reconciliation (L81), Randall-Sundrum warped 5D AdS_5 3-brane 10^32 hierarchy (L84-L85), "
                     "quantum monism reduction (L86 -> 8 multica Panic events d_M=2.462..2.550, beta=(1,9)), Jacobson/Verlinde entropic gravity (L87), "
                     "and tropical geometry min-plus degeneration (L88)."
@@ -1324,14 +1409,24 @@ def run_single_poll_pass(
                     "geomancy & ancestral sequence reconstruction (L94), physics revolutions from theory-observation forks (Uranus->Neptune vs Mercury 43 arcsec/century->GR, UV catastrophe->Planck) (L95-L98), "
                     "Fitzpatrick & Mishra-Sharma LLM physics replication bar (L99), Lattice QCD continuum convergence vs Loop Quantum Gravity non-persistent spin-foam memory loops (L100-L101)."
                 ),
-                "run_10308A51_L102_to_L116_contemplative": (
+                "run_10308A51_L102_to_L133_contemplative": (
                     "Thin-film optical equifinality & neuromorphic computation / quantum archaeology backward-inference underdetermination (L102-L103), "
-                    "Deleuze & Guattari schizoanalysis feel modulus & Nick Land geotrauma strata scars (L104-L107), convergent evolution attractor-folds (L108), "
+                    "Deleuze & Guattari schizoanalysis feel modulus & Nick Land geotrauma strata scars (L104-L107, L118, L132-L133), convergent evolution attractor-folds (L108), "
                     "4 regimes of 'surface reading surface' (Epigenetics + Ancestral Sequence Reconstruction + Dark Matter Detectors + Fossil Record) for theoretical biology/ecology (L109), "
                     "Generalized Compartmentalized 'Fun Neurology' Interactive Network Graph (Fast Wireframe tau=1.2s, Slow Core tau=8.0s, Plasticity Shell Psi_k, Gold Laya Flux, Edge Cycles beta_1>0) (L110-L111), "
                     "Non-recursive continuous self-improvement guard (Plasticity Shell consolidating novelty without rewriting the consolidation rule) (L112), "
                     "timescale lecture discipline & argument as dance keeping beta_1 > 0 nonzero (L113-L114), "
-                    "Vizard 3D astrodynamics visualizer + SPICE.jl Julia ephemeris kernels (L115), and subverting Moore's Law gatekeeping (L116)."
+                    "Vizard 3D astrodynamics visualizer + SPICE.jl Julia ephemeris kernels (L115), subverting Moore's Law & Huawei LogicFolding Tau=R*C scaling (L116, L126-L129), "
+                    "William Basinski Disintegration Loops vs thermodynamic entropic signals (L123-L125), and Dr. Santaneel Ghosh SEMO Fe3O4 polymer nanospheres & Track 1 PC12/NGF cytometry/microscopy (L130-L131)."
+                ),
+                "run_F418DE55_L134_to_L137": (
+                    "Golden Recording (golden_20260710-141352) Phase B sleep calibration and Muse S 4-channel TP9/TP10 partial-contact saturation & inverse log transform weighting."
+                ),
+                "run_1824FBDB_L138_to_end": (
+                    "Spatial array panning & bang-bang vs hysteresis gating (L138-L139), wireless Julia debugging from Google Pixel 8a (L140-L141), "
+                    "polyglot Symbolics.jl + Turing.jl + JACC.jl + Enzyme.jl + Grassmann.jl + NeuroJAX/EvoJAX + NeuroARC.jl stack (L142-L146), "
+                    "SPICE.jl kernels + Basilisk ('Vasilis') timelines + M7 mission clock Three-Clock Law integration (L147), Muse off-state prior coasting (L148), "
+                    "SmallModularBioReactors.jl M7 evidence calibration rig (L149), and CU Boulder AVS Lab & LASP Basilisk C/C++ + SWIG Python astrodynamics framework (L151-L152)."
                 ),
             },
             "turns_L75_to_end": all_turns_evaluated,

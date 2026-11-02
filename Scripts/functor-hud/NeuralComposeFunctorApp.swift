@@ -1333,8 +1333,24 @@ public final class FunctorDialecticalViewModel: ObservableObject {
         }
         lineData.append(Data("\n".utf8))
 
+        let isPolledHeardTurn = record.inputUtterance.hasPrefix("Heard[")
         let writeLine = { (url: URL) in
             if FileManager.default.fileExists(atPath: url.path) {
+                if isPolledHeardTurn,
+                   let existing = try? String(contentsOf: url, encoding: .utf8) {
+                    let tailLines = existing.split(separator: "\n", omittingEmptySubsequences: true).suffix(32)
+                    let alreadyPresent = tailLines.contains { ln in
+                        guard let d = String(ln).data(using: .utf8),
+                              let obj = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+                              let priorUtt = obj["inputUtterance"] as? String else {
+                            return false
+                        }
+                        return priorUtt == record.inputUtterance
+                    }
+                    if alreadyPresent {
+                        return
+                    }
+                }
                 if let fh = try? FileHandle(forWritingTo: url) {
                     _ = try? fh.seekToEnd()
                     try? fh.write(contentsOf: lineData)

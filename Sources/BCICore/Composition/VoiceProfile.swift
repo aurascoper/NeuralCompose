@@ -160,7 +160,14 @@ public struct VoiceProfile: Codable, Sendable, Equatable {
         "LogicFolding",
         "Basinski",
         "TP9",
-        "TP10"
+        "TP10",
+        "SmallModularBioReactors.jl",
+        "SMBR",
+        "AVS Lab",
+        "LASP",
+        "SWIG",
+        "OpenMC",
+        "neutronics"
     ]
 
     /// Merges any profile-specific vocabulary with `defaultRecognitionVocabulary`
