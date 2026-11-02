@@ -473,6 +473,14 @@ public final class EquifinalHypnagogicBridgeServer: @unchecked Sendable {
         unsetenv("NEURALCOMPOSE_BRIDGE_SEED")
         setenv("NEURALCOMPOSE_INTERACTION_LOG", "1", 1)
         setenv("NEURALCOMPOSE_HYPNAGOGIC_AUTOSTART", "reflective", 1)
+        if !CommandLine.arguments.contains("--self-test") {
+            if ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] == nil {
+                setenv("NEURALCOMPOSE_BOARD_PROFILE", "muses", 0)
+            }
+            if ProcessInfo.processInfo.environment["NEURALCOMPOSE_MUSE_DISCOVERY_TIMEOUT"] == nil {
+                setenv("NEURALCOMPOSE_MUSE_DISCOVERY_TIMEOUT", "10", 0)
+            }
+        }
         Self.ensureDefaultVoiceProfileVocabularyExists()
 
         DispatchQueue(label: "com.neuralcompose.equifinal.bridge.accept", qos: .userInitiated, attributes: .concurrent).async { [weak self] in
@@ -1432,13 +1440,12 @@ public final class FunctorDialecticalViewModel: ObservableObject {
             .appendingPathComponent("Documents/NeuralCompose/InteractionLogs")
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
-        df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.locale = Locale(identifier: "en_US_POSIX")
         let todayLog = logDir.appendingPathComponent("dialectic-turns-\(df.string(from: Date())).jsonl")
         guard let content = try? String(contentsOf: todayLog, encoding: .utf8) else { return }
         let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
         if lastObservedInteractionLogCount < 0 {
-            lastObservedInteractionLogCount = lines.count
-            return
+            lastObservedInteractionLogCount = max(0, lines.count - 6)
         }
         guard lines.count > lastObservedInteractionLogCount else { return }
         let newLines = lines[lastObservedInteractionLogCount..<lines.count]
@@ -1451,16 +1458,27 @@ public final class FunctorDialecticalViewModel: ObservableObject {
             }
             let rawHeard = (obj["heard"] as? String) ?? ""
             let rawSpoken = (obj["spokenText"] as? String) ?? ""
+            let spectralStr = (obj["spectralState"] as? String) ?? "Live"
+            let glossVal = (obj["glossScalar"] as? Double) ?? 0.5
             let heard = rawHeard.replacingOccurrences(of: "\u{2014}", with: " - ").replacingOccurrences(of: "\u{2013}", with: "-")
             let spoken = rawSpoken.replacingOccurrences(of: "\u{2014}", with: " - ").replacingOccurrences(of: "\u{2013}", with: "-")
             let fp = obj["generatorFingerprint"] as? [String: Any]
             let runtimeStr = (fp?["runtime"] as? String) ?? hypnagogicRuntimeChoiceLabel
             hypnagogicLoopTurnCount += 1
             hypnagogicLastSpokenReply = spoken.isEmpty ? "(metastable dialectical silence)" : spoken
-            hypnagogicLoopPhaseLabel = "Listening (Runtime=\(runtimeStr) | Turn #\(hypnagogicLoopTurnCount))"
+            hypnagogicLoopPhaseLabel = "Listening (Runtime=\(runtimeStr) | \(spectralStr) | Turn #\(hypnagogicLoopTurnCount))"
+            stepLiveSensorToyDrive(
+                tiltX: (glossVal - 0.5) * 2.2,
+                tiltY: 0.35,
+                tiltZ: 1.0,
+                gyroMag: abs(glossVal - 0.5) * 4.5,
+                micRMS: max(0.25, min(0.95, 1.0 - glossVal)),
+                tempoBpm: glossVal < 0.4 ? 128.0 : 72.0,
+                dt: 0.35
+            )
             triggerEquifinalTurn(
                 source: .multicaStream,
-                text: "Heard[\(runtimeStr)]: '\(heard)' -> Spoke: '\(hypnagogicLastSpokenReply)'",
+                text: "Heard[\(runtimeStr) | \(spectralStr)]: '\(heard)' -> Spoke: '\(hypnagogicLastSpokenReply)'",
                 persistToDisk: true
             )
         }
@@ -4075,25 +4093,41 @@ public struct UnifiedNeuralComposeRootView: View {
 
                 Spacer()
 
-                if selectedTab != .functorDialectic {
-                    if bciLoader.viewModel != nil {
-                        Text(functorViewModel.hardwareMicLoopLocked
-                             ? "BCI PIPELINE + HYPNAGOGIC LOOP ACTIVE | MIC LOCKED (VOLUME SAFE)"
-                             : "LIVE BCI PIPELINE ACTIVE")
+                if let vm = bciLoader.viewModel {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(vm.pipelineMode.isFullyLive
+                                  ? Color(red: 0.20, green: 0.83, blue: 0.60)
+                                  : Color.orange)
+                            .frame(width: 8, height: 8)
+                        Text(vm.pipelineMode.isFullyLive
+                             ? "LIVE PIPELINE | \(vm.pipelineMode.substitutionSummary)"
+                             : "PIPELINE | \(vm.pipelineMode.substitutionSummary)")
                             .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .foregroundColor(Color(red: 0.20, green: 0.83, blue: 0.60))
-                    } else {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text("BOOTING BCI PIPELINE...")
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .foregroundColor(.orange)
+                            .foregroundColor(vm.pipelineMode.isFullyLive
+                                             ? Color(red: 0.20, green: 0.83, blue: 0.60)
+                                             : Color.orange)
+                        if vm.pipelineMode.acquisition == .synthetic || vm.lastError != nil {
+                            Button(action: {
+                                Task { await vm.reconnectLiveEEG() }
+                            }) {
+                                Label(vm.isReconnecting ? "Scanning BLE..." : "Connect Muse BLE",
+                                      systemImage: "wave.3.right.circle.fill")
+                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.mini)
+                            .tint(.blue)
+                            .disabled(vm.isReconnecting)
                         }
                     }
                 } else {
-                    Text("[MODEL ILLUSTRATION - RUNG_4_MODEL | 60F FUNCTOR + MULTICA + SEMANTICA + HYPNAGOGIC LOOP]")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.65))
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("SCANNING MUSE BLE & BOOTING PIPELINE...")
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.orange)
+                    }
                 }
             }
             .padding(.horizontal, 14)
@@ -4164,6 +4198,9 @@ public struct UnifiedNeuralComposeRootView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if let vm = bciLoader.viewModel {
+                bciLiveBridgeObserver(vm: vm)
+            }
         }
         .onAppear {
             wireHypnagogicCallbacks()
@@ -4172,6 +4209,99 @@ public struct UnifiedNeuralComposeRootView: View {
         .onChange(of: selectedTab) { _, _ in
             ensureBCIPipelineLoaded()
         }
+    }
+
+    @ViewBuilder
+    private func bciLiveBridgeObserver(vm: AppViewModel) -> some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .onAppear {
+                enforceAudioLockOnBCIViewModel()
+            }
+            .onChange(of: functorViewModel.hardwareMicLoopLocked) { _, _ in
+                enforceAudioLockOnBCIViewModel()
+            }
+            .onChange(of: vm.hypnagogicLoopEnabled) { _, newValue in
+                handleHypnagogicLoopEnabledChange(newValue)
+            }
+            .onChange(of: vm.hypnagogicMode) { _, newMode in
+                functorViewModel.hypnagogicLoopModeLabel = newMode.rawValue
+            }
+            .onChange(of: vm.hypnagogicRuntimePreference) { _, newRuntime in
+                functorViewModel.hypnagogicRuntimeChoiceLabel = newRuntime.rawValue
+            }
+            .onChange(of: vm.composedText) { _, newText in
+                handleComposedTextChange(newText)
+            }
+            .onChange(of: vm.currentIntent) { _, newIntent in
+                handleLiveIntentImpulse(vm: vm, newIntent: newIntent)
+            }
+            .onChange(of: vm.detectedSpectralState) { _, newState in
+                handleLiveSpectralShift(vm: vm, newState: newState)
+            }
+    }
+
+    private func handleHypnagogicLoopEnabledChange(_ newValue: Bool) {
+        functorViewModel.hypnagogicLoopActive = newValue
+        if newValue {
+            functorViewModel.hardwareMicLoopLocked = false
+        }
+        functorViewModel.hypnagogicLoopPhaseLabel = newValue
+            ? "Listening (On-Device Speech Recognizer)"
+            : "Stopped"
+    }
+
+    private func handleComposedTextChange(_ newText: String) {
+        let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            functorViewModel.triggerEquifinalTurn(
+                source: .commit,
+                text: "BCI carousel composition: \(trimmed)",
+                persistToDisk: true
+            )
+        }
+    }
+
+    private func handleLiveIntentImpulse(vm: AppViewModel, newIntent: IntentClass) {
+        guard newIntent != .rest else { return }
+        let spectralLabel = vm.detectedSpectralState?.badgeLabel ?? "Live"
+        let qualityLabel = vm.signalQuality.map { String(describing: $0) } ?? "live"
+        let isStrongImpulse = (newIntent == .jawClench || newIntent == .select)
+        let impulseEnergy: Double = isStrongImpulse ? 1.8 : 1.1
+        functorViewModel.stepLiveSensorToyDrive(
+            tiltX: impulseEnergy * 0.9,
+            tiltY: impulseEnergy * 0.5,
+            tiltZ: 1.0,
+            gyroMag: impulseEnergy * 2.5,
+            micRMS: min(1.0, impulseEnergy * 0.45),
+            tempoBpm: newIntent == .jawClench ? 128.0 : 96.0,
+            dt: 0.30
+        )
+        functorViewModel.triggerEquifinalTurn(
+            source: .multicaStream,
+            text: "Muse BLE Impulse [\(newIntent.displayName) | \(spectralLabel) | signal=\(qualityLabel)]",
+            persistToDisk: true
+        )
+    }
+
+    private func handleLiveSpectralShift(vm: AppViewModel, newState: SpectralState?) {
+        guard let state = newState else { return }
+        let qualityLabel = vm.signalQuality.map { String(describing: $0) } ?? "live"
+        let isHighLoad = (state == .highCognitiveLoad || state == .engagedFocused)
+        functorViewModel.stepLiveSensorToyDrive(
+            tiltX: isHighLoad ? 1.1 : 0.25,
+            tiltY: isHighLoad ? 0.65 : 0.15,
+            tiltZ: 1.0,
+            gyroMag: isHighLoad ? 2.8 : 0.6,
+            micRMS: isHighLoad ? 0.75 : 0.25,
+            tempoBpm: isHighLoad ? 128.0 : 72.0,
+            dt: 0.25
+        )
+        functorViewModel.triggerEquifinalTurn(
+            source: .synthetic,
+            text: "Muse BLE Spectral Shift -> \(state.badgeLabel) (signal=\(qualityLabel))",
+            persistToDisk: true
+        )
     }
 
     private func wireHypnagogicCallbacks() {
@@ -4201,6 +4331,12 @@ public struct UnifiedNeuralComposeRootView: View {
         guard let vm = bciLoader.viewModel else { return }
         wireHypnagogicCallbacks()
         functorViewModel.hypnagogicRuntimeChoiceLabel = vm.hypnagogicRuntimePreference.rawValue
+        if !vm.adaptiveComplexityEnabled {
+            vm.adaptiveComplexityEnabled = true
+        }
+        if !vm.interactionLoggingEnabled {
+            vm.interactionLoggingEnabled = true
+        }
         if functorViewModel.hardwareMicLoopLocked && !vm.hypnagogicLoopEnabled {
             if vm.spokenGenerationLoopEnabled {
                 vm.spokenGenerationLoopEnabled = false

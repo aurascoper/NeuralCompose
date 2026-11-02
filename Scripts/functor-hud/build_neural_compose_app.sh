@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRATCH_DIR="/Users/aurascoper/.gemini/antigravity/scratch"
 NC_REPO="/Users/aurascoper/Developer/NeuralCompose"
+BRAINFLOW_PATH="${BRAINFLOW_ROOT:-$HOME/Developer/brainflow}"
 FIXTURE_BUILD_DIR="$SCRATCH_DIR/neural_compose_fixture_build"
 
 APP_SCRATCH="$SCRATCH_DIR/Neural Compose.app"
@@ -22,75 +23,87 @@ else
 fi
 
 echo "================================================================================"
-echo "2. Compiling Unified Native arm64 macOS Binary (4-Pillar Functor + Full BCI App)"
+echo "2. Compiling Unified Native arm64 macOS Binary (4-Pillar Functor + Full BCI + BrainFlow BLE)"
 echo "================================================================================"
+# Preserve mlx-swift_Cmlx.bundle (with default.metallib) before any bundle cleanup
+if [[ -f "$APP_APPLICATIONS/Contents/Resources/mlx-swift_Cmlx.bundle/Contents/Resources/default.metallib" ]] && [[ ! -f "$NC_REPO/.build/mlx-swift_Cmlx.bundle/Contents/Resources/default.metallib" ]]; then
+    cp -R "$APP_APPLICATIONS/Contents/Resources/mlx-swift_Cmlx.bundle" "$NC_REPO/.build/mlx-swift_Cmlx.bundle"
+fi
+
+"$NC_REPO/Scripts/build.sh" --with-brainflow
+
 BIN_OUT="$SCRATCH_DIR/NeuralComposeFunctorBin"
-PROD_DEBUG="$NC_REPO/.build/out/Products/Debug"
-INTERM_DIR="$NC_REPO/.build/out/Intermediates.noindex"
-NATIVE_DEBUG="$NC_REPO/.build/arm64-apple-macosx/debug"
+PRODUCTS_DIR="$NC_REPO/.build/out/Products/Debug"
+INTERMEDIATES_DIR="$NC_REPO/.build/out/Intermediates.noindex"
+APP_OBJ_DIR="$INTERMEDIATES_DIR/NeuralCompose.build/Debug/NeuralCompose-p.build/Objects-normal/arm64"
 
-if [[ -d "$NATIVE_DEBUG/BCICore.build" ]] && [[ -d "$PROD_DEBUG" ]]; then
-    echo "Syncing latest native-built BCICore.o and Prompt resources into $PROD_DEBUG..."
-    ld -r "$NATIVE_DEBUG/BCICore.build/"*.o -o "$PROD_DEBUG/BCICore.o"
-    if [[ -f "$NATIVE_DEBUG/Modules/BCICore.swiftmodule" ]]; then
-        cp "$NATIVE_DEBUG/Modules/BCICore.swiftmodule" "$PROD_DEBUG/BCICore.swiftmodule/arm64-apple-macos.swiftmodule"
-    fi
-    if [[ -f "$NATIVE_DEBUG/Modules/BCICore.swiftdoc" ]]; then
-        cp "$NATIVE_DEBUG/Modules/BCICore.swiftdoc" "$PROD_DEBUG/BCICore.swiftmodule/arm64-apple-macos.swiftdoc"
-    fi
-fi
-if [[ -d "$PROD_DEBUG/NeuralCompose_BCICloudBridge.bundle/Contents/Resources" ]]; then
-    cp "$NC_REPO/Sources/BCICloudBridge/Prompts/"*.md "$PROD_DEBUG/NeuralCompose_BCICloudBridge.bundle/Contents/Resources/"
+if [[ -d "$NC_REPO/.build/mlx-swift_Cmlx.bundle" ]]; then
+    rm -rf "$PRODUCTS_DIR/mlx-swift_Cmlx.bundle"
+    cp -R "$NC_REPO/.build/mlx-swift_Cmlx.bundle" "$PRODUCTS_DIR/mlx-swift_Cmlx.bundle"
 fi
 
-if [[ -f "$PROD_DEBUG/ExecutableModules/NeuralComposeApp-415ACE3B569506E-testable.o" ]]; then
-    echo "Linking unified binary against compiled NeuralComposeApp + MLX + BCIEEG + BCIVoice + WorldModel modules..."
-    swiftc -target arm64-apple-macos14.0 -parse-as-library \
-      -I "$PROD_DEBUG" \
-      -Xcc -fmodule-map-file="$INTERM_DIR/GeneratedModuleMaps/BCIBridge.modulemap" \
-      -Xcc -fmodule-map-file="$NC_REPO/.build/checkouts/mlx-swift/Source/Cmlx/include/module.modulemap" \
-      -Xcc -fmodule-map-file="$NC_REPO/.build/checkouts/swift-numerics/Sources/_NumericsShims/include/module.modulemap" \
-      "$PROD_DEBUG/ExecutableModules/NeuralComposeApp-415ACE3B569506E-testable.o" \
-      "$PROD_DEBUG/BCICore.o" "$PROD_DEBUG/BCIBridge.o" "$PROD_DEBUG/BCIEEG.o" "$PROD_DEBUG/BCIClassifier.o" \
-      "$PROD_DEBUG/MLX.o" "$PROD_DEBUG/Cmlx.o" "$PROD_DEBUG/Numerics.o" "$PROD_DEBUG/_NumericsShims.o" \
-      "$PROD_DEBUG/RealModule.o" "$PROD_DEBUG/ComplexModule.o" "$PROD_DEBUG/MLXNN.o" "$PROD_DEBUG/MLXRandom.o" \
-      "$PROD_DEBUG/MLXFast.o" "$PROD_DEBUG/MLXLLM.o" "$PROD_DEBUG/MLXOptimizers.o" "$PROD_DEBUG/MLXLinalg.o" \
-      "$PROD_DEBUG/Tokenizers.o" "$PROD_DEBUG/Generation.o" "$PROD_DEBUG/Models.o" "$PROD_DEBUG/Hub.o" \
-      "$PROD_DEBUG/Jinja.o" "$PROD_DEBUG/OrderedCollections.o" "$PROD_DEBUG/InternalCollectionsUtilities.o" \
-      "$PROD_DEBUG/TensorUtils.o" "$PROD_DEBUG/MLXLMCommon.o" "$PROD_DEBUG/MLXEmbedders.o" \
-      "$PROD_DEBUG/BCILLM.o" "$PROD_DEBUG/BCIVoice.o" "$PROD_DEBUG/BCICloudBridge.o" "$PROD_DEBUG/BCIPeerBridge.o" \
-      "$PROD_DEBUG/WorldModelDemo.o" \
-      "$SCRATCH_DIR/NeuralComposeFunctorApp.swift" \
-      -lc++ -framework Speech -framework Foundation -framework Metal -framework Accelerate \
-      -framework AVFAudio -framework AVFoundation -framework AppKit -framework Combine \
-      -framework CoreFoundation -framework CoreGraphics -framework CoreImage -framework CoreML \
-      -framework CoreVideo -framework CryptoKit -framework Network -framework QuartzCore \
-      -framework SceneKit -framework SwiftUI \
-      -o "$BIN_OUT"
-else
-    echo "Compiling standalone 4-Pillar + BCICore binary..."
-    swiftc -O -target arm64-apple-macos14.0 -parse-as-library \
-      "$NC_REPO/Sources/BCICore/Models/Embedding.swift" \
-      "$NC_REPO/Sources/BCICore/Models/SpectralState.swift" \
-      "$NC_REPO/Sources/BCICore/Protocols/GenerationRuntime.swift" \
-      "$NC_REPO/Sources/BCICore/Telemetry/GeneratorFingerprint.swift" \
-      "$NC_REPO/Sources/BCICore/Dialectic/DialecticalCompetition.swift" \
-      "$NC_REPO/Sources/BCICore/Dialectic/DialecticalDynamics.swift" \
-      "$NC_REPO/Sources/BCICore/Dialectic/DialecticalField.swift" \
-      "$NC_REPO/Sources/BCICore/Dialectic/DialecticalMemory.swift" \
-      "$NC_REPO/Sources/BCICore/Dialectic/SemanticGraph.swift" \
-      "$SCRATCH_DIR/NeuralComposeFunctorApp.swift" \
-      -framework SwiftUI -framework SceneKit -framework AppKit -framework Metal -framework Foundation \
-      -o "$BIN_OUT"
-fi
+/usr/bin/python3 -c '
+import sys
+p_in, p_out = sys.argv[1], sys.argv[2]
+data = open(p_in, "rb").read()
+open(p_out, "wb").write(data.replace(b"\x00_main\x00", b"\x00_ncmn\x00"))
+' "$APP_OBJ_DIR/NeuralComposeApp.o" "$SCRATCH_DIR/NeuralComposeApp_nomain.o"
+
+LINK_OBJS=("$SCRATCH_DIR/NeuralComposeApp_nomain.o")
+while IFS= read -r obj_file; do
+    [[ -n "$obj_file" ]] || continue
+    [[ "$obj_file" == */NeuralComposeApp.o ]] && continue
+    LINK_OBJS+=("$obj_file")
+done < <(tr ' ' '\n' < "$APP_OBJ_DIR/NeuralCompose.LinkFileList")
+
+rm -rf "$PRODUCTS_DIR/NeuralComposeApp.swiftmodule"
+echo "Linking unified binary against compiled NeuralComposeApp + BrainFlow BLE + MLX + BCIEEG + BCIVoice + WorldModel modules..."
+swiftc -target arm64-apple-macos14.0 -parse-as-library \
+  -I "$APP_OBJ_DIR" \
+  -I "$PRODUCTS_DIR" \
+  -Xcc -fmodule-map-file="$INTERMEDIATES_DIR/GeneratedModuleMaps/BCIBridge.modulemap" \
+  -Xcc -fmodule-map-file="$NC_REPO/.build/checkouts/mlx-swift/Source/Cmlx/include/module.modulemap" \
+  -Xcc -fmodule-map-file="$NC_REPO/.build/checkouts/swift-numerics/Sources/_NumericsShims/include/module.modulemap" \
+  "${LINK_OBJS[@]}" \
+  "$PRODUCTS_DIR"/lib*.a \
+  "$SCRATCH_DIR/NeuralComposeFunctorApp.swift" \
+  -L"$BRAINFLOW_PATH/compiled" -lBoardController \
+  -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+  -lc++ -framework Speech -framework Foundation -framework Metal -framework Accelerate \
+  -framework AVFAudio -framework AVFoundation -framework AppKit -framework Combine \
+  -framework CoreBluetooth -framework CoreFoundation -framework CoreGraphics -framework CoreImage \
+  -framework CoreML -framework CoreVideo -framework CryptoKit -framework Network \
+  -framework QuartzCore -framework SceneKit -framework SwiftUI \
+  -o "$BIN_OUT"
 
 file "$BIN_OUT"
+
+add_rpath_if_missing() {
+    local target="$1"
+    local rpath="$2"
+    if ! otool -l "$target" | awk -v expected="$rpath" '$1 == "path" && $2 == expected { found = 1 } END { exit(found ? 0 : 1) }'; then
+        install_name_tool -add_rpath "$rpath" "$target" 2>/dev/null || true
+    fi
+}
+
+rewrite_bundle_dependencies() {
+    local app_path="$1"
+    local target="$2"
+    local dependency basename
+    while IFS= read -r dependency; do
+        basename="${dependency##*/}"
+        if [[ -f "$app_path/Contents/Frameworks/$basename" && "$dependency" != "@rpath/$basename" ]]; then
+            install_name_tool -change "$dependency" "@rpath/$basename" "$target"
+        fi
+    done < <(otool -L "$target" | awk 'NR > 1 { print $1 }')
+}
 
 package_one_bundle() {
     local app_path="$1"
     echo "Packaging bundle: $app_path"
     rm -rf "$app_path"
     mkdir -p "$app_path/Contents/MacOS"
+    mkdir -p "$app_path/Contents/Frameworks"
     mkdir -p "$app_path/Contents/Resources/fixture"
     mkdir -p "$app_path/Contents/Resources/equifinal_bin"
 
@@ -102,18 +115,49 @@ package_one_bundle() {
         chmod +x "$app_path/Contents/Resources/equifinal_bin/claude"
     fi
 
-    if [[ -x "$PROD_DEBUG/SpectralProbe" ]]; then
-        cp "$PROD_DEBUG/SpectralProbe" "$app_path/Contents/MacOS/SpectralProbe"
-        chmod +x "$app_path/Contents/MacOS/SpectralProbe"
-    fi
+    for helper_bin in "SpectralProbe" "MLXProbe"; do
+        if [[ -x "$PRODUCTS_DIR/$helper_bin" ]]; then
+            cp "$PRODUCTS_DIR/$helper_bin" "$app_path/Contents/MacOS/$helper_bin"
+            chmod +x "$app_path/Contents/MacOS/$helper_bin"
+        fi
+    done
+
+    shopt -s nullglob
+    for dylib in "$PRODUCTS_DIR"/*.dylib "$BRAINFLOW_PATH/compiled"/lib*.dylib; do
+        [[ -f "$dylib" ]] || continue
+        cp -f "$dylib" "$app_path/Contents/Frameworks/"
+    done
+    shopt -u nullglob
+
+    for exe_target in "$app_path/Contents/MacOS/NeuralCompose" "$app_path/Contents/MacOS/SpectralProbe" "$app_path/Contents/MacOS/MLXProbe"; do
+        if [[ -x "$exe_target" ]]; then
+            rewrite_bundle_dependencies "$app_path" "$exe_target"
+            add_rpath_if_missing "$exe_target" '@executable_path/../Frameworks'
+        fi
+    done
+
+    shopt -s nullglob
+    for bundled_dylib in "$app_path/Contents/Frameworks/"*.dylib; do
+        bundled_name="$(basename "$bundled_dylib")"
+        install_name_tool -id "@rpath/$bundled_name" "$bundled_dylib"
+        rewrite_bundle_dependencies "$app_path" "$bundled_dylib"
+        add_rpath_if_missing "$bundled_dylib" '@loader_path'
+    done
+    shopt -u nullglob
 
     if [[ -f "$NC_REPO/Sources/NeuralComposeApp/Resources/NeuralCompose.icns" ]]; then
         cp "$NC_REPO/Sources/NeuralComposeApp/Resources/NeuralCompose.icns" "$app_path/Contents/Resources/NeuralCompose.icns"
     fi
 
     for bundle_name in "NeuralCompose_BCICloudBridge.bundle" "mlx-swift_Cmlx.bundle" "swift-transformers_Hub.bundle"; do
-        if [[ -d "$PROD_DEBUG/$bundle_name" ]]; then
-            cp -R "$PROD_DEBUG/$bundle_name" "$app_path/Contents/Resources/$bundle_name"
+        local src_bundle=""
+        if [[ -d "$NC_REPO/.build/$bundle_name" ]]; then
+            src_bundle="$NC_REPO/.build/$bundle_name"
+        elif [[ -d "$PRODUCTS_DIR/$bundle_name" ]]; then
+            src_bundle="$PRODUCTS_DIR/$bundle_name"
+        fi
+        if [[ -n "$src_bundle" ]]; then
+            cp -R "$src_bundle" "$app_path/Contents/Resources/$bundle_name"
             rm -rf "$app_path/Contents/Resources/$bundle_name/Contents/_CodeSignature"
             ln -sf "Resources/$bundle_name" "$app_path/Contents/$bundle_name"
         fi
@@ -199,11 +243,16 @@ EOF
     if security find-identity -v -p codesigning 2>/dev/null | grep -q "NeuralCompose Local Dev"; then
         sign_id="NeuralCompose Local Dev"
     fi
-    if [[ -x "$app_path/Contents/MacOS/SpectralProbe" ]]; then
-        codesign --force --sign "$sign_id" "$app_path/Contents/MacOS/SpectralProbe"
-    fi
+    while IFS= read -r -d '' dylib; do
+        codesign --force --sign "$sign_id" "$dylib"
+    done < <(find "$app_path/Contents/Frameworks" -type f -name '*.dylib' -print0)
+    for helper_bin in "SpectralProbe" "MLXProbe"; do
+        if [[ -x "$app_path/Contents/MacOS/$helper_bin" ]]; then
+            codesign --force --sign "$sign_id" "$app_path/Contents/MacOS/$helper_bin"
+        fi
+    done
     codesign --force --sign "$sign_id" "$app_path/Contents/MacOS/NeuralCompose"
-    codesign --force --deep --sign "$sign_id" "$app_path"
+    codesign --force --sign "$sign_id" "$app_path"
     codesign --verify --deep --strict --verbose=2 "$app_path"
 }
 

@@ -1,5 +1,6 @@
 import Foundation
 import BCICore
+import BCIBridge
 import BCIEEG
 import BCIClassifier
 import BCILLM
@@ -248,7 +249,11 @@ public struct AppContainer: Sendable {
     }
 
     private static func profileFromEnvironment() -> MuseBoardProfile {
-        let raw = ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] ?? "synthetic"
+        let env = ProcessInfo.processInfo.environment
+        let defaultProfile = (NSClassFromString("XCTestCase") == nil && bci_bridge_is_available())
+            ? "muses"
+            : "synthetic"
+        let raw = env["NEURALCOMPOSE_BOARD_PROFILE"] ?? defaultProfile
         switch raw.lowercased() {
         case "muse2", "musetwo", "muse2-ble", "musetwo-ble":
             return .museTwoNativeBLE

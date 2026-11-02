@@ -150,6 +150,10 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
            !candidates.contains(fallback) {
             candidates.append(fallback)
         }
+        if (primaryProfile == .museSNativeBLE || primaryProfile == .museSAthena),
+           !candidates.contains(.museTwoNativeBLE) {
+            candidates.append(.museTwoNativeBLE)
+        }
 
         var openedHandle: bci_session_handle_t?
         var currentProfile = primaryProfile

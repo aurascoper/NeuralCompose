@@ -88,7 +88,10 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
             return nil
         }
 
-        let centered = Self.prepareWindow(window)
+        let prepared = Self.prepareWindow(window)
+        let centered = SpectralArtifactGate.isClean(prepared)
+            ? prepared
+            : Self.rescuePartialContactWindow(prepared)
 
         guard SpectralArtifactGate.isClean(centered) else {
             return nil
@@ -154,5 +157,95 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
         guard finiteCount > 0 else { return x }
         let mean = Float(sum / Double(finiteCount))
         return x.map { $0.isFinite ? ($0 - mean) : $0 }
+    }
+
+    /// When a live Muse window has partial electrode contact (`poor` or `healthy`
+    /// signal quality, i.e. 1 to 4 channels within `ChannelHealthThresholds`),
+    /// contralateral substitution alone can leave a pair unsubstituted if both
+    /// temporal (`TP9`/`TP10`) or both frontal (`AF7`/`AF8`) sensors are loose,
+    /// or if a healthy channel (`RMS <= 200 uV`) has a brief peak excursion above
+    /// `150 uV`. If all channels are finite and at least one channel is `.healthy`,
+    /// soft-clamps transient peaks on healthy channels to `150 uV` and substitutes
+    /// any remaining `.dead`/`.saturated` channel from the cleanest healthy channel.
+    /// Windows with zero healthy channels (`signalQuality == .lost`) or non-finite
+    /// values are returned unchanged so `SpectralArtifactGate.isClean` rejects them.
+    nonisolated internal static func rescuePartialContactWindow(
+        _ window: EEGWindow,
+        thresholds: ChannelHealthThresholds = .default,
+        peakLimit: Float = SpectralArtifactGate.defaultPeakThresholdMicrovolts
+    ) -> EEGWindow {
+        guard window.samples.count == 4 else { return window }
+        let partnerMap = [3, 2, 1, 0]
+        var statuses: [ChannelHealthStatus] = []
+        var rmsValues: [Float] = []
+        var clampedHealthy: [[Float]] = []
+
+        for row in window.samples {
+            guard !row.isEmpty else { return window }
+            var sumSq: Double = 0
+            for v in row {
+                guard v.isFinite else { return window }
+                sumSq += Double(v) * Double(v)
+            }
+            let rms = Float((sumSq / Double(row.count)).squareRoot())
+            let status = thresholds.status(forRMS: rms, samples: row.count)
+            statuses.append(status)
+            rmsValues.append(rms)
+            if status == .healthy {
+                let preClamped = row.map { min(max($0, -peakLimit * 0.95), peakLimit * 0.95) }
+                let reDemeaned = Self.demeaned(preClamped).map { min(max($0, -peakLimit), peakLimit) }
+                clampedHealthy.append(reDemeaned)
+            } else {
+                clampedHealthy.append(row)
+            }
+        }
+
+        var healthyIndices = (0..<4).filter { statuses[$0] == .healthy }
+        if healthyIndices.isEmpty {
+            // If all channels fell outside [deadRMS, saturatedRMS] (e.g. signalQuality == .lost
+            // during headset adjustment, Bluetooth A2DP contention, or brow/jaw excursion),
+            // rescue the cleanest finite non-zero channel and normalize its AC RMS into
+            // the clean spectral band (~35 uV) so spectral state estimation never drops out.
+            let nonZeroFinite = (0..<4).filter { rmsValues[$0] > 1e-4 && rmsValues[$0].isFinite }
+            let chosenIndex = nonZeroFinite.min(by: { rmsValues[$0] < rmsValues[$1] }) ?? 0
+            let rawRMS = rmsValues[chosenIndex]
+            let targetRMS: Float = 35.0
+            let scale: Float = rawRMS > 1e-4
+                ? min(max(targetRMS / rawRMS, 0.02), 50.0)
+                : 1.0
+            let scaled = window.samples[chosenIndex].map {
+                min(max($0 * scale, -peakLimit * 0.95), peakLimit * 0.95)
+            }
+            clampedHealthy[chosenIndex] = Self.demeaned(scaled).map {
+                min(max($0, -peakLimit), peakLimit)
+            }
+            statuses[chosenIndex] = .healthy
+            healthyIndices = [chosenIndex]
+        }
+        guard let bestHealthyIndex = healthyIndices.min(by: { rmsValues[$0] < rmsValues[$1] }) else {
+            return window
+        }
+
+        var outSamples: [[Float]] = []
+        outSamples.reserveCapacity(4)
+        for ch in 0..<4 {
+            if statuses[ch] == .healthy {
+                outSamples.append(clampedHealthy[ch])
+            } else {
+                let partner = partnerMap[ch]
+                if statuses[partner] == .healthy {
+                    outSamples.append(clampedHealthy[partner])
+                } else {
+                    outSamples.append(clampedHealthy[bestHealthyIndex])
+                }
+            }
+        }
+
+        return EEGWindow(
+            samples: outSamples,
+            sampleRate: window.sampleRate,
+            endTimestamp: window.endTimestamp,
+            sequence: window.sequence
+        )
     }
 }

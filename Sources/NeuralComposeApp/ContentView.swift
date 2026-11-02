@@ -57,7 +57,8 @@ struct ContentView: View {
                 hypnagogicMode: $viewModel.hypnagogicMode,
                 hypnagogicRuntimePreference: $viewModel.hypnagogicRuntimePreference,
                 hypnagogicRuntimeDiagnostics: viewModel.hypnagogicRuntimeDiagnostics,
-                health: viewModel.healthSnapshot
+                health: viewModel.healthSnapshot,
+                onReconnectMuse: { Task { await viewModel.reconnectLiveEEG() } }
             )
             Divider()
 

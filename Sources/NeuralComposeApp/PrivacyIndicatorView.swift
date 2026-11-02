@@ -60,6 +60,7 @@ struct PrivacyIndicatorView: View {
     var hypnagogicRuntimeDiagnostics: HypnagogicRuntimeDiagnostics
     /// Latest app-watchdog snapshot for the degraded badge (read-only display).
     var health: HealthSnapshot? = nil
+    var onReconnectMuse: () -> Void = {}
 
     @State private var expanded: Bool = false
 
@@ -79,6 +80,16 @@ struct PrivacyIndicatorView: View {
                 hypnagogicLoopBadge
                 voiceBadge
                 cmdBadge
+                if !isReconnecting && (mode.acquisition == .synthetic || lastError != nil) {
+                    Button(action: onReconnectMuse) {
+                        Label("Connect Muse BLE", systemImage: "dot.radiowaves.left.and.right")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .tint(.blue)
+                    .help("Scan and connect to Muse headband over Bluetooth Low Energy")
+                }
                 Button(action: { expanded.toggle() }) {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
                 }

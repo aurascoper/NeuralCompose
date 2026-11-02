@@ -135,6 +135,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     /// shape, artifact-contaminated window, or untrusted anchor space)  - 
     /// `applyAdaptiveGeneration()` falls back to `signalQuality` in that case.
     @Published public private(set) var detectedSpectralState: SpectralState?
+    /// Latest classified motor/ocular impulse from the EEG classifier (`singleBlink`,
+    /// `doubleBlink`, `jawClench`, `select`, or `rest`), published on `@MainActor`
+    /// so the 4-Pillar Visual Intelligence Evolution Model and UI observers can
+    /// react immediately even when the composition carousel is idle.
+    @Published public private(set) var currentIntent: IntentClass = .rest
 
     /// The latest app-watchdog health snapshot (nil until the pipeline starts).
     /// Drives the degraded banner; the same snapshot is written each tick to
@@ -285,6 +290,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
     // ── Immutable wiring (lives for the lifetime of the view model) ──────
     public let container: AppContainer
+    private var streamOverride: EEGStreamFactory.Resolved?
     private let metrics: MetricsCollector
     private let windowing: EEGWindowing
     private let smoother: IntentSmoother
@@ -508,13 +514,16 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         //    on; observes only, never changes runtime behaviour.
         let healthLoggerRef = healthLogger
         let healthStartedAt = Date()
-        let wantedProfile = (ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] ?? "synthetic").lowercased()
+        let activeResolved = streamOverride ?? container.streamResolved
+        let wantedProfile = (ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] ?? activeResolved.profile.rawValue).lowercased()
         let expectedLive = wantedProfile.contains("muse")
             || wantedProfile.contains("athena")
             || wantedProfile.contains("osc")
             || wantedProfile.contains("mindmonitor")
+            || activeResolved.acquisition != .synthetic
         var lastWindowCount = metricsRef.snapshot().windowing.count
         var lastWindowAt = healthStartedAt
+        var rollingWps: Double = 0
         healthTask = Task.detached(priority: .utility) { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -522,7 +531,14 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 let nowWindows = metricsRef.snapshot().windowing.count
                 let now = Date()
                 let dt = max(0.001, now.timeIntervalSince(lastWindowAt))
-                let wps = Double(nowWindows &- lastWindowCount) / dt
+                let instantWps = Double(nowWindows &- lastWindowCount) / dt
+                if instantWps > 0 {
+                    rollingWps = rollingWps > 0 ? (0.65 * instantWps + 0.35 * rollingWps) : instantWps
+                } else {
+                    rollingWps = rollingWps * 0.55
+                    if rollingWps < 0.08 { rollingWps = 0 }
+                }
+                let wps = rollingWps
                 lastWindowCount = nowWindows
                 lastWindowAt = now
                 guard let snap = await self?.assembleHealthSnapshot(
@@ -536,7 +552,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         // ── EEG supervisor (off-main): start the configured stream; if it
         //    errors or completes and we aren't already on synthetic, fall
         //    back and keep going. Updates `pipelineMode` on the way.
-        let initialResolved = container.streamResolved
+        let initialResolved = activeResolved
         let containerRef = container
         let spectralEstimatorRef = self.spectralEstimator
         let jepaTransitionCaptureRef = self.jepaTransitionCapture
@@ -578,6 +594,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     for try await sample in stream {
                         if Task.isCancelled { break }
                         samplesThisAttempt += 1
+                        if current.acquisition == .synthetic,
+                           initialResolved.acquisition == .localMuse,
+                           samplesThisAttempt >= 3840 {
+                            break
+                        }
                         // Single-owner fan-out (see liveSampleStream()).
                         samples.send(sample)
 
@@ -635,13 +656,19 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                 // classification so a single lifted electrode does not poison
                                 // spatial features. Raw window is kept for calibration recording.
                                 let cleanedWindow = Self.preprocessWindow(window)
+                                let result = channel.send(cleanedWindow)
+                                if result.droppedBufferedElement {
+                                    await MainActor.run { self?.droppedWindowCount += 1 }
+                                }
                                 // Milestone B state source - always run regardless of
                                 // adaptiveComplexityEnabled (shadow mode), same invariant as
-                                // signalQuality/detectedAdaptation. Stub estimator returns nil
-                                // immediately; the real one gates on shape/artifact internally.
-                                let spectral = await spectralEstimatorRef.estimate(window: cleanedWindow)
-                                await MainActor.run {
-                                    self?.recordWindowEvaluation(quality: quality, spectral: spectral)
+                                // signalQuality/detectedAdaptation. Dispatched off the sample
+                                // drain hot-path so MLX GPU inference never stalls BLE polling.
+                                Task.detached(priority: .utility) { [weak self, spectralEstimatorRef] in
+                                    let spectral = await spectralEstimatorRef.estimate(window: cleanedWindow)
+                                    await MainActor.run {
+                                        self?.recordWindowEvaluation(quality: quality, spectral: spectral)
+                                    }
                                 }
 
                                 // The compact JEPA state is derived from the
@@ -668,11 +695,6 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                         self?.calibrationMetrics = calibMetrics
                                     }
                                 }
-
-                                let result = channel.send(cleanedWindow)
-                                if result.droppedBufferedElement {
-                                    await MainActor.run { self?.droppedWindowCount += 1 }
-                                }
                             }
                         } catch let bci as BCIError {
                             metrics.recordError(bci)
@@ -692,7 +714,18 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 }
                 await current.stream.stop()
                 if Task.isCancelled { break }
-                if current.acquisition == .synthetic { break }   // already at last resort
+                if current.acquisition == .synthetic {
+                    if initialResolved.acquisition == .localMuse {
+                        current = initialResolved
+                        liveRetries = 0
+                        await MainActor.run {
+                            self?.isReconnecting = true
+                            self?.lastError = nil
+                        }
+                        continue
+                    }
+                    break
+                }   // already at last resort
 
                 // Live stream stopped (error or clean completion). Retry the
                 // live source a few times - Muse S powers itself off after
@@ -770,8 +803,24 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 // subscribers before it enters the FSM/carousel path.
                 classifications.send(prediction)
                 let smoothed = await smootherRef.ingest(prediction)
+                let effectiveIntent: IntentClass
+                switch smoothed {
+                case .selectActive:
+                    effectiveIntent = .select
+                case .advance:
+                    effectiveIntent = prediction.intent != .rest ? prediction.intent : .singleBlink
+                case .idle:
+                    effectiveIntent = prediction.confidence >= 0.60 ? prediction.intent : .rest
+                }
+                await self?.setCurrentIntent(effectiveIntent)
                 await composition.applyIntent(smoothed)
             }
+        }
+    }
+
+    private func setCurrentIntent(_ intent: IntentClass) {
+        if currentIntent != intent {
+            currentIntent = intent
         }
     }
 
@@ -1193,6 +1242,19 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
             loopMode: hypnagogicLoopBuilt?.rawValue, loopRunning: loopRunning,
             turnCount: turnCount, secondsSinceLastTurn: secondsSinceLastTurn,
             degraded: degraded)
+    }
+
+    /// Forces an immediate Bluetooth scan/reconnection attempt to a live Muse
+    /// headband (default `.museSNativeBLE`, with automatic fallback to Athena and Muse 2).
+    public func reconnectLiveEEG(profile: MuseBoardProfile = .museSNativeBLE) async {
+        lastError = nil
+        isReconnecting = true
+        streamOverride = EEGStreamFactory.make(profile: profile)
+        if isRunning {
+            await stop()
+        }
+        await start()
+        isReconnecting = false
     }
 
     public func stop() async {

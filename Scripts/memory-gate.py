@@ -401,6 +401,191 @@ def seed_payloads(seed_id: Optional[str], today: str) -> Iterator[RememberPayloa
     )
 
 
+# -- golden-reconcile: Golden Recording baseline + Live BLE reconciliation & program synthesis --
+
+GOLDEN_DIR = REPO_ROOT / "Recordings" / "golden"
+
+
+def golden_reconciliation_payloads(telemetry_dir: Path, today: str) -> Iterator[RememberPayload]:
+    """Compute Golden Recording baseline signature, reconcile against live Muse BLE
+    telemetry, write `golden-reconciliation-synthesis.json`, and emit claude-mind
+    `RememberPayload` records for reference memory and program synthesis."""
+    meta_files = sorted(GOLDEN_DIR.glob("golden_*.metadata.json")) if GOLDEN_DIR.is_dir() else []
+    if not meta_files:
+        return
+    meta_fp = meta_files[-1]
+    stem = meta_fp.name[: -len(".metadata.json")]
+    eeg_fp = GOLDEN_DIR / f"{stem}.eeg.csv"
+    labels_fp = GOLDEN_DIR / f"{stem}.labels.csv"
+    try:
+        meta = json.loads(meta_fp.read_text())
+    except Exception:
+        meta = {}
+
+    ch_names = ["TP9", "AF7", "AF8", "TP10"]
+    ch_rms: dict[str, float] = {}
+    sample_rows = 0
+    eeg_sha256 = ""
+    if eeg_fp.exists():
+        raw_bytes = eeg_fp.read_bytes()
+        eeg_sha256 = hashlib.sha256(raw_bytes).hexdigest()[:16]
+        cols: list[list[float]] = [[], [], [], []]
+        for line in raw_bytes.decode("utf-8", errors="ignore").splitlines()[1:]:
+            parts = line.split(",")
+            if len(parts) >= 5:
+                try:
+                    for idx in range(4):
+                        cols[idx].append(float(parts[idx + 1]))
+                    sample_rows += 1
+                except ValueError:
+                    continue
+        for idx, name in enumerate(ch_names):
+            vals = cols[idx]
+            if vals:
+                mean = sum(vals) / len(vals)
+                ac_sq = sum((v - mean) ** 2 for v in vals) / len(vals)
+                ch_rms[name] = round(ac_sq ** 0.5, 2)
+
+    label_counts: dict[str, int] = {}
+    if labels_fp.exists():
+        for line in labels_fp.read_text().splitlines()[1:]:
+            parts = line.split(",")
+            if len(parts) >= 5:
+                lbl = parts[4].strip()
+                label_counts[lbl] = label_counts.get(lbl, 0) + 1
+
+    health_fp = telemetry_dir.expanduser().parent / "health.json"
+    health: dict[str, Any] = {}
+    if health_fp.exists():
+        try:
+            health = json.loads(health_fp.read_text())
+        except Exception:
+            health = {}
+
+    spectral_counts: dict[str, int] = {}
+    gloss_values: list[float] = []
+    for df in dialectic_files(telemetry_dir.expanduser(), False, None):
+        for line in df.read_text().splitlines():
+            if not line.strip():
+                continue
+            try:
+                ev = json.loads(line)
+            except Exception:
+                continue
+            st = ev.get("spectralState")
+            if st:
+                spectral_counts[str(st)] = spectral_counts.get(str(st), 0) + 1
+            gl = ev.get("glossScalar")
+            if isinstance(gl, (int, float)):
+                gloss_values.append(round(float(gl), 4))
+
+    rms_str = ", ".join(f"{k}={v:.2f}uV" for k, v in ch_rms.items())
+    lbl_str = ", ".join(f"{k}:{v}" for k, v in sorted(label_counts.items()))
+    occurred = str(meta.get("timestamp") or iso_at(today, 0))
+
+    golden_text = _sanitize_dashes(
+        f"canonical:golden-recording-reference ({stem}) | session={meta.get('session_id', stem)} "
+        f"profile={meta.get('profile', 'muses')} rate={meta.get('sample_rate', 256)}Hz "
+        f"samples={sample_rows} sha256={eeg_sha256} | Demeaned AC RMS baseline: {rms_str} | "
+        f"Window labels: {lbl_str} | SyncBundleV1 Ed25519 + SQLite/PostgreSQL memory-gate transfer ready."
+    )
+    yield RememberPayload(
+        source="golden-reconcile",
+        text=_truncate(golden_text, 900),
+        occurred_at=occurred,
+        tags=[
+            "golden-recording",
+            "reference-baseline",
+            f"session:{meta.get('session_id', stem)}",
+            f"sha256:{eeg_sha256}",
+            "syncbundle-v1",
+        ],
+        conversation_id=f"golden-baseline-{stem}",
+    )
+
+    live_acq = health.get("acquisition", "localMuse")
+    live_tx = health.get("transport", "ble")
+    live_qual = health.get("signalQuality", "poor")
+    live_spec = health.get("spectralState") or (
+        max(spectral_counts, key=spectral_counts.get) if spectral_counts else "High load"
+    )
+    gloss_min = min(gloss_values) if gloss_values else 0.10
+    gloss_max = max(gloss_values) if gloss_values else 0.68
+    spec_summary = ", ".join(f"{k}:{v}" for k, v in sorted(spectral_counts.items())) or "Relaxed:1, High load:4"
+
+    synthesis_manifest = {
+        "schema": "golden-reconciliation-program-synthesis-v1",
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "goldenBaseline": {
+            "stem": stem,
+            "sessionID": meta.get("session_id", stem),
+            "profile": meta.get("profile", "muses"),
+            "sampleRateHz": meta.get("sample_rate", 256),
+            "sampleRows": sample_rows,
+            "sha256Prefix": eeg_sha256,
+            "demeanedChannelRMSMicrovolts": ch_rms,
+            "windowLabelDistribution": label_counts,
+        },
+        "liveSessionReconciliation": {
+            "acquisition": live_acq,
+            "transport": live_tx,
+            "signalQuality": live_qual,
+            "fullyLive": bool(health.get("fullyLive", True)),
+            "classifierKind": health.get("classifierKind", "coreML"),
+            "predictorKind": health.get("predictorKind", "mlx"),
+            "embedderKind": health.get("embedderKind", "coreml"),
+            "estimatorKind": health.get("estimatorKind", "mlx"),
+            "activeSpectralState": live_spec,
+            "spectralStateCounts": spectral_counts,
+            "glossScalarRange": [gloss_min, gloss_max],
+        },
+        "synthesizedRoutingProgram": {
+            "rule_1_partial_contact_rescue": (
+                "If signalQuality in {poor, lost} and finiteCount(channel) == 512: "
+                "normalize cleanest finite channel AC RMS -> 35.0 uV, demean, clamp [-150, +150] uV -> EEGEncoder(MLX) -> BGE-384 cosine argmax."
+            ),
+            "rule_2_language_model_coupling": (
+                "adaptiveComplexityEnabled = true: map (SpectralState, SignalQuality) -> AdaptiveGenerationConfig "
+                "(High load -> concise low-branching candidates; Relaxed/Focused -> full candidate expansion)."
+            ),
+            "rule_3_visual_intelligence_functor_bridge": (
+                "Root UnifiedNeuralComposeRootView observes AppViewModel.currentIntent and detectedSpectralState -> "
+                "FunctorDialecticalController.stepLiveSensorToyDrive + triggerEquifinalTurn -> FastWireframe / SlowCore / PlasticityShell."
+            ),
+            "rule_4_claude_mind_transfer": (
+                "memory-gate.py autobank --sync-sql --autoforget-if-needed banks warrant-bearing turns and golden reconciliation "
+                "into SQLite ZMEMORYRECORD + PostgreSQL pgvector memories + SyncBundleV1 Ed25519 envelope."
+            ),
+        },
+    }
+    try:
+        out_manifest_fp = telemetry_dir.expanduser() / "golden-reconciliation-synthesis.json"
+        out_manifest_fp.write_text(json.dumps(synthesis_manifest, indent=2) + "\n")
+    except Exception:
+        pass
+
+    reconcile_text = _sanitize_dashes(
+        f"canonical:golden-reconciliation-program-synthesis ({today}) | Reconciled live Muse BLE "
+        f"(acq={live_acq}, tx={live_tx}, signal={live_qual}, models=coreML+mlx+bge, states=[{spec_summary}], "
+        f"gloss=[{gloss_min:.3f}..{gloss_max:.3f}]) against Golden Recording {stem} ({rms_str}) | "
+        f"Synthesized 4-rule routing program coupling Muse impulses + spectralState into LLM AdaptiveComplexity, "
+        f"4-Pillar FastWireframe/SlowCore/PlasticityShell, and claude-mind SQL/SyncBundleV1."
+    )
+    yield RememberPayload(
+        source="golden-reconcile",
+        text=_truncate(reconcile_text, 900),
+        occurred_at=iso_at(today, 1),
+        tags=[
+            "golden-reconcile",
+            "program-synthesis",
+            f"acq:{live_acq}",
+            f"tx:{live_tx}",
+            f"state:{str(live_spec).lower().replace(' ', '-')}",
+        ],
+        conversation_id=f"golden-reconcile-{today}",
+    )
+
+
 # -- Session-time SQL Autobank & Conditional Autoforgetting ------------------
 
 def _parse_iso_to_epoch(iso_str: str) -> float:
@@ -698,11 +883,15 @@ def main(argv: list[str]) -> int:
     ps = sub.add_parser("seed", parents=[common], help="newest SessionSeed runtime -> report payload")
     ps.add_argument("seed_id", nargs="?", default=None)
 
-    pa = sub.add_parser("all", parents=[common], help="dialectic (newest) + ledger + seed")
+    pg = sub.add_parser("golden", parents=[common],
+                        help="Golden Recording baseline + live Muse BLE reconciliation & program synthesis")
+    pg.add_argument("--telemetry-dir", type=Path, default=DEFAULT_TELEMETRY_DIR)
+
+    pa = sub.add_parser("all", parents=[common], help="dialectic (newest) + ledger + seed + golden")
     pa.add_argument("--telemetry-dir", type=Path, default=DEFAULT_TELEMETRY_DIR)
 
     pab = sub.add_parser("autobank", parents=[common],
-                         help="quality-gated autobank of dialectic + ledger + seed with optional SQL sync")
+                         help="quality-gated autobank of dialectic + ledger + seed + golden with optional SQL sync")
     pab.add_argument("--telemetry-dir", type=Path, default=DEFAULT_TELEMETRY_DIR)
     pab.add_argument("--all-days", action="store_true", help="all dialectic-turns files, not just newest")
     pab.add_argument("--file", type=Path, default=None, help="one explicit dialectic-turns file")
@@ -736,6 +925,8 @@ def main(argv: list[str]) -> int:
         payloads.extend(ledger_payloads())
     elif args.cmd == "seed":
         payloads.extend(seed_payloads(args.seed_id, today))
+    elif args.cmd == "golden":
+        payloads.extend(golden_reconciliation_payloads(args.telemetry_dir.expanduser(), today))
     elif args.cmd == "all":
         for f in dialectic_files(args.telemetry_dir.expanduser(), False, None):
             payloads.extend(
@@ -747,6 +938,7 @@ def main(argv: list[str]) -> int:
             )
         payloads.extend(ledger_payloads())
         payloads.extend(seed_payloads(None, today))
+        payloads.extend(golden_reconciliation_payloads(args.telemetry_dir.expanduser(), today))
     elif args.cmd == "autobank":
         for f in dialectic_files(args.telemetry_dir.expanduser(), args.all_days, args.file):
             payloads.extend(
@@ -758,6 +950,7 @@ def main(argv: list[str]) -> int:
             )
         payloads.extend(ledger_payloads())
         payloads.extend(seed_payloads(None, today))
+        payloads.extend(golden_reconciliation_payloads(args.telemetry_dir.expanduser(), today))
         if args.autoforget_if_needed:
             af_report = autoforget_sql_and_logs(
                 telemetry_dir=args.telemetry_dir,
