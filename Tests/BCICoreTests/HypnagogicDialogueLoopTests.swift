@@ -130,4 +130,38 @@ final class HypnagogicDialogueLoopTests: XCTestCase {
         XCTAssertEqual(HypnagogicDialogueLoop.chunk("   "), [])
         XCTAssertEqual(HypnagogicDialogueLoop.chunk("no punctuation"), ["no punctuation"])
     }
+
+    private actor FlakyMirrorGenerator: TextGenerating {
+        nonisolated let isLive = false
+        nonisolated let modelIdentifier = "spy-flaky-mirror"
+        private var failCalls: Int
+        init(failCalls: Int) { self.failCalls = failCalls }
+        func generate(prompt: String, maxTokens: Int, temperature: Double,
+                      cancellationID: UUID) async throws -> String {
+            if failCalls > 0 {
+                failCalls -= 1
+                throw BCIError.predictorInferenceFailed(reason: "claude CLI exited with status 127")
+            }
+            return "Calm mirror reply."
+        }
+    }
+
+    func testSilentTurnDoesNotClearLastFailureInMirrorLoop() async {
+        let listener = SpyListener(script: ["hello", nil])
+        let generator = FlakyMirrorGenerator(failCalls: 1)
+        let speaker = SpySpeaker()
+        let loop = HypnagogicDialogueLoop(listener: listener, generator: generator,
+                                          speaker: speaker, config: fastConfig())
+        await loop.start()
+        let spokeCue = await poll {
+            let listens = await listener.listenCount
+            let spoken = await speaker.spoken.count
+            return listens >= 2 && spoken >= 1
+        }
+        await loop.stop()
+        XCTAssertTrue(spokeCue)
+        let status = await loop.status
+        XCTAssertNotNil(status.lastFailure, "silent turn in mirror loop must not clear lastFailure")
+        XCTAssertTrue(status.lastFailure?.contains("status 127") == true)
+    }
 }

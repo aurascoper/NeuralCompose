@@ -105,11 +105,15 @@ def _sanitize_dashes(text: str) -> str:
     out = re.sub(r"Speaker\s+Speaker\s+\[REDACTED_NAME\]", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     out = re.sub(r"\bKendra\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     out = re.sub(r"\bHunter\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bBrett\b", "[REDACTED_PII]", out, flags=re.IGNORECASE)
     out = re.sub(r"\[REDACTED_NAME\]\s+\[REDACTED_NAME\]\s+\[REDACTED_NAME\]", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     out = re.sub(r"\bUncle\s+Tom\b", "Family Member", out, flags=re.IGNORECASE)
     out = re.sub(r"\bEllen\s+Wan\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     out = re.sub(r"\bAndrew\s+Hoffman\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     return out
+
+
+_sanitize_dashes_and_pii = _sanitize_dashes
 
 
 

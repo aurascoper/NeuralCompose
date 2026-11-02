@@ -469,7 +469,7 @@ Across the 15 dictated turns (`Log Lines 30-43` and `Line 51`), `NeuralCompose` 
 
 `[MODEL ILLUSTRATION - RUNG_4_MODEL]`
 
-Across Draft PR #74 (`DoubleTreeHorizonBridge`), the *Clay, microbes and metal* exploratory deck ([REDACTED_NAME] Kinder, October 2026, for Ellen Wan & Andrew Hoffman), and the M6 Literature Synthesis (mycelial anastomosis and *Danio rerio* chromatophore patterning), the exact same topological invariant governs when a branching system transitions from a fragile tree of Tarjan bridges into a resilient biconnected cycle network:
+Across Draft PR #74 (`DoubleTreeHorizonBridge`), the *Clay, microbes and metal* exploratory deck ([REDACTED_NAME] Kinder, October 2026, for [REDACTED_NAME] & [REDACTED_NAME]), and the M6 Literature Synthesis (mycelial anastomosis and *Danio rerio* chromatophore patterning), the exact same topological invariant governs when a branching system transitions from a fragile tree of Tarjan bridges into a resilient biconnected cycle network:
 
 | Domain | Unbridged / Single-Contact Regime (`beta_1 = 0`, All Edges are Tarjan Bridges) | Multi-Site Horizon / Anastomosis Closure (`beta_1 = 2^n_H - 1`, Tarjan Bridges = `0`) | Falsification / Control Discriminant |
 | :--- | :--- | :--- | :--- |

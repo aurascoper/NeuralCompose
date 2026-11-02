@@ -108,3 +108,11 @@ deep-research-report.md
 NeuralCompose_dream_prompt.md
 .pi-subagents/
 /outputs/
+
+## Raw physiological health & prosody telemetry traces (excluded from public research releases per Priority 5)
+InteractionLogs/health-*.jsonl
+InteractionLogs/prosody-trace-*.jsonl
+InteractionLogs/spoken-trace-*.jsonl
+Tests/Fixtures/InteractionLogs/health-*.jsonl
+Tests/Fixtures/InteractionLogs/prosody-trace-*.jsonl
+Tests/Fixtures/InteractionLogs/spoken-trace-*.jsonl

@@ -3,7 +3,7 @@ import Foundation
 /// Experimental, opt-in hypnagogic dialogue loop. On each turn it LISTENS for a
 /// short spoken utterance (on-device STT), sends the transcript to a
 /// `TextGenerating` engine constrained to soft, ≤2-sentence "mirror" replies,
-/// and SPEAKS the reply with hypnagogic prosody — then repeats. On a silent turn
+/// and SPEAKS the reply with hypnagogic prosody  -  then repeats. On a silent turn
 /// it speaks a pre-programmed induction cue instead of calling the model.
 ///
 /// Honest scope (read before extending):
@@ -11,9 +11,9 @@ import Foundation
 ///    The S-3 classifier is synthetic-only and unvalidated on real data (see
 ///    `decision_registry.md` entry 7 / `SLEEP_CYCLE_DESIGN.md`); firing this on
 ///    an unreliable N1 signal is out of scope.
-///  - The generator MAY be a network/cloud model — the sole runtime exception
+///  - The generator MAY be a network/cloud model  -  the sole runtime exception
 ///    to "No network at runtime" (`decision_registry.md` entry 8). STT stays
-///    on-device, so only *text* — never audio — can leave the machine, and
+///    on-device, so only *text*  -  never audio  -  can leave the machine, and
 ///    nothing is persisted. The opt-in flag + privacy banner make it visible
 ///    while active.
 ///  - Engineering scaffolding, **NOT** a validated intervention. Any efficacy
@@ -23,7 +23,7 @@ import Foundation
 /// `TextGenerating`, `SpeechSynthesizing`), fully testable with spies; it never
 /// links AVFoundation, MLX, or the CLI itself. Mic and speaker are used in
 /// strict alternation (listen → speak → listen), so the mic is never hot during
-/// playback — no acoustic feedback path, no explicit mute needed.
+/// playback  -  no acoustic feedback path, no explicit mute needed.
 public actor HypnagogicDialogueLoop {
 
     public struct Config: Sendable {
@@ -127,6 +127,7 @@ public actor HypnagogicDialogueLoop {
                 try Task.checkCancellation()
 
                 let reply: String
+                let didGenerateReply: Bool
                 if let transcript = heard?.trimmingCharacters(in: .whitespacesAndNewlines),
                    !transcript.isEmpty {
                     phase = .generating
@@ -136,22 +137,26 @@ public actor HypnagogicDialogueLoop {
                         temperature: config.temperature,
                         cancellationID: UUID()
                     )
+                    didGenerateReply = true
                 } else {
-                    // Silent turn — no model call; speak a rotating induction cue.
+                    // Silent turn  -  no model call; speak a rotating induction cue.
                     reply = nextSilenceCue()
+                    didGenerateReply = false
                 }
 
                 try Task.checkCancellation()
                 phase = .speaking
                 try await speakChunks(reply)
-                lastFailure = nil
-                lastTurnAt = Date()
-                turnIndex += 1
+                if didGenerateReply {
+                    lastFailure = nil
+                    lastTurnAt = Date()
+                    turnIndex += 1
+                }
             } catch is CancellationError {
                 return
             } catch {
                 // A listen/generate/speak failure (incl. BCIError.cancelled from
-                // stopSpeaking) — exit if cancelled, else fall through to the
+                // stopSpeaking)  -  exit if cancelled, else fall through to the
                 // delay rather than hot-spinning on a persistent error.
                 if Task.isCancelled { return }
                 phase = .retrying

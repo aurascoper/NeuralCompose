@@ -1,0 +1,478 @@
+{
+  "schema": "claude-mind-sqlite-verification-receipt-v1",
+  "verified_at_utc": "2026-11-02T18:48:21.379520+00:00",
+  "sqlite_db_path": "/Users/aurascoper/Library/Application Support/claude-mind/memory.sqlite",
+  "claude_mind_mcp_repo": "/Users/aurascoper/Developer/claude-mind-mcp",
+  "claude_mind_mcp_head_commit": "35748bdeb6fb226064456c2e780f39ec62742a1a",
+  "zmemoryrecord_summary": {
+    "total_rows": 2091,
+    "min_z_pk": 1,
+    "max_z_pk": 2124,
+    "max_z_pk_equals_2124_or_greater": true
+  },
+  "ztagrecord_summary": {
+    "total_tags": 5285,
+    "max_z_pk": 5287
+  },
+  "target_z_pk_ranges_verified": {
+    "anchor_pks": [
+      805,
+      939,
+      1060,
+      1073,
+      1076
+    ],
+    "session_oct31_nov01_range": "1049..1087 (excluding unallocated auto-increment gaps 1070, 1072)",
+    "reconciliation_nov02_range_1": "2108..2110",
+    "reconciliation_nov02_range_2": "2112..2124",
+    "unallocated_autoincrement_gaps": [
+      1070,
+      1072,
+      2111
+    ],
+    "verified_present_count": 55,
+    "all_requested_pks_present": true
+  },
+  "pii_free_row_digests": [
+    {
+      "z_pk": 805,
+      "source": "neutron-criticality-router-momentum-automata-brti-obi-sync-2026-10-27",
+      "conversation_id": "fc8435a3-e081-4be3-8f9a-a1bda5e23a28",
+      "tombstoned": 0,
+      "char_length": 8168,
+      "text_sha256": "01492140cfcbf541f287a785343894bc99d72377c2709774f24fee6082a91a6a"
+    },
+    {
+      "z_pk": 939,
+      "source": "poller-self-improvement-v2",
+      "conversation_id": "poller-self-improvement-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1776,
+      "text_sha256": "497255d1fb18edb79e41b4c0b05bf582dfb301749190450dc34febee820d45f7"
+    },
+    {
+      "z_pk": 1049,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1777,
+      "text_sha256": "e56eddb53022e838c825ec8f8c17778bf7204aa95cf839718e3913dd409636a3"
+    },
+    {
+      "z_pk": 1050,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1821,
+      "text_sha256": "63da92cae705e4b22add02e163a62181bf78e2bde337357ecb26e795e49679ce"
+    },
+    {
+      "z_pk": 1051,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 6672,
+      "text_sha256": "d05e79c53077d638961be31f6aec2de2db0c699b68c261b4454d26fc92582e15"
+    },
+    {
+      "z_pk": 1052,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 6248,
+      "text_sha256": "ab48167640a2483928e30c9d18793e82cd779d66202fadb2590fac161ff6bf9c"
+    },
+    {
+      "z_pk": 1053,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 957,
+      "text_sha256": "a9f84ec0b238fb875daabbd923395436a785b21b08bcf0b23d41f0b0de113f9b"
+    },
+    {
+      "z_pk": 1054,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5698,
+      "text_sha256": "b41d980fdbbbec96a731d162b582eea99333ec873672664ede1af6c23c13f4e4"
+    },
+    {
+      "z_pk": 1055,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 522,
+      "text_sha256": "e9eb03d5e94f144b81f11d5347f9f21dd34c03430be5b3d4f786cb8d949eb7a3"
+    },
+    {
+      "z_pk": 1056,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5788,
+      "text_sha256": "15a2f16a49749eecf7344d790257910eec41b6bbe32bbb97b2329d1e1ac9d8f1"
+    },
+    {
+      "z_pk": 1057,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5788,
+      "text_sha256": "dd6723ac52d1d715c63c9f58f9041577844eb933737a17c65011aaefcf577fd6"
+    },
+    {
+      "z_pk": 1058,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5718,
+      "text_sha256": "856d94d951a521a91227242d3997ad484051950e389d615b436e899623e39231"
+    },
+    {
+      "z_pk": 1059,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5789,
+      "text_sha256": "c517f3323942dcbc842657b8a4c7c984a673c234cefcc358ca187570deba32a9"
+    },
+    {
+      "z_pk": 1060,
+      "source": "golden-reconciliation",
+      "conversation_id": "reconciliation-2026-11-01-to-11-02",
+      "tombstoned": 0,
+      "char_length": 3144,
+      "text_sha256": "49e2721b55821cbd1a1e55b92b5b33f6ba6b01428199e2092be16c17a91b0236"
+    },
+    {
+      "z_pk": 1061,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5789,
+      "text_sha256": "85c557853adf34ecf142edab7f50196e7be7e774254a21151b3feb126dc85fd3"
+    },
+    {
+      "z_pk": 1062,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5701,
+      "text_sha256": "e2a112ebaf7ce0a2d8998fce13595fb175538f431d88b5d784f11d580c9fdf9b"
+    },
+    {
+      "z_pk": 1063,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5653,
+      "text_sha256": "cf9c98ab160d3b8e13e4ee3908d536bf7ad46ab97b9da8bc6ef4e18a030a7cf5"
+    },
+    {
+      "z_pk": 1064,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5689,
+      "text_sha256": "2783b95f8ecb1ab9f3bff0c641b1e123efc5e5f2d6039e4cc03e8284c878caa3"
+    },
+    {
+      "z_pk": 1065,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5789,
+      "text_sha256": "bfa0bf9222f439cd4e710ddfdd551ee6f1b9c473ff74db401113c1ba365f68cd"
+    },
+    {
+      "z_pk": 1066,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5703,
+      "text_sha256": "17e675bcea71579e16233a0a3bb6eb63da7faf1edc32a2a6ba2c592f01d359e9"
+    },
+    {
+      "z_pk": 1067,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1030,
+      "text_sha256": "830d50225e913cf159b702bc0a1ee875b8f88772fd7ad7be30978dd80a617563"
+    },
+    {
+      "z_pk": 1068,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1071,
+      "text_sha256": "7da0d0d26a11f6e5c3177b3d339929682b1757a2ca6633c954e6f872d9a2ac88"
+    },
+    {
+      "z_pk": 1069,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 7152,
+      "text_sha256": "2ab66b9868151098010a11d92b5256c99d29b656442fa3de0b12704ab616c4b6"
+    },
+    {
+      "z_pk": 1071,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 6287,
+      "text_sha256": "7bbfa30cfc3833ae7d4a26b1c3959cc75e56e88daa4830ee8cff2890d0509556"
+    },
+    {
+      "z_pk": 1073,
+      "source": "poller-self-improvement-v2",
+      "conversation_id": "matlab-alara-hippocratism-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 866,
+      "text_sha256": "a4f376fa77a4efd7154d149a2f415a8d9c185e1abdc835bf01d4d796a42ad9a0"
+    },
+    {
+      "z_pk": 1074,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5637,
+      "text_sha256": "f6d09d46dc5021fcdf1907d69596f090586ab875fb8d70b975afab730661f130"
+    },
+    {
+      "z_pk": 1075,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5679,
+      "text_sha256": "4607c354dbce1a8c68f6cbadb990c6f4b36faa9a4c84315305e9ec7257eb9bc3"
+    },
+    {
+      "z_pk": 1076,
+      "source": "golden-reconcile",
+      "conversation_id": "golden-reconcile-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 488,
+      "text_sha256": "1eb201342cc5876ed4ba1b70ba4f8f39ca3419a67b71f8281c6ce22dfd0e40ae"
+    },
+    {
+      "z_pk": 1077,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5711,
+      "text_sha256": "f6548161a04c02006b3492faab561a396b0a435beea3a4c83d2abd64be76ce18"
+    },
+    {
+      "z_pk": 1078,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5637,
+      "text_sha256": "5e4d3369a81665f006ffb7ff09890c7f1e639bb5a30acbe43604b48e69b275ff"
+    },
+    {
+      "z_pk": 1079,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5702,
+      "text_sha256": "05002563c998c1f3794c991b027bdfcba75483f8374e472ad4f152f9358d8439"
+    },
+    {
+      "z_pk": 1080,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5702,
+      "text_sha256": "74cc4ba7dba84ea725fe2536d31babce89a99864d131cbc06269afff6b0287fd"
+    },
+    {
+      "z_pk": 1081,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5679,
+      "text_sha256": "c89ab8f5457a759aa9be4c9a62cf29ddd00591ea220d057bdfc85cf8194a2094"
+    },
+    {
+      "z_pk": 1082,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 7137,
+      "text_sha256": "9773fc1e093d48fae4e20d1cb0d57b71670cd930ba59ecaa32d386ecc46ff72b"
+    },
+    {
+      "z_pk": 1083,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5655,
+      "text_sha256": "26a84d9af69a4b23939b64278cd162d6b0556e5fdee871bdabf470ae9c6cfe17"
+    },
+    {
+      "z_pk": 1084,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5665,
+      "text_sha256": "e415d4797f1a3751e3056808a51f99aa5a818594258a049f8ed63a5ca19ddf03"
+    },
+    {
+      "z_pk": 1085,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5644,
+      "text_sha256": "7189c2d110573996a6fae7e478488f27a62d04a41dee32747b671dc3987452d7"
+    },
+    {
+      "z_pk": 1086,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5743,
+      "text_sha256": "8a891e902b8001dd724cfb5cea603da23c2d4d3d43d4561fa6d18f157e0d1841"
+    },
+    {
+      "z_pk": 1087,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5680,
+      "text_sha256": "5113195d3e1dbb955b3130db5cb1636437cea3d16dcf014ed26d1d698b4f44ba"
+    },
+    {
+      "z_pk": 2108,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1375,
+      "text_sha256": "a3e3114739fa3728da2e8a4d9482ec7aad14a1a914b83ceda18d70ff401f6728"
+    },
+    {
+      "z_pk": 2109,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5681,
+      "text_sha256": "fd4c11aaa41860ee26a336a2dffd13df7c4631dad4bb89429a2c9b1793fda597"
+    },
+    {
+      "z_pk": 2110,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5697,
+      "text_sha256": "eaa683f1225ac03bd67d0b33970211acfff5f3d6a9d2de0fc910f2a5c726a7ee"
+    },
+    {
+      "z_pk": 2112,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 6665,
+      "text_sha256": "9d132699a3fa5ed829d2b591cd93c4ec43ccf6934beed0da8db1b99e697ff9b1"
+    },
+    {
+      "z_pk": 2113,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1001,
+      "text_sha256": "502bdc3a36aafe92303c9c02d73cb95aff53bf50a5f3aadbef180cf849746ae9"
+    },
+    {
+      "z_pk": 2114,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5676,
+      "text_sha256": "5b9a63453cb4d9e9ab30da8bec2c0e3fb936917f90f5536507c8d3b78665a412"
+    },
+    {
+      "z_pk": 2115,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1446,
+      "text_sha256": "dd533e5431612a4ea537087ae367a6ecb3592c7f4db850eb7c698fbce7933ea6"
+    },
+    {
+      "z_pk": 2116,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1375,
+      "text_sha256": "b6c6466d0c0a9578bd2ee37942976e39d0bf1f87fcd11bfed437999f9d4e0cbb"
+    },
+    {
+      "z_pk": 2117,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1420,
+      "text_sha256": "ad311d913f550cbeb38117303126efac08c6528655790cab592b58d0b0d1ae32"
+    },
+    {
+      "z_pk": 2118,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 1265,
+      "text_sha256": "5e3ec99a5f1e6d10eddf0ab1e87eb448030c6b95b2670e9c05e00700c2f2a8c7"
+    },
+    {
+      "z_pk": 2119,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5789,
+      "text_sha256": "6b65c1ae67ea37c0f77d9efe4ee0427a06b0bc6c9b8763f71a939db9b2f76e22"
+    },
+    {
+      "z_pk": 2120,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5674,
+      "text_sha256": "e20bfee34f731b8d6b4bda5fb97a70052b1af7ca52e2754e51c0a0139722e2b0"
+    },
+    {
+      "z_pk": 2121,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5789,
+      "text_sha256": "a20b08b636e0a619e799bffe263322adc9fb1d50575a634ca04f95fb74a6f3dc"
+    },
+    {
+      "z_pk": 2122,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5731,
+      "text_sha256": "992c406e93109404d1288a3cffbd226e863158c06886a500386e27fcda9fab2e"
+    },
+    {
+      "z_pk": 2123,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5611,
+      "text_sha256": "3477a169fd6d390585d176c7d3163a904d18164e5b034e00d0bf3c960f54216a"
+    },
+    {
+      "z_pk": 2124,
+      "source": "app-dialectic",
+      "conversation_id": "dialectic-2026-11-02",
+      "tombstoned": 0,
+      "char_length": 5619,
+      "text_sha256": "917b23bc6ac06cc380109c8b22c2bf7766a1d799f1268c1fc88f727fbe012750"
+    }
+  ]
+}

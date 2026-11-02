@@ -9,9 +9,9 @@
   "typography_em_en_dash_count": 0,
   "files": {
     "NeuralCompose_Brett_Model_and_Biofilms_Dialogues_2026-10-31.md": {
-      "bytes": 69184,
+      "bytes": 69191,
       "lines": 478,
-      "sha256": "b5f2c368e93b18a40ca5ce923e4b0fa3e166285f4343c48f825d4f552ce916df"
+      "sha256": "08511859dfdf7357a5e6d563c407df687e2b538a66f0a702e3dcf3083a2d7433"
     },
     "NeuralCompose_Dialectical_Dialogues_2026-10-31.md": {
       "bytes": 112927,
@@ -24,9 +24,9 @@
       "sha256": "8886ca6f73ce8f33426938238358abee384a8499d550fb4c2c93f4acf38b4419"
     },
     "autobank-manifest-2026-11-02.jsonl": {
-      "bytes": 53113,
-      "lines": 59,
-      "sha256": "49045019ad2bd5c4f0b24671e56a4f4607c9fddbcb23355f21365447f10a0ebb"
+      "bytes": 67035,
+      "lines": 82,
+      "sha256": "40e43dcf3729bd953dbbb9a97b39565a24473d27c29ca9f52cfef6f3888b059c"
     },
     "dialectic-autobank-2026-07-19.jsonl": {
       "bytes": 70203,
@@ -94,9 +94,9 @@
       "sha256": "3337c81c676d55b8cb0380a2181214f690dbcd447e9ddc9a407cdd19d07e4364"
     },
     "dialectic-autobank-2026-11-02.jsonl": {
-      "bytes": 96667,
-      "lines": 27,
-      "sha256": "69098f4e60603aeb92cf2df57b16e772c8b637efead551f42b55d4ef62c9c414"
+      "bytes": 175033,
+      "lines": 50,
+      "sha256": "62217e51dc7733fd92cd5d52c3d532240ec30f4f732371d0447ee501e6513d31"
     },
     "dialectic-turns-2026-07-19.jsonl": {
       "bytes": 78213,
@@ -164,159 +164,21 @@
       "sha256": "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7"
     },
     "dialectic-turns-2026-11-02.jsonl": {
-      "bytes": 100060,
-      "lines": 28,
-      "sha256": "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013"
+      "bytes": 175552,
+      "lines": 51,
+      "sha256": "4bed458a31ac5e5b549bb2b02afde1013cd1ef13dac2202adf5c06db8bbdb786",
+      "historical_28_line_prefix_bytes": 100060,
+      "historical_28_line_prefix_sha256": "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013"
     },
     "equifinal-dialectic-turns.jsonl": {
-      "bytes": 3056841,
-      "lines": 1465,
-      "sha256": "fe7dbb1606659e9e95930fb511448fbef42bf1178feb2dce08e4e258040826bf"
+      "bytes": 3203820,
+      "lines": 1540,
+      "sha256": "132f4e4639d87fe362e9ca54b3ed214f17bbc0cfd8fdecedadc77136f78a40bd"
     },
     "golden-reconciliation-synthesis.json": {
-      "bytes": 2433,
+      "bytes": 2833,
       "lines": 46,
-      "sha256": "590c0ace59e102b99b93bd41daef1ad2a7cd147d589a0fc350f92cf2c5fd00c2"
-    },
-    "health-2026-07-20.jsonl": {
-      "bytes": 745919,
-      "lines": 1326,
-      "sha256": "be418ca7656c6edf121c6ca3bfd1d110fd8b428ca4515ced126d6629242defec"
-    },
-    "health-2026-07-21.jsonl": {
-      "bytes": 747524,
-      "lines": 1381,
-      "sha256": "ecad9a832d0d1c7a7fd1fce9e4af63cad2987e7109d5324e043eeee3535b9510"
-    },
-    "health-2026-07-22.jsonl": {
-      "bytes": 304590,
-      "lines": 541,
-      "sha256": "a7c677401db3c1bfc6def81ba57df80a4e0bd41487810320d95501c20c7bee1b"
-    },
-    "health-2026-07-23.jsonl": {
-      "bytes": 692061,
-      "lines": 1207,
-      "sha256": "ec45b8823bfdfb15f20dd97d6dcee61c274579eb838d57822c4cfc7960adf8c4"
-    },
-    "health-2026-07-24.jsonl": {
-      "bytes": 17693,
-      "lines": 36,
-      "sha256": "72f8884bbb3408f453674bb1eb222716c965458fce5bffc82c0323821a323d63"
-    },
-    "health-2026-07-25.jsonl": {
-      "bytes": 15447,
-      "lines": 32,
-      "sha256": "a10cac91737cd6a943b87b5a5199b45fba68121cb1eebd575fef165e28dd1843"
-    },
-    "health-2026-07-26.jsonl": {
-      "bytes": 4321,
-      "lines": 9,
-      "sha256": "0eb3ea7e731aa3088e8b0033b71b2b558105efbc3637554a77480c1193bd4c7a"
-    },
-    "health-2026-07-27.jsonl": {
-      "bytes": 55939,
-      "lines": 103,
-      "sha256": "2824306e9495cafaca8499809ec49a256a5d6e006125d6e42146a3dedd1a07f5"
-    },
-    "health-2026-07-28.jsonl": {
-      "bytes": 188545,
-      "lines": 330,
-      "sha256": "110979963459dcb894e7bc7463cb57d6e62fb5814eab491fe5b437641778e0ec"
-    },
-    "health-2026-07-29.jsonl": {
-      "bytes": 14859,
-      "lines": 26,
-      "sha256": "d51a7f3260a0d89c31406b9f50f4718dfb0b584c3beaeb98e7afe79613046edf"
-    },
-    "health-2026-08-07.jsonl": {
-      "bytes": 623297,
-      "lines": 1090,
-      "sha256": "d5e21ad29a6dcf26e447ffcc611c9a9089cb31ca1335574af22abd8baabd0f48"
-    },
-    "health-2026-08-08.jsonl": {
-      "bytes": 799195,
-      "lines": 1377,
-      "sha256": "11390935246c48833e3fa57b2f1ad905bc69716c7338a73232973ae10acc3424"
-    },
-    "health-2026-08-09.jsonl": {
-      "bytes": 789455,
-      "lines": 1358,
-      "sha256": "e601b56319cfc06b68a3a20a14d00bfad89b7f76a94947e7ca4f9d6cbcf90a93"
-    },
-    "health-2026-08-17.jsonl": {
-      "bytes": 2539,
-      "lines": 5,
-      "sha256": "b91468d8c46939685c6b6abf02e3657b85c11244b3d227e8dea078e59006db60"
-    },
-    "health-2026-08-22.jsonl": {
-      "bytes": 966,
-      "lines": 2,
-      "sha256": "66631ba5ee908582066d95d8d38646ab3503fe212d65f5ff877c61ce68023b82"
-    },
-    "health-2026-08-24.jsonl": {
-      "bytes": 1480,
-      "lines": 3,
-      "sha256": "c21b23f2facb5c4ddb412eb65f67a683b443021bdf6fe78119fe61b35159ac1c"
-    },
-    "health-2026-09-24.jsonl": {
-      "bytes": 13994,
-      "lines": 29,
-      "sha256": "49d35baba05b5730db89780ca6ff33ea1035dc2ce5f445e4a17a211d543f032b"
-    },
-    "health-2026-09-25.jsonl": {
-      "bytes": 1929,
-      "lines": 4,
-      "sha256": "46981bb7248a6dd1349eae54b4b8fc74e6d962e02cdc6a1de53ade1406eb03d2"
-    },
-    "health-2026-09-29.jsonl": {
-      "bytes": 456,
-      "lines": 1,
-      "sha256": "3f331f6968812564d09c241c354f04eb9dba5e3ca5ae52cb6c1f5d23adfe8904"
-    },
-    "health-2026-10-11.jsonl": {
-      "bytes": 547688,
-      "lines": 1137,
-      "sha256": "3032b04deb8e79dd10b104827fec8fedaf01685d1af1622cb733dc1ee9b29f28"
-    },
-    "health-2026-10-13.jsonl": {
-      "bytes": 47770,
-      "lines": 87,
-      "sha256": "08f4a88f1fafd14006ae448551a3b777f9eaa092ca9820188b10cbd4bd69c53c"
-    },
-    "health-2026-10-14.jsonl": {
-      "bytes": 4039,
-      "lines": 8,
-      "sha256": "1f365be2acbdd38b735c1fbd916ca5231b0a4fe864a8b236147d0428ca48aa11"
-    },
-    "health-2026-10-15.jsonl": {
-      "bytes": 95611,
-      "lines": 187,
-      "sha256": "4132a2df6e6b0da565ca0d1de786ecbd47d31e83fb1d5d0aef47ac75d0d75c70"
-    },
-    "health-2026-10-29.jsonl": {
-      "bytes": 3464,
-      "lines": 7,
-      "sha256": "f0f9af5e85faa30571a662db70212bd840f281806df46a7d666bc700b3c6e84e"
-    },
-    "health-2026-10-30.jsonl": {
-      "bytes": 40551,
-      "lines": 85,
-      "sha256": "f0581c3adb3f7ce153b272bbd4bfc3f0de319aa05bfdcc476672ae064d821c11"
-    },
-    "health-2026-10-31.jsonl": {
-      "bytes": 581248,
-      "lines": 1059,
-      "sha256": "b4e5e0caf964e5eb3b981ff0948d9082cc6fb8b6fda0f0e168a4003435048d9a"
-    },
-    "health-2026-11-01.jsonl": {
-      "bytes": 514234,
-      "lines": 964,
-      "sha256": "afd6ec932c64e719ad8f0b3025dd2dea70d4a2ea25c859dd042576a6c488e53d"
-    },
-    "health-2026-11-02.jsonl": {
-      "bytes": 175037,
-      "lines": 337,
-      "sha256": "61f8182ad52ca9e825e0a0904035bd391eb1a82174c770c3bbfa71bb2486216a"
+      "sha256": "d61b3df5c7fca257afed2771980730cb05fe648e7c65596a106cbf475ea61a82"
     },
     "interactions-2026-07-19.jsonl": {
       "bytes": 561,
@@ -334,9 +196,9 @@
       "sha256": "6fa25008a7a98ff38a23dcc3f5f766c6241f2f46298e8dacbcdebcaf98ef1c50"
     },
     "matlab-alara-bridge-telemetry.json": {
-      "bytes": 2578,
-      "lines": 70,
-      "sha256": "552560d4e8164525a7e7cadc0c9087af401702940425b7fb4b96979bd013e1cc"
+      "bytes": 14874,
+      "lines": 434,
+      "sha256": "55d75a6a091cbaa5ec6c9d95940ef49b7af53a3a2e5d094eb3d7a94567d8becd"
     },
     "offline-dream-cron.err.log": {
       "bytes": 2365,
@@ -354,100 +216,47 @@
       "sha256": "786916ef49c0d401d2b58b1b8bb1786d86b3a3b8f3f2cb22278cf0ee64b26dcf"
     },
     "poller-self-improvement-synthesis-v2.json": {
-      "bytes": 528286,
-      "lines": 4264,
-      "sha256": "233c9271128520cfc2c22976bdf5aa2a3a6f62250d04a9edb3bbd3f7210b2f46"
+      "bytes": 1153277,
+      "lines": 5631,
+      "sha256": "e4b12969b3ed5a75affe48c9c4e71ec8f4b67e3aaf8f78ab8e83c162506024bd"
     },
     "poller_watermark.json": {
-      "bytes": 996,
-      "lines": 21,
-      "sha256": "74fd70cbff94ead434cf51ec3e6e90c9efd7f4686c9be0133ad54fdb061a1eb2"
+      "bytes": 1037,
+      "lines": 22,
+      "sha256": "64220e3d3a63a76255f49efe618e56a4d7a0a5d026d912c74afb7bbb26161f03"
     },
-    "prosody-trace-2026-07-22.jsonl": {
-      "bytes": 72227,
-      "lines": 105,
-      "sha256": "c3b3ffcb365e3e8d725f94e7a51f6588df8da745a0f118bbf851053bc0beaf42"
+    "CLAUDE_MIND_SQLITE_VERIFICATION_RECEIPT_2026-11-02.json": {
+      "bytes": 15163,
+      "lines": 478,
+      "sha256": "230df599f6e44962a0c621f5b8b70c1d9383455ad851692f47b26e78bbc9b0f1"
     },
-    "prosody-trace-2026-07-23.jsonl": {
-      "bytes": 67968,
-      "lines": 99,
-      "sha256": "c2a304008904ae6d0d4d2b94daa3921e640d83d47fd60192f3078cc6108af9c2"
-    },
-    "prosody-trace-2026-07-24.jsonl": {
-      "bytes": 1057,
-      "lines": 2,
-      "sha256": "48a22878428e1c2fd771536aca9b4eb0572720e90ed0b678d557d7f4375c1974"
-    },
-    "prosody-trace-2026-07-28.jsonl": {
-      "bytes": 52477,
-      "lines": 50,
-      "sha256": "880bb2009f4f7fcb7d15970346d361b53ebf2e05352212c2762ae35cff580634"
-    },
-    "prosody-trace-2026-07-29.jsonl": {
-      "bytes": 5157,
-      "lines": 5,
-      "sha256": "82b4e6725353d6ebede0095300e5a89b60975548fd5e086d2d1b790a77d0ad52"
-    },
-    "prosody-trace-2026-10-13.jsonl": {
-      "bytes": 18592,
-      "lines": 19,
-      "sha256": "4d19fc2e8adb7ef819db3febdc79e19b309dbb0f9cead0872bd26848ac63c134"
-    },
-    "prosody-trace-2026-10-14.jsonl": {
-      "bytes": 2968,
-      "lines": 3,
-      "sha256": "1ce522897e5012fd3994baf69ba206e71595ee86ac2d9fa0d749ad1697f131a2"
-    },
-    "prosody-trace-2026-10-31.jsonl": {
-      "bytes": 118714,
-      "lines": 109,
-      "sha256": "43c8e7ae8be3dfeabb7ec1b638c0c8d87e19c7119f1f213be6340e48de404a97"
-    },
-    "prosody-trace-2026-11-01.jsonl": {
-      "bytes": 176573,
-      "lines": 146,
-      "sha256": "6f6370818d825eb41c1905cb909bb4b234e30e3fa49999b7689231e6b67b27aa"
-    },
-    "prosody-trace-2026-11-02.jsonl": {
-      "bytes": 35038,
-      "lines": 28,
-      "sha256": "083172ca2edbdda0bcfb8ac812c8eb8680d88f894a0352d04bdeed68fbb3b7c9"
-    },
-    "spoken-trace-2026-07-21.jsonl": {
-      "bytes": 720,
-      "lines": 2,
-      "sha256": "d0205a8f60f7ce1d68f8644e08c29e60abdeb1ef5d1620c297420bdebeefa715"
-    },
-    "spoken-trace-2026-07-22.jsonl": {
-      "bytes": 1296,
-      "lines": 5,
-      "sha256": "2a4160ee00e33e5bb450cf71d8978e546568304a753f1aced97953cb8abbd665"
-    },
-    "spoken-trace-2026-07-23.jsonl": {
-      "bytes": 234,
-      "lines": 1,
-      "sha256": "b6f6a2107b71e92434d6dad13e92fc6cd93dd85822c16e8b2fdc544adb0d9610"
-    },
-    "spoken-trace-2026-07-24.jsonl": {
-      "bytes": 234,
-      "lines": 1,
-      "sha256": "2c7e2cc9caf93f80cd5b024d6e7824e2429aa038c1993e0c2b207f2eadcf69bb"
-    },
-    "spoken-trace-2026-07-27.jsonl": {
-      "bytes": 468,
-      "lines": 2,
-      "sha256": "3bcf7e2fd9a85a4c3a8e92993e1ec5ff850c1285d665f0bbf11d4ca6a3ac8f7b"
-    },
-    "spoken-trace-2026-08-07.jsonl": {
-      "bytes": 468,
-      "lines": 2,
-      "sha256": "81a3b04fa0c23ec6397b6a36fdd51783e5715b6b5fe297c5eee7306cc958dc6e"
-    },
-    "spoken-trace-2026-08-17.jsonl": {
-      "bytes": 936,
-      "lines": 4,
-      "sha256": "5fe14969b65c03604a4ee724fde8f16bf3d5b20046e54ed0388e264a04316cf2"
+    "MOMENTUM_AUTOMATA_VERIFICATION_RECEIPT_2026-11-02.json": {
+      "bytes": 8046,
+      "lines": 244,
+      "sha256": "75a8b7c5e8fe074e2c4f084511b6a3d13aa05518f5e1177d284231e537730e39"
     }
   },
-  "updatedAtUTC": "2026-11-02T07:57:48.340104+00:00"
+  "updatedAtUTC": "2026-11-02T07:57:48.340104+00:00",
+  "excluded_private_telemetry_patterns": [
+    "health-*.jsonl",
+    "prosody-trace-*.jsonl",
+    "spoken-trace-*.jsonl"
+  ],
+  "append_only_dialectic_corpus_summary": {
+    "dialectic-turns-2026-10-31.jsonl": {
+      "lines": 122
+    },
+    "dialectic-turns-2026-11-01.jsonl": {
+      "lines": 156
+    },
+    "dialectic-turns-2026-11-02.jsonl": {
+      "lines": 51,
+      "eligible_warranted_turns": 50,
+      "historical_28_line_prefix_bytes": 100060,
+      "historical_28_line_prefix_sha256": "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013",
+      "full_51_line_bytes": 175552,
+      "full_51_line_sha256": "4bed458a31ac5e5b549bb2b02afde1013cd1ef13dac2202adf5c06db8bbdb786"
+    },
+    "total_turns_across_3_files": 329
+  }
 }

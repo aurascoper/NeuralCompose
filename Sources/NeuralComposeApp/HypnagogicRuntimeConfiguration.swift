@@ -141,7 +141,7 @@ public struct HypnagogicRuntimeDiagnostics: Sendable, Equatable {
 }
 
 extension HypnagogicLoopPhase {
-    var displayLabel: String {
+    public var displayLabel: String {
         switch self {
         case .stopped: return "Stopped"
         case .listening: return "Listening"

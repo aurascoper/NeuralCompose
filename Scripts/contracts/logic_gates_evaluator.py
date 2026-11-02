@@ -644,9 +644,11 @@ class LogicGatesEvaluator:
 
         s_sub = source_event.subsystem_id
         t_sub = target_event.subsystem_id
+        s_norm = s_sub.replace("_", "").lower()
+        t_norm = t_sub.replace("_", "").lower()
 
         # Transition S1 -> S2 (NeuralCompose -> Momentum Automata)
-        if "NeuralCompose" in s_sub and "MomentumAutomata" in t_sub:
+        if "neuralcompose" in s_norm and "momentumautomata" in t_norm:
             s_payload = source_event.payload
             t_payload = target_event.payload
             if isinstance(s_payload, NeuralComposeFixtureEnvelope):
@@ -672,7 +674,7 @@ class LogicGatesEvaluator:
                         status = ":Incomplete"
 
         # Transition S2 -> S3 (Momentum Automata -> Reactor Pools)
-        elif "MomentumAutomata" in s_sub and "ReactorPools" in t_sub:
+        elif "momentumautomata" in s_norm and "reactorpools" in t_norm:
             t_payload = target_event.payload
             if isinstance(t_payload, MultiPoolReactorEnvelope):
                 if t_payload.n_pool != 8:
@@ -687,7 +689,7 @@ class LogicGatesEvaluator:
                         status = ":Incomplete"
 
         # Transition S3 -> S4 (Reactor Pools -> Biofilm Sessions)
-        elif "ReactorPools" in s_sub and "BiofilmsSessions" in t_sub:
+        elif "reactorpools" in s_norm and ("biofilmsessions" in t_norm or "biofilm" in t_norm):
             t_payload = target_event.payload
             if isinstance(t_payload, BiofilmSessionEnvelope):
                 # Cytoplasmic streaming check [5.0, 60.0] um/s

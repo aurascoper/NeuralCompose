@@ -45,8 +45,39 @@ APP_OBJ_DIR="$INTERMEDIATES_DIR/NeuralCompose.build/Debug/NeuralCompose-p.build/
 if [[ "${1:-}" == "--fast-link" ]] && [[ -f "$APP_OBJ_DIR/NeuralComposeApp.o" ]]; then
     echo "Using existing compiled NeuralComposeApp object files (--fast-link)."
 else
-    "$NC_REPO/Scripts/build.sh" --with-brainflow
+    if [[ -f "$BRAINFLOW_PATH/src/board_controller/inc/board_controller.h" ]]; then
+        (cd "$NC_REPO" && swift build -c debug --product NeuralCompose \
+            -Xcc "-DBCI_BRAINFLOW_AVAILABLE=1" \
+            -Xcc "-I$BRAINFLOW_PATH/src/board_controller/inc" \
+            -Xcc "-I$BRAINFLOW_PATH/src/utils/inc" \
+            -Xcc "-I$BRAINFLOW_PATH/src/data_handler/inc" \
+            -Xcc "-I$BRAINFLOW_PATH/third_party/json" \
+            -Xlinker "-L$BRAINFLOW_PATH/compiled" \
+            -Xlinker "-rpath" -Xlinker "$BRAINFLOW_PATH/compiled" \
+            -Xlinker "-rpath" -Xlinker "@executable_path" \
+            -Xlinker "-lBoardController" \
+            -Xlinker "-lDataHandler" \
+            -Xlinker "-lBrainBitLib")
+    else
+        (cd "$NC_REPO" && swift build -c debug --product NeuralCompose)
+    fi
 fi
+
+echo "Compiling BCIBridge.mm with -DBCI_BRAINFLOW_AVAILABLE=1 against BrainFlow at $BRAINFLOW_PATH..."
+clang++ -std=c++17 -ObjC++ -target arm64-apple-macos14.0 \
+  -DBCI_BRAINFLOW_AVAILABLE=1 \
+  -I"$NC_REPO/Sources/BCIBridge/include" \
+  -I"$BRAINFLOW_PATH/src/board_controller/inc" \
+  -I"$BRAINFLOW_PATH/src/utils/inc" \
+  -I"$BRAINFLOW_PATH/src/data_handler/inc" \
+  -I"$BRAINFLOW_PATH/third_party/json" \
+  -c "$NC_REPO/Sources/BCIBridge/BCIBridge.mm" \
+  -o "$PRODUCTS_DIR/BCIBridge.o"
+strings "$PRODUCTS_DIR/BCIBridge.o" | grep -q "brainflow-linked"
+cp "$BRAINFLOW_PATH/compiled"/lib*.dylib "$PRODUCTS_DIR/" 2>/dev/null || true
+find "$BRAINFLOW_PATH/build" \
+  \( -name "libsimpleble*.dylib" -o -name "libsimpleble-c*.dylib" \) \
+  -exec cp {} "$PRODUCTS_DIR/" \; 2>/dev/null || true
 
 if [[ -d "$NC_REPO/.build/mlx-swift_Cmlx.bundle" ]]; then
     rm -rf "$PRODUCTS_DIR/mlx-swift_Cmlx.bundle"
@@ -67,11 +98,67 @@ while IFS= read -r obj_file; do
     LINK_OBJS+=("$obj_file")
 done < <(tr ' ' '\n' < "$APP_OBJ_DIR/NeuralCompose.LinkFileList")
 
+INFO_PLIST_TMP="$SCRATCH_DIR/NeuralCompose_Info.plist"
+cat > "$INFO_PLIST_TMP" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>NeuralCompose</string>
+    <key>CFBundleName</key>
+    <string>Neural Compose</string>
+    <key>CFBundleDisplayName</key>
+    <string>Neural Compose</string>
+    <key>CFBundleIconFile</key>
+    <string>NeuralCompose</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.neuralcompose.app</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>60</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSUIElement</key>
+    <false/>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>NeuralCompose connects to your Muse headband over Bluetooth to read EEG locally. EEG data never leaves your machine.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>NeuralCompose captures microphone audio while you press and hold the dictation button and during listening turns of opt-in Hypnagogic mode. Audio is transcribed on-device only.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>NeuralCompose uses on-device speech recognition to transcribe your speech locally.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>NeuralCompose can receive EEG over your local network from the Mind Monitor OSC stream.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>[MODEL ILLUSTRATION - RUNG_4_MODEL] NeuralCompose 60-Frame Functor Network and Dialectical Topological Fixture.</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.neuralcompose.app.url</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>neuralcompose</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
+EOF
+
 rm -rf "$PRODUCTS_DIR/NeuralComposeApp.swiftmodule"
 echo "Linking unified binary against compiled NeuralComposeApp + BrainFlow BLE + MLX + BCIEEG + BCIVoice + WorldModel modules..."
 swiftc -target arm64-apple-macos14.0 -parse-as-library \
   -I "$APP_OBJ_DIR" \
   -I "$PRODUCTS_DIR" \
+  -Xcc -I"$NC_REPO/.build/checkouts/mlx-swift/Source/Cmlx/include" \
   -Xcc -fmodule-map-file="$INTERMEDIATES_DIR/GeneratedModuleMaps/BCIBridge.modulemap" \
   -Xcc -fmodule-map-file="$NC_REPO/.build/checkouts/mlx-swift/Source/Cmlx/include/module.modulemap" \
   -Xcc -fmodule-map-file="$NC_REPO/.build/checkouts/swift-numerics/Sources/_NumericsShims/include/module.modulemap" \
@@ -80,6 +167,7 @@ swiftc -target arm64-apple-macos14.0 -parse-as-library \
   "$NC_REPO/Scripts/functor-hud/NeuralComposeFunctorApp.swift" \
   -L"$BRAINFLOW_PATH/compiled" -lBoardController \
   -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+  -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker "$INFO_PLIST_TMP" \
   -lc++ -framework Speech -framework Foundation -framework Metal -framework Accelerate \
   -framework AVFAudio -framework AVFoundation -framework AppKit -framework Combine \
   -framework CoreBluetooth -framework CoreFoundation -framework CoreGraphics -framework CoreImage \

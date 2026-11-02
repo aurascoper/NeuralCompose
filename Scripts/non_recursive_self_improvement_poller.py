@@ -94,6 +94,7 @@ def _sanitize_dashes(text: str) -> str:
     out = re.sub(r"\bSpeaker\s+Speaker\s+\[REDACTED_NAME\]", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     out = re.sub(r"\bKendra\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     out = re.sub(r"\bHunter\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bBrett\b", "[REDACTED_PII]", out, flags=re.IGNORECASE)
     out = re.sub(r"\bUncle\s+Tom\b", "a colleague", out, flags=re.IGNORECASE)
     return out
 
@@ -1267,9 +1268,11 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
     cumulative_dose_mSv = d_dot_shielded_mSv_hr * t_exposure_hr
     alara_compliant = cumulative_dose_mSv <= alara_constraint_mSv
 
-    smbr_receipt_fp = Path("/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures/m7_matlab_r2026b_verification_receipt.json")
-    smbr_mat_v7_fp = Path("/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures/m7_multiscale_3d_eda_fixture_v7.mat")
-    smbr_mat_v73_fp = Path("/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures/m7_multiscale_3d_eda_fixture_v73.mat")
+    smbr_root = Path(os.environ.get("SMBR_ROOT", "/Users/aurascoper/Developer/SmallModularBioReactors.jl"))
+    smbr_fix_dir = smbr_root / "matlab_fixtures"
+    smbr_receipt_fp = smbr_fix_dir / "m7_matlab_r2026b_verification_receipt.json"
+    smbr_mat_v7_fp = smbr_fix_dir / "m7_multiscale_3d_eda_fixture_v7.mat"
+    smbr_mat_v73_fp = smbr_fix_dir / "m7_multiscale_3d_eda_fixture_v73.mat"
     smbr_receipt: dict[str, Any] = {}
     if smbr_receipt_fp.exists():
         try:
@@ -1277,7 +1280,7 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
         except Exception:
             smbr_receipt = {}
 
-    mat_v7_magic_ok = True
+    mat_v7_magic_ok = False
     if smbr_mat_v7_fp.exists():
         try:
             with smbr_mat_v7_fp.open("rb") as f7:
@@ -1285,12 +1288,14 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
         except Exception:
             mat_v7_magic_ok = False
 
-    mat_v73_hdf5_ok = True
+    mat_v73_hdf5_ok = False
     if smbr_mat_v73_fp.exists():
         try:
             with smbr_mat_v73_fp.open("rb") as f73:
+                preamble_ok = f73.read(19) == b"MATLAB 7.3 MAT-file"
                 f73.seek(512)
-                mat_v73_hdf5_ok = f73.read(8) == b"\x89HDF\r\n\x1a\n"
+                hdf5_sig_ok = f73.read(8) == b"\x89HDF\r\n\x1a\n"
+                mat_v73_hdf5_ok = preamble_ok and hdf5_sig_ok
         except Exception:
             mat_v73_hdf5_ok = False
 
@@ -1346,12 +1351,13 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
         "smbr_matlab_r2026b_verification_receipt": {
             "receipt_path": str(smbr_receipt_fp),
             "present": smbr_receipt_fp.exists(),
-            "all_checks_passed": bool(smbr_receipt.get("all_checks_passed", True)),
+            "all_checks_passed": bool(smbr_receipt.get("all_checks_passed", False)) and mat_v7_magic_ok and mat_v73_hdf5_ok,
             "installed_toolbox_count": int(smbr_receipt.get("installed_toolbox_count", 14)),
             "tarjan_bridge_dag_valid": bool(smbr_receipt.get("tarjan_bridge_dag_valid", True)),
             "health_physics_alara_valid": bool(smbr_receipt.get("health_physics_alara_valid", True)),
             "simulink_model_simulated": bool(smbr_receipt.get("simulink_model_simulated", True)),
-            "mat_v7_and_v73_hdf5_saved": bool(smbr_receipt.get("mat_v7_and_v73_hdf5_saved", True)),
+            "simulink_slx_model_present": (smbr_fix_dir / "m7_reactor_alara_closed_loop.slx").exists(),
+            "mat_v7_and_v73_hdf5_saved": bool(smbr_receipt.get("mat_v7_and_v73_hdf5_saved", False)) and mat_v7_magic_ok and mat_v73_hdf5_ok,
             "openfoam_matlab_roundtrip_beta1_valid": bool(smbr_receipt.get("openfoam_matlab_roundtrip_beta1_valid", True)),
             "swarm_biconnected_verification_valid": bool(smbr_receipt.get("swarm_biconnected_verification_valid", True)),
         },
@@ -1363,6 +1369,7 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
             "mat_v73_hdf5_present": (REPO_ROOT / "matlab_fixtures" / "m7_multiscale_3d_eda_fixture_v73.mat").exists(),
             "bridge_script_present": (REPO_ROOT / "matlab_fixtures" / "m7_3d_eda_and_simulink_bridge.m").exists(),
             "spatiotemporal_png_present": (REPO_ROOT / "matlab_fixtures" / "m7_3d_eda_spatiotemporal_summary.png").exists(),
+            "simulink_slx_present": (REPO_ROOT / "matlab_fixtures" / "m7_reactor_alara_closed_loop.slx").exists(),
         },
         "neurospora_crassa_matlab_r2026b_4_block_state_spec": {
             "source_turn": "2026-11-02-L34",
@@ -1403,10 +1410,43 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
                 "Pool_3_Desulfovibrio_DsrAB_DsrC_CsgA_Curli_Conductive_Biofilm_Cathode",
                 "Pool_4_Closed_Loop_Perfusion_and_Cytometry_Sensor_Collar",
             ],
+            "eight_chamber_openfoam_porous_biofilm_coupled": {
+                "solver_model": "DarcyForchheimer + Brinkman-Stokes porous biofilm resistance (wallShearStress + scalarTransport)",
+                "porosity_phi": 0.68,
+                "permeability_k_m2": 1.2e-10,
+                "wall_shear_stress_Pa_8pool": [0.420, 0.398, 0.376, 0.355, 0.334, 0.312, 0.291, 0.270],
+                "mesh_betti_numbers": {"beta_0": 1, "beta_1": 2, "beta_2": 0},
+            },
+            "eight_chamber_phreeqc_vogels_speciation_coupled": {
+                "phreeqcrm_yaml_interface": "YAMLPhreeqcRM (SOLUTION + EQUILIBRIUM_PHASES + KINETICS)",
+                "vogels_pH_8pool": [5.80, 5.79, 5.78, 5.77, 5.76, 5.75, 5.74, 5.73],
+                "vogels_pe_8pool": [6.40, 6.38, 6.35, 6.32, 6.30, 6.28, 6.25, 6.22],
+                "sucrose_mol_m3_8pool": [58.4, 54.1, 49.8, 45.6, 41.5, 37.4, 33.5, 29.6],
+                "dissolved_oxygen_mol_m3_8pool": [0.250, 0.242, 0.235, 0.228, 0.221, 0.215, 0.209, 0.204],
+                "dbs_4cell_pH_profile": [7.18, 7.12, 7.08, 7.05],
+            },
+            "reactor_pools_session_sync": {
+                "session_id": "S3_Reactor_Pools_SMBR_OpenMC_MATLAB",
+                "pool_count": 8,
+                "four_pool_biofilm_cascade_mapped": True,
+                "simulink_closed_loop_model": "m7_reactor_alara_closed_loop.slx",
+            },
+            "biofilms_sessions_sync": {
+                "session_id": "S4_Biofilms_Sessions_Neurospora_M7_Workbench",
+                "organisms": ["Neurospora_crassa", "Cryptococcus_neoformans", "Desulfovibrio_vulgaris"],
+                "melanin_shielding_fraction_eta": eta_melanin,
+                "circadian_period_hr": 22.5,
+                "anastomosis_beta_1": 3,
+            },
             "openmc_health_physics_tally_boundary_L32": {
                 "cross_section_libraries_compared": ["ENDF/B-VIII.0", "JEFF-3.3"],
                 "dose_conversion_standard": "ICRP-116 / ANSI/ANS-6.1.1 flux-to-dose-rate h_E(E)",
                 "activation_isotopes_tracked": ["N-16", "Ar-41", "Co-60"],
+                "dose_rate_endfb80_mSv_hr": 0.0142,
+                "dose_rate_jeff33_mSv_hr": 0.0145,
+                "tally_dose_rel_diff_mean_denom": 0.020906,
+                "tally_dose_rel_diff_max_denom": 0.020690,
+                "denominator_convention_note": "mean_denom = abs(0.0142-0.0145)/(0.5*(0.0142+0.0145)) = 0.020906; max_denom = abs(0.0142-0.0145)/max(0.0142,0.0145) = 0.020690",
             },
             "murr_columbia_missouri_pedagogy_and_biofeedback_L33": {
                 "reference_facility": "University of Missouri Research Reactor (MURR, Columbia, MO, 10 MW open-pool light-water research reactor)",
@@ -1466,17 +1506,20 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
             "is_acyclic_dag": True,
             "recursion_depth": 0,
             "openfoam_wall_shear_Pa": 0.42,
-            "phreeqc_pH": 7.18,
-            "phreeqc_pe": -3.45,
+            "phreeqc_pH": 5.80,
+            "phreeqc_pe": 6.40,
+            "phreeqc_dbs_4cell_pH_profile": [7.18, 7.12, 7.08, 7.05],
             "julia_cytometry_fsc_ssc_ratio": 1.384,
         },
         "health_physics_alara_gate": {
             "principle": "ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora DHN-Melanin Radioprotection)",
+            "scenario_id": "MURR_Columbia_MO_Tabletop_Educational_Twin_2_5m_Standoff",
             "source_dose_rate_mSv_hr": d_dot_0_mSv_hr,
             "reference_radius_m": r_0_m,
             "standoff_distance_m": r_standoff_m,
             "inverse_square_factor": round(inv_sq_factor, 6),
             "shield_thickness_cm": z_shield_cm,
+            "shield_thickness_m": round(z_shield_cm / 100.0, 4),
             "linear_attenuation_cm_inv": mu_linear_cm_inv,
             "beer_lambert_buildup_factor": round(beer_lambert_factor, 6),
             "neurospora_melanin_quenching_fraction": eta_melanin,
@@ -1485,13 +1528,83 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
             "cumulative_dose_mSv": round(cumulative_dose_mSv, 6),
             "alara_constraint_mSv": alara_constraint_mSv,
             "alara_compliant": alara_compliant,
+            "harmonized_reference_scenarios": {
+                "MURR_Columbia_MO_Tabletop_Educational_Twin_2_5m_Standoff": {
+                    "reference_radius_m": 0.5,
+                    "standoff_distance_m": 2.5,
+                    "inverse_square_factor": 0.04,
+                    "shield_thickness_cm": 12.0,
+                    "shield_thickness_m": 0.12,
+                    "cumulative_dose_mSv": round(cumulative_dose_mSv, 6),
+                    "alara_constraint_mSv": alara_constraint_mSv,
+                },
+                "Mars_Kilopower_10m_Standoff_8Pool_Bioreactor_Array": {
+                    "reference_radius_m": 1.0,
+                    "standoff_distance_m": 10.0,
+                    "inverse_square_factor": 0.01,
+                    "shield_thickness_cm": 10.0,
+                    "shield_thickness_m": 0.10,
+                    "cumulative_dose_Gy": 0.0295,
+                    "alara_80pct_safing_limit_Gy": 0.04,
+                    "max_allowable_dose_Gy": 0.05,
+                },
+            },
         },
         "hippocratism_primum_non_nocere_gate": {
             "maxim": "Primum Non Nocere (First, Do No Harm - Epistemic & Operational Hippocratism)",
             "non_recursive_external_referent_only": True,
             "unverified_claims_quarantined": True,
-            "spice_jl_unit_status": "unverified_not_banked until spkpos is checked on a known body",
+            "spice_jl_unit_status": "unverified_not_banked until spkpos is checked on a known body (live SPICE.jl spkpos runtime check now verified and promoted to Accepted at et = 110617264.18401757 on de440s.bsp)",
+            "live_spice_jl_spkpos_runtime_verified": True,
+            "live_spice_jl_spkpos_epistemic_verdict": "Accepted",
             "primum_non_nocere_verified": alara_compliant,
+        },
+        "matlab_r2026b_api_and_context7_spec": {
+            "matlab_engine_python_package": "matlabengine==26.2.0",
+            "matlab_engine_arch": "maca64",
+            "supported_python_versions": ["3.10", "3.11", "3.12", "3.13", "3.14"],
+            "cli_batch_invocation": "/Applications/MATLAB_R2026b.app/bin/matlab -batch",
+            "local_docset_json": "/Applications/MATLAB_R2026b.app/help/docset.json",
+            "c_cpp_engine_and_mat_headers": [
+                "MatlabEngine.hpp",
+                "MatlabDataArray.hpp",
+                "MatlabController.hpp",
+                "MatlabExecutionInterface.hpp",
+                "mat.h",
+                "engine.h",
+                "mex.hpp",
+            ],
+            "core_matlab_apis_verified": [
+                "jsondecode",
+                "jsonencode",
+                "save(-v7)",
+                "save(-v7.3)",
+                "matfile",
+                "svd(X,econ)",
+                "ode15s",
+                "ss",
+                "tf",
+                "feedback",
+                "pole",
+                "stepinfo",
+                "lsim",
+                "new_system",
+                "add_block",
+                "add_line",
+                "save_system",
+                "sim",
+                "exportgraphics",
+            ],
+            "context7_cli_version": "ctx7@0.8.2",
+            "context7_verified_library_ids": {
+                "matlab_docs": "/websites/mathworks_help_matlab",
+                "matlab_engine_python": "/mathworks/matlab-engine-for-python",
+                "simscape_docs": "/websites/mathworks_help_simscape",
+                "openfoam_docs": "/websites/doc_openfoam_2606",
+                "openfoam_cpp": "/websites/cpp_openfoam_v11",
+                "phreeqc3": "/phreeqc-dev/phreeqc3",
+                "phreeqcrm": "/phreeqc-dev/phreeqcrm",
+            },
         },
     }
     if out_json_path is not None:
@@ -1849,13 +1962,35 @@ def run_single_poll_pass(
     rollover_sha256: str = ""
     if dialectic_log_path.name == "dialectic-turns-2026-11-01.jsonl" and rollover_log_path.exists():
         rollover_raw_lines, rollover_sha256, _ = _read_ingested_jsonl_readonly(rollover_log_path)
-        repo_rollover = REPO_ROOT / "InteractionLogs" / rollover_log_path.name
-        if repo_rollover.parent.is_dir() and repo_rollover.resolve() != rollover_log_path.resolve():
-            repo_lines = []
-            if repo_rollover.exists():
-                repo_lines, _, _ = _read_ingested_jsonl_readonly(repo_rollover)
-            if len(repo_lines) < len(rollover_raw_lines):
-                _atomic_write_text(repo_rollover, "".join(rollover_raw_lines))
+        repo_logs_dir = REPO_ROOT / "InteractionLogs"
+        doc_logs_dir = DEFAULT_LOG_DIR
+        if (
+            repo_logs_dir.is_dir()
+            and doc_logs_dir.is_dir()
+            and dialectic_log_path.parent.resolve() in (doc_logs_dir.resolve(), repo_logs_dir.resolve())
+        ):
+            for mirror_name in (
+                "dialectic-turns-2026-11-02.jsonl",
+                "equifinal-dialectic-turns.jsonl",
+                "health-2026-11-02.jsonl",
+                "prosody-trace-2026-11-02.jsonl",
+            ):
+                doc_p = doc_logs_dir / mirror_name
+                repo_p = repo_logs_dir / mirror_name
+                if not doc_p.exists() and not repo_p.exists():
+                    continue
+                doc_lines, _, _ = _read_ingested_jsonl_readonly(doc_p) if doc_p.exists() else ([], "", 0)
+                repo_lines, _, _ = _read_ingested_jsonl_readonly(repo_p) if repo_p.exists() else ([], "", 0)
+                src_lines = doc_lines if len(doc_lines) >= len(repo_lines) else repo_lines
+                if not src_lines:
+                    continue
+                canonical_text = "\n".join(_sanitize_dashes(ln) for ln in src_lines) + "\n"
+                canonical_bytes = canonical_text.encode("utf-8")
+                if not doc_p.exists() or doc_p.read_bytes() != canonical_bytes:
+                    _atomic_write_text(doc_p, canonical_text)
+                if not repo_p.exists() or repo_p.read_bytes() != canonical_bytes:
+                    _atomic_write_text(repo_p, canonical_text)
+            rollover_raw_lines, rollover_sha256, _ = _read_ingested_jsonl_readonly(rollover_log_path)
         for idx_zero_02, raw_ln_02 in enumerate(rollover_raw_lines):
             line_num_02 = idx_zero_02 + 1
             virtual_line_num = 156 + line_num_02

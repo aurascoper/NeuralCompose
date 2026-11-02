@@ -4,9 +4,9 @@
 Executes:
 - Tier 1: Feature Coverage (120 tests across 24 features)
 - Tier 2: Boundary & Corner Cases (120 tests across 24 features)
-- Tier 3: Pairwise Cross-Feature Interactions (24 tests)
+- Tier 3: Pairwise Cross-Feature Interactions (29 tests)
 - Tier 4: Real-World Application Workloads (6 scenarios)
-Total: 270 test cases.
+Total: 275 test cases.
 
 Verifies:
 - 100% test pass rate
@@ -27,13 +27,16 @@ import sys
 import time
 import unittest
 
-# Ensure REPO_ROOT and REPO_ROOT/tests are on sys.path
+# Ensure REPO_ROOT, REPO_ROOT/tests, and REPO_ROOT/Tests are on sys.path
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TESTS_DIR = REPO_ROOT / "tests"
+TESTS_DIR_LOWER = REPO_ROOT / "tests"
+TESTS_DIR_UPPER = REPO_ROOT / "Tests"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-if str(TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(TESTS_DIR))
+if str(TESTS_DIR_LOWER) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR_LOWER))
+if str(TESTS_DIR_UPPER) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR_UPPER))
 
 from e2e.test_master_event_contract_e2e import (
     TestTier1FeatureCoverage,

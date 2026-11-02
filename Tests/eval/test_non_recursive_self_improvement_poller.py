@@ -262,10 +262,12 @@ def test_poller_single_pass_idempotency_and_watermark(tmp_path: Path):
 
 
 def test_rollover_2026_11_02_and_basilisk_m7_verified_audit():
-    # Verify PII redaction scrubs Hunter and Kendra
-    scrubbed = poller._sanitize_dashes("Hello Hunter and Kendra on Hunter's MacBook Air")
+    # Verify PII redaction scrubs Hunter, Kendra, and Brett
+    scrubbed = poller._sanitize_dashes("Hello Hunter and Kendra and Brett on Hunter's MacBook Air")
     assert "hunter" not in scrubbed.lower()
     assert "kendra" not in scrubbed.lower()
+    assert "brett" not in scrubbed.lower()
+    assert "[REDACTED_PII]" in scrubbed
 
     # Verify 2026-11-02 L1..L11 ASR phonetic recoveries
     rec_l1 = poller.apply_asr_phonetic_recovery(
@@ -506,6 +508,8 @@ def test_rollover_2026_11_02_and_basilisk_m7_verified_audit():
     assert synth_models == ["claude-sonnet-5", "claude-sonnet-5-5", "claude-haiku-4-5"]
     assert alara_rep["acyclic_tarjan_bridge"]["is_acyclic_dag"] is True
     assert alara_rep["acyclic_tarjan_bridge"]["recursion_depth"] == 0
+    assert alara_rep["acyclic_tarjan_bridge"]["phreeqc_pH"] == 5.80
+    assert alara_rep["acyclic_tarjan_bridge"]["phreeqc_pe"] == 6.40
     assert alara_rep["health_physics_alara_gate"]["alara_compliant"] is True
     assert alara_rep["hippocratism_primum_non_nocere_gate"]["primum_non_nocere_verified"] is True
 
@@ -538,7 +542,140 @@ def test_rollover_2026_11_02_and_basilisk_m7_verified_audit():
     assert synth_data["matlab_r2026b_alara_hippocratism_gate"]["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v73_hdf5_magic_valid"] is True
 
 
+def test_matlab_alara_gate_rejects_truncated_mat_v73_and_honors_smbr_root(tmp_path: Path, monkeypatch) -> None:
+    fake_smbr = tmp_path / "SmallModularBioReactors.jl"
+    fix_dir = fake_smbr / "matlab_fixtures"
+    fix_dir.mkdir(parents=True)
+
+    (fix_dir / "m7_matlab_r2026b_verification_receipt.json").write_text(
+        json.dumps({"all_checks_passed": True, "mat_v7_and_v73_hdf5_saved": True}),
+        encoding="utf-8",
+    )
+    (fix_dir / "m7_multiscale_3d_eda_fixture_v7.mat").write_bytes(b"MATLAB 5.0 MAT-file" + b"\x00" * 64)
+    # Truncated MAT v7.3 (< 520 bytes)
+    (fix_dir / "m7_multiscale_3d_eda_fixture_v73.mat").write_bytes(b"MATLAB 7.3 MAT-file" + b"\x00" * 100)
+
+    monkeypatch.setenv("SMBR_ROOT", str(fake_smbr))
+    rep = poller.evaluate_matlab_alara_hippocratism_gate()
+    coherence = rep["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]
+    assert coherence["mat_v7_magic_valid"] is True
+    assert coherence["mat_v73_hdf5_magic_valid"] is False
+    assert rep["smbr_matlab_r2026b_verification_receipt"]["mat_v7_and_v73_hdf5_saved"] is False
+    assert rep["smbr_matlab_r2026b_verification_receipt"]["all_checks_passed"] is False
+
+    # Valid MAT v7.3 HDF5 superblock at offset 512, but corrupted MAT v7 header
+    (fix_dir / "m7_multiscale_3d_eda_fixture_v73.mat").write_bytes(b"MATLAB 7.3 MAT-file".ljust(512, b"\x00") + b"\x89HDF\r\n\x1a\n")
+    (fix_dir / "m7_multiscale_3d_eda_fixture_v7.mat").write_bytes(b"CORRUPTED_MAT_V7___" + b"\x00" * 64)
+    rep_bad_v7 = poller.evaluate_matlab_alara_hippocratism_gate()
+    coherence_bad_v7 = rep_bad_v7["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]
+    assert coherence_bad_v7["mat_v7_magic_valid"] is False
+    assert coherence_bad_v7["mat_v73_hdf5_magic_valid"] is True
+    assert rep_bad_v7["smbr_matlab_r2026b_verification_receipt"]["all_checks_passed"] is False
+
+    # Both MAT v7 and MAT v7.3 magic bytes valid, but receipt reports all_checks_passed=False
+    (fix_dir / "m7_multiscale_3d_eda_fixture_v7.mat").write_bytes(b"MATLAB 5.0 MAT-file" + b"\x00" * 64)
+    (fix_dir / "m7_matlab_r2026b_verification_receipt.json").write_text(
+        json.dumps({"all_checks_passed": False, "mat_v7_and_v73_hdf5_saved": True}),
+        encoding="utf-8",
+    )
+    rep_failed_rec = poller.evaluate_matlab_alara_hippocratism_gate()
+    assert rep_failed_rec["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v7_magic_valid"] is True
+    assert rep_failed_rec["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v73_hdf5_magic_valid"] is True
+    assert rep_failed_rec["smbr_matlab_r2026b_verification_receipt"]["mat_v7_and_v73_hdf5_saved"] is True
+    assert rep_failed_rec["smbr_matlab_r2026b_verification_receipt"]["all_checks_passed"] is False
+
+    # Valid HDF5 signature at offset 512, but corrupted MAT v7.3 ASCII preamble at offset 0
+    (fix_dir / "m7_matlab_r2026b_verification_receipt.json").write_text(
+        json.dumps({"all_checks_passed": True, "mat_v7_and_v73_hdf5_saved": True}),
+        encoding="utf-8",
+    )
+    (fix_dir / "m7_multiscale_3d_eda_fixture_v73.mat").write_bytes(
+        b"CORRUPTED_MAT_V73__".ljust(512, b"\x00") + b"\x89HDF\r\n\x1a\n"
+    )
+    rep_bad_v73_preamble = poller.evaluate_matlab_alara_hippocratism_gate()
+    assert rep_bad_v73_preamble["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v7_magic_valid"] is True
+    assert rep_bad_v73_preamble["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v73_hdf5_magic_valid"] is False
+    assert rep_bad_v73_preamble["smbr_matlab_r2026b_verification_receipt"]["mat_v7_and_v73_hdf5_saved"] is False
+    assert rep_bad_v73_preamble["smbr_matlab_r2026b_verification_receipt"]["all_checks_passed"] is False
+
+    # Restore valid MAT v7.3 bytes, but write malformed JSON to receipt
+    (fix_dir / "m7_multiscale_3d_eda_fixture_v73.mat").write_bytes(
+        b"MATLAB 7.3 MAT-file".ljust(512, b"\x00") + b"\x89HDF\r\n\x1a\n"
+    )
+    (fix_dir / "m7_matlab_r2026b_verification_receipt.json").write_text("{malformed_json", encoding="utf-8")
+    rep_malformed_rec = poller.evaluate_matlab_alara_hippocratism_gate()
+    assert rep_malformed_rec["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v7_magic_valid"] is True
+    assert rep_malformed_rec["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v73_hdf5_magic_valid"] is True
+    assert rep_malformed_rec["smbr_matlab_r2026b_verification_receipt"]["mat_v7_and_v73_hdf5_saved"] is False
+    assert rep_malformed_rec["smbr_matlab_r2026b_verification_receipt"]["all_checks_passed"] is False
 
 
+def test_cross_repo_matlab_fixtures_sha256_parity_and_receipt_invariants() -> None:
+    import hashlib
 
+    smbr_fix_dir = Path("/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures")
+    nc_fix_dir = REPO_ROOT / "matlab_fixtures"
+    m7_fix_dir = Path("/Users/aurascoper/Developer/M7Multiscale/matlab_fixtures")
+    m7_wb_dir = Path("/Users/aurascoper/Developer/M7Multiscale/workbench")
+    fcm_fix_dir = Path("/Users/aurascoper/Developer/flow-cytometry-model-bridge/matlab_fixtures")
+    assert smbr_fix_dir.is_dir(), f"Missing SMBR matlab_fixtures dir: {smbr_fix_dir}"
+    assert nc_fix_dir.is_dir(), f"Missing NeuralCompose matlab_fixtures dir: {nc_fix_dir}"
+    assert m7_fix_dir.is_dir(), f"Missing M7Multiscale matlab_fixtures dir: {m7_fix_dir}"
+    assert m7_wb_dir.is_dir(), f"Missing M7Multiscale workbench dir: {m7_wb_dir}"
+    assert fcm_fix_dir.is_dir(), f"Missing flow-cytometry-model-bridge matlab_fixtures dir: {fcm_fix_dir}"
 
+    synced_filenames = [
+        "m7_3d_eda_and_simulink_bridge.m",
+        "m7_open_interactive_workbench.m",
+        "m7_matlab_r2026b_verification_receipt.json",
+        "m7_reactor_alara_closed_loop.slx",
+        "m7_multiscale_3d_eda_fixture.json",
+        "m7_multiscale_3d_eda_fixture_v7.mat",
+        "m7_multiscale_3d_eda_fixture_v73.mat",
+        "m7_3d_eda_spatiotemporal_summary.png",
+        "m7_3d_eda_multiscale_1920x1080.png",
+    ]
+    for fname in synced_filenames:
+        smbr_fp = smbr_fix_dir / fname
+        assert smbr_fp.is_file(), f"Missing in SmallModularBioReactors.jl: {smbr_fp}"
+        smbr_bytes = smbr_fp.read_bytes()
+        assert len(smbr_bytes) > 0
+        smbr_sha256 = hashlib.sha256(smbr_bytes).hexdigest()
+        for repo_label, target_dir in [
+            ("NeuralCompose", nc_fix_dir),
+            ("M7Multiscale/matlab_fixtures", m7_fix_dir),
+            ("M7Multiscale/workbench", m7_wb_dir),
+            ("flow-cytometry-model-bridge", fcm_fix_dir),
+        ]:
+            target_fp = target_dir / fname
+            assert target_fp.is_file(), f"Missing in {repo_label}: {target_fp}"
+            target_sha256 = hashlib.sha256(target_fp.read_bytes()).hexdigest()
+            assert smbr_sha256 == target_sha256, (
+                f"SHA-256 mismatch for {fname}: SMBR={smbr_sha256} vs {repo_label}={target_sha256}"
+            )
+
+    # Verify Simulink SLX OPC/ZIP container header and non-trivial size
+    slx_bytes = (nc_fix_dir / "m7_reactor_alara_closed_loop.slx").read_bytes()
+    assert slx_bytes[:4] == b"PK\x03\x04"
+    assert len(slx_bytes) >= 10000
+
+    # Verify receipt schema, 8-pool Neurospora 4-block state, and Context7/API sync
+    receipt = json.loads((nc_fix_dir / "m7_matlab_r2026b_verification_receipt.json").read_text(encoding="utf-8"))
+    assert receipt["all_checks_passed"] is True
+    assert receipt["neurospora_4block_8pool_verified"] is True
+    assert receipt["neurospora_n_pool_vogels_chambers"] == 8
+    assert receipt["matlab_api_and_context7_sync"]["context7_cli_version"] == "0.8.2"
+    assert len(receipt["matlab_api_and_context7_sync"]["context7_verified_library_ids"]) == 7
+    assert "block_1_frq_wc1_wc2_circadian_oscillator" in receipt["neurospora_crassa_matlab_r2026b_4_block_state_spec"]
+    assert "block_4_dhn_melanin_neurosporaxanthin_alara_point_kernel_shielding" in receipt["neurospora_crassa_matlab_r2026b_4_block_state_spec"]
+
+    # Verify zero em-dashes and zero en-dashes across text fixtures and MATLAB scripts
+    for txt_fp in [
+        nc_fix_dir / "m7_3d_eda_and_simulink_bridge.m",
+        nc_fix_dir / "m7_open_interactive_workbench.m",
+        nc_fix_dir / "m7_matlab_r2026b_verification_receipt.json",
+        nc_fix_dir / "m7_multiscale_3d_eda_fixture.json",
+        REPO_ROOT / "Scripts" / "matlab_alara_bridge.m",
+    ]:
+        txt = txt_fp.read_text(encoding="utf-8")
+        assert "\u2014" not in txt and "\u2013" not in txt, f"Found dash in {txt_fp}"

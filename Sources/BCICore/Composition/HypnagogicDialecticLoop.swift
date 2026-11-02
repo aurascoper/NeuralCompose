@@ -311,7 +311,6 @@ public actor HypnagogicDialecticLoop {
                     // dialectical silence. Breathe with an induction cue.
                     phase = .speaking
                     try await speakChunks(nextSilenceCue(), prosody: config.prosody)
-                    lastFailure = nil
                 }
             } catch is CancellationError {
                 return
@@ -599,7 +598,6 @@ public actor HypnagogicDialecticLoop {
                 try await speakChunks(nextSilenceCue(), prosody: config.prosody)
             }
         }
-        lastFailure = nil
         lastTurnAt = Date()
         turnIndex += 1
     }
@@ -615,14 +613,17 @@ public actor HypnagogicDialecticLoop {
     /// Detects explicit session/memory reset or turn-off commands that should trigger
     /// conditional autoforgetting of the rolling history/centroid and log a silent turn.
     public static func isMemoryResetCommand(_ heard: String) -> Bool {
-        let lowered = heard.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = heard.trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-            .trimmingCharacters(in: .punctuationCharacters)
+            .split(whereSeparator: { $0.isWhitespace })
+            .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
         let resetCommands: Set<String> = [
             "turn off", "turn it off", "switch off", "forget that",
             "clear memory", "reset memory", "clear history", "reset history"
         ]
-        return resetCommands.contains(lowered)
+        return resetCommands.contains(normalized)
     }
 
     /// Classifies a transcribed utterance into direct address, ambient room
@@ -636,6 +637,7 @@ public actor HypnagogicDialecticLoop {
             .map { $0.trimmingCharacters(in: .punctuationCharacters) }
             .filter { !$0.isEmpty }
         guard !words.isEmpty else { return .ambientBackchannel }
+        let normalized = words.joined(separator: " ")
 
         // Single-token repetition stutters (e.g. "sex sex sex", "Sex, sex, sex.") map to .ambientBackchannel.
         if words.count >= 2 && Set(words).count == 1 {
@@ -644,11 +646,13 @@ public actor HypnagogicDialecticLoop {
 
         // Guard against acoustic loopback of the system's own silenceCue TTS.
         let silenceCueEchoIndicators = [
+            "drifting softly deeper",
             "sinking warm and slow",
             "let the shapes dissolve",
-            "shapes dissolve and float"
+            "shapes dissolve and float",
+            "the quiet carries you down"
         ]
-        if silenceCueEchoIndicators.contains(where: { lowered.contains($0) }) {
+        if silenceCueEchoIndicators.contains(where: { normalized.contains($0) }) {
             return .ambientBackchannel
         }
 
@@ -673,7 +677,7 @@ public actor HypnagogicDialecticLoop {
             "stop",
             "next"
         ]
-        if routineLogisticsCommands.contains(where: { lowered == $0 || lowered.hasPrefix($0 + " ") }) {
+        if routineLogisticsCommands.contains(where: { normalized == $0 || normalized.hasPrefix($0 + " ") }) {
             return .ambientBackchannel
         }
 
@@ -683,7 +687,7 @@ public actor HypnagogicDialecticLoop {
             "i have", "but i'm", "but i am", "i was", "i wasn't", "yeah i was i wasn't",
             "i don't know if", "conviction"
         ]
-        if exactBackchannels.contains(lowered) {
+        if exactBackchannels.contains(normalized) {
             return .ambientBackchannel
         }
 
@@ -692,7 +696,7 @@ public actor HypnagogicDialecticLoop {
             "in the other room", "side conversation",
             "while we were working", "showing the slides"
         ]
-        if ambientIndicators.contains(where: { lowered.contains($0) }) {
+        if ambientIndicators.contains(where: { normalized.contains($0) }) {
             return .ambientRoomConversation
         }
 

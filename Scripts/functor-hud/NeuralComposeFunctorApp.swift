@@ -1367,6 +1367,12 @@ public final class FunctorDialecticalViewModel: ObservableObject {
         writeLine(appSupportURL)
         try? FileManager.default.createDirectory(at: legacyLogDir, withIntermediateDirectories: true)
         writeLine(legacyLogURL)
+        let devLogsDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Developer/NeuralCompose/InteractionLogs", isDirectory: true)
+        if FileManager.default.fileExists(atPath: devLogsDir.path) &&
+           devLogsDir.standardizedFileURL != legacyLogDir.standardizedFileURL {
+            writeLine(devLogsDir.appendingPathComponent(legacyLogURL.lastPathComponent))
+        }
     }
 
     /// Invokes `/semantica:decision` verb (`record`, `query`, `precedents`, `influence`, `explain`)
@@ -1500,15 +1506,17 @@ public final class FunctorDialecticalViewModel: ObservableObject {
             hypnagogicLoopTurnCount += 1
             hypnagogicLastSpokenReply = spoken.isEmpty ? "(metastable dialectical silence)" : spoken
             hypnagogicLoopPhaseLabel = "Listening (Runtime=\(runtimeStr) | \(spectralStr) | Turn #\(hypnagogicLoopTurnCount))"
-            stepLiveSensorToyDrive(
-                tiltX: (glossVal - 0.5) * 2.2,
-                tiltY: 0.35,
-                tiltZ: 1.0,
-                gyroMag: abs(glossVal - 0.5) * 4.5,
-                micRMS: max(0.25, min(0.95, 1.0 - glossVal)),
-                tempoBpm: glossVal < 0.4 ? 128.0 : 72.0,
-                dt: 0.35
-            )
+            if liveSensorToyMode {
+                stepLiveSensorToyDrive(
+                    tiltX: (glossVal - 0.5) * 2.2,
+                    tiltY: 0.35,
+                    tiltZ: 1.0,
+                    gyroMag: abs(glossVal - 0.5) * 4.5,
+                    micRMS: max(0.25, min(0.95, 1.0 - glossVal)),
+                    tempoBpm: glossVal < 0.4 ? 128.0 : 72.0,
+                    dt: 0.35
+                )
+            }
             triggerEquifinalTurn(
                 source: .multicaStream,
                 text: "Heard[\(runtimeStr) | \(spectralStr)]: '\(heard)' -> Spoke: '\(hypnagogicLastSpokenReply)'",
@@ -1818,6 +1826,11 @@ public final class FunctorDialecticalViewModel: ObservableObject {
         var podEnergy = 0.999364
         var alaraFactor = 330.752854
         var collarBeta1 = 2
+        var neurosporaNPool = 8
+        var neurosporaMeanBiomassKgM3 = 0.70
+        var neurosporaSyncytialBeta1 = 3
+        var maxSccSize = 1
+        var openmcRelDiff = 0.02069
         var roundtripBeta1Valid = true
         var swarmBiconnectedValid = true
 
@@ -1854,6 +1867,23 @@ public final class FunctorDialecticalViewModel: ObservableObject {
                    let b1 = collar["beta_1_collar_cycle_rank"] as? Int {
                     collarBeta1 = b1
                 }
+                if let dag = obj["tarjan_bridge_pipeline"] as? [String: Any],
+                   let scc = dag["max_scc_size"] as? Int {
+                    maxSccSize = scc
+                }
+                if let nc4 = obj["neurospora_crassa_4block_matlab_model"] as? [String: Any] {
+                    if let np = nc4["n_pool"] as? Int {
+                        neurosporaNPool = np
+                    }
+                    if let b2 = nc4["block_2_syncytial_hyphal_biofilm_and_woronin"] as? [String: Any] {
+                        if let bVec = b2["B_i_kg_m3"] as? [Double], !bVec.isEmpty {
+                            neurosporaMeanBiomassKgM3 = bVec.reduce(0.0, +) / Double(bVec.count)
+                        }
+                        if let b1s = b2["beta_1"] as? Int {
+                            neurosporaSyncytialBeta1 = b1s
+                        }
+                    }
+                }
                 if let ctrl = obj["controls_fixture_and_adaptor_schematic"] as? [String: Any] {
                     if let rt = ctrl["openfoam_basilisk_matlab_roundtrip_L29"] as? [String: Any],
                        let inv = rt["roundtrip_beta1_invariant"] as? Bool {
@@ -1867,19 +1897,39 @@ public final class FunctorDialecticalViewModel: ObservableObject {
             }
             let recURL = dir.appendingPathComponent("m7_matlab_r2026b_verification_receipt.json")
             if let rData = try? Data(contentsOf: recURL),
-               let rObj = try? JSONSerialization.jsonObject(with: rData) as? [String: Any],
-               let pod = rObj["pod_mode1_energy_fraction"] as? Double {
-                podEnergy = pod
+               let rObj = try? JSONSerialization.jsonObject(with: rData) as? [String: Any] {
+                if let pod = rObj["pod_mode1_energy_fraction"] as? Double {
+                    podEnergy = pod
+                }
+                if let relDiff = rObj["openmc_tally_variance_rel_diff"] as? Double {
+                    openmcRelDiff = relDiff
+                }
+                if let ncState = rObj["neurospora_4block_state"] as? [String: Any] {
+                    if let np = ncState["n_pool"] as? Int {
+                        neurosporaNPool = np
+                    }
+                    if let bVec = (ncState["B_kg_m3"] as? [Double]) ?? (ncState["B_i"] as? [Double]), !bVec.isEmpty {
+                        neurosporaMeanBiomassKgM3 = bVec.reduce(0.0, +) / Double(bVec.count)
+                    }
+                    if let b1s = (ncState["beta_1_syncytial_loops"] as? Int) ?? (ncState["beta_1"] as? Int) {
+                        neurosporaSyncytialBeta1 = b1s
+                    }
+                }
             }
         }
 
         let collarUtterance = String(
-            format: "MATLAB_R2026b_Collar_Signal [MAT_v7=%@ | MAT_v7.3_HDF5=%@ | JSON_Schema=OK | ss(A,B,C,D) eig=(-0.08,-0.15) | POD=%.6f | ALARA=%.2fx | Collar_beta_1=%d | OpenFOAM_Roundtrip=%@ | Swarm_Biconnected=%@]",
+            format: "MATLAB_R2026b_Collar_Signal [MAT_v7=%@ | MAT_v7.3_HDF5=%@ | JSON_Schema=OK | ss(A,B,C,D) eig=(-0.08,-0.15) | POD=%.6f | ALARA=%.2fx | Collar_beta_1=%d | SCC=%d | Neurospora_8Pool_Yield=%.2f_kg_m3 (N_pool=%d, syncytial_beta_1=%d) | OpenMC_L32_RelDiff=%.4f | OpenFOAM_Roundtrip=%@ | Swarm_Biconnected=%@]",
             matV7HeaderValid ? "VALID" : "INVALID",
             matV73HDF5Valid ? "VALID" : "INVALID",
             podEnergy,
             alaraFactor,
             collarBeta1,
+            maxSccSize,
+            neurosporaMeanBiomassKgM3,
+            neurosporaNPool,
+            neurosporaSyncytialBeta1,
+            openmcRelDiff,
             roundtripBeta1Valid ? "PASS" : "FAIL",
             swarmBiconnectedValid ? "PASS" : "FAIL"
         )
@@ -1999,7 +2049,14 @@ public final class FunctorDialecticalViewModel: ObservableObject {
             text: collarUtterance,
             persistToDisk: persistToDisk
         )
-        statusMessage = "Pulled MATLAB R2026b Controls & Collar Fixture (beta_1=\(collarBeta1), MAT v7/v7.3 + JSON) -> \(rec.decision_id)"
+        statusMessage = String(
+            format: "Pulled MATLAB R2026b Controls & Collar Fixture (beta_1=%d, SCC=%d, Neurospora %d-pool yield=%.2f kg/m^3, MAT v7/v7.3 + JSON) -> %@",
+            collarBeta1,
+            maxSccSize,
+            neurosporaNPool,
+            neurosporaMeanBiomassKgM3,
+            rec.decision_id
+        )
         return rec
     }
 
@@ -4245,12 +4302,13 @@ public struct NeuralComposeFunctorAppMain {
         precondition(tHyp.prev_hash == tMicLocked.curr_hash, "Broken Multica SHA-256 chain at hypnagogic turn")
         precondition(tHyp.verdict.hasPrefix("Accepted"), "Expected Accepted verdict for Hypnagogic Loop turn over loopback peer bridge")
 
-        // Verify Turn L28..L30 MATLAB Controls Fixture Horizon Collar signal ingestion
+        // Verify Turn L28..L32 MATLAB Controls Fixture Horizon Collar signal ingestion
         let tMatlabCollar = vm.pullMATLABControlsFixtureAsHorizonCollarSignal(persistToDisk: true)
         precondition(tMatlabCollar.prev_hash == tHyp.curr_hash, "Broken Multica SHA-256 chain at MATLAB collar turn")
         precondition(tMatlabCollar.verdict.hasPrefix("Accepted"), "Expected Accepted verdict for MATLAB Controls Fixture Horizon Collar signal")
         precondition(tMatlabCollar.inputUtterance.contains("MATLAB_R2026b_Collar_Signal"), "Expected MATLAB_R2026b_Collar_Signal in collar utterance")
         precondition(tMatlabCollar.inputUtterance.contains("MAT_v7=VALID | MAT_v7.3_HDF5=VALID"), "Expected MAT_v7=VALID | MAT_v7.3_HDF5=VALID in collar utterance, got \(tMatlabCollar.inputUtterance)")
+        precondition(tMatlabCollar.inputUtterance.contains("SCC=1") && tMatlabCollar.inputUtterance.contains("Neurospora_8Pool_Yield=0.70_kg_m3 (N_pool=8, syncytial_beta_1=3)"), "Expected SCC=1 and Neurospora 8-pool yield in collar utterance, got \(tMatlabCollar.inputUtterance)")
 
         // Negative Test: Corrupted / truncated MAT v7.3 HDF5 file (< 8 bytes or 0x00 magic byte) must degrade to Incomplete(missing_matlab_collar_fixture)
         let corruptDir = FileManager.default.temporaryDirectory.appendingPathComponent("neural_compose_corrupt_mat_\(UUID().uuidString)")
@@ -4458,6 +4516,9 @@ public struct UnifiedNeuralComposeRootView: View {
             .onChange(of: vm.hypnagogicRuntimePreference) { _, newRuntime in
                 functorViewModel.hypnagogicRuntimeChoiceLabel = newRuntime.rawValue
             }
+            .onChange(of: vm.hypnagogicRuntimeDiagnostics) { _, newDiag in
+                handleHypnagogicDiagnosticsChange(newDiag)
+            }
             .onChange(of: vm.composedText) { _, newText in
                 handleComposedTextChange(newText)
             }
@@ -4479,6 +4540,38 @@ public struct UnifiedNeuralComposeRootView: View {
             : "Stopped"
     }
 
+    private func handleHypnagogicDiagnosticsChange(_ diag: HypnagogicRuntimeDiagnostics) {
+        let lowerRuntime = diag.configuration.runtimeName.lowercased()
+        functorViewModel.hypnagogicRuntimeChoiceLabel = lowerRuntime.hasPrefix("claude")
+            ? "claude"
+            : (lowerRuntime.hasPrefix("ollama") ? "ollama" : diag.configuration.runtimeName)
+        functorViewModel.hypnagogicLoopTurnCount = diag.turnCount
+        let phaseLabel = diag.phase.displayLabel
+        if let rawFailure = diag.lastFailure, !rawFailure.isEmpty {
+            let reason = rawFailure
+                .replacingOccurrences(of: "\u{2014}", with: " - ")
+                .replacingOccurrences(of: "\u{2013}", with: "-")
+            if diag.phase == .retrying {
+                functorViewModel.hypnagogicLoopPhaseLabel = "\(phaseLabel) (\(reason))"
+            } else {
+                functorViewModel.hypnagogicLoopPhaseLabel = "\(phaseLabel) (Turn #\(diag.turnCount) | Last Failure: \(reason))"
+            }
+            return
+        }
+        switch diag.phase {
+        case .stopped:
+            functorViewModel.hypnagogicLoopPhaseLabel = phaseLabel
+        case .listening:
+            functorViewModel.hypnagogicLoopPhaseLabel = "\(phaseLabel) (On-Device Speech Recognizer | Turn #\(diag.turnCount))"
+        case .generating:
+            functorViewModel.hypnagogicLoopPhaseLabel = "\(phaseLabel) (\(diag.configuration.runtimeName) | \(diag.configuration.model))"
+        case .speaking:
+            functorViewModel.hypnagogicLoopPhaseLabel = "\(phaseLabel) (\(diag.configuration.runtimeName) | Turn #\(diag.turnCount))"
+        case .retrying:
+            functorViewModel.hypnagogicLoopPhaseLabel = "\(phaseLabel) (runtime error)"
+        }
+    }
+
     private func handleComposedTextChange(_ newText: String) {
         let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
@@ -4495,6 +4588,9 @@ public struct UnifiedNeuralComposeRootView: View {
     @State private var isHandlingIntentImpulse: Bool = false
 
     private func handleLiveIntentImpulse(vm: AppViewModel, newIntent: IntentClass) {
+        guard vm.pipelineMode.acquisition != .synthetic,
+              !vm.isReconnecting,
+              vm.signalQuality == .healthy || vm.signalQuality == .poor else { return }
         guard !isHandlingIntentImpulse, newIntent != .rest else { return }
         let now = Date().timeIntervalSince1970
         let intentName = newIntent.displayName
@@ -4510,15 +4606,17 @@ public struct UnifiedNeuralComposeRootView: View {
         let qualityLabel = vm.signalQuality.map { String(describing: $0) } ?? "live"
         let isStrongImpulse = (newIntent == .jawClench || newIntent == .select)
         let impulseEnergy: Double = isStrongImpulse ? 1.8 : 1.1
-        functorViewModel.stepLiveSensorToyDrive(
-            tiltX: impulseEnergy * 0.9,
-            tiltY: impulseEnergy * 0.5,
-            tiltZ: 1.0,
-            gyroMag: impulseEnergy * 2.5,
-            micRMS: min(1.0, impulseEnergy * 0.45),
-            tempoBpm: newIntent == .jawClench ? 128.0 : 96.0,
-            dt: 0.30
-        )
+        if functorViewModel.liveSensorToyMode {
+            functorViewModel.stepLiveSensorToyDrive(
+                tiltX: impulseEnergy * 0.9,
+                tiltY: impulseEnergy * 0.5,
+                tiltZ: 1.0,
+                gyroMag: impulseEnergy * 2.5,
+                micRMS: min(1.0, impulseEnergy * 0.45),
+                tempoBpm: newIntent == .jawClench ? 128.0 : 96.0,
+                dt: 0.30
+            )
+        }
         functorViewModel.triggerEquifinalTurn(
             source: .multicaStream,
             text: "Muse BLE Impulse [\(newIntent.displayName) | \(spectralLabel) | signal=\(qualityLabel)]",
@@ -4531,6 +4629,9 @@ public struct UnifiedNeuralComposeRootView: View {
     @State private var isHandlingSpectralShift: Bool = false
 
     private func handleLiveSpectralShift(vm: AppViewModel, newState: SpectralState?) {
+        guard vm.pipelineMode.acquisition != .synthetic,
+              !vm.isReconnecting,
+              vm.signalQuality == .healthy || vm.signalQuality == .poor else { return }
         guard !isHandlingSpectralShift, let state = newState else { return }
         let now = Date().timeIntervalSince1970
         let badge = state.badgeLabel
@@ -4544,15 +4645,17 @@ public struct UnifiedNeuralComposeRootView: View {
 
         let qualityLabel = vm.signalQuality.map { String(describing: $0) } ?? "live"
         let isHighLoad = (state == .highCognitiveLoad || state == .engagedFocused)
-        functorViewModel.stepLiveSensorToyDrive(
-            tiltX: isHighLoad ? 1.1 : 0.25,
-            tiltY: isHighLoad ? 0.65 : 0.15,
-            tiltZ: 1.0,
-            gyroMag: isHighLoad ? 2.8 : 0.6,
-            micRMS: isHighLoad ? 0.75 : 0.25,
-            tempoBpm: isHighLoad ? 128.0 : 72.0,
-            dt: 0.25
-        )
+        if functorViewModel.liveSensorToyMode {
+            functorViewModel.stepLiveSensorToyDrive(
+                tiltX: isHighLoad ? 1.1 : 0.25,
+                tiltY: isHighLoad ? 0.65 : 0.15,
+                tiltZ: 1.0,
+                gyroMag: isHighLoad ? 2.8 : 0.6,
+                micRMS: isHighLoad ? 0.75 : 0.25,
+                tempoBpm: isHighLoad ? 128.0 : 72.0,
+                dt: 0.25
+            )
+        }
         functorViewModel.triggerEquifinalTurn(
             source: .synthetic,
             text: "Muse BLE Spectral Shift -> \(badge) (signal=\(qualityLabel))",
@@ -4587,6 +4690,7 @@ public struct UnifiedNeuralComposeRootView: View {
         guard let vm = bciLoader.viewModel else { return }
         wireHypnagogicCallbacks()
         functorViewModel.hypnagogicRuntimeChoiceLabel = vm.hypnagogicRuntimePreference.rawValue
+        handleHypnagogicDiagnosticsChange(vm.hypnagogicRuntimeDiagnostics)
         if !vm.adaptiveComplexityEnabled {
             vm.adaptiveComplexityEnabled = true
         }

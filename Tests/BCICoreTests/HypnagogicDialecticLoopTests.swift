@@ -801,4 +801,97 @@ final class HypnagogicDialecticLoopTests: XCTestCase {
         XCTAssertFalse(prompts.first?.contains("stale-1") == true,
                        "Memory reset command must trim oldest conversation history turns via autoforgetting")
     }
+
+    private actor FlakyGenerator: TextGenerating {
+        nonisolated let isLive = false
+        nonisolated let modelIdentifier = "spy-flaky"
+        private var remainingFailures: Int
+        init(failFirstNCalls: Int) {
+            self.remainingFailures = failFirstNCalls
+        }
+        func generate(prompt: String, maxTokens: Int, temperature: Double,
+                      cancellationID: UUID) async throws -> String {
+            if remainingFailures > 0 {
+                remainingFailures -= 1
+                throw BCIError.predictorInferenceFailed(reason: "claude CLI exited with status 127: command not found")
+            }
+            return temperature >= 0.9 ? "dreamer recovery" : "stabilizer recovery"
+        }
+    }
+
+    func testEmptyInputSilenceCueDoesNotClearLastFailureUntilHeardTurnSucceeds() async {
+        let embedder = MapEmbedder(dimension: 2, table: [
+            "first heard": [1, 0],
+            "second heard": [1, 0],
+            "stabilizer recovery": [1, 0],
+            "dreamer recovery": [0, 1]
+        ])
+        // 1st listen: "first heard" -> generator throws -> lastFailure is set.
+        // 2nd listen: nil (empty input) -> speaks silence cue -> lastFailure MUST remain non-nil.
+        let listener = SpyListener(script: ["first heard", nil], loopLast: true)
+        let generator = FlakyGenerator(failFirstNCalls: 1)
+        let speaker = SpySpeaker()
+        let loop = HypnagogicDialecticLoop(
+            listener: listener, generator: generator, speaker: speaker, embedder: embedder,
+            random: { 0.5 }, config: fastConfig()
+        )
+        await loop.start()
+        let spokeSilenceCueAfterFailure = await poll {
+            let listens = await listener.listenCount
+            let spokenCount = await speaker.spoken.count
+            return listens >= 2 && spokenCount >= 1
+        }
+        await loop.stop()
+        XCTAssertTrue(spokeSilenceCueAfterFailure, "loop should speak a silence cue on the empty-input turn after a failed heard turn")
+        let statusAfterEmptyInput = await loop.status
+        XCTAssertNotNil(
+            statusAfterEmptyInput.lastFailure,
+            "an empty-input silence cue must not clear lastFailure from a prior failed heard turn"
+        )
+        XCTAssertTrue(
+            statusAfterEmptyInput.lastFailure?.contains("status 127") == true,
+            "lastFailure should preserve the underlying CLI error reason"
+        )
+
+        // Now run a loop where a failed heard turn is followed by an empty input turn and then a succeeding heard turn.
+        let listenerRecovery = SpyListener(script: ["first heard", nil, "second heard"], loopLast: true)
+        let generatorRecovery = FlakyGenerator(failFirstNCalls: 1)
+        let speakerRecovery = SpySpeaker()
+        let loopRecovery = HypnagogicDialecticLoop(
+            listener: listenerRecovery, generator: generatorRecovery, speaker: speakerRecovery,
+            embedder: embedder, random: { 0.5 }, config: fastConfig()
+        )
+        await loopRecovery.start()
+        let recovered = await poll {
+            (await loopRecovery.status).turnIndex >= 1
+        }
+        await loopRecovery.stop()
+        XCTAssertTrue(recovered, "subsequent heard turn should complete")
+        let statusAfterRecovery = await loopRecovery.status
+        XCTAssertNil(statusAfterRecovery.lastFailure, "a succeeding heard turn must clear lastFailure")
+
+        // Verify that an ambientBackchannel ("No") or acoustic silence-cue loopback ("Drifting, softly, deeper.")
+        // logged via logSilentTurn does NOT clear lastFailure before a real candidate turn succeeds.
+        let listenerBackchannel = SpyListener(
+            script: ["first heard", "No", "Drifting, softly, deeper.", nil],
+            loopLast: true
+        )
+        let generatorBackchannel = FlakyGenerator(failFirstNCalls: 1)
+        let speakerBackchannel = SpySpeaker()
+        let loopBackchannel = HypnagogicDialecticLoop(
+            listener: listenerBackchannel, generator: generatorBackchannel, speaker: speakerBackchannel,
+            embedder: embedder, random: { 0.5 }, config: fastConfig()
+        )
+        await loopBackchannel.start()
+        let loggedSilentTurns = await poll {
+            (await loopBackchannel.status).turnIndex >= 2
+        }
+        await loopBackchannel.stop()
+        XCTAssertTrue(loggedSilentTurns, "backchannel and silence-cue echo should advance silent turn count")
+        let statusAfterBackchannel = await loopBackchannel.status
+        XCTAssertNotNil(
+            statusAfterBackchannel.lastFailure,
+            "ambientBackchannel and silence-cue echo turns in logSilentTurn must not clear lastFailure"
+        )
+    }
 }

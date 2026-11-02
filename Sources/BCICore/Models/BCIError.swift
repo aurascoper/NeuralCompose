@@ -3,9 +3,9 @@ import Foundation
 /// Errors surfaced across module boundaries.
 ///
 /// Each case carries enough detail to drive both a log line and a
-/// user-facing privacy/diagnostic banner. Avoid stringly-typed wrapping —
+/// user-facing privacy/diagnostic banner. Avoid stringly-typed wrapping  - 
 /// the FSM matches on these cases.
-public enum BCIError: Error, Sendable, CustomStringConvertible {
+public enum BCIError: Error, LocalizedError, Sendable, CustomStringConvertible {
 
     // EEG streaming
     case bridgeUnavailable(reason: String)
@@ -54,6 +54,8 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
     // App-level
     case cancelled
 
+    public var errorDescription: String? { description }
+
     public var description: String {
         switch self {
         case .bridgeUnavailable(let reason):
@@ -75,7 +77,7 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
         case .classifierInferenceFailed(let reason):
             return "Core ML inference failed: \(reason)"
         case .classifierOutputShapeUnexpected(let expected, let actual):
-            return "Core ML output shape mismatch — expected \(expected), got \(actual)"
+            return "Core ML output shape mismatch - expected \(expected), got \(actual)"
         case .predictorWeightsMissing(let path):
             return "MLX weights not found at \(path)"
         case .predictorInitFailed(let reason):
@@ -91,7 +93,7 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
         case .embedderInferenceFailed(let reason):
             return "Sentence embedder inference failed: \(reason)"
         case .embedderOutputShapeUnexpected(let expected, let actual):
-            return "Sentence embedder output shape mismatch — expected \(expected), got \(actual)"
+            return "Sentence embedder output shape mismatch - expected \(expected), got \(actual)"
         case .embedderMetadataInvalid(let path, let reason):
             return "Sentence embedder metadata invalid at \(path): \(reason)"
         case .speechSynthesisFailed(let reason):
@@ -109,7 +111,7 @@ public enum BCIError: Error, Sendable, CustomStringConvertible {
         case .worldModelDemoInferenceFailed(let reason):
             return "World Model demo Core ML inference failed: \(reason)"
         case .worldModelDemoOutputShapeUnexpected(let expected, let actual):
-            return "World Model demo Core ML output shape mismatch — expected \(expected), got \(actual)"
+            return "World Model demo Core ML output shape mismatch - expected \(expected), got \(actual)"
         case .peerConnectionFailed(let reason):
             return "Peer bridge connection failed: \(reason)"
         case .cancelled:

@@ -729,7 +729,167 @@
         "z_shield(t)",
         "Phi_light(t)"
       ],
-      "alara_compliant": true
+      "alara_compliant": true,
+      "epistemic_classification": "Model specification; coefficient and dose-response must be calibrated. A radiation shielding model cannot establish net metabolic energy capture from radiation."
     }
+  },
+  "live_spice_jl_known_body_runtime_check": {
+    "spice_jl_version": "0.2.5",
+    "cspice_jll_version": "67.0.0+0",
+    "kernels": [
+      "naif0012.tls",
+      "pck00010.tpc",
+      "de405s_littleendian.bsp"
+    ],
+    "kernel_sha256": {
+      "naif0012_tls": "678e32bdb5a744117a467cd9601cd6b373f0e9bc9bbde1371d5eee39600a039b",
+      "pck00010_tpc": "59468328349aa730d18bf1f8d7e86efe6e40b75dfb921908f99321b3a7a701d2",
+      "de405s_littleendian_bsp": "b52400cfa5bdfbb4ce94c578beb999d30d7ab5e715be0cd5628ffbf5d7042236"
+    },
+    "utc_epoch": "2003-07-04T19:00:00",
+    "pst_epoch": "July 4, 2003 11:00 AM PST",
+    "et_s": 110617264.18401757,
+    "mars_earth_lt_s": 269.6898813661505,
+    "mars_earth_pos_naif_km": [
+      73822235.3105355,
+      -27127918.99847228,
+      -18741306.301489875
+    ],
+    "mars_earth_vel_naif_km_s": [
+      -6.808513340013807,
+      7.513996124082212,
+      3.0012984926593522
+    ],
+    "mars_earth_basilisk_pos_si_m": [
+      73822235310.5355,
+      -27127918998.47228,
+      -18741306301.489876
+    ],
+    "mars_earth_basilisk_vel_si_m_s": [
+      -6808.513340013807,
+      7513.996124082212,
+      3001.2984926593522
+    ],
+    "mars_sun_pos_naif_km": [
+      106369803.61211638,
+      -163445966.13628316,
+      -77842067.9194019
+    ],
+    "mars_sun_vel_naif_km_s": [
+      21.80769502870392,
+      13.269642292194385,
+      5.497049232400181
+    ],
+    "mars_sun_basilisk_pos_si_m": [
+      106369803612.11638,
+      -163445966136.28317,
+      -77842067919.4019
+    ],
+    "mars_sun_basilisk_vel_si_m_s": [
+      21807.69502870392,
+      13269.642292194385,
+      5497.049232400181
+    ],
+    "pos_scale_ratio_m_per_km": 1000.0,
+    "vel_scale_ratio_m_s_per_km_s": 1000.0,
+    "spice_jl_unit_verdict": "Accepted",
+    "vizard_communication_paths": {
+      "broadcast_stream_default": "tcp://localhost:5570",
+      "broadcast_is_read_only_non_blocking": true,
+      "lockstep_live_stream": "tcp://localhost:5556",
+      "lockstep_is_two_way": true
+    }
+  },
+  "five_graph_topology_distinction": {
+    "inter_solver_orchestration_graph": {
+      "cycles_permitted": false,
+      "max_scc_size": 1,
+      "beta_1_inter_solver": 0,
+      "role": "Acyclic Tarjan bridge orchestration (OpenFOAM -> PHREEQC -> FlowCytometry -> SMBR -> MATLAB)"
+    },
+    "biological_state_dynamics_graph": {
+      "cycles_permitted": true,
+      "role": "Internal biological state feedback loops permitted (frq/wc-1/wc-2 circadian negative feedback and nutrient-growth-EPS coupling)"
+    },
+    "hyphal_anastomosis_graph": {
+      "cycles_permitted": true,
+      "beta_0": 1,
+      "beta_1": 3,
+      "biconnected": true,
+      "epistemic_disposition": "Graph topology can be tested; biological interpretation needs image-derived network data"
+    },
+    "bayesian_inference_graph": {
+      "cycles_permitted": false,
+      "beta_1": 0,
+      "role": "Turing.jl / Hastings-Metropolis posterior dependency DAG conditioned on biomass and trace metal removal data"
+    },
+    "visualization_observer_graph": {
+      "cycles_permitted": false,
+      "can_inject_physical_causality": false,
+      "default_vizard_endpoint": "tcp://localhost:5570",
+      "role": "Read-only non-causal observer graph; cannot overwrite upstream finite-volume or geochemical ground truth"
+    }
+  },
+  "section_6_scientific_and_engineering_flags": {
+    "neurospora_circadian_oscillator": "Model specification; parameters require strain- and condition-specific calibration",
+    "hyphal_streaming_5_to_60_um_s": "Reported range; not a universal constant",
+    "hex1_woronin_septal_plugging": "Established biological mechanism; the model's representation still needs validation",
+    "anastomosis_cycles": "Graph topology can be tested; biological interpretation needs image-derived network data",
+    "melanin_shielding": "Plausible material response; coefficient and dose-response must be calibrated",
+    "alara_compliance": "A software audit flag, not regulatory approval or a radiation-safety authorization",
+    "openmc_tally_comparison": "A numerical comparison, not proof that the source geometry, particle spectrum, or material model is accurate",
+    "eight_chamber_pool_hydraulics": "Simscape/PHREEQC reference configuration; not a flight-qualified bioreactor",
+    "inter_solver_dag": "Structurally verifiable from the fixture; does not demonstrate live end-to-end coupling",
+    "eight_chamber_system_classification": "numerical_and_software_architecture_not_operational_space_bioreactor",
+    "operational_space_bioreactor_verdict": "Incomplete",
+    "required_flight_budgets": {
+      "nutrient_budget_demonstrated": "Incomplete",
+      "oxygen_budget_demonstrated": "Incomplete",
+      "carbon_budget_demonstrated": "Incomplete",
+      "heat_budget_demonstrated": "Incomplete",
+      "waste_budget_demonstrated": "Incomplete",
+      "energy_budget_demonstrated": "Incomplete",
+      "microgravity_gas_liquid_management_demonstrated": "Incomplete"
+    },
+    "fission_power_and_biological_reactor_separated": true,
+    "biological_inherits_nuclear_criticality_assumptions": false
+  },
+  "menke_2026_geochemfoam_dbs_solver_coupling": {
+    "citation": "Menke, Doster, and Maes (2026) arXiv:2610.19057",
+    "dissolved_pb2_mol_m3": [
+      1.2,
+      0.95,
+      0.68,
+      0.42
+    ],
+    "sorbed_pb2_surface_mol_m3_bulk": [
+      0.45,
+      0.7,
+      0.97,
+      1.23
+    ],
+    "cell_volumes_m3": [
+      1.0e-9,
+      1.0e-9,
+      1.0e-9,
+      1.0e-9
+    ],
+    "porosity_phi": [
+      0.78,
+      0.72,
+      0.68,
+      0.75
+    ],
+    "phreeqc_solver_version": "PHREEQC-3.7.3",
+    "phreeqc_database": "phreeqc.dat",
+    "phreeqc_pH_zones": [
+      7.35,
+      6.85
+    ],
+    "phreeqc_pe_zones": [
+      4.1,
+      2.4
+    ],
+    "phreeqc_mean_activity_H_plus_mol_kgw": 9.29610568e-8
   }
 }

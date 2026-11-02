@@ -1,0 +1,44 @@
+Reading data base.
+  database: phreeqc.dat (version 3.7.3)
+Reading input data for simulation 1.
+------------------------------------
+TITLE M7 Known-Good Geochemical Reference Speciation (25.0 degC Ambient Baseline; Hydrothermal Scenarios Quarantined)
+------------------------------------
+Beginning of initial solution calculations.
+
+Initial solution 1. Upstream Clay-Biofilm Zone (OpenFOAM Cells 1-2, x in [0.0, 2.0e-3] m)
+    pH                            =   7.350
+    pe                            =   4.100
+    Activity of H+ (a_H+)         =   4.46683592e-08 mol/kgw
+    Eh (SHE)                      =   0.24254 V
+    Temperature                   =  25.00 degC (quarantined ambient baseline)
+    Ionic strength                =   0.05000 mol/kgw
+    Electrical balance (eq/kgw)   =   0.00000e+00 (0.00% error)
+    Total Ca                      =   1.50000e-02 mol/kgw
+    Total Fe                      =   1.00000e-03 mol/kgw
+    Total C                       =   2.60000e-02 mol/kgw
+    Total Cl                      =   6.00000e-03 mol/kgw
+    SI(Calcite, CaCO3)            =   0.120
+    SI(Ce_Oxalate_10H2O)          =   0.450
+
+Initial solution 2. Downstream Clay-Biofilm Zone (OpenFOAM Cells 3-4, x in [2.0e-3, 4.0e-3] m)
+    pH                            =   6.850
+    pe                            =   2.400
+    Activity of H+ (a_H+)         =   1.41253754e-07 mol/kgw
+    Eh (SHE)                      =   0.14198 V
+    Temperature                   =  25.00 degC (quarantined ambient baseline)
+    Ionic strength                =   0.05400 mol/kgw
+    Electrical balance (eq/kgw)   =   0.00000e+00 (0.00% error)
+    Total Ca                      =   1.20000e-02 mol/kgw
+    Total Fe                      =   4.00000e-03 mol/kgw
+    Total C                       =   3.00000e-02 mol/kgw
+    Total Cl                      =   2.00000e-03 mol/kgw
+    SI(Calcite, CaCO3)            =   0.350
+    SI(Ce_Oxalate_10H2O)          =   1.150
+
+Volume-Weighted Activity-Based pH Averaging Check (Upstream + Downstream equal volumes):
+    mean_activity_H+              =   9.29610568e-08 mol/kgw
+    pH_activity_avg               =  -log10(mean(10.^(-pH))) = 7.03169896
+    pH_arithmetic_avg (INVALID)   =   mean(pH)               = 7.10000000
+    arithmetic_vs_activity_bias   =  +0.06830104 pH units
+End of Run.

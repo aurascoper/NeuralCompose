@@ -1,0 +1,60 @@
+TITLE M7 Known-Good Geochemical Reference Speciation (25.0 degC Ambient Baseline; Hydrothermal Scenarios Quarantined)
+DATABASE phreeqc.dat
+
+SOLUTION 1 Upstream Clay-Biofilm Zone (OpenFOAM Cells 1-2, x in [0.0, 2.0e-3] m)
+    temp      25.0
+    pH        7.35
+    pe        4.10
+    units     mol/kgw
+    density   1.002
+    water     1.000
+    Ca        0.015
+    Fe(2)     0.001
+    C(4)      0.022
+    Oxalate   0.002
+    Cl        0.006 charge
+
+EQUILIBRIUM_PHASES 1
+    Calcite           0.12  0.00005
+    Ce_Oxalate_10H2O  0.45  0.00011
+
+SURFACE 1 Montmorillonite Edge-Site Complexation (Upstream)
+    Mont_OH  0.0024  600.0  1.0
+    -equilibrate with solution 1
+
+SOLUTION 2 Downstream Clay-Biofilm Zone (OpenFOAM Cells 3-4, x in [2.0e-3, 4.0e-3] m)
+    temp      25.0
+    pH        6.85
+    pe        2.40
+    units     mol/kgw
+    density   1.002
+    water     1.000
+    Ca        0.012
+    Fe(2)     0.004
+    C(4)      0.018
+    Oxalate   0.006
+    Cl        0.002 charge
+
+EQUILIBRIUM_PHASES 2
+    Calcite           0.35  0.00012
+    Ce_Oxalate_10H2O  1.15  0.00045
+
+SURFACE 2 Montmorillonite Edge-Site Complexation (Downstream)
+    Mont_OH  0.0024  600.0  1.0
+    -equilibrate with solution 2
+
+SELECTED_OUTPUT 1
+    -file                 reference_selected_output.tsv
+    -reset                false
+    -simulation           true
+    -solution             true
+    -time                 true
+    -temperature          true
+    -pH                   true
+    -pe                   true
+    -ionic_strength       true
+    -totals               Ca Fe(2) C(4) Cl
+    -molalities           Ca+2 Fe+2 HCO3- C2O4-2 Cl-
+    -saturation_indices   Calcite Ce_Oxalate_10H2O
+    -equilibrium_phases   Calcite Ce_Oxalate_10H2O
+END

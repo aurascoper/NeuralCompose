@@ -1,6 +1,6 @@
 {
   "schema": "golden-reconciliation-program-synthesis-v1",
-  "generatedAt": "2026-11-02T08:28:21.435035+00:00",
+  "generatedAt": "2026-11-02T10:34:11.184639+00:00",
   "goldenBaseline": {
     "stem": "golden_20260710-141352",
     "sessionID": "calibration_2026-07-10T141352_muses",
@@ -29,7 +29,7 @@
     "estimatorKind": "mlx",
     "activeSpectralState": "High load",
     "spectralStateCounts": {
-      "High load": 35
+      "High load": 50
     },
     "glossScalarRange": [
       0.1,

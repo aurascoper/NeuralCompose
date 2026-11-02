@@ -3,9 +3,9 @@
 Opaque-box comprehensive test suite exercising:
 - Tier 1: Feature Coverage (>=5 tests per feature across 24 features = 120 tests)
 - Tier 2: Boundary & Corner Cases (>=5 tests per feature across 24 features = 120 tests)
-- Tier 3: Pairwise Cross-Feature Interactions (24 tests)
+- Tier 3: Pairwise Cross-Feature Interactions (29 tests)
 - Tier 4: Real-World Application Workloads (6 scenarios)
-Total: 270 tests.
+Total: 275 tests.
 
 Strictly zero em-dashes and zero en-dashes across all code, docstrings, and receipts.
 """
@@ -16,6 +16,7 @@ import json
 import math
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -1448,7 +1449,7 @@ class TestTier2BoundaryAndCornerCases(unittest.TestCase):
 
     def test_t2_f20_02_dose_at_0_0400_safing_triggered(self) -> None:
         ctl = ALARAClosedLoopController()
-        state = ALARAControllerState(cumulative_dose_Gy=0.0401)
+        state = ALARAControllerState(cumulative_dose_Gy=0.0400)
         out = ctl.step_controller(state)
         self.assertTrue(out.safing_shutter_closed)
 
@@ -1577,12 +1578,26 @@ class TestTier2BoundaryAndCornerCases(unittest.TestCase):
             MasterEvent.from_json(raw_json)
 
     def test_t2_f24_03_em_dash_in_schema_rejected(self) -> None:
-        with self.assertRaises(FileNotFoundError):
-            load_master_event_contract_schema(Path("/nonexistent/file/path"))
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            f.write('{"schema_id": "test\u2014em_dash"}')
+            temp_path = Path(f.name)
+        try:
+            with self.assertRaises(ValueError) as ctx:
+                load_master_event_contract_schema(temp_path)
+            self.assertIn("forbidden em-dash or en-dash", str(ctx.exception))
+        finally:
+            temp_path.unlink(missing_ok=True)
 
     def test_t2_f24_04_en_dash_in_schema_rejected(self) -> None:
-        text = "\u2013"
-        self.assertIn("\u2013", text)
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            f.write('{"schema_id": "test\u2013en_dash"}')
+            temp_path = Path(f.name)
+        try:
+            with self.assertRaises(ValueError) as ctx:
+                load_master_event_contract_schema(temp_path)
+            self.assertIn("forbidden em-dash or en-dash", str(ctx.exception))
+        finally:
+            temp_path.unlink(missing_ok=True)
 
     def test_t2_f24_05_sanitize_dashes_replaces_both(self) -> None:
         s = "a\u2014b\u2013c"
@@ -1747,6 +1762,76 @@ class TestTier3CrossFeatureInteractions(unittest.TestCase):
             self.assertNotIn("\u2013", json_str)
             back = MasterEvent.from_json(json_str)
             self.assertEqual(back.event_id, ev.event_id)
+
+    def test_t3_25_negative_transition_s1_to_s2_high_tension_trips_control(self) -> None:
+        """S1 -> S2 transition with D_M = 3.0 trips Control defect and marks status :Incomplete."""
+        ev1 = generate_synthetic_neuralcompose_event(
+            sequence_id="s1_neg_tension",
+            mahalanobis_tension_D_M=3.0,
+        )
+        ev2 = generate_synthetic_momentum_automata_event(
+            sequence_id="s2_neg_tension",
+            causal_parent_id=ev1.event_id,
+        )
+        tr = LogicGatesEvaluator.evaluate_transition(ev1, ev2)
+        self.assertTrue(tr.defect_flags["Control"])
+        self.assertEqual(tr.enforced_epistemic_status, ":Incomplete")
+        self.assertTrue(tr.transition_valid)
+
+    def test_t3_26_negative_transition_s1_to_s2_fragmented_betti0_trips_coordination(self) -> None:
+        """S1 -> S2 transition with beta_0 = 2 trips Coordination defect and marks status :Rejected."""
+        ev1 = generate_synthetic_neuralcompose_event(
+            sequence_id="s1_neg_betti",
+            beta_0=2,
+        )
+        ev2 = generate_synthetic_momentum_automata_event(
+            sequence_id="s2_neg_betti",
+            causal_parent_id=ev1.event_id,
+        )
+        tr = LogicGatesEvaluator.evaluate_transition(ev1, ev2)
+        self.assertTrue(tr.defect_flags["Coordination"])
+        self.assertEqual(tr.enforced_epistemic_status, ":Rejected")
+        self.assertFalse(tr.transition_valid)
+
+    def test_t3_27_negative_transition_s2_to_s3_sub280k_trips_source_nutmeg(self) -> None:
+        """S2 -> S3 transition with T = 250.0 K trips Source defect and marks status :Incomplete."""
+        ev2 = generate_synthetic_momentum_automata_event(sequence_id="s2_neg_temp")
+        cold_temps = [250.0, 298.18, 298.20, 298.22, 298.25, 298.27, 298.29, 298.31]
+        ev3 = generate_synthetic_reactor_pools_event(
+            sequence_id="s3_neg_temp",
+            temperatures_kelvin=cold_temps,
+            causal_parent_id=ev2.event_id,
+        )
+        tr = LogicGatesEvaluator.evaluate_transition(ev2, ev3)
+        self.assertTrue(tr.defect_flags["Source"])
+        self.assertEqual(tr.enforced_epistemic_status, ":Incomplete")
+        self.assertTrue(tr.transition_valid)
+
+    def test_t3_28_negative_transition_s3_to_s4_streaming_velocity_trips_boundary(self) -> None:
+        """S3 -> S4 transition with streaming velocity 65.0 um/s trips Boundary defect and marks status :Rejected."""
+        ev3 = generate_synthetic_reactor_pools_event(sequence_id="s3_neg_vel")
+        ev4 = generate_synthetic_biofilm_session_event(
+            sequence_id="s4_neg_vel",
+            causal_parent_id=ev3.event_id,
+        )
+        ev4.payload.cytoplasmic_streaming_velocity_um_s = 65.0
+        tr = LogicGatesEvaluator.evaluate_transition(ev3, ev4)
+        self.assertTrue(tr.defect_flags["Boundary"])
+        self.assertEqual(tr.enforced_epistemic_status, ":Rejected")
+        self.assertFalse(tr.transition_valid)
+
+    def test_t3_29_negative_transition_s3_to_s4_anastomosis_betti0_trips_coordination(self) -> None:
+        """S3 -> S4 transition with anastomosis beta_0 = 2 trips Coordination defect and marks status :Rejected."""
+        ev3 = generate_synthetic_reactor_pools_event(sequence_id="s3_neg_ana")
+        ev4 = generate_synthetic_biofilm_session_event(
+            sequence_id="s4_neg_ana",
+            causal_parent_id=ev3.event_id,
+        )
+        ev4.payload.anastomosis_topology.beta_0 = 2
+        tr = LogicGatesEvaluator.evaluate_transition(ev3, ev4)
+        self.assertTrue(tr.defect_flags["Coordination"])
+        self.assertEqual(tr.enforced_epistemic_status, ":Rejected")
+        self.assertFalse(tr.transition_valid)
 
 
 class TestTier4RealWorldWorkloads(unittest.TestCase):

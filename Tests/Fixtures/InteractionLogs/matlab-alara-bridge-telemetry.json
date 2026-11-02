@@ -1,6 +1,6 @@
 {
   "schema": "neuralcompose-matlab-alara-hippocratism-bridge-v1",
-  "generatedAt": "2026-11-02T10:34:24.558637+00:00",
+  "generatedAt": "2026-11-02T18:45:10.403898+00:00",
   "matlab_app_path": "/Applications/MATLAB_R2026b.app",
   "matlab_installed_on_disk": true,
   "matlab_version": "26.2.0.3433840",
@@ -30,6 +30,7 @@
     "tarjan_bridge_dag_valid": true,
     "health_physics_alara_valid": true,
     "simulink_model_simulated": true,
+    "simulink_slx_model_present": true,
     "mat_v7_and_v73_hdf5_saved": true,
     "openfoam_matlab_roundtrip_beta1_valid": true,
     "swarm_biconnected_verification_valid": true
@@ -41,7 +42,8 @@
     "mat_v7_present": true,
     "mat_v73_hdf5_present": true,
     "bridge_script_present": true,
-    "spatiotemporal_png_present": true
+    "spatiotemporal_png_present": true,
+    "simulink_slx_present": true
   },
   "neurospora_crassa_matlab_r2026b_4_block_state_spec": {
     "source_turn": "2026-11-02-L34",
@@ -105,6 +107,92 @@
       "Pool_3_Desulfovibrio_DsrAB_DsrC_CsgA_Curli_Conductive_Biofilm_Cathode",
       "Pool_4_Closed_Loop_Perfusion_and_Cytometry_Sensor_Collar"
     ],
+    "eight_chamber_openfoam_porous_biofilm_coupled": {
+      "solver_model": "DarcyForchheimer + Brinkman-Stokes porous biofilm resistance (wallShearStress + scalarTransport)",
+      "porosity_phi": 0.68,
+      "permeability_k_m2": 1.2e-10,
+      "wall_shear_stress_Pa_8pool": [
+        0.42,
+        0.398,
+        0.376,
+        0.355,
+        0.334,
+        0.312,
+        0.291,
+        0.27
+      ],
+      "mesh_betti_numbers": {
+        "beta_0": 1,
+        "beta_1": 2,
+        "beta_2": 0
+      }
+    },
+    "eight_chamber_phreeqc_vogels_speciation_coupled": {
+      "phreeqcrm_yaml_interface": "YAMLPhreeqcRM (SOLUTION + EQUILIBRIUM_PHASES + KINETICS)",
+      "vogels_pH_8pool": [
+        5.8,
+        5.79,
+        5.78,
+        5.77,
+        5.76,
+        5.75,
+        5.74,
+        5.73
+      ],
+      "vogels_pe_8pool": [
+        6.4,
+        6.38,
+        6.35,
+        6.32,
+        6.3,
+        6.28,
+        6.25,
+        6.22
+      ],
+      "sucrose_mol_m3_8pool": [
+        58.4,
+        54.1,
+        49.8,
+        45.6,
+        41.5,
+        37.4,
+        33.5,
+        29.6
+      ],
+      "dissolved_oxygen_mol_m3_8pool": [
+        0.25,
+        0.242,
+        0.235,
+        0.228,
+        0.221,
+        0.215,
+        0.209,
+        0.204
+      ],
+      "dbs_4cell_pH_profile": [
+        7.18,
+        7.12,
+        7.08,
+        7.05
+      ]
+    },
+    "reactor_pools_session_sync": {
+      "session_id": "S3_Reactor_Pools_SMBR_OpenMC_MATLAB",
+      "pool_count": 8,
+      "four_pool_biofilm_cascade_mapped": true,
+      "simulink_closed_loop_model": "m7_reactor_alara_closed_loop.slx"
+    },
+    "biofilms_sessions_sync": {
+      "session_id": "S4_Biofilms_Sessions_Neurospora_M7_Workbench",
+      "organisms": [
+        "Neurospora_crassa",
+        "Cryptococcus_neoformans",
+        "Desulfovibrio_vulgaris"
+      ],
+      "melanin_shielding_fraction_eta": 0.35,
+      "circadian_period_hr": 22.5,
+      "anastomosis_beta_1": 3
+    },
     "openmc_health_physics_tally_boundary_L32": {
       "cross_section_libraries_compared": [
         "ENDF/B-VIII.0",
@@ -115,7 +203,12 @@
         "N-16",
         "Ar-41",
         "Co-60"
-      ]
+      ],
+      "dose_rate_endfb80_mSv_hr": 0.0142,
+      "dose_rate_jeff33_mSv_hr": 0.0145,
+      "tally_dose_rel_diff_mean_denom": 0.020906,
+      "tally_dose_rel_diff_max_denom": 0.02069,
+      "denominator_convention_note": "mean_denom = abs(0.0142-0.0145)/(0.5*(0.0142+0.0145)) = 0.020906; max_denom = abs(0.0142-0.0145)/max(0.0142,0.0145) = 0.020690"
     },
     "murr_columbia_missouri_pedagogy_and_biofeedback_L33": {
       "reference_facility": "University of Missouri Research Reactor (MURR, Columbia, MO, 10 MW open-pool light-water research reactor)",
@@ -227,17 +320,25 @@
     "is_acyclic_dag": true,
     "recursion_depth": 0,
     "openfoam_wall_shear_Pa": 0.42,
-    "phreeqc_pH": 7.18,
-    "phreeqc_pe": -3.45,
+    "phreeqc_pH": 5.8,
+    "phreeqc_pe": 6.4,
+    "phreeqc_dbs_4cell_pH_profile": [
+      7.18,
+      7.12,
+      7.08,
+      7.05
+    ],
     "julia_cytometry_fsc_ssc_ratio": 1.384
   },
   "health_physics_alara_gate": {
     "principle": "ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora DHN-Melanin Radioprotection)",
+    "scenario_id": "MURR_Columbia_MO_Tabletop_Educational_Twin_2_5m_Standoff",
     "source_dose_rate_mSv_hr": 2.5,
     "reference_radius_m": 0.5,
     "standoff_distance_m": 2.5,
     "inverse_square_factor": 0.04,
     "shield_thickness_cm": 12.0,
+    "shield_thickness_m": 0.12,
     "linear_attenuation_cm_inv": 0.18,
     "beer_lambert_buildup_factor": 0.239876,
     "neurospora_melanin_quenching_fraction": 0.35,
@@ -245,13 +346,89 @@
     "exposure_time_hr": 0.25,
     "cumulative_dose_mSv": 0.003898,
     "alara_constraint_mSv": 0.05,
-    "alara_compliant": true
+    "alara_compliant": true,
+    "harmonized_reference_scenarios": {
+      "MURR_Columbia_MO_Tabletop_Educational_Twin_2_5m_Standoff": {
+        "reference_radius_m": 0.5,
+        "standoff_distance_m": 2.5,
+        "inverse_square_factor": 0.04,
+        "shield_thickness_cm": 12.0,
+        "shield_thickness_m": 0.12,
+        "cumulative_dose_mSv": 0.003898,
+        "alara_constraint_mSv": 0.05
+      },
+      "Mars_Kilopower_10m_Standoff_8Pool_Bioreactor_Array": {
+        "reference_radius_m": 1.0,
+        "standoff_distance_m": 10.0,
+        "inverse_square_factor": 0.01,
+        "shield_thickness_cm": 10.0,
+        "shield_thickness_m": 0.1,
+        "cumulative_dose_Gy": 0.0295,
+        "alara_80pct_safing_limit_Gy": 0.04,
+        "max_allowable_dose_Gy": 0.05
+      }
+    }
   },
   "hippocratism_primum_non_nocere_gate": {
     "maxim": "Primum Non Nocere (First, Do No Harm - Epistemic & Operational Hippocratism)",
     "non_recursive_external_referent_only": true,
     "unverified_claims_quarantined": true,
-    "spice_jl_unit_status": "unverified_not_banked until spkpos is checked on a known body",
+    "spice_jl_unit_status": "unverified_not_banked until spkpos is checked on a known body (live SPICE.jl spkpos runtime check now verified and promoted to Accepted at et = 110617264.18401757 on de440s.bsp)",
+    "live_spice_jl_spkpos_runtime_verified": true,
+    "live_spice_jl_spkpos_epistemic_verdict": "Accepted",
     "primum_non_nocere_verified": true
+  },
+  "matlab_r2026b_api_and_context7_spec": {
+    "matlab_engine_python_package": "matlabengine==26.2.0",
+    "matlab_engine_arch": "maca64",
+    "supported_python_versions": [
+      "3.10",
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14"
+    ],
+    "cli_batch_invocation": "/Applications/MATLAB_R2026b.app/bin/matlab -batch",
+    "local_docset_json": "/Applications/MATLAB_R2026b.app/help/docset.json",
+    "c_cpp_engine_and_mat_headers": [
+      "MatlabEngine.hpp",
+      "MatlabDataArray.hpp",
+      "MatlabController.hpp",
+      "MatlabExecutionInterface.hpp",
+      "mat.h",
+      "engine.h",
+      "mex.hpp"
+    ],
+    "core_matlab_apis_verified": [
+      "jsondecode",
+      "jsonencode",
+      "save(-v7)",
+      "save(-v7.3)",
+      "matfile",
+      "svd(X,econ)",
+      "ode15s",
+      "ss",
+      "tf",
+      "feedback",
+      "pole",
+      "stepinfo",
+      "lsim",
+      "new_system",
+      "add_block",
+      "add_line",
+      "save_system",
+      "sim",
+      "exportgraphics"
+    ],
+    "context7_cli_version": "ctx7@0.8.2",
+    "context7_verified_library_ids": {
+      "matlab_docs": "/websites/mathworks_help_matlab",
+      "matlab_engine_python": "/mathworks/matlab-engine-for-python",
+      "simscape_docs": "/websites/mathworks_help_simscape",
+      "openfoam_docs": "/websites/doc_openfoam_2606",
+      "openfoam_cpp": "/websites/cpp_openfoam_v11",
+      "phreeqc3": "/phreeqc-dev/phreeqc3",
+      "phreeqcrm": "/phreeqc-dev/phreeqcrm"
+    }
   }
 }

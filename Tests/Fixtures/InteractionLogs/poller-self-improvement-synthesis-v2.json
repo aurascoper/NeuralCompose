@@ -1,13 +1,13 @@
 {
   "schema": "poller-self-improvement-synthesis-v2",
-  "generated_at_utc": "2026-11-02T10:34:49.242391+00:00",
+  "generated_at_utc": "2026-11-02T17:14:17.548697+00:00",
   "ground_truth_verification": {
     "dialectic_log_path": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
     "dialectic_log_total_lines": 156,
     "dialectic_log_sha256": "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7",
     "rollover_2026_11_02_log_path": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-02.jsonl",
-    "rollover_2026_11_02_total_lines": 50,
-    "rollover_2026_11_02_sha256": "62217e51dc7733fd92cd5d52c3d532240ec30f4f732371d0447ee501e6513d31",
+    "rollover_2026_11_02_total_lines": 51,
+    "rollover_2026_11_02_sha256": "4bed458a31ac5e5b549bb2b02afde1013cd1ef13dac2202adf5c06db8bbdb786",
     "read_only_ingestion_verified": true,
     "fabricated_l0_claims_rejected": {
       "gemma_4_gpt_5_4_hy_world_2_0_present_in_logs": false,
@@ -78,22 +78,22 @@
       ]
     },
     "live_poller_backpressure_probe": {
-      "queried_at_utc": "2026-11-02T10:34:24.038001+00:00",
-      "swap_total_mb": 12288.0,
-      "swap_used_mb": 11285.81,
-      "swap_free_mb": 1002.19,
-      "pages_stored_in_compressor": 800104,
-      "pages_occupied_by_compressor": 508503,
-      "swapouts_pages": 41969936,
-      "active_plus_wired_ram_gb": 5.42,
-      "swap_used_gb": 11.29,
-      "compressor_uncompressed_gb": 13.11,
-      "compressor_physical_ram_gb": 8.33,
-      "cumulative_swapouts_gb": 687.64,
-      "swapped_plus_compressed_gb": 24.4,
-      "total_virtual_working_set_gb": 29.82,
-      "backpressure_gate_open": true,
-      "backpressure_mode": "NORMAL_READONLY_BATCH"
+      "queried_at_utc": "2026-11-02T17:14:16.425999+00:00",
+      "swap_total_mb": 0.0,
+      "swap_used_mb": 0.0,
+      "swap_free_mb": 0.0,
+      "pages_stored_in_compressor": 640798,
+      "pages_occupied_by_compressor": 352654,
+      "swapouts_pages": 0,
+      "active_plus_wired_ram_gb": 6.43,
+      "swap_used_gb": 0.0,
+      "compressor_uncompressed_gb": 10.5,
+      "compressor_physical_ram_gb": 5.78,
+      "cumulative_swapouts_gb": 0.0,
+      "swapped_plus_compressed_gb": 10.5,
+      "total_virtual_working_set_gb": 16.93,
+      "backpressure_gate_open": false,
+      "backpressure_mode": "THROTTLED_LOW_SWAP_HEADROOM"
     }
   },
   "asr_phonetic_recovery_dictionary": {
@@ -623,7 +623,7 @@
         "run_id": "F518FBE3-AFC0-41AD-BCBE-32BB762FF317",
         "turn_index": 3,
         "recorded_at": "2026-11-01T18:46:31.066Z",
-        "raw_heard": "How should we primer my friend in co-author of biofilms Brett Faulkner about this for the nuclear manufacturing materials research technician posting a job I can get you the job description shortly",
+        "raw_heard": "How should we primer my friend in co-author of biofilms [REDACTED_PII] Faulkner about this for the nuclear manufacturing materials research technician posting a job I can get you the job description shortly",
         "recovered_canonical_summary": "Basilisk (BSK, 'basil skin' / 'Vasilis' / 'bass') open-source astrodynamics flight software framework developed by the University of Colorado Boulder's Autonomous Vehicle Systems (AVS) Lab and LASP ('ABS lab in LA ASP'), combining a high-speed C/C++ core with a SWIG Python interface, repeatable faster-than-realtime Monte-Carlo runs, hardware-in-the-loop, Vizard ('lizard' / 'wizard' -> 'Vizard') 3D visualization, and SPICE ephemeris kernels, coupled to SmallModularBioReactors.jl ('small modular bio reactors.JL') / Oklo microreactor viewer ('Oklo viewer'), PHREEQC ('pH REEQC' -> 'PHREEQC USGS aqueous geochemical speciation'), M7SpatialFrame / M7 mission clocks, OpenMC ('open MC') neutronics, M7 Multiscale Explorer 4D spatiotemporal multiscale workbench ('4D spatial temple multi skill workbench', 'floats and ants' -> 'floats and ints [Float64 vs Int64 decimal representation]', 'problem with your prophecy' -> 'problem with your prosody [PersonalVoice / TTS prosodic cadence vs falsifiable forward-model prediction]', 'M71M8 ... in 7.1 as a header versus a float or ant' -> 'M7.1..M7.8 version header vs Float64/Int64 type classification in TTS/ASR pronunciation'), and MathWorks MATLAB R2026b (26.2.0.3433840) / Simulink / Simscape ('math works math lab' / 'application for Matt Lab' / 'mat lab and slink' / 'simulator link' / 'simulant product family' -> 'Simulink Product Family', 'Simca electrical' / 'Seca electrical' -> 'Simscape / Simscape Electrical', 'cogeneration' -> 'Code Generation (MATLAB Coder / Simulink Coder)', 'sign out for for all my workflows' -> 'sign up for for all my workflows', 'tested measurement' -> 'Test and Measurement') 4-stage Tarjan Acyclic Bridge (OpenFOAM -> PHREEQC -> Julia FlowCytometry/SMBR -> MATLAB/Simulink/Simscape, plus L22 cyclical orderbook matching engine [tau ~ 1 s] vs append-only acyclic balance engine ledger joined across a one-way Tarjan bridge settlement seam, L23 Hyperliquid ['hyper liquid' -> 'Hyperliquid'] $150 USDC settlement-seam test harness, L24 MEXC ['MEXC6' -> 'MEXC boundary execution and yield control center'] $51 staked, L25 Fast Wireframe [Hyperliquid 1-block perp collateral unwind, tau ~ 1 s] vs Slow Core [MEXC staking locked behind unbonding/claim clock] prioritizing redemption latency over dollar size, L26-L27 ZEC/USDC ['CEC algorithmic trading bought' -> 'ZEC algorithmic trading bot'] tuned ~900 base / ~2500 max with stoppable exit-trigger governance, L28 MATLAB fixture collar adapter [MAT v5/v7 struct vs MAT v7.3 HDF5 binary container -> JSON intermediate schema wired as a Glued Double-Tree Horizon Collar leaf with beta_1 = 2 across the 4-process Antigravity/MATLAB/Julia/NeuralCompose boundary], L29 OpenFOAM boundary-mesh topology vs Basilisk/MATLAB field round-trip beta_1 invariance verified by a headless CLI diff-checker prior to Vizard/NeuralCompose interactive visualization, L30 biconnected multi-agent swarm verification [Tarjan biconnectivity beta_1 >= 1, zero single-agent bridge collapse, counterfactual feed-swap trigger invariance across claude-sonnet-5, claude-sonnet-5-5, and claude-haiku-4-5 synthetic sessions], L31 unified substrate-swap diff-checker and sequential 2-filter reject logging combining L29 OpenFOAM/Basilisk/MATLAB format round-trip and L30 swarm biconnectivity into one pre-commit gate, L32 OpenMC Monte Carlo neutron/photon transport cross-section library swap [ENDF/B-VIII.0 vs JEFF-3.3] + ICRP-116 / ANSI/ANS-6.1.1 flux-to-dose-rate conversion factors and activation inventory, L33 MURR [University of Missouri Research Reactor in Columbia, Missouri, 10 MW open-pool light-water research reactor] digital-twin pedagogy and Muse S EEG / prosody biofeedback home-learning loop coupled to 4-pool SmallModularBioReactors.jl biofilm cascades, L34 ['why can\\'t we prose and more think about' -> 'why can\\'t we propose/pause and think about what we need to model with Neurospora in MATLAB'] 4-block Neurospora crassa MATLAB R2026b state specification [Block 1 frq/wc-1/wc-2 3-ODE circadian oscillator M_frq, F_c, F_n, phi(t); Block 2 syncytial hyphal streaming 5..60 um/s + Woronin body HEX-1 + anastomosis beta_1 = 3; Block 3 8-chamber Vogel\\'s medium Simscape + PHREEQC hydraulics pH = 5.80, pe = 6.40; Block 4 DHN-melanin / neurosporaxanthin ALARA point-kernel shielding with actuators u_valve(t), z_shield(t), Phi_light(t)], L36-L38 3-kit MATLAB R2026b toolbox scoping [DSP System Toolbox, Simulink, Simscape Electrical] + Performance Analyzer, Task Execution Time [TET] Monitor, Application Compiler, Hardware Board Setup, and Simulink Desktop Real-Time, L40 SmallModularBioReactors.jl boundary-condition symmetry vs deliberate module asymmetry for fault containment, and L45-L46 biofilm materials research technician specimen preparation [salting/fixative stabilization, compacting under load, and consolidating living adhesive biofilm matrices mapped to memory compaction, salting, and Slow Core consolidation]) governed by Health-Physics ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora crassa DHN-melanin radioprotection) and Epistemic/Operational Hippocratism (Primum Non Nocere: recursion_depth == 0, unverified_not_banked quarantine).",
         "matched_rules": [
           {
@@ -2259,7 +2259,7 @@
         "run_id": "1824FBDB-C680-4103-B25D-98298A60D6E8",
         "turn_index": 63,
         "recorded_at": "2026-11-02T09:16:25.608Z",
-        "raw_heard": "My friends application Brett the core of biofilms will be applying for the essential duties of the materials research technician that that is just now being established specimen preparation",
+        "raw_heard": "My friends application [REDACTED_PII] the core of biofilms will be applying for the essential duties of the materials research technician that that is just now being established specimen preparation",
         "recovered_canonical_summary": "Basilisk (BSK, 'basil skin' / 'Vasilis' / 'bass') open-source astrodynamics flight software framework developed by the University of Colorado Boulder's Autonomous Vehicle Systems (AVS) Lab and LASP ('ABS lab in LA ASP'), combining a high-speed C/C++ core with a SWIG Python interface, repeatable faster-than-realtime Monte-Carlo runs, hardware-in-the-loop, Vizard ('lizard' / 'wizard' -> 'Vizard') 3D visualization, and SPICE ephemeris kernels, coupled to SmallModularBioReactors.jl ('small modular bio reactors.JL') / Oklo microreactor viewer ('Oklo viewer'), PHREEQC ('pH REEQC' -> 'PHREEQC USGS aqueous geochemical speciation'), M7SpatialFrame / M7 mission clocks, OpenMC ('open MC') neutronics, M7 Multiscale Explorer 4D spatiotemporal multiscale workbench ('4D spatial temple multi skill workbench', 'floats and ants' -> 'floats and ints [Float64 vs Int64 decimal representation]', 'problem with your prophecy' -> 'problem with your prosody [PersonalVoice / TTS prosodic cadence vs falsifiable forward-model prediction]', 'M71M8 ... in 7.1 as a header versus a float or ant' -> 'M7.1..M7.8 version header vs Float64/Int64 type classification in TTS/ASR pronunciation'), and MathWorks MATLAB R2026b (26.2.0.3433840) / Simulink / Simscape ('math works math lab' / 'application for Matt Lab' / 'mat lab and slink' / 'simulator link' / 'simulant product family' -> 'Simulink Product Family', 'Simca electrical' / 'Seca electrical' -> 'Simscape / Simscape Electrical', 'cogeneration' -> 'Code Generation (MATLAB Coder / Simulink Coder)', 'sign out for for all my workflows' -> 'sign up for for all my workflows', 'tested measurement' -> 'Test and Measurement') 4-stage Tarjan Acyclic Bridge (OpenFOAM -> PHREEQC -> Julia FlowCytometry/SMBR -> MATLAB/Simulink/Simscape, plus L22 cyclical orderbook matching engine [tau ~ 1 s] vs append-only acyclic balance engine ledger joined across a one-way Tarjan bridge settlement seam, L23 Hyperliquid ['hyper liquid' -> 'Hyperliquid'] $150 USDC settlement-seam test harness, L24 MEXC ['MEXC6' -> 'MEXC boundary execution and yield control center'] $51 staked, L25 Fast Wireframe [Hyperliquid 1-block perp collateral unwind, tau ~ 1 s] vs Slow Core [MEXC staking locked behind unbonding/claim clock] prioritizing redemption latency over dollar size, L26-L27 ZEC/USDC ['CEC algorithmic trading bought' -> 'ZEC algorithmic trading bot'] tuned ~900 base / ~2500 max with stoppable exit-trigger governance, L28 MATLAB fixture collar adapter [MAT v5/v7 struct vs MAT v7.3 HDF5 binary container -> JSON intermediate schema wired as a Glued Double-Tree Horizon Collar leaf with beta_1 = 2 across the 4-process Antigravity/MATLAB/Julia/NeuralCompose boundary], L29 OpenFOAM boundary-mesh topology vs Basilisk/MATLAB field round-trip beta_1 invariance verified by a headless CLI diff-checker prior to Vizard/NeuralCompose interactive visualization, L30 biconnected multi-agent swarm verification [Tarjan biconnectivity beta_1 >= 1, zero single-agent bridge collapse, counterfactual feed-swap trigger invariance across claude-sonnet-5, claude-sonnet-5-5, and claude-haiku-4-5 synthetic sessions], L31 unified substrate-swap diff-checker and sequential 2-filter reject logging combining L29 OpenFOAM/Basilisk/MATLAB format round-trip and L30 swarm biconnectivity into one pre-commit gate, L32 OpenMC Monte Carlo neutron/photon transport cross-section library swap [ENDF/B-VIII.0 vs JEFF-3.3] + ICRP-116 / ANSI/ANS-6.1.1 flux-to-dose-rate conversion factors and activation inventory, L33 MURR [University of Missouri Research Reactor in Columbia, Missouri, 10 MW open-pool light-water research reactor] digital-twin pedagogy and Muse S EEG / prosody biofeedback home-learning loop coupled to 4-pool SmallModularBioReactors.jl biofilm cascades, L34 ['why can\\'t we prose and more think about' -> 'why can\\'t we propose/pause and think about what we need to model with Neurospora in MATLAB'] 4-block Neurospora crassa MATLAB R2026b state specification [Block 1 frq/wc-1/wc-2 3-ODE circadian oscillator M_frq, F_c, F_n, phi(t); Block 2 syncytial hyphal streaming 5..60 um/s + Woronin body HEX-1 + anastomosis beta_1 = 3; Block 3 8-chamber Vogel\\'s medium Simscape + PHREEQC hydraulics pH = 5.80, pe = 6.40; Block 4 DHN-melanin / neurosporaxanthin ALARA point-kernel shielding with actuators u_valve(t), z_shield(t), Phi_light(t)], L36-L38 3-kit MATLAB R2026b toolbox scoping [DSP System Toolbox, Simulink, Simscape Electrical] + Performance Analyzer, Task Execution Time [TET] Monitor, Application Compiler, Hardware Board Setup, and Simulink Desktop Real-Time, L40 SmallModularBioReactors.jl boundary-condition symmetry vs deliberate module asymmetry for fault containment, and L45-L46 biofilm materials research technician specimen preparation [salting/fixative stabilization, compacting under load, and consolidating living adhesive biofilm matrices mapped to memory compaction, salting, and Slow Core consolidation]) governed by Health-Physics ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora crassa DHN-melanin radioprotection) and Epistemic/Operational Hippocratism (Primum Non Nocere: recursion_depth == 0, unverified_not_banked quarantine).",
         "epistemic_note": null,
         "matched_rules": [
@@ -2423,7 +2423,8 @@
       47,
       48,
       49,
-      50
+      50,
+      51
     ],
     "canonical_key_tag": "key:31a8fe980f",
     "verified_claims_banked": {
@@ -2455,8 +2456,8 @@
   },
   "utc_midnight_rollover_2026_11_02_audit": {
     "dialectic_log_path": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-02.jsonl",
-    "total_lines_in_file": 50,
-    "sha256": "62217e51dc7733fd92cd5d52c3d532240ec30f4f732371d0447ee501e6513d31",
+    "total_lines_in_file": 51,
+    "sha256": "4bed458a31ac5e5b549bb2b02afde1013cd1ef13dac2202adf5c06db8bbdb786",
     "turns_evaluated": [
       {
         "file": "dialectic-turns-2026-11-02.jsonl",
@@ -3353,7 +3354,7 @@
         "max_candidate_potential": 1.7396,
         "eligible_for_memory": true,
         "rescue_category": "rescued_asr_phonetic_recovery",
-        "heard": "My friends application Brett the core of biofilms will be applying for the essential duties of the materials research technician that that is just now being established specimen preparation",
+        "heard": "My friends application [REDACTED_PII] the core of biofilms will be applying for the essential duties of the materials research technician that that is just now being established specimen preparation",
         "spoken_preview": "Specimen preparation is the tell  -  that's a materials-science job description dressed up as a job title, and biofilms are precisely the thing that resists being a specimen, since they're living, adhesive, self-organizi...",
         "asr_phonetic_recovery": "Basilisk (BSK, 'basil skin' / 'Vasilis' / 'bass') open-source astrodynamics flight software framework developed by the University of Colorado Boulder's Autonomous Vehicle Systems (AVS) Lab and LASP ('ABS lab in LA ASP'), combining a high-speed C/C++ core with a SWIG Python interface, repeatable faster-than-realtime Monte-Carlo runs, hardware-in-the-loop, Vizard ('lizard' / 'wizard' -> 'Vizard') 3D visualization, and SPICE ephemeris kernels, coupled to SmallModularBioReactors.jl ('small modular bio reactors.JL') / Oklo microreactor viewer ('Oklo viewer'), PHREEQC ('pH REEQC' -> 'PHREEQC USGS aqueous geochemical speciation'), M7SpatialFrame / M7 mission clocks, OpenMC ('open MC') neutronics, M7 Multiscale Explorer 4D spatiotemporal multiscale workbench ('4D spatial temple multi skill workbench', 'floats and ants' -> 'floats and ints [Float64 vs Int64 decimal representation]', 'problem with your prophecy' -> 'problem with your prosody [PersonalVoice / TTS prosodic cadence vs falsifiable forward-model prediction]', 'M71M8 ... in 7.1 as a header versus a float or ant' -> 'M7.1..M7.8 version header vs Float64/Int64 type classification in TTS/ASR pronunciation'), and MathWorks MATLAB R2026b (26.2.0.3433840) / Simulink / Simscape ('math works math lab' / 'application for Matt Lab' / 'mat lab and slink' / 'simulator link' / 'simulant product family' -> 'Simulink Product Family', 'Simca electrical' / 'Seca electrical' -> 'Simscape / Simscape Electrical', 'cogeneration' -> 'Code Generation (MATLAB Coder / Simulink Coder)', 'sign out for for all my workflows' -> 'sign up for for all my workflows', 'tested measurement' -> 'Test and Measurement') 4-stage Tarjan Acyclic Bridge (OpenFOAM -> PHREEQC -> Julia FlowCytometry/SMBR -> MATLAB/Simulink/Simscape, plus L22 cyclical orderbook matching engine [tau ~ 1 s] vs append-only acyclic balance engine ledger joined across a one-way Tarjan bridge settlement seam, L23 Hyperliquid ['hyper liquid' -> 'Hyperliquid'] $150 USDC settlement-seam test harness, L24 MEXC ['MEXC6' -> 'MEXC boundary execution and yield control center'] $51 staked, L25 Fast Wireframe [Hyperliquid 1-block perp collateral unwind, tau ~ 1 s] vs Slow Core [MEXC staking locked behind unbonding/claim clock] prioritizing redemption latency over dollar size, L26-L27 ZEC/USDC ['CEC algorithmic trading bought' -> 'ZEC algorithmic trading bot'] tuned ~900 base / ~2500 max with stoppable exit-trigger governance, L28 MATLAB fixture collar adapter [MAT v5/v7 struct vs MAT v7.3 HDF5 binary container -> JSON intermediate schema wired as a Glued Double-Tree Horizon Collar leaf with beta_1 = 2 across the 4-process Antigravity/MATLAB/Julia/NeuralCompose boundary], L29 OpenFOAM boundary-mesh topology vs Basilisk/MATLAB field round-trip beta_1 invariance verified by a headless CLI diff-checker prior to Vizard/NeuralCompose interactive visualization, L30 biconnected multi-agent swarm verification [Tarjan biconnectivity beta_1 >= 1, zero single-agent bridge collapse, counterfactual feed-swap trigger invariance across claude-sonnet-5, claude-sonnet-5-5, and claude-haiku-4-5 synthetic sessions], L31 unified substrate-swap diff-checker and sequential 2-filter reject logging combining L29 OpenFOAM/Basilisk/MATLAB format round-trip and L30 swarm biconnectivity into one pre-commit gate, L32 OpenMC Monte Carlo neutron/photon transport cross-section library swap [ENDF/B-VIII.0 vs JEFF-3.3] + ICRP-116 / ANSI/ANS-6.1.1 flux-to-dose-rate conversion factors and activation inventory, L33 MURR [University of Missouri Research Reactor in Columbia, Missouri, 10 MW open-pool light-water research reactor] digital-twin pedagogy and Muse S EEG / prosody biofeedback home-learning loop coupled to 4-pool SmallModularBioReactors.jl biofilm cascades, L34 ['why can\\'t we prose and more think about' -> 'why can\\'t we propose/pause and think about what we need to model with Neurospora in MATLAB'] 4-block Neurospora crassa MATLAB R2026b state specification [Block 1 frq/wc-1/wc-2 3-ODE circadian oscillator M_frq, F_c, F_n, phi(t); Block 2 syncytial hyphal streaming 5..60 um/s + Woronin body HEX-1 + anastomosis beta_1 = 3; Block 3 8-chamber Vogel\\'s medium Simscape + PHREEQC hydraulics pH = 5.80, pe = 6.40; Block 4 DHN-melanin / neurosporaxanthin ALARA point-kernel shielding with actuators u_valve(t), z_shield(t), Phi_light(t)], L36-L38 3-kit MATLAB R2026b toolbox scoping [DSP System Toolbox, Simulink, Simscape Electrical] + Performance Analyzer, Task Execution Time [TET] Monitor, Application Compiler, Hardware Board Setup, and Simulink Desktop Real-Time, L40 SmallModularBioReactors.jl boundary-condition symmetry vs deliberate module asymmetry for fault containment, and L45-L46 biofilm materials research technician specimen preparation [salting/fixative stabilization, compacting under load, and consolidating living adhesive biofilm matrices mapped to memory compaction, salting, and Slow Core consolidation]) governed by Health-Physics ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora crassa DHN-melanin radioprotection) and Epistemic/Operational Hippocratism (Primum Non Nocere: recursion_depth == 0, unverified_not_banked quarantine).",
         "epistemic_note": null
@@ -3457,12 +3458,32 @@
         "spoken_preview": "Vaccinated against what  -  biological antigens for the plant-safety protocols, or tetanus and bloodborne pathogen coverage for working the machine shop and the SEM lab. Either way it's the same structural move as before...",
         "asr_phonetic_recovery": "Basilisk (BSK, 'basil skin' / 'Vasilis' / 'bass') open-source astrodynamics flight software framework developed by the University of Colorado Boulder's Autonomous Vehicle Systems (AVS) Lab and LASP ('ABS lab in LA ASP'), combining a high-speed C/C++ core with a SWIG Python interface, repeatable faster-than-realtime Monte-Carlo runs, hardware-in-the-loop, Vizard ('lizard' / 'wizard' -> 'Vizard') 3D visualization, and SPICE ephemeris kernels, coupled to SmallModularBioReactors.jl ('small modular bio reactors.JL') / Oklo microreactor viewer ('Oklo viewer'), PHREEQC ('pH REEQC' -> 'PHREEQC USGS aqueous geochemical speciation'), M7SpatialFrame / M7 mission clocks, OpenMC ('open MC') neutronics, M7 Multiscale Explorer 4D spatiotemporal multiscale workbench ('4D spatial temple multi skill workbench', 'floats and ants' -> 'floats and ints [Float64 vs Int64 decimal representation]', 'problem with your prophecy' -> 'problem with your prosody [PersonalVoice / TTS prosodic cadence vs falsifiable forward-model prediction]', 'M71M8 ... in 7.1 as a header versus a float or ant' -> 'M7.1..M7.8 version header vs Float64/Int64 type classification in TTS/ASR pronunciation'), and MathWorks MATLAB R2026b (26.2.0.3433840) / Simulink / Simscape ('math works math lab' / 'application for Matt Lab' / 'mat lab and slink' / 'simulator link' / 'simulant product family' -> 'Simulink Product Family', 'Simca electrical' / 'Seca electrical' -> 'Simscape / Simscape Electrical', 'cogeneration' -> 'Code Generation (MATLAB Coder / Simulink Coder)', 'sign out for for all my workflows' -> 'sign up for for all my workflows', 'tested measurement' -> 'Test and Measurement') 4-stage Tarjan Acyclic Bridge (OpenFOAM -> PHREEQC -> Julia FlowCytometry/SMBR -> MATLAB/Simulink/Simscape, plus L22 cyclical orderbook matching engine [tau ~ 1 s] vs append-only acyclic balance engine ledger joined across a one-way Tarjan bridge settlement seam, L23 Hyperliquid ['hyper liquid' -> 'Hyperliquid'] $150 USDC settlement-seam test harness, L24 MEXC ['MEXC6' -> 'MEXC boundary execution and yield control center'] $51 staked, L25 Fast Wireframe [Hyperliquid 1-block perp collateral unwind, tau ~ 1 s] vs Slow Core [MEXC staking locked behind unbonding/claim clock] prioritizing redemption latency over dollar size, L26-L27 ZEC/USDC ['CEC algorithmic trading bought' -> 'ZEC algorithmic trading bot'] tuned ~900 base / ~2500 max with stoppable exit-trigger governance, L28 MATLAB fixture collar adapter [MAT v5/v7 struct vs MAT v7.3 HDF5 binary container -> JSON intermediate schema wired as a Glued Double-Tree Horizon Collar leaf with beta_1 = 2 across the 4-process Antigravity/MATLAB/Julia/NeuralCompose boundary], L29 OpenFOAM boundary-mesh topology vs Basilisk/MATLAB field round-trip beta_1 invariance verified by a headless CLI diff-checker prior to Vizard/NeuralCompose interactive visualization, L30 biconnected multi-agent swarm verification [Tarjan biconnectivity beta_1 >= 1, zero single-agent bridge collapse, counterfactual feed-swap trigger invariance across claude-sonnet-5, claude-sonnet-5-5, and claude-haiku-4-5 synthetic sessions], L31 unified substrate-swap diff-checker and sequential 2-filter reject logging combining L29 OpenFOAM/Basilisk/MATLAB format round-trip and L30 swarm biconnectivity into one pre-commit gate, L32 OpenMC Monte Carlo neutron/photon transport cross-section library swap [ENDF/B-VIII.0 vs JEFF-3.3] + ICRP-116 / ANSI/ANS-6.1.1 flux-to-dose-rate conversion factors and activation inventory, L33 MURR [University of Missouri Research Reactor in Columbia, Missouri, 10 MW open-pool light-water research reactor] digital-twin pedagogy and Muse S EEG / prosody biofeedback home-learning loop coupled to 4-pool SmallModularBioReactors.jl biofilm cascades, L34 ['why can\\'t we prose and more think about' -> 'why can\\'t we propose/pause and think about what we need to model with Neurospora in MATLAB'] 4-block Neurospora crassa MATLAB R2026b state specification [Block 1 frq/wc-1/wc-2 3-ODE circadian oscillator M_frq, F_c, F_n, phi(t); Block 2 syncytial hyphal streaming 5..60 um/s + Woronin body HEX-1 + anastomosis beta_1 = 3; Block 3 8-chamber Vogel\\'s medium Simscape + PHREEQC hydraulics pH = 5.80, pe = 6.40; Block 4 DHN-melanin / neurosporaxanthin ALARA point-kernel shielding with actuators u_valve(t), z_shield(t), Phi_light(t)], L36-L38 3-kit MATLAB R2026b toolbox scoping [DSP System Toolbox, Simulink, Simscape Electrical] + Performance Analyzer, Task Execution Time [TET] Monitor, Application Compiler, Hardware Board Setup, and Simulink Desktop Real-Time, L40 SmallModularBioReactors.jl boundary-condition symmetry vs deliberate module asymmetry for fault containment, and L45-L46 biofilm materials research technician specimen preparation [salting/fixative stabilization, compacting under load, and consolidating living adhesive biofilm matrices mapped to memory compaction, salting, and Slow Core consolidation]) governed by Health-Physics ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora crassa DHN-melanin radioprotection) and Epistemic/Operational Hippocratism (Primum Non Nocere: recursion_depth == 0, unverified_not_banked quarantine).",
         "epistemic_note": null
+      },
+      {
+        "file": "dialectic-turns-2026-11-02.jsonl",
+        "line_number": 51,
+        "virtual_session_line": 207,
+        "run_id": "1824FBDB-C680-4103-B25D-98298A60D6E8",
+        "turn_index": 69,
+        "recorded_at": "2026-11-02T10:49:00.855Z",
+        "inferred_mode": "contemplative",
+        "witness_attempted": false,
+        "outcome": "silent",
+        "gloss_scalar": 0.5,
+        "self_similarity": null,
+        "max_candidate_potential": 0.0,
+        "eligible_for_memory": false,
+        "rescue_category": "rejected_silent_or_empty",
+        "heard": "No",
+        "spoken_preview": "",
+        "asr_phonetic_recovery": null,
+        "epistemic_note": null
       }
     ]
   },
   "matlab_r2026b_alara_hippocratism_gate": {
     "schema": "neuralcompose-matlab-alara-hippocratism-bridge-v1",
-    "generatedAt": "2026-11-02T10:34:24.558637+00:00",
+    "generatedAt": "2026-11-02T17:14:17.354364+00:00",
     "matlab_app_path": "/Applications/MATLAB_R2026b.app",
     "matlab_installed_on_disk": true,
     "matlab_version": "26.2.0.3433840",
@@ -3492,6 +3513,7 @@
       "tarjan_bridge_dag_valid": true,
       "health_physics_alara_valid": true,
       "simulink_model_simulated": true,
+      "simulink_slx_model_present": true,
       "mat_v7_and_v73_hdf5_saved": true,
       "openfoam_matlab_roundtrip_beta1_valid": true,
       "swarm_biconnected_verification_valid": true
@@ -3503,7 +3525,8 @@
       "mat_v7_present": true,
       "mat_v73_hdf5_present": true,
       "bridge_script_present": true,
-      "spatiotemporal_png_present": true
+      "spatiotemporal_png_present": true,
+      "simulink_slx_present": true
     },
     "neurospora_crassa_matlab_r2026b_4_block_state_spec": {
       "source_turn": "2026-11-02-L34",
@@ -3567,6 +3590,92 @@
         "Pool_3_Desulfovibrio_DsrAB_DsrC_CsgA_Curli_Conductive_Biofilm_Cathode",
         "Pool_4_Closed_Loop_Perfusion_and_Cytometry_Sensor_Collar"
       ],
+      "eight_chamber_openfoam_porous_biofilm_coupled": {
+        "solver_model": "DarcyForchheimer + Brinkman-Stokes porous biofilm resistance (wallShearStress + scalarTransport)",
+        "porosity_phi": 0.68,
+        "permeability_k_m2": 1.2e-10,
+        "wall_shear_stress_Pa_8pool": [
+          0.42,
+          0.398,
+          0.376,
+          0.355,
+          0.334,
+          0.312,
+          0.291,
+          0.27
+        ],
+        "mesh_betti_numbers": {
+          "beta_0": 1,
+          "beta_1": 2,
+          "beta_2": 0
+        }
+      },
+      "eight_chamber_phreeqc_vogels_speciation_coupled": {
+        "phreeqcrm_yaml_interface": "YAMLPhreeqcRM (SOLUTION + EQUILIBRIUM_PHASES + KINETICS)",
+        "vogels_pH_8pool": [
+          5.8,
+          5.79,
+          5.78,
+          5.77,
+          5.76,
+          5.75,
+          5.74,
+          5.73
+        ],
+        "vogels_pe_8pool": [
+          6.4,
+          6.38,
+          6.35,
+          6.32,
+          6.3,
+          6.28,
+          6.25,
+          6.22
+        ],
+        "sucrose_mol_m3_8pool": [
+          58.4,
+          54.1,
+          49.8,
+          45.6,
+          41.5,
+          37.4,
+          33.5,
+          29.6
+        ],
+        "dissolved_oxygen_mol_m3_8pool": [
+          0.25,
+          0.242,
+          0.235,
+          0.228,
+          0.221,
+          0.215,
+          0.209,
+          0.204
+        ],
+        "dbs_4cell_pH_profile": [
+          7.18,
+          7.12,
+          7.08,
+          7.05
+        ]
+      },
+      "reactor_pools_session_sync": {
+        "session_id": "S3_Reactor_Pools_SMBR_OpenMC_MATLAB",
+        "pool_count": 8,
+        "four_pool_biofilm_cascade_mapped": true,
+        "simulink_closed_loop_model": "m7_reactor_alara_closed_loop.slx"
+      },
+      "biofilms_sessions_sync": {
+        "session_id": "S4_Biofilms_Sessions_Neurospora_M7_Workbench",
+        "organisms": [
+          "Neurospora_crassa",
+          "Cryptococcus_neoformans",
+          "Desulfovibrio_vulgaris"
+        ],
+        "melanin_shielding_fraction_eta": 0.35,
+        "circadian_period_hr": 22.5,
+        "anastomosis_beta_1": 3
+      },
       "openmc_health_physics_tally_boundary_L32": {
         "cross_section_libraries_compared": [
           "ENDF/B-VIII.0",
@@ -3689,8 +3798,14 @@
       "is_acyclic_dag": true,
       "recursion_depth": 0,
       "openfoam_wall_shear_Pa": 0.42,
-      "phreeqc_pH": 7.18,
-      "phreeqc_pe": -3.45,
+      "phreeqc_pH": 5.8,
+      "phreeqc_pe": 6.4,
+      "phreeqc_dbs_4cell_pH_profile": [
+        7.18,
+        7.12,
+        7.08,
+        7.05
+      ],
       "julia_cytometry_fsc_ssc_ratio": 1.384
     },
     "health_physics_alara_gate": {
@@ -3715,12 +3830,65 @@
       "unverified_claims_quarantined": true,
       "spice_jl_unit_status": "unverified_not_banked until spkpos is checked on a known body",
       "primum_non_nocere_verified": true
+    },
+    "matlab_r2026b_api_and_context7_spec": {
+      "matlab_engine_python_package": "matlabengine==26.2.0",
+      "matlab_engine_arch": "maca64",
+      "supported_python_versions": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "cli_batch_invocation": "/Applications/MATLAB_R2026b.app/bin/matlab -batch",
+      "local_docset_json": "/Applications/MATLAB_R2026b.app/help/docset.json",
+      "c_cpp_engine_and_mat_headers": [
+        "MatlabEngine.hpp",
+        "MatlabDataArray.hpp",
+        "MatlabController.hpp",
+        "MatlabExecutionInterface.hpp",
+        "mat.h",
+        "engine.h",
+        "mex.hpp"
+      ],
+      "core_matlab_apis_verified": [
+        "jsondecode",
+        "jsonencode",
+        "save(-v7)",
+        "save(-v7.3)",
+        "matfile",
+        "svd(X,econ)",
+        "ode15s",
+        "ss",
+        "tf",
+        "feedback",
+        "pole",
+        "stepinfo",
+        "lsim",
+        "new_system",
+        "add_block",
+        "add_line",
+        "save_system",
+        "sim",
+        "exportgraphics"
+      ],
+      "context7_cli_version": "ctx7@0.8.2",
+      "context7_verified_library_ids": {
+        "matlab_docs": "/websites/mathworks_help_matlab",
+        "matlab_engine_python": "/mathworks/matlab-engine-for-python",
+        "simscape_docs": "/websites/mathworks_help_simscape",
+        "openfoam_docs": "/websites/doc_openfoam_2606",
+        "openfoam_cpp": "/websites/cpp_openfoam_v11",
+        "phreeqc3": "/phreeqc-dev/phreeqc3",
+        "phreeqcrm": "/phreeqc-dev/phreeqcrm"
+      }
     }
   },
   "multica_channel_quantum_monism_panic_burst": {
     "multica_log_path": "/Users/aurascoper/Library/Application Support/NeuralCompose/multica_channel.jsonl",
-    "total_lines": 1506,
-    "sha256": "f3e1acc8c47075e7142164269ce4a1332c1dc0d3b61025217d26a9fa53689dac",
+    "total_lines": 1566,
+    "sha256": "9bc9fb322722bb42a8fc9c9e8270690a0b8a806cca4fb91422bae178e9a3fc71",
     "quantum_monism_panic_window_lines": [
       342,
       1249
@@ -5431,15 +5599,15 @@
   "claude_mind_sql_rescue_telemetry": {
     "sqlite_db_path": "/Users/aurascoper/Library/Application Support/claude-mind/memory.sqlite",
     "sqlite_inserted": 0,
-    "sqlite_updated": 1,
-    "sqlite_skipped": 134,
+    "sqlite_updated": 0,
+    "sqlite_skipped": 135,
     "sqlite_max_z_pk_before": 2124,
     "sqlite_max_z_pk_after": 2124,
     "session_2026_11_01_row_count_before": 1274,
     "session_2026_11_01_row_count_after": 1274,
     "inserted_z_pks": [],
     "pg_inserted": 0,
-    "pg_skipped": 135
+    "pg_skipped": 0
   },
   "master_event_contract_v1_gates": {
     "schema_path": "/Users/aurascoper/Developer/NeuralCompose/configs/master_event_contract_schema_v1.json",
@@ -5458,6 +5626,6 @@
       "L31",
       "L32"
     ],
-    "rollover_2026_11_02_line_count": 50
+    "rollover_2026_11_02_line_count": 51
   }
 }

@@ -664,10 +664,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                 // adaptiveComplexityEnabled (shadow mode), same invariant as
                                 // signalQuality/detectedAdaptation. Dispatched off the sample
                                 // drain hot-path so MLX GPU inference never stalls BLE polling.
+                                let windowAcquisition = current.acquisition
                                 Task.detached(priority: .utility) { [weak self, spectralEstimatorRef] in
                                     let spectral = await spectralEstimatorRef.estimate(window: cleanedWindow)
                                     await MainActor.run {
-                                        self?.recordWindowEvaluation(quality: quality, spectral: spectral)
+                                        guard let self, self.pipelineMode.acquisition == windowAcquisition else { return }
+                                        self.recordWindowEvaluation(quality: quality, spectral: spectral)
                                     }
                                 }
 
@@ -720,6 +722,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                         liveRetries = 0
                         await MainActor.run {
                             self?.isReconnecting = true
+                            self?.signalQuality = .lost
                             self?.lastError = nil
                         }
                         continue

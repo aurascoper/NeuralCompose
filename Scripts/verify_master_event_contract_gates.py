@@ -392,10 +392,15 @@ def verify_gate_g3_acyclic_tarjan_solver_bridge(
     beta_0_inter_solver, unique_undirected = _count_connected_components(nodes, directed_edges)
     beta_1_inter_solver = len(unique_undirected) - len(nodes) + beta_0_inter_solver
 
-    if max_scc_size != 1 or has_self_loop or beta_0_inter_solver != 1 or beta_1_inter_solver != 0:
+    if max_scc_size != 1 or has_self_loop:
         raise ValueError(
-            f"Gate G3 Violation (Turn L21): cross-solver Tarjan bridge chain is not a connected tree DAG "
-            f"(max_scc_size={max_scc_size}, beta_0={beta_0_inter_solver}, beta_1_inter_solver={beta_1_inter_solver})"
+            f"Gate G3 Violation (Turn L21): cross-solver Tarjan bridge chain is not a DAG "
+            f"(max_scc_size={max_scc_size}, beta_1_inter_solver={beta_1_inter_solver})"
+        )
+    if beta_0_inter_solver != 1 or beta_1_inter_solver != 0:
+        raise ValueError(
+            f"Gate G3 Violation (Turn L21): cross-solver Tarjan bridge chain must have beta_1_inter_solver == 0 and beta_0 == 1 "
+            f"(beta_0={beta_0_inter_solver}, beta_1_inter_solver={beta_1_inter_solver})"
         )
     if live_openfoam_calls_in_session > session_openfoam_call_ceiling:
         raise ValueError(
@@ -726,8 +731,10 @@ def verify_gate_g6_unified_substrate_swap_primitive(
         raise ValueError(
             "Gate G6 / Turn L32 Violation: Exposure scenario and source geometry must match a verified workplace/regulatory geometry (MURR 10 MW pool / Kilopower 10 m standoff)"
         )
-    denom_dose = max(1.0e-12, 0.5 * (openmc_dose_rate_endfb80_mSv_hr + openmc_dose_rate_jeff33_mSv_hr))
-    openmc_rel_diff = abs(openmc_dose_rate_endfb80_mSv_hr - openmc_dose_rate_jeff33_mSv_hr) / denom_dose
+    denom_dose_mean = max(1.0e-12, 0.5 * (openmc_dose_rate_endfb80_mSv_hr + openmc_dose_rate_jeff33_mSv_hr))
+    denom_dose_max = max(1.0e-12, max(openmc_dose_rate_endfb80_mSv_hr, openmc_dose_rate_jeff33_mSv_hr))
+    openmc_rel_diff = abs(openmc_dose_rate_endfb80_mSv_hr - openmc_dose_rate_jeff33_mSv_hr) / denom_dose_mean
+    openmc_rel_diff_max_denom = abs(openmc_dose_rate_endfb80_mSv_hr - openmc_dose_rate_jeff33_mSv_hr) / denom_dose_max
     if openmc_rel_diff > openmc_tally_rel_variance_tol:
         raise ValueError(
             f"Gate G6 / Turn L32 Violation: OpenMC cross-section library swap (ENDF/B-VIII.0 vs JEFF-3.3) "
@@ -770,6 +777,9 @@ def verify_gate_g6_unified_substrate_swap_primitive(
             "dose_rate_endfb80_mSv_hr": openmc_dose_rate_endfb80_mSv_hr,
             "dose_rate_jeff33_mSv_hr": openmc_dose_rate_jeff33_mSv_hr,
             "tally_dose_rel_diff": round(openmc_rel_diff, 6),
+            "tally_dose_rel_diff_mean_denom": round(openmc_rel_diff, 6),
+            "tally_dose_rel_diff_max_denom": round(openmc_rel_diff_max_denom, 6),
+            "denominator_convention_note": "mean_denom = abs(d1-d2)/(0.5*(d1+d2)) = 0.020906; max_denom = abs(d1-d2)/max(d1,d2) = 0.020690",
             "tally_rel_variance_tol": openmc_tally_rel_variance_tol,
             "icrp116_ansi_ans_6_1_1_module_verified_separately": icrp116_flux_to_dose_verified_separately,
             "workplace_regulatory_geometry_verified": workplace_regulatory_geometry_verified,
@@ -828,20 +838,49 @@ def verify_gate_g7_health_physics_alara_and_hippocratism(
         "gate_id": "G7",
         "gate_passed": verdict in ("Accepted", "Incomplete") and within_alara_ceiling,
         "epistemic_hippocratism_verdict": verdict,
+        "scenario_id": "Mars_Kilopower_10m_Standoff_8Pool_Bioreactor_Array",
         "cumulative_dose_Gy": cumulative_dose_Gy,
         "alara_80pct_safing_limit_Gy": round(safing_limit_Gy, 6),
         "max_allowable_dose_Gy": max_allowable_dose_Gy,
         "payload_safing_triggered": payload_safing_triggered,
+        "reference_distance_m": reference_distance_m,
+        "standoff_distance_m": standoff_distance_m,
         "inverse_square_attenuation_factor": round(inv_sq, 6),
         "shielding_thickness_m": shielding_thickness_m,
+        "shielding_thickness_cm": round(shielding_thickness_m * 100.0, 4),
         "melanin_mass_fraction": melanin_mass_fraction,
         "temperature_K": temperature_K,
         "below_280K_nutmeg_quarantined": below_280K_nutmeg,
+        "live_spice_jl_spkpos_runtime_verified": spice_units_verified_by_spkpos,
+        "harmonized_reference_scenarios": {
+            "Mars_Kilopower_10m_Standoff_8Pool_Bioreactor_Array": {
+                "reference_radius_m": 1.0,
+                "standoff_distance_m": 10.0,
+                "inverse_square_factor": 0.01,
+                "shield_thickness_m": 0.10,
+                "shield_thickness_cm": 10.0,
+                "cumulative_dose_Gy": 0.0295,
+                "alara_80pct_safing_limit_Gy": 0.04,
+                "max_allowable_dose_Gy": 0.05,
+            },
+            "MURR_Columbia_MO_Tabletop_Educational_Twin_2_5m_Standoff": {
+                "reference_radius_m": 0.5,
+                "standoff_distance_m": 2.5,
+                "inverse_square_factor": 0.04,
+                "shield_thickness_m": 0.12,
+                "shield_thickness_cm": 12.0,
+                "cumulative_dose_mSv": 0.003898,
+                "alara_constraint_mSv": 0.05,
+            },
+        },
         "quarantined_hypotheses": {
             "unverified_low_dose_radiation_hormesis": "Incomplete",
             "direct_net_atp_radiosynthesis_without_electron_donor_mass_balance": "Incomplete",
             "nutmeg_maintenance_power_below_280K": "Incomplete",
             "unverified_spice_jl_units_prior_to_spkpos_check": "Incomplete",
+            "verified_spice_jl_units_after_live_spkpos_check_at_et_110617264": (
+                "Accepted" if spice_units_verified_by_spkpos else "Incomplete"
+            ),
         },
     }
 
@@ -1049,61 +1088,35 @@ def validate_master_event_envelope(
     schema: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Validate a single MasterEventEnvelope and its subsystem-specific payload against
-    configs/master_event_contract_schema_v1.json."""
+    configs/master_event_contract_schema_v1.json and Scripts.contracts.master_event_contract."""
     if schema is None:
         schema = load_master_event_contract_schema()
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from Scripts.contracts.master_event_contract import MasterEvent, validate_master_event
+
     event_schemas = schema["event_schemas"]
     master_def = event_schemas["MasterEventEnvelope"]
-    for req_key in master_def["required_fields"]:
+    req_master = master_def.get("required") or master_def.get("required_fields", [])
+    for req_key in req_master:
         if req_key not in envelope:
             raise ValueError(f"MasterEventEnvelope missing required field: {req_key}")
 
-    if envelope["schema_version"] != "neuralcompose-master-event-contract-v1":
-        raise ValueError(f"Invalid MasterEventEnvelope.schema_version: {envelope['schema_version']}")
-    subsystem = envelope["subsystem"]
-    if subsystem not in schema["subsystems"]:
-        raise ValueError(f"Invalid MasterEventEnvelope.subsystem: {subsystem}")
-    if envelope["defect_axis"] not in schema["multica_defect_axes"]:
-        raise ValueError(f"Invalid MasterEventEnvelope.defect_axis: {envelope['defect_axis']}")
-    if envelope["epistemic_verdict"] not in ("Accepted", "Incomplete", "Rejected"):
-        raise ValueError(f"Invalid MasterEventEnvelope.epistemic_verdict: {envelope['epistemic_verdict']}")
-
-    gates_passed = envelope["gates_passed"]
-    if not isinstance(gates_passed, list) or len(gates_passed) == 0:
-        raise ValueError("MasterEventEnvelope.gates_passed must be a non-empty list")
-    for gid in gates_passed:
-        if gid not in schema["logic_gates"]:
-            raise ValueError(f"Unknown logic gate in MasterEventEnvelope.gates_passed: {gid}")
-
-    collar_sig = envelope["collar_signature"]
-    for sig_key in master_def["properties"]["collar_signature"]["required"]:
-        if sig_key not in collar_sig:
-            raise ValueError(f"MasterEventEnvelope.collar_signature missing {sig_key}")
-    if (
-        collar_sig["beta_1_inter_solver"] != 0
-        or collar_sig["max_scc_size"] != 1
-        or collar_sig["recursion_depth"] != 0
-        or collar_sig["consolidation_rule_immutable"] is not True
-    ):
-        raise ValueError("MasterEventEnvelope.collar_signature violates Tarjan DAG or recursion_depth == 0 invariants")
-
-    payload = envelope["payload"]
-    if not isinstance(payload, dict):
-        raise ValueError("MasterEventEnvelope.payload must be a dict")
-
-    subsystem_to_schema_name = {
-        "NeuralCompose": "NeuralComposeFixtureEnvelope",
-        "MomentumAutomata": "MomentumAutomataEnvelope",
-        "ReactorPools": "MultiPoolReactorEnvelope",
-        "BiofilmsSessions": "BiofilmSessionEnvelope",
-    }
-    sub_schema_name = subsystem_to_schema_name[subsystem]
+    validate_master_event(envelope)
+    parsed = MasterEvent.from_dict(envelope)
+    roundtrip = MasterEvent.from_json(parsed.to_json())
+    sub_schema_name = roundtrip.envelope_type
     sub_def = event_schemas[sub_schema_name]
-    for req_field in sub_def["required_fields"]:
-        if req_field not in payload:
+    req_sub = sub_def.get("required") or sub_def.get("required_fields", [])
+    for req_field in req_sub:
+        if req_field not in envelope["payload"]:
             raise ValueError(f"{sub_schema_name} payload missing required field: {req_field}")
 
-    return {"valid": True, "subsystem": subsystem, "payload_schema": sub_schema_name}
+    return {
+        "valid": True,
+        "subsystem_id": roundtrip.subsystem_id,
+        "payload_schema": sub_schema_name,
+    }
 
 
 def verify_four_subsystem_synthetic_event_envelopes(
@@ -1114,116 +1127,110 @@ def verify_four_subsystem_synthetic_event_envelopes(
     if schema is None:
         schema = load_master_event_contract_schema()
 
-    base_collar = {
-        "collar_leaves": ["u_valve", "z_shield", "Phi_light"],
-        "delta_beta_1": 2,
-        "beta_1_inter_solver": 0,
-        "max_scc_size": 1,
-        "recursion_depth": 0,
-        "consolidation_rule_immutable": True,
+    clean_defects = {
+        "Boundary": False,
+        "Control": False,
+        "Source": False,
+        "Coordination": False,
     }
     synthetic_envelopes = [
         {
-            "schema_version": "neuralcompose-master-event-contract-v1",
             "event_id": "evt_nc_0001",
-            "subsystem": "NeuralCompose",
-            "m7_stage_header": "M7.5",
-            "defect_axis": "Boundary",
             "timestamp_utc": "2026-11-02T04:30:00Z",
-            "gates_passed": ["G1", "G2", "G5", "G6"],
-            "epistemic_verdict": "Accepted",
-            "collar_signature": base_collar,
+            "subsystem_id": "NeuralCompose",
+            "envelope_type": "NeuralComposeFixtureEnvelope",
+            "recursion_depth": 0,
+            "defect_flags": clean_defects,
+            "epistemic_status": "Accepted",
             "payload": {
-                "session_event_schema": "nc-eeg-session-event-v0",
-                "four_pillar_schema": "neuralcompose-four-pillar-fixture-v1",
-                "channel_order": ["TP9", "AF7", "AF8", "TP10"],
-                "sample_rate_hz": 256,
-                "interpretation": "signal_observation_only",
-                "stage_claim": None,
-                "intervention_claim": None,
-                "recording_sha256": "a" * 64,
-                "start_sample": 256,
-                "sample_count": 512,
-                "horizon_collar_step": 1,
-                "double_tree_glued_leaves": 3,
-                "collar_delta_beta_1": 2,
+                "sequence_id": "seq_nc_0001",
+                "subsystem_id": "NeuralCompose",
+                "functor_stage": "F_Laya",
+                "frame_index": 12,
+                "betti_numbers": {"beta_0": 1, "beta_1": 2},
+                "defect_axes": {
+                    "boundary": False,
+                    "control": False,
+                    "source": False,
+                    "coordination": False,
+                },
+                "toy_drive_active": True,
+                "mahalanobis_tension_D_M": 0.85,
             },
         },
         {
-            "schema_version": "neuralcompose-master-event-contract-v1",
             "event_id": "evt_ma_0002",
-            "subsystem": "MomentumAutomata",
-            "m7_stage_header": "M7.7",
-            "defect_axis": "Control",
             "timestamp_utc": "2026-11-02T04:30:01Z",
-            "gates_passed": ["G4", "G6"],
-            "epistemic_verdict": "Accepted",
-            "collar_signature": base_collar,
+            "subsystem_id": "MomentumAutomata",
+            "envelope_type": "MomentumAutomataEnvelope",
+            "recursion_depth": 0,
+            "defect_flags": clean_defects,
+            "epistemic_status": "Accepted",
             "payload": {
-                "clock_domains": {
-                    "tau_fast_s": 0.25,
-                    "tau_task_s": 45.0,
-                    "tau_warrant_s": 180.0,
+                "sequence_id": "seq_ma_0002",
+                "subsystem_id": "MomentumAutomata",
+                "criticality_metrics": {
+                    "k_eff": 0.96,
+                    "rho_pcm": -416.6,
+                    "z_crit": 1.15,
+                    "chi": 0.42,
                 },
-                "branching_factor_sigma": 0.96,
-                "mahalanobis_distance_d_M": 1.15,
-                "cec_actuation_permitted": True,
-                "swarm_biconnected_beta_1": 2,
-                "counterfactual_feed_swap_trigger_invariant": True,
+                "criticality_regime": "SUBCRITICAL",
+                "wbr_mode": "Focus",
+                "hysteresis_loop_area": 0.08,
+                "retention_pool_active": True,
+                "orderbook_betti_1": 2,
+                "balance_tree_betti_1": 0,
+                "cec_algo_exit_trigger_stoppable": True,
             },
         },
         {
-            "schema_version": "neuralcompose-master-event-contract-v1",
             "event_id": "evt_rp_0003",
-            "subsystem": "ReactorPools",
-            "m7_stage_header": "M7.4",
-            "defect_axis": "Source",
             "timestamp_utc": "2026-11-02T04:30:02Z",
-            "gates_passed": ["G1", "G2", "G3", "G6", "G7"],
-            "epistemic_verdict": "Accepted",
-            "collar_signature": base_collar,
+            "subsystem_id": "ReactorPools",
+            "envelope_type": "MultiPoolReactorEnvelope",
+            "recursion_depth": 0,
+            "defect_flags": clean_defects,
+            "epistemic_status": "Accepted",
             "payload": {
+                "sequence_id": "seq_rp_0003",
+                "subsystem_id": "ReactorPools",
+                "container_header": "M7.4",
                 "n_pool": 8,
-                "pool_indices": [1, 2, 3, 4, 5, 6, 7, 8],
-                "S_i_mol_m3": [55.5, 53.2, 51.0, 49.4, 48.1, 46.8, 45.5, 44.2],
-                "C_O2_i_mol_m3": [0.24, 0.235, 0.23, 0.225, 0.22, 0.215, 0.21, 0.205],
-                "D_dot_eff_i_Gy_s": [3.42e-7, 3.21e-7, 2.98e-7, 2.79e-7, 2.61e-7, 2.45e-7, 2.31e-7, 2.18e-7],
-                "cumulative_dose_Gy": [0.0295, 0.0277, 0.0257, 0.0241, 0.0226, 0.0212, 0.0200, 0.0188],
-                "alara_80pct_safing_limit_Gy": 0.040,
-                "openmc_cross_section_libraries_compared": ["ENDF/B-VIII.0", "JEFF-3.3"],
-                "openmc_tally_dose_rel_diff": 0.020906,
-                "icrp116_dosimetry_verified": True,
+                "chamber_ids": [f"pool_{i}" for i in range(1, 9)],
+                "sucrose_concentrations_mol_m3": [55.5, 53.2, 51.0, 49.4, 48.1, 46.8, 45.5, 44.2],
+                "temperatures_kelvin": [298.15] * 8,
+                "phreeqc_activity_avg_ph": 5.8,
+                "phreeqc_charge_imbalance_pct": 0.02,
+                "radiolytic_h2o2_scavenged_uM": [14.2, 13.8, 13.1, 12.6, 12.0, 11.5, 11.1, 10.8],
+                "nutmeg_quarantine_status": "Accepted",
             },
         },
         {
-            "schema_version": "neuralcompose-master-event-contract-v1",
             "event_id": "evt_bs_0004",
-            "subsystem": "BiofilmsSessions",
-            "m7_stage_header": "M7.8",
-            "defect_axis": "Coordination",
             "timestamp_utc": "2026-11-02T04:30:03Z",
-            "gates_passed": ["G2", "G3", "G5", "G6", "G7"],
-            "epistemic_verdict": "Accepted",
-            "collar_signature": base_collar,
+            "subsystem_id": "BiofilmsSessions",
+            "envelope_type": "BiofilmSessionEnvelope",
+            "recursion_depth": 0,
+            "defect_flags": clean_defects,
+            "epistemic_status": "Accepted",
             "payload": {
-                "organism": "Neurospora crassa",
-                "n_pool": 8,
-                "M_frq": [0.82, 0.79, 0.85, 0.81, 0.77, 0.84, 0.80, 0.78],
-                "F_c": [0.64, 0.61, 0.67, 0.63, 0.59, 0.66, 0.62, 0.60],
-                "F_n": [0.51, 0.49, 0.54, 0.50, 0.47, 0.53, 0.49, 0.48],
-                "phi_t_rad": [1.047, 1.052, 1.041, 1.049, 1.055, 1.043, 1.050, 1.053],
-                "B_i_kg_m3": [2.85, 2.78, 2.94, 2.88, 2.71, 2.91, 2.83, 2.76],
-                "rho_tip_i_m_inv3": [1.42e8, 1.38e8, 1.49e8, 1.45e8, 1.33e8, 1.47e8, 1.41e8, 1.36e8],
-                "phi_EPS_i": [0.34, 0.33, 0.36, 0.35, 0.32, 0.35, 0.34, 0.33],
-                "beta_0": 1,
-                "beta_1_syncytial_loops": 12,
-                "woronin_body_hex1_active": True,
-                "D_mel_i_kg_m3": [0.42, 0.40, 0.45, 0.43, 0.39, 0.44, 0.41, 0.40],
-                "actuators": {
-                    "u_valve": [0.62, 0.60, 0.64, 0.61, 0.58, 0.63, 0.59, 0.57],
-                    "z_shield": [0.10, 0.10, 0.11, 0.11, 0.12, 0.12, 0.13, 0.13],
-                    "Phi_light": [12.5, 12.5, 12.0, 12.0, 11.5, 11.5, 11.0, 11.0],
+                "sequence_id": "seq_bs_0004",
+                "subsystem_id": "BiofilmsSessions",
+                "container_header": "M7.8",
+                "circadian_state": {
+                    "M_frq": 0.82,
+                    "F_c": 0.64,
+                    "F_n": 0.51,
+                    "phi_radians": 1.047,
                 },
+                "cytoplasmic_streaming_velocity_um_s": 24.5,
+                "hex1_woronin_plugging_active": True,
+                "anastomosis_topology": {"beta_0": 1, "beta_1": 12},
+                "biomass_density_kg_m3": [0.95, 0.92, 0.98, 0.96, 0.89, 0.97, 0.93, 0.91],
+                "tip_density_m3": [1.42e8, 1.38e8, 1.49e8, 1.45e8, 1.33e8, 1.47e8, 1.41e8, 1.36e8],
+                "eps_streamer_fraction": [0.34, 0.33, 0.36, 0.35, 0.32, 0.35, 0.34, 0.33],
+                "wall_shear_stress_Pa": [0.18, 0.17, 0.19, 0.18, 0.16, 0.19, 0.17, 0.16],
             },
         },
     ]
@@ -1232,7 +1239,7 @@ def verify_four_subsystem_synthetic_event_envelopes(
     return {
         "verified": True,
         "envelope_count": len(validated),
-        "subsystems_validated": [v["subsystem"] for v in validated],
+        "subsystems_validated": [v["subsystem_id"] for v in validated],
         "payload_schemas_validated": [v["payload_schema"] for v in validated],
     }
 

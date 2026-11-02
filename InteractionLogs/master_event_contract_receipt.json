@@ -1,7 +1,7 @@
 {
   "schema": "neuralcompose-master-event-contract-receipt-v1",
   "contract_schema_id": "neuralcompose-master-event-contract-schema-v1",
-  "verified_at_utc": "2026-11-02T10:56:18.135510+00:00",
+  "verified_at_utc": "2026-11-02T18:45:10.104515+00:00",
   "all_gates_passed": true,
   "max_scc_size": 1,
   "beta_1_inter_solver": 0,
@@ -44,6 +44,29 @@
       0.215,
       0.21,
       0.205
+    ]
+  },
+  "neuralcompose_session_and_four_pillar_summary": {
+    "verified": true,
+    "session_event_schema": "nc-eeg-session-event-v0",
+    "session_manifest_schema": "nc-eeg-session-manifest-v0",
+    "four_pillar_schema": "neuralcompose-four-pillar-fixture-v1",
+    "forbidden_stage_claim_rejected": true
+  },
+  "four_subsystem_envelopes_summary": {
+    "verified": true,
+    "envelope_count": 4,
+    "subsystems_validated": [
+      "NeuralCompose",
+      "MomentumAutomata",
+      "ReactorPools",
+      "BiofilmsSessions"
+    ],
+    "payload_schemas_validated": [
+      "NeuralComposeFixtureEnvelope",
+      "MomentumAutomataEnvelope",
+      "MultiPoolReactorEnvelope",
+      "BiofilmSessionEnvelope"
     ]
   },
   "gates": {
@@ -245,6 +268,9 @@
         "dose_rate_endfb80_mSv_hr": 0.0142,
         "dose_rate_jeff33_mSv_hr": 0.0145,
         "tally_dose_rel_diff": 0.020906,
+        "tally_dose_rel_diff_mean_denom": 0.020906,
+        "tally_dose_rel_diff_max_denom": 0.02069,
+        "denominator_convention_note": "mean_denom = abs(d1-d2)/(0.5*(d1+d2)) = 0.020906; max_denom = abs(d1-d2)/max(d1,d2) = 0.020690",
         "tally_rel_variance_tol": 0.05,
         "icrp116_ansi_ans_6_1_1_module_verified_separately": true,
         "workplace_regulatory_geometry_verified": true,
@@ -258,20 +284,47 @@
       "gate_id": "G7",
       "gate_passed": true,
       "epistemic_hippocratism_verdict": "Accepted",
+      "scenario_id": "Mars_Kilopower_10m_Standoff_8Pool_Bioreactor_Array",
       "cumulative_dose_Gy": 0.0295,
       "alara_80pct_safing_limit_Gy": 0.04,
       "max_allowable_dose_Gy": 0.05,
       "payload_safing_triggered": false,
+      "reference_distance_m": 1.0,
+      "standoff_distance_m": 10.0,
       "inverse_square_attenuation_factor": 0.01,
       "shielding_thickness_m": 0.1,
+      "shielding_thickness_cm": 10.0,
       "melanin_mass_fraction": 0.18,
       "temperature_K": 298.15,
       "below_280K_nutmeg_quarantined": false,
+      "live_spice_jl_spkpos_runtime_verified": true,
+      "harmonized_reference_scenarios": {
+        "Mars_Kilopower_10m_Standoff_8Pool_Bioreactor_Array": {
+          "reference_radius_m": 1.0,
+          "standoff_distance_m": 10.0,
+          "inverse_square_factor": 0.01,
+          "shield_thickness_m": 0.1,
+          "shield_thickness_cm": 10.0,
+          "cumulative_dose_Gy": 0.0295,
+          "alara_80pct_safing_limit_Gy": 0.04,
+          "max_allowable_dose_Gy": 0.05
+        },
+        "MURR_Columbia_MO_Tabletop_Educational_Twin_2_5m_Standoff": {
+          "reference_radius_m": 0.5,
+          "standoff_distance_m": 2.5,
+          "inverse_square_factor": 0.04,
+          "shield_thickness_m": 0.12,
+          "shield_thickness_cm": 12.0,
+          "cumulative_dose_mSv": 0.003898,
+          "alara_constraint_mSv": 0.05
+        }
+      },
       "quarantined_hypotheses": {
         "unverified_low_dose_radiation_hormesis": "Incomplete",
         "direct_net_atp_radiosynthesis_without_electron_donor_mass_balance": "Incomplete",
         "nutmeg_maintenance_power_below_280K": "Incomplete",
-        "unverified_spice_jl_units_prior_to_spkpos_check": "Incomplete"
+        "unverified_spice_jl_units_prior_to_spkpos_check": "Incomplete",
+        "verified_spice_jl_units_after_live_spkpos_check_at_et_110617264": "Accepted"
       }
     }
   }

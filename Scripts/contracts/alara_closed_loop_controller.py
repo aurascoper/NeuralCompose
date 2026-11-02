@@ -68,7 +68,7 @@ class ALARAClosedLoopController:
     ) -> None:
         self.max_allowable_dose_Gy = float(max_allowable_dose_Gy)
         self.safing_fraction = float(safing_fraction)
-        self.safing_threshold_Gy = self.safing_fraction * self.max_allowable_dose_Gy
+        self.safing_threshold_Gy = round(self.safing_fraction * self.max_allowable_dose_Gy, 9)
 
     def compute_effective_dose_rate(
         self,
@@ -140,7 +140,7 @@ class ALARAClosedLoopController:
             )
 
         safing_limit = self.safing_threshold_Gy
-        is_safing_triggered = state.cumulative_dose_Gy >= safing_limit
+        is_safing_triggered = state.cumulative_dose_Gy >= (safing_limit - 1e-12)
         is_ceiling_exceeded = state.cumulative_dose_Gy > self.max_allowable_dose_Gy
         is_cold_nutmeg = state.temperature_K < 280.0
         is_unverified_spice = not state.spice_units_verified_by_spkpos

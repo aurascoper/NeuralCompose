@@ -46,7 +46,10 @@ fi
 
 BOARD_PROFILE="${NEURALCOMPOSE_BOARD_PROFILE:-muses}"
 
-ENV_ARGS=(--env "NEURALCOMPOSE_BOARD_PROFILE=$BOARD_PROFILE")
+ENV_ARGS=(
+    --env "NEURALCOMPOSE_BOARD_PROFILE=$BOARD_PROFILE"
+    --env "PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:${PATH:-/usr/bin:/bin:/usr/sbin:/sbin}"
+)
 if [[ -n "${NEURALCOMPOSE_MUSE_SERIAL_NUMBER:-}" ]]; then
     ENV_ARGS+=(--env "NEURALCOMPOSE_MUSE_SERIAL_NUMBER=$NEURALCOMPOSE_MUSE_SERIAL_NUMBER")
 fi
