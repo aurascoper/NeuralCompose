@@ -214,7 +214,9 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
                 spoken: event.spokenText,
                 outcome: event.outcome,
                 selfSimilarity: event.selfSimilarity,
-                maxSelfSimilarity: maxSelfSimilarity
+                maxSelfSimilarity: maxSelfSimilarity,
+                witnessAttempted: event.witnessAttempted ?? true,
+                maxCandidatePotential: event.candidates.map(\.potential).max() ?? 0.0
             ) {
                 keptLines.append(line)
             } else {

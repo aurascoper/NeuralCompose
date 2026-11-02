@@ -176,8 +176,37 @@ final class TelemetryLoggerTests: XCTestCase {
             recordedAt: "2026-11-01T19:30:10.000Z"
         )
 
+        let contemplativeCand = DialecticalCandidate(
+            text: "Vizard streams ZeroMQ VizMessage frames from Basilisk while SPICE.jl evaluates planetary ephemeris kernels.",
+            embedding: emb,
+            roleID: "tension-holding"
+        )
+        let contemplativeScored = ScoredCandidate(
+            candidate: contemplativeCand,
+            energy: .init(coherence: 0.92, resonance: 0.88, novelty: 0.65),
+            potential: 1.54,
+            roleFulfillment: 0.91
+        )
+        let contemplativeTurn = DialecticalTurnEvent(
+            DialecticalCompetition(
+                index: 3,
+                heard: "What is a wizard about and how it applied to the spice Julia Colonels",
+                scored: [contemplativeScored],
+                tension: 0.08,
+                margin: 0.14,
+                selectionTemperature: 0.0,
+                outcome: .spoke(contemplativeCand),
+                glossScalar: 0.5,
+                selfSimilarity: 0.93,
+                witnessAttempted: false
+            ),
+            runID: "run-contemplative",
+            recordedAt: "2026-11-01T19:31:00.000Z"
+        )
+
         await logger.log(validTurn)
         await logger.log(stutterTurn)
+        await logger.log(contemplativeTurn)
 
         let report = await logger.autobankAndAutoforgetIfNeeded(
             day: todayStr,
@@ -189,15 +218,15 @@ final class TelemetryLoggerTests: XCTestCase {
 
         XCTAssertEqual(report.prunedTransientFiles, 1, "expired transient prosody-trace file must be pruned")
         XCTAssertFalse(FileManager.default.fileExists(atPath: expiredTraceURL.path))
-        XCTAssertEqual(report.evaluatedTurns, 2)
-        XCTAssertEqual(report.autobankedTurns, 1)
+        XCTAssertEqual(report.evaluatedTurns, 3)
+        XCTAssertEqual(report.autobankedTurns, 2, "both validTurn and contemplativeTurn (pot=1.54, witnessAttempted=false) must be autobanked")
         XCTAssertEqual(report.forgottenTurns, 1)
         XCTAssertTrue(report.compactedPrimaryLog)
 
         let autobankURL = dir.appendingPathComponent("dialectic-autobank-\(todayStr).jsonl")
         let autobankLines = try String(contentsOf: autobankURL, encoding: .utf8)
             .split(separator: "\n", omittingEmptySubsequences: true)
-        XCTAssertEqual(autobankLines.count, 1)
+        XCTAssertEqual(autobankLines.count, 2)
 
         let backupURL = dir.appendingPathComponent("dialectic-turns-\(todayStr).jsonl.bak")
         XCTAssertTrue(FileManager.default.fileExists(atPath: backupURL.path), "compacting primary log must preserve .bak snapshot")

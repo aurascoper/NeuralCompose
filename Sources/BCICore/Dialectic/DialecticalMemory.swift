@@ -170,7 +170,9 @@ public struct DialecticalMemory: Sendable {
         spoken: String?,
         outcome: String,
         selfSimilarity: Float?,
-        maxSelfSimilarity: Float = 0.92
+        maxSelfSimilarity: Float = 0.92,
+        witnessAttempted: Bool = true,
+        maxCandidatePotential: Float = 0.0
     ) -> (eligible: Bool, reason: String) {
         let rolePrefix = outcome.split(separator: ":", maxSplits: 1).first.map(String.init) ?? ""
         guard rolePrefix == "spoke" || rolePrefix == "synthesized" else {
@@ -206,13 +208,47 @@ public struct DialecticalMemory: Sendable {
         if words.count >= 2 && Set(words).count == 1 {
             return (false, "single_token_stutter")
         }
-        guard words.count >= 3, (words.count + spokenWords.count) >= 5 else {
-            return (false, "short_backchannel_or_hedge")
+        // Secondary contemplative-mode warrant rule: when witnessAttempted == false and
+        // maxCandidatePotential >= 1.40 with selfSimilarity in [0.85, 0.96] (or nil on turn 0)
+        // and substantive spoken synthesis (>= 25 spoken words), rescue contemplative turns.
+        let isContemplativeHighPotential = !witnessAttempted &&
+            maxCandidatePotential >= 1.40 &&
+            ((selfSimilarity ?? 0.90) >= 0.85 && (selfSimilarity ?? 0.90) <= 0.96)
+        if !isContemplativeHighPotential {
+            guard words.count >= 3, (words.count + spokenWords.count) >= 5 else {
+                return (false, "short_backchannel_or_hedge")
+            }
+        } else {
+            guard (words.count + spokenWords.count) >= 5 else {
+                return (false, "short_backchannel_or_hedge")
+            }
         }
         if let sim = selfSimilarity, sim > maxSelfSimilarity {
+            if isContemplativeHighPotential {
+                return (true, "warranted_contemplative")
+            }
             return (false, String(format: "reflexive_collapse_gt_%.2f", maxSelfSimilarity))
         }
-        return (true, "warranted")
+        return (true, isContemplativeHighPotential ? "warranted_contemplative" : "warranted")
+    }
+
+    /// Evaluates whether a `DialecticalTurnEvent` warrants banking into persistent
+    /// SQL memory / session-time autobank manifest when/iff needed, automatically
+    /// extracting `witnessAttempted` and `maxCandidatePotential` from the event.
+    public static func evaluateAutobankWarrant(
+        _ event: DialecticalTurnEvent,
+        maxSelfSimilarity: Float = 0.92
+    ) -> (eligible: Bool, reason: String) {
+        let maxPot = event.candidates.map(\.potential).max() ?? 0.0
+        return evaluateAutobankWarrant(
+            heard: event.heard,
+            spoken: event.spokenText,
+            outcome: event.outcome,
+            selfSimilarity: event.selfSimilarity,
+            maxSelfSimilarity: maxSelfSimilarity,
+            witnessAttempted: event.witnessAttempted ?? true,
+            maxCandidatePotential: maxPot
+        )
     }
 
     /// Evaluates whether a completed dialectical turn warrants banking into persistent
@@ -222,15 +258,28 @@ public struct DialecticalMemory: Sendable {
         spoken: String?,
         outcome: String,
         selfSimilarity: Float?,
-        maxSelfSimilarity: Float = 0.92
+        maxSelfSimilarity: Float = 0.92,
+        witnessAttempted: Bool = true,
+        maxCandidatePotential: Float = 0.0
     ) -> Bool {
         evaluateAutobankWarrant(
             heard: heard,
             spoken: spoken,
             outcome: outcome,
             selfSimilarity: selfSimilarity,
-            maxSelfSimilarity: maxSelfSimilarity
+            maxSelfSimilarity: maxSelfSimilarity,
+            witnessAttempted: witnessAttempted,
+            maxCandidatePotential: maxCandidatePotential
         ).eligible
+    }
+
+    /// Evaluates whether a `DialecticalTurnEvent` warrants banking into persistent
+    /// SQL memory / session-time autobank manifest when/iff needed.
+    public static func shouldAutobankTurn(
+        _ event: DialecticalTurnEvent,
+        maxSelfSimilarity: Float = 0.92
+    ) -> Bool {
+        evaluateAutobankWarrant(event, maxSelfSimilarity: maxSelfSimilarity).eligible
     }
 
     // MARK: - Synthesis (emergent third idea)

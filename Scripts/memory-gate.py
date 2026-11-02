@@ -106,11 +106,14 @@ def should_autobank_turn(
     outcome: str,
     self_similarity: Optional[float] = None,
     max_self_similarity: float = DEFAULT_MAX_SELF_SIMILARITY,
+    witness_attempted: bool = True,
+    max_candidate_potential: float = 0.0,
 ) -> tuple[bool, str]:
     """Return `(eligible, reason)` for whether a dialectical turn warrants banking.
 
     Mirrors `DialecticalMemory.shouldAutobankTurn` in Swift so runtime and
-    session-time gates agree on the exact same criteria.
+    session-time gates agree on the exact same criteria, including the
+    secondary contemplative-mode warrant rule (!witness_attempted && max_candidate_potential >= 1.40).
     """
     role = outcome.split(":", 1)[0] if outcome else ""
     if role not in ("spoke", "synthesized"):
@@ -131,11 +134,23 @@ def should_autobank_turn(
             return False, "transient_control_or_transit"
     if len(words) >= 2 and len(set(words)) == 1:
         return False, "single_token_stutter"
-    if len(words) < 3 or (len(words) + len(spoken_words)) < 5:
-        return False, "short_backchannel_or_hedge"
+    sim_val = float(self_similarity) if isinstance(self_similarity, (int, float)) else 0.90
+    is_contemplative_high_pot = (
+        not witness_attempted
+        and float(max_candidate_potential) >= 1.40
+        and 0.85 <= sim_val <= 0.96
+    )
+    if not is_contemplative_high_pot:
+        if len(words) < 3 or (len(words) + len(spoken_words)) < 5:
+            return False, "short_backchannel_or_hedge"
+    else:
+        if (len(words) + len(spoken_words)) < 5:
+            return False, "short_backchannel_or_hedge"
     if isinstance(self_similarity, (int, float)) and float(self_similarity) > max_self_similarity:
+        if is_contemplative_high_pot:
+            return True, "warranted_contemplative"
         return False, f"reflexive_collapse_gt_{max_self_similarity:.2f}"
-    return True, "warranted"
+    return True, ("warranted_contemplative" if is_contemplative_high_pot else "warranted")
 
 
 def should_autoforget_memory_text(
@@ -144,20 +159,43 @@ def should_autoforget_memory_text(
 ) -> tuple[bool, str]:
     """Inspect an existing `app-dialectic` memory text and decide whether it
     should be forgotten (tombstoned) when/iff needed."""
-    m_heard = re.search(r'heard\s+"([^"]*)"', text)
-    m_Spoken = re.search(r'(?:spoke|synthesized)\s+"([^"]*)"', text)
-    if not m_heard or not m_Spoken:
-        return False, "non_dialectic_format"
-    heard = m_heard.group(1)
-    spoken = m_Spoken.group(1)
+    # If explicitly rescued by Turn L112 non-recursive poller or ASR phonetic recovery, keep active
+    if "gate rescued_" in text or "gate warranted_" in text or "ASR_RECOVERED:" in text:
+        return False, "poller_warranted_or_rescued"
+
+    # Match `heard "<heard>" -> spoke|synthesized "<spoken>" (<context>)`
+    # without truncating when `<spoken>` or `<heard>` contains inner quotation marks.
+    m_pair = re.search(
+        r'heard\s+"(.*?)"\s*(?:->|\u2192)\s*(?:spoke|synthesized)\s+"(.*)"(?:\s*\((?:tension|gloss|self_sim|state|pot|mode)[^()]*\))?',
+        text,
+        re.DOTALL,
+    )
+    if m_pair:
+        heard = m_pair.group(1)
+        spoken = m_pair.group(2)
+        # Strip trailing context ` (tension ...)` if the greedy group captured up to a later quote
+        spoken = re.sub(r'"\s*\((?:tension|gloss|self_sim|state|pot|mode)[^()]*\).*$', "", spoken, flags=re.DOTALL)
+    else:
+        m_heard = re.search(r'heard\s+"([^"]*)"', text)
+        m_spoken = re.search(r'(?:spoke|synthesized)\s+"(.+)"', text, re.DOTALL)
+        if not m_heard or not m_spoken:
+            return False, "non_dialectic_format"
+        heard = m_heard.group(1)
+        spoken = m_spoken.group(1)
+
     m_sim = re.search(r"self_sim\s+([0-9.]+)", text)
     self_sim = float(m_sim.group(1)) if m_sim else None
+    m_pot = re.search(r"pot\s+([0-9.]+)", text)
+    max_pot = float(m_pot.group(1)) if m_pot else 0.0
+    is_contemplative = ("mode contemplative" in text) or (max_pot >= 1.40)
     eligible, reason = should_autobank_turn(
         heard=heard,
         spoken=spoken,
         outcome="spoke:check",
         self_similarity=self_sim,
         max_self_similarity=max_self_similarity,
+        witness_attempted=not is_contemplative,
+        max_candidate_potential=max_pot if max_pot > 0.0 else (1.45 if is_contemplative else 0.0),
     )
     return (not eligible), reason
 
@@ -250,12 +288,16 @@ def dialectic_payloads(
                 continue
 
             if not include_unfiltered:
+                cands = ev.get("candidates") or []
+                max_pot = max((float(c.get("potential", 0.0)) for c in cands), default=0.0)
                 eligible, _ = should_autobank_turn(
                     heard=heard,
                     spoken=spoken,
                     outcome=outcome,
                     self_similarity=self_sim if isinstance(self_sim, (int, float)) else None,
                     max_self_similarity=max_self_similarity,
+                    witness_attempted=bool(ev.get("witnessAttempted", True)),
+                    max_candidate_potential=max_pot,
                 )
                 if not eligible:
                     continue
@@ -756,45 +798,69 @@ def autoforget_sql_and_logs(
         conn = sqlite3.connect(str(sqlite_path))
         cur = conn.cursor()
         cur.execute(
-            "SELECT Z_PK, ZTEXT FROM ZMEMORYRECORD WHERE ZSOURCE = 'app-dialectic' AND COALESCE(ZTOMBSTONED, 0) = 0"
+            "SELECT Z_PK, COALESCE(ZTOMBSTONED, 0), ZTEXT FROM ZMEMORYRECORD WHERE ZSOURCE = 'app-dialectic'"
         )
         to_forget_pks: list[int] = []
-        for pk, txt in cur.fetchall():
+        to_restore_pks: list[int] = []
+        for pk, tomb, txt in cur.fetchall():
             forget, reason = should_autoforget_memory_text(str(txt or ""), max_self_similarity=max_self_similarity)
-            if forget:
+            if forget and int(tomb) == 0:
                 to_forget_pks.append(int(pk))
                 report["reasons"][reason] = report["reasons"].get(reason, 0) + 1
+            elif (not forget) and int(tomb) == 1:
+                to_restore_pks.append(int(pk))
         report["sqlite_candidates"] = len(to_forget_pks)
-        if apply_sql and to_forget_pks:
-            cur.executemany(
-                "UPDATE ZMEMORYRECORD SET ZTOMBSTONED = 1 WHERE Z_PK = ?",
-                [(pk,) for pk in to_forget_pks],
-            )
-            conn.commit()
-            report["sqlite_tombstoned"] = len(to_forget_pks)
+        report["sqlite_restored"] = 0
+        if apply_sql:
+            if to_forget_pks:
+                cur.executemany(
+                    "UPDATE ZMEMORYRECORD SET ZTOMBSTONED = 1 WHERE Z_PK = ?",
+                    [(pk,) for pk in to_forget_pks],
+                )
+                report["sqlite_tombstoned"] = len(to_forget_pks)
+            if to_restore_pks:
+                cur.executemany(
+                    "UPDATE ZMEMORYRECORD SET ZTOMBSTONED = 0 WHERE Z_PK = ?",
+                    [(pk,) for pk in to_restore_pks],
+                )
+                report["sqlite_restored"] = len(to_restore_pks)
+            if to_forget_pks or to_restore_pks:
+                conn.commit()
         conn.close()
 
     pg_query = (
-        "SELECT id::text, text FROM memories "
-        "WHERE source = 'app-dialectic' AND COALESCE(tombstoned, FALSE) = FALSE;"
+        "SELECT id::text, COALESCE(tombstoned, FALSE)::text, text FROM memories "
+        "WHERE source = 'app-dialectic';"
     )
     res = subprocess.run(["psql", pg_dsn, "-t", "-A", "-F", "\t", "-c", pg_query], capture_output=True, text=True)
     if res.returncode == 0:
         pg_forget_ids: list[str] = []
+        pg_restore_ids: list[str] = []
         for raw_ln in res.stdout.splitlines():
-            if "\t" not in raw_ln:
+            parts = raw_ln.split("\t", 2)
+            if len(parts) < 3:
                 continue
-            mid, mtxt = raw_ln.split("\t", 1)
+            mid, mtomb, mtxt = parts[0], parts[1].strip().lower(), parts[2]
             forget, _ = should_autoforget_memory_text(mtxt, max_self_similarity=max_self_similarity)
-            if forget:
+            if forget and mtomb in ("f", "false", "0"):
                 pg_forget_ids.append(mid.strip())
+            elif (not forget) and mtomb in ("t", "true", "1"):
+                pg_restore_ids.append(mid.strip())
         report["pg_candidates"] = len(pg_forget_ids)
-        if apply_sql and pg_forget_ids:
-            uuid_list = ", ".join(f"'{u}'::uuid" for u in pg_forget_ids)
-            upd_sql = f"UPDATE memories SET tombstoned = TRUE WHERE id IN ({uuid_list});"
-            upd = subprocess.run(["psql", pg_dsn, "-q", "-c", upd_sql], capture_output=True, text=True)
-            if upd.returncode == 0:
-                report["pg_tombstoned"] = len(pg_forget_ids)
+        report["pg_restored"] = 0
+        if apply_sql:
+            if pg_forget_ids:
+                uuid_list = ", ".join(f"'{u}'::uuid" for u in pg_forget_ids)
+                upd_sql = f"UPDATE memories SET tombstoned = TRUE WHERE id IN ({uuid_list});"
+                upd = subprocess.run(["psql", pg_dsn, "-q", "-c", upd_sql], capture_output=True, text=True)
+                if upd.returncode == 0:
+                    report["pg_tombstoned"] = len(pg_forget_ids)
+            if pg_restore_ids:
+                uuid_list = ", ".join(f"'{u}'::uuid" for u in pg_restore_ids)
+                upd_sql = f"UPDATE memories SET tombstoned = FALSE WHERE id IN ({uuid_list});"
+                upd = subprocess.run(["psql", pg_dsn, "-q", "-c", upd_sql], capture_output=True, text=True)
+                if upd.returncode == 0:
+                    report["pg_restored"] = len(pg_restore_ids)
 
     for fp in dialectic_files(telemetry_dir.expanduser(), all_days=True, explicit=None):
         report["files_inspected"] += 1
@@ -808,12 +874,16 @@ def autoforget_sql_and_logs(
             except json.JSONDecodeError:
                 continue
             report["turns_evaluated"] += 1
+            cands = ev.get("candidates") or []
+            max_pot = max((float(c.get("potential", 0.0)) for c in cands), default=0.0)
             eligible, reason = should_autobank_turn(
                 heard=str(ev.get("heard", "")),
                 spoken=str(ev.get("spokenText") or ""),
                 outcome=str(ev.get("outcome", "")),
                 self_similarity=ev.get("selfSimilarity"),
                 max_self_similarity=max_self_similarity,
+                witness_attempted=bool(ev.get("witnessAttempted", True)),
+                max_candidate_potential=max_pot,
             )
             if eligible:
                 kept_lines.append(_sanitize_dashes(ln))

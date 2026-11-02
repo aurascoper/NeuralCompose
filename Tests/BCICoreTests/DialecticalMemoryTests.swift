@@ -256,5 +256,61 @@ final class DialecticalMemoryTests: XCTestCase {
         )
         XCTAssertTrue(w2.eligible)
         XCTAssertEqual(w2.reason, "warranted")
+
+        // Secondary contemplative-mode warrant rule (!witnessAttempted && maxCandidatePotential >= 1.40 && selfSimilarity in 0.85...0.96)
+        let wContemplative = DialecticalMemory.evaluateAutobankWarrant(
+            heard: "What is a wizard about and how it applied to the spice Julia Colonels",
+            spoken: "A wizard is about mastery earned through study, mapping to Vizard and SPICE.jl ephemeris kernels.",
+            outcome: "spoke:coherence-seeking",
+            selfSimilarity: 0.9247,
+            maxSelfSimilarity: 0.92,
+            witnessAttempted: false,
+            maxCandidatePotential: 1.445
+        )
+        XCTAssertTrue(wContemplative.eligible)
+        XCTAssertEqual(wContemplative.reason, "warranted_contemplative")
+
+        // ASR Phonetic Recovery Dictionary verification (Turn L79 & Turn L115)
+        let recL79 = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "Are the viral arc jeans worth modeling and something like open foam or pie mall or Kmart"
+        )
+        XCTAssertTrue(recL79.canonicalHeard.contains("viral Arc capsid gene"))
+        XCTAssertTrue(recL79.canonicalHeard.contains("OpenFOAM"))
+        XCTAssertTrue(recL79.canonicalHeard.contains("PyMOL"))
+        XCTAssertTrue(recL79.canonicalHeard.contains("ChimeraX"))
+        XCTAssertEqual(recL79.matchedRules.count, 4)
+
+        let recL115 = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "What is a wizard about and how it applied to the spice Julia Colonels"
+        )
+        XCTAssertTrue(recL115.canonicalHeard.contains("Vizard"))
+        XCTAssertTrue(recL115.canonicalHeard.contains("SPICE.jl"))
+        XCTAssertEqual(recL115.matchedRules.count, 2, "spice julia colonels replacement must not redundantly re-trigger julia colonels")
+        XCTAssertTrue(HypnagogicDialecticLoop.isAstrodynamicsOrM7MultiscaleQuery("What is a wizard about and how it applied to the spice Julia Colonels"))
+        XCTAssertTrue(HypnagogicDialecticLoop.isDirectRecallOrClarificationQuery("What is a wizard about and how it applied to the spice Julia Colonels"))
+
+        // Context guard: literal retail sentence without modeling/biology context must not rewrite "Kmart" or "pie mall"
+        let recRetail = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "I walked past a Kmart and a pie mall on my way home"
+        )
+        XCTAssertEqual(recRetail.matchedRules.count, 0)
+        XCTAssertFalse(recRetail.canonicalHeard.contains("ChimeraX"))
+        XCTAssertFalse(recRetail.canonicalHeard.contains("PyMOL"))
+
+        let recL127 = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "somebody Baczynski the disintegration loops and a thermodynamic and tropic signal or web MCP calls on Huawei's logic folding to subvert more law"
+        )
+        XCTAssertTrue(recL127.canonicalHeard.contains("Basinski"))
+        XCTAssertTrue(recL127.canonicalHeard.contains("entropic signal"))
+        XCTAssertTrue(recL127.canonicalHeard.contains("LogicFolding"))
+        XCTAssertTrue(recL127.canonicalHeard.contains("Moore's Law"))
+        XCTAssertTrue(HypnagogicDialecticLoop.isAstrodynamicsOrM7MultiscaleQuery("So can you do you know calls like web MCP calls on Huawei's logic folding to subvert more law"))
+
+        let recL132And134 = HypnagogicDialecticLoop.canonicalizeASRTranscript(
+            "compartmentalization of the deal modules and what's considered the golden recording that be face be sleep"
+        )
+        XCTAssertTrue(recL132And134.canonicalHeard.contains("feel modulus"))
+        XCTAssertTrue(recL132And134.canonicalHeard.contains("Phase B sleep"))
     }
 }
+

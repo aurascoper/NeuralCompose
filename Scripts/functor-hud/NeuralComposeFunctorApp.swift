@@ -1435,7 +1435,13 @@ public final class FunctorDialecticalViewModel: ObservableObject {
         }
     }
 
+    private var isPollingInteractionLogs: Bool = false
+
     public func pollLiveInteractionLogTurns() {
+        guard !isPollingInteractionLogs else { return }
+        isPollingInteractionLogs = true
+        defer { isPollingInteractionLogs = false }
+
         let logDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Documents/NeuralCompose/InteractionLogs")
         let df = DateFormatter()
@@ -1445,7 +1451,9 @@ public final class FunctorDialecticalViewModel: ObservableObject {
         guard let content = try? String(contentsOf: todayLog, encoding: .utf8) else { return }
         let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
         if lastObservedInteractionLogCount < 0 {
-            lastObservedInteractionLogCount = max(0, lines.count - 6)
+            // Initialize watermark to current EOF so startup does not replay historical turns into multica_channel.jsonl
+            lastObservedInteractionLogCount = lines.count
+            return
         }
         guard lines.count > lastObservedInteractionLogCount else { return }
         let newLines = lines[lastObservedInteractionLogCount..<lines.count]
@@ -3156,7 +3164,6 @@ public struct EquifinalMulticaConsoleView: View {
 
 public struct FunctorDialecticalDashboardView: View {
     @ObservedObject private var viewModel: FunctorDialecticalViewModel
-    @StateObject private var fallbackViewModel = FunctorDialecticalViewModel()
     private let usesExternalViewModel: Bool
 
     public init(viewModel: FunctorDialecticalViewModel? = nil) {
@@ -4149,36 +4156,6 @@ public struct UnifiedNeuralComposeRootView: View {
                             if let vm = bciLoader.viewModel, let disp = bciLoader.dispatcher {
                                 ContentView(viewModel: vm, dispatcher: disp)
                                     .frame(minHeight: 740)
-                                    .onAppear {
-                                        enforceAudioLockOnBCIViewModel()
-                                    }
-                                    .onChange(of: functorViewModel.hardwareMicLoopLocked) { _, _ in
-                                        enforceAudioLockOnBCIViewModel()
-                                    }
-                                    .onChange(of: vm.hypnagogicLoopEnabled) { _, newValue in
-                                        functorViewModel.hypnagogicLoopActive = newValue
-                                        if newValue {
-                                            functorViewModel.hardwareMicLoopLocked = false
-                                        }
-                                        functorViewModel.hypnagogicLoopPhaseLabel = newValue
-                                            ? "Listening (On-Device Speech Recognizer)"
-                                            : "Stopped"
-                                    }
-                                    .onChange(of: vm.hypnagogicMode) { _, newMode in
-                                        functorViewModel.hypnagogicLoopModeLabel = newMode.rawValue
-                                    }
-                                    .onChange(of: vm.hypnagogicRuntimePreference) { _, newRuntime in
-                                        functorViewModel.hypnagogicRuntimeChoiceLabel = newRuntime.rawValue
-                                    }
-                                    .onChange(of: vm.composedText) { _, newText in
-                                        let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
-                                        if !trimmed.isEmpty {
-                                            functorViewModel.triggerEquifinalTurn(
-                                                source: .commit,
-                                                text: "BCI carousel composition: \(trimmed)"
-                                            )
-                                        }
-                                    }
                             } else {
                                 bciLoadingPlaceholder
                                     .frame(minHeight: 540)
@@ -4262,8 +4239,22 @@ public struct UnifiedNeuralComposeRootView: View {
         }
     }
 
+    @State private var lastEmittedIntentName: String = ""
+    @State private var lastIntentImpulseEpoch: TimeInterval = 0.0
+    @State private var isHandlingIntentImpulse: Bool = false
+
     private func handleLiveIntentImpulse(vm: AppViewModel, newIntent: IntentClass) {
-        guard newIntent != .rest else { return }
+        guard !isHandlingIntentImpulse, newIntent != .rest else { return }
+        let now = Date().timeIntervalSince1970
+        let intentName = newIntent.displayName
+        // Guard against un-debounced synthetic intent impulses spamming multica_channel.jsonl
+        guard intentName != lastEmittedIntentName || (now - lastIntentImpulseEpoch) >= 5.0 else { return }
+        guard (now - lastIntentImpulseEpoch) >= 2.0 else { return }
+        isHandlingIntentImpulse = true
+        defer { isHandlingIntentImpulse = false }
+        lastEmittedIntentName = intentName
+        lastIntentImpulseEpoch = now
+
         let spectralLabel = vm.detectedSpectralState?.badgeLabel ?? "Live"
         let qualityLabel = vm.signalQuality.map { String(describing: $0) } ?? "live"
         let isStrongImpulse = (newIntent == .jawClench || newIntent == .select)
@@ -4284,8 +4275,22 @@ public struct UnifiedNeuralComposeRootView: View {
         )
     }
 
+    @State private var lastEmittedSpectralBadge: String = ""
+    @State private var lastSpectralShiftEpoch: TimeInterval = 0.0
+    @State private var isHandlingSpectralShift: Bool = false
+
     private func handleLiveSpectralShift(vm: AppViewModel, newState: SpectralState?) {
-        guard let state = newState else { return }
+        guard !isHandlingSpectralShift, let state = newState else { return }
+        let now = Date().timeIntervalSince1970
+        let badge = state.badgeLabel
+        // Guard against duplicate/un-debounced spectral shift loops spamming multica_channel.jsonl
+        guard badge != lastEmittedSpectralBadge || (now - lastSpectralShiftEpoch) >= 5.0 else { return }
+        guard (now - lastSpectralShiftEpoch) >= 2.0 else { return }
+        isHandlingSpectralShift = true
+        defer { isHandlingSpectralShift = false }
+        lastEmittedSpectralBadge = badge
+        lastSpectralShiftEpoch = now
+
         let qualityLabel = vm.signalQuality.map { String(describing: $0) } ?? "live"
         let isHighLoad = (state == .highCognitiveLoad || state == .engagedFocused)
         functorViewModel.stepLiveSensorToyDrive(
@@ -4299,7 +4304,7 @@ public struct UnifiedNeuralComposeRootView: View {
         )
         functorViewModel.triggerEquifinalTurn(
             source: .synthetic,
-            text: "Muse BLE Spectral Shift -> \(state.badgeLabel) (signal=\(qualityLabel))",
+            text: "Muse BLE Spectral Shift -> \(badge) (signal=\(qualityLabel))",
             persistToDisk: true
         )
     }

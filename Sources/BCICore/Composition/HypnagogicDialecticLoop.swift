@@ -349,18 +349,24 @@ public actor HypnagogicDialecticLoop {
 
         // 1. Two generators, each shaped by the standing tension, and each
         //    shown the last few exchanges so a follow-up can be understood.
+        let asrRecovery = Self.canonicalizeASRTranscript(heard)
+        let effectiveHeard = asrRecovery.canonicalHeard
+        let asrNote = asrRecovery.matchedRules.isEmpty
+            ? ""
+            : "[ASR Phonetic Recovery Context: Speech recognition phonetically transcribed domain terminology (\(asrRecovery.matchedRules.joined(separator: "; "))). Canonical utterance meaning: \"\(effectiveHeard)\". Address the canonical scientific/architectural terms directly.]\n\n"
         let earlier = history.recent(config.historyExchanges)
         let historyBlock = earlier.isEmpty ? "" : Self.historyPreamble(earlier)
         let discourseNote = discourseKind == .ambientRoomConversation
             ? "[Discourse Context: Ambient room conversation with colleagues, guests, or coauthors. Respond only to the substantive conceptual topic; do not psychoanalyze overheard fragments, proper names, or conversational stutters.]\n\n"
             : ""
-        let hudNote = Self.isFourPillarHUDQuery(heard) ? Self.fourPillarHUDPreamble : ""
-        let stackNote = Self.isBluetoothBrainFlowOrStackQuery(heard) ? Self.bluetoothBrainFlowStackPreamble : ""
-        let recallQuery = Self.isDirectRecallOrClarificationQuery(heard)
+        let hudNote = (Self.isFourPillarHUDQuery(heard) || Self.isFourPillarHUDQuery(effectiveHeard)) ? Self.fourPillarHUDPreamble : ""
+        let stackNote = (Self.isBluetoothBrainFlowOrStackQuery(heard) || Self.isBluetoothBrainFlowOrStackQuery(effectiveHeard)) ? Self.bluetoothBrainFlowStackPreamble : ""
+        let astroM7Note = (Self.isAstrodynamicsOrM7MultiscaleQuery(heard) || Self.isAstrodynamicsOrM7MultiscaleQuery(effectiveHeard)) ? Self.astrodynamicsAndM7MultiscalePreamble : ""
+        let recallQuery = Self.isDirectRecallOrClarificationQuery(heard) || Self.isDirectRecallOrClarificationQuery(effectiveHeard)
         let recallNote = recallQuery
             ? "[Direct Clarification Context: The speaker is asking a direct question or asking to recall specific items from the prior turn. Explicitly restate the exact items from the prior turn or answer the literal question in your first sentence before developing your pole's perspective.]\n\n"
             : ""
-        let preamble = historyBlock + discourseNote + hudNote + stackNote + recallNote
+        let preamble = historyBlock + discourseNote + asrNote + hudNote + stackNote + astroM7Note + recallNote
         var candidateTexts: [(roleID: String, text: String)] = []
         for role in roles {
             try Task.checkCancellation()
@@ -757,6 +763,121 @@ public actor HypnagogicDialecticLoop {
 
     """
 
+    /// Canonical ASR Phonetic Recovery Dictionary mapping recurring macOS SFSpeechRecognizer /
+    /// Whisper phonetic corruptions to their exact scientific and architectural referents.
+    public static let asrPhoneticRecoveryTable: [(pattern: String, canonicalReplacement: String)] = [
+        ("viral arc jeans", "viral Arc capsid gene (dArc1/hArc retrotransposon Gag capsid)"),
+        ("open foam", "OpenFOAM"),
+        ("pie mall", "PyMOL"),
+        ("kmart", "ChimeraX"),
+        ("wizard", "Vizard (CU Boulder AVS Lab Unity 3D astrodynamics visualizer over ZeroMQ/Protobuf VizMessage)"),
+        ("spice julia colonels", "SPICE.jl Julia ephemeris kernels (.bsp, .tpc, .tls, .ck, .fk via furnsh/spkezr/pxform)"),
+        ("julia colonels", "SPICE.jl Julia ephemeris kernels"),
+        ("antilitter space", "Anti-de Sitter space (AdS_5)"),
+        ("three brain", "3-brane (Randall-Sundrum warped 5D AdS_5 hierarchy)"),
+        ("lance qcd", "Lattice QCD"),
+        ("neomorph computation", "neuromorphic computation"),
+        ("ancestral sequence we conduction", "ancestral sequence reconstruction (ASR)"),
+        ("moore's lobby", "Moore's Law"),
+        ("moores law", "Moore's Law"),
+        ("more law", "Moore's Law"),
+        ("baczynski", "Basinski (William Basinski, The Disintegration Loops)"),
+        ("and tropic signal", "entropic signal"),
+        ("logic folding", "LogicFolding (Huawei Tau = R*C 3D wafer-to-wafer hybrid-bonding scaling)"),
+        ("towel scaling", "Tau scaling (Tau = R*C time-constant scaling law in 3D LogicFolding)"),
+        ("centennial goch", "Santaneel Ghosh (Dr. Santaneel Ghosh, Southeast Missouri State University, SEMO)"),
+        ("palmer nana spheres", "polymer nanospheres (thermoresponsive PEG-MA/EGDMA Fe3O4 magnetic nanocarriers, PMC2894335)"),
+        ("fuel modulus", "feel modulus (Deleuze & Guattari schizoanalysis intensity modulus)"),
+        ("deal modules", "feel modulus (Deleuze & Guattari schizoanalysis intensity modulus)"),
+        ("face be sleep", "Phase B sleep (NeuralCompose Phase B Sleep & 3D EEG validation with Golden Recording golden_20260710-141352)"),
+        ("symbolic j.jl", "Symbolics.jl"),
+        ("symbolic @jl", "Symbolics.jl"),
+        ("symbolic.jl", "Symbolics.jl"),
+        ("withtouring.jl", "with Turing.jl"),
+        ("jacc.jljack.jl", "JACC.jl"),
+        ("jacc.jl", "JACC.jl"),
+        ("jacoby and matrixes", "Jacobian matrices"),
+        ("enzyme with.j", "Enzyme.jl"),
+        ("neuro jacks", "NeuroJAX"),
+        ("evo jacks", "EvoJAX"),
+        ("neuro arc.jl", "NeuroARC.jl"),
+        ("tp nine", "TP9")
+    ]
+
+
+    /// Applies the ASR Phonetic Recovery Dictionary to a raw speech transcript, returning
+    /// both the canonicalized string and the list of matched phonetic recovery rules.
+    public static func canonicalizeASRTranscript(_ heard: String) -> (canonicalHeard: String, matchedRules: [String]) {
+        var result = heard
+        let lowered = heard.lowercased()
+        var matched: [String] = []
+        // Contextual guard: only expand "wizard" -> "Vizard" when paired with spice / julia / colonels / basilisk / kernel
+        let hasSpiceOrAstroContext = lowered.contains("spice") || lowered.contains("colonel") ||
+            lowered.contains("kernel") || lowered.contains("basilisk") || lowered.contains("vizard")
+        // Contextual guard: only expand "kmart" -> "ChimeraX" or "pie mall" -> "PyMOL" when in a scientific/modeling context
+        let hasModelingOrBioContext = lowered.contains("model") || lowered.contains("gene") ||
+            lowered.contains("jeans") || lowered.contains("arc") || lowered.contains("capsid") ||
+            lowered.contains("foam") || lowered.contains("openfoam") || lowered.contains("pymol") ||
+            lowered.contains("chimerax") || lowered.contains("protein") || lowered.contains("molecular") ||
+            lowered.contains("viral") || lowered.contains("virus")
+        for entry in asrPhoneticRecoveryTable {
+            if entry.pattern == "wizard" && !hasSpiceOrAstroContext {
+                continue
+            }
+            if (entry.pattern == "kmart" || entry.pattern == "pie mall") && !hasModelingOrBioContext {
+                continue
+            }
+            if result.lowercased().contains(entry.pattern) {
+                matched.append("\(entry.pattern) -> \(entry.canonicalReplacement)")
+                result = result.replacingOccurrences(
+                    of: entry.pattern,
+                    with: entry.canonicalReplacement,
+                    options: [.caseInsensitive]
+                )
+            }
+        }
+        return (result, matched)
+    }
+
+    /// Detects when the speaker is asking about CU Boulder AVS Lab Basilisk / Vizard / SPICE.jl
+    /// astrodynamics ephemeris kernels or Viral Arc Capsid / OpenFOAM / PyMOL / ChimeraX M7 modeling.
+    public static func isAstrodynamicsOrM7MultiscaleQuery(_ heard: String) -> Bool {
+        let lowered = heard.lowercased()
+        if (lowered.contains("wizard") || lowered.contains("vizard")) &&
+           (lowered.contains("spice") || lowered.contains("colonel") || lowered.contains("kernel") || lowered.contains("julia")) {
+            return true
+        }
+        let indicators = [
+            "basilisk", "vizard", "spice.jl", "spice julia", "julia colonels",
+            "viral arc", "arc jeans", "openfoam", "open foam", "pymol", "pie mall", "chimerax",
+            "logic folding", "disintegration loops", "centennial goch", "santaneel ghosh",
+            "palmer nana spheres", "polymer nanospheres"
+        ]
+        return indicators.contains(where: { lowered.contains($0) })
+    }
+
+    /// Architectural reference injected into the turn preamble when the speaker asks about
+    /// Basilisk, Vizard, SPICE.jl Julia ephemeris kernels, or Viral Arc Capsid / OpenFOAM / PyMOL / ChimeraX.
+    public static let astrodynamicsAndM7MultiscalePreamble: String = """
+    [Astrodynamics (Basilisk + Vizard + SPICE.jl) & M7 Multiscale (Viral Arc Capsid + OpenFOAM + PyMOL + ChimeraX + LogicFolding) Reference:
+    1. ASR Phonetic Recovery Notice:
+       - "wizard ... spice Julia Colonels" is an ASR phonetic corruption of "Vizard ... SPICE Julia kernels (SPICE.jl)".
+       - "viral arc jeans ... open foam or pie mall or Kmart" is an ASR phonetic corruption of "viral Arc capsid gene in OpenFOAM, PyMOL, or ChimeraX".
+       - "Baczynski ... and tropic signal ... logic folding to subvert more law" maps to William Basinski's The Disintegration Loops, thermodynamic entropic signal, and Huawei LogicFolding (Tau = R*C 3D hybrid-bonding scaling) to subvert Moore's Law.
+    2. Basilisk + Vizard + SPICE.jl Astrodynamics Architecture:
+       - Basilisk (CU Boulder Autonomous Vehicle Systems / AVS Lab): modular C/C++ and Python spacecraft flight software and astrodynamics simulation framework using message-passing modules.
+       - Vizard: CU Boulder AVS Lab's Unity3D-based spacecraft and planetary astrodynamics visualization application that streams simulation state from Basilisk or Julia over ZeroMQ / Protobuf (VizMessage) sockets to render 3D attitude, camera frustums, reaction wheels, thrusters, and planetary bodies (Earth, Mars, Enceladus, Europa).
+       - SPICE.jl (Julia wrapper for NASA NAIF CSPICE toolkit): loads and queries planetary, lunar, and spacecraft ephemeris kernels (.bsp SPK trajectory kernels, .tpc PCK planetary constants, .tls LSK leapseconds, .ck CK orientation, .fk FK reference frames) via furnsh, spkezr, spkpos, and pxform, feeding exact orbital irradiance, eclipse, and tidal-flexing boundary conditions into M7WorldScenario.
+    3. Viral Arc Capsid Gene (dArc1 / hArc) in OpenFOAM, PyMOL, ChimeraX, and M7Multiscale:
+       - Arc (Activity-Regulated Cytoskeleton-Associated Protein) is a domesticated Ty3/gypsy retrotransposon Gag capsid gene that self-assembles into icosahedral virus-like capsids (T=4, ~32 nm diameter, PDB 6GSE / 4X3H) encapsulating mRNA for intercellular synaptic transfer via extracellular vesicles.
+       - PyMOL and UCSF ChimeraX (plus SobolevMacromolecule) model the molecular capsid assembly, NTD/CTD domain interfaces, and ancestral sequence reconstruction (ASR), while OpenFOAM models interstitial / synaptic-cleft Stokes-advection-diffusion transport (Re << 1, Peclet Pe = L*U/D_capsid) coupled to M7Multiscale.
+    4. Huawei LogicFolding & Tau (tau = R*C) 3D Hybrid-Bonding Scaling vs Moore's Law:
+       - LogicFolding uses fine-grained 3D wafer-to-wafer hybrid bonding and vertical transistor/CFET stacking to minimize interconnect RC time constants (tau = R*C) without EUV planar shrinking, trading 2D wire delay for vertical z-axis interlayer parasitic capacitance and thermal crosstalk.
+    Address the literal Vizard + SPICE.jl ephemeris kernel, Viral Arc + OpenFOAM/PyMOL/ChimeraX, or LogicFolding Tau = R*C architecture directly in your first sentence.]
+
+    """
+
+
     /// Detects when the speaker is asking a direct recall, clarification, or
     /// architectural-purpose question (e.g. "You said lemon juice or what else...",
     /// "What is the fast wireframe ... used for") where the coherence-seeking
@@ -764,12 +885,12 @@ public actor HypnagogicDialecticLoop {
     /// the requested items before developing their angle.
     public static func isDirectRecallOrClarificationQuery(_ heard: String) -> Bool {
         let lowered = heard.lowercased()
-        if isFourPillarHUDQuery(lowered) || isBluetoothBrainFlowOrStackQuery(lowered) {
+        if isFourPillarHUDQuery(lowered) || isBluetoothBrainFlowOrStackQuery(lowered) || isAstrodynamicsOrM7MultiscaleQuery(lowered) {
             return true
         }
         let recallIndicators = [
             "you said ", "what else if not", "what did you say", "which other",
-            "repeat that", "what was the other", "what is the ", "what are the ",
+            "repeat that", "what was the other", "what is the ", "what is a ", "what are the ",
             "used for"
         ]
         return recallIndicators.contains(where: { lowered.contains($0) })
