@@ -92,7 +92,7 @@ def _make_session():
 def test_cluster_blink_bursts():
     events = [{"start_s": t, "end_s": t + 0.1} for t in (0.0, 0.6, 1.2, 1.8, 2.4)]
     events += [{"start_s": t, "end_s": t + 0.1} for t in (10.0, 10.6, 11.2, 11.8, 12.4)]
-    events += [{"start_s": 20.0, "end_s": 20.1}]  # lone blink — not a marker
+    events += [{"start_s": 20.0, "end_s": 20.1}]  # lone blink  -  not a marker
     markers = csm.cluster_blink_bursts(events)
     assert len(markers) == 2, f"expected 2 bursts, got {len(markers)}"
     assert all(m["n_blinks"] == 5 for m in markers)
@@ -110,7 +110,7 @@ def test_segment_from_markers():
 
 
 def test_segment_from_markers_warns_on_marker_shortfall():
-    # Only 2 markers detected for 3 labels — a realistic flaky-detection
+    # Only 2 markers detected for 3 labels  -  a realistic flaky-detection
     # scenario. Regression test for a real bug: this used to silently
     # stretch drowsy's segment to total_s and drop "sleep" entirely with
     # no visible trace anywhere in the console summary.

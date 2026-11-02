@@ -24,7 +24,7 @@ def test_cka_independent():
     """Independent data does NOT give CKA near zero when d >> n.
 
     This is the biased linear CKA estimator (Kornblith et al.). With 50 samples
-    against 128 and 256 features it inflates severely — ~0.78 here — because the
+    against 128 and 256 features it inflates severely  -  ~0.78 here  -  because the
     Gram matrices of independent high-dimensional Gaussians are far from
     orthogonal at this sample size. The previous `< 0.3` described an unbiased
     estimator this code does not implement, and the test never ran to contradict

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Contract tests for Scripts/check_adr_references.py.
 
-Standard library only — `unittest`, no pytest, no NumPy, no MLX. The checker
+Standard library only (`unittest`, no pytest, no NumPy, no MLX). The checker
 runs as a direct `python3` step in the Swift CI job before any Python job
 exists, so its own tests must not acquire dependencies the gate does not have.
 
@@ -205,6 +205,19 @@ class ADRPolicyBoundaryTests(unittest.TestCase):
         self.tree.write("Tests/eval/test_adr_references.py", "# ADR-999\n")
         self.assertEqual(self.tree.codes(), [])
 
+    def test_interaction_log_fixtures_are_advisory_not_normative(self) -> None:
+        """Archived dialogue fixtures under Tests/Fixtures/InteractionLogs are advisory."""
+        self.tree.adr("ADR-001-first.md")
+        self.tree.write(
+            "Tests/Fixtures/InteractionLogs/autobank-manifest.jsonl",
+            '{"note": "reserved ADR-009-generation-runtime.md"}\n',
+        )
+        self.assertEqual(self.tree.codes(mode="hard"), [])
+        self.assertEqual(
+            self.tree.codes(mode="all", severity="warning"),
+            ["ADR_FILENAME_REFERENCE_MISSING", "ADR_REFERENCE_MISSING"],
+        )
+
 
 class LiveRepositoryTests(unittest.TestCase):
     """The gate itself, against the tree this test is running in."""
@@ -226,7 +239,7 @@ class LiveRepositoryTests(unittest.TestCase):
         self.assertTrue(adr_directory.is_dir(), f"missing {checker.ADR_DIRECTORY}")
         self.assertTrue(
             list(adr_directory.glob("ADR-*.md")),
-            "decision log contains no ADRs — the gate would pass trivially",
+            "decision log contains no ADRs; the gate would pass trivially",
         )
 
 

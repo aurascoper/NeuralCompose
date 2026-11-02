@@ -351,27 +351,62 @@ function receipt = m7_3d_eda_and_simulink_bridge()
     of_cells_table = readtable(fullfile(of_dir, 'm7_openfoam_reference_cells.csv'));
     pq_sel_table   = readtable(fullfile(pq_dir, 'reference_selected_output.tsv'), 'FileType', 'text', 'Delimiter', '\t');
     pq_map_table   = readtable(fullfile(pq_dir, 'cell_mapping.csv'));
-    of_pq_ph_diff  = max(abs(double(of_cells_table.pH(:)) - double(pq_map_table.pH_cell(:))));
-    of_pq_pe_diff  = max(abs(double(of_cells_table.pe(:)) - double(pq_map_table.pe_cell(:))));
+    of_0_ph        = parse_openfoam_scalar_field(fullfile(of_dir, '0', 'pH'));
+    of_1200_ph     = parse_openfoam_scalar_field(fullfile(of_dir, '1200', 'pH'));
+    of_1200_por    = parse_openfoam_scalar_field(fullfile(of_dir, '1200', 'porosity'));
+    of_finite_ok   = (height(of_cells_table) == 4) && (height(pq_sel_table) == 2) && (height(pq_map_table) == 4) && ...
+                     (numel(of_0_ph) == 4) && (numel(of_1200_ph) == 4) && (numel(of_1200_por) == 4) && ...
+                     all(isfinite(of_0_ph)) && all(isfinite(of_1200_ph)) && all(isfinite(of_1200_por)) && ...
+                     all(isfinite(double(of_cells_table.pH(:)))) && all(isfinite(double(of_cells_table.pe(:)))) && ...
+                     all(isfinite(double(of_cells_table.porosity_fraction(:)))) && ...
+                     all(isfinite(double(pq_map_table.pH_cell(:)))) && all(isfinite(double(pq_map_table.pe_cell(:)))) && ...
+                     all(isfinite(double(pq_sel_table.pH(:)))) && all(isfinite(double(pq_sel_table.pe(:)))) && ...
+                     all(isfinite(double(pq_sel_table.si_Calcite(:)))) && all(isfinite(double(pq_sel_table.si_Ce_Oxalate_10H2O(:))));
+    if of_finite_ok
+        sol_idx        = double(pq_map_table.phreeqc_solution_id(:));
+        pq_sel_ph_vec  = double(pq_sel_table.pH(:));
+        pq_sel_pe_vec  = double(pq_sel_table.pe(:));
+        pq_mapped_ph   = pq_sel_ph_vec(sol_idx);
+        pq_mapped_pe   = pq_sel_pe_vec(sol_idx);
+        of_pq_ph_diff  = max(abs(double(of_cells_table.pH(:)) - double(pq_map_table.pH_cell(:))), [], 'includenan');
+        of_pq_pe_diff  = max(abs(double(of_cells_table.pe(:)) - double(pq_map_table.pe_cell(:))), [], 'includenan');
+        of_1200_ph_err = max(abs(of_1200_ph(:) - double(of_cells_table.pH(:))), [], 'includenan');
+        of_1200_po_err = max(abs(of_1200_por(:) - double(of_cells_table.porosity_fraction(:))), [], 'includenan');
+        pq_sel_ph_err  = max(abs(pq_mapped_ph(:) - double(of_cells_table.pH(:))), [], 'includenan');
+        pq_sel_pe_err  = max(abs(pq_mapped_pe(:) - double(of_cells_table.pe(:))), [], 'includenan');
+    else
+        of_pq_ph_diff  = NaN;
+        of_pq_pe_diff  = NaN;
+        of_1200_ph_err = NaN;
+        of_1200_po_err = NaN;
+        pq_sel_ph_err  = NaN;
+        pq_sel_pe_err  = NaN;
+    end
     mdbs           = fx.menke_2026_geochemfoam_dbs_solver_coupling;
     c_pb2_init     = double(mdbs.dissolved_pb2_mol_m3(:));
     s_pb2_init     = double(mdbs.sorbed_pb2_surface_mol_m3_bulk(:));
     delta_sorb     = min(0.05 .* c_pb2_init, c_pb2_init);
     c_pb2_final    = c_pb2_init - delta_sorb;
     s_pb2_final    = s_pb2_init + delta_sorb;
-    total_pb2_init  = sum(c_pb2_init + s_pb2_init);
-    total_pb2_final = sum(c_pb2_final + s_pb2_final);
+    total_pb2_init  = sum(c_pb2_init + s_pb2_init, 'includenan');
+    total_pb2_final = sum(c_pb2_final + s_pb2_final, 'includenan');
     menke_dbs_pb2_rel_residual = abs(total_pb2_final - total_pb2_init) / max(1e-18, total_pb2_init);
-    menke_dbs_pb2_conserved    = (menke_dbs_pb2_rel_residual < 1e-12) && (menke_dbs_pb2_rel_residual < 0.01);
-    openfoam_phreeqc_actual_output_ingestion_verified = (height(of_cells_table) == 4) && ...
-                                                        (height(pq_sel_table) == 2) && ...
-                                                        (height(pq_map_table) == 4) && ...
+    menke_dbs_pb2_conserved    = isfinite(menke_dbs_pb2_rel_residual) && (menke_dbs_pb2_rel_residual < 1e-12) && (menke_dbs_pb2_rel_residual < 0.01);
+    openfoam_phreeqc_actual_output_ingestion_verified = of_finite_ok && ...
                                                         (of_pq_ph_diff < 1e-12) && ...
                                                         (of_pq_pe_diff < 1e-12) && ...
+                                                        (of_1200_ph_err < 1e-12) && ...
+                                                        (of_1200_po_err < 1e-12) && ...
+                                                        (pq_sel_ph_err < 1e-12) && ...
+                                                        (pq_sel_pe_err < 1e-12) && ...
                                                         isfile(fullfile(of_dir, '0', 'pH')) && ...
                                                         isfile(fullfile(of_dir, '0', 'porosity')) && ...
+                                                        isfile(fullfile(of_dir, '1200', 'pH')) && ...
+                                                        isfile(fullfile(of_dir, '1200', 'porosity')) && ...
+                                                        isfile(fullfile(of_dir, '1200', 'U')) && ...
                                                         isfile(fullfile(of_dir, 'constant', 'polyMesh', 'owner')) && ...
                                                         isfile(fullfile(of_dir, 'constant', 'polyMesh', 'neighbour')) && ...
+                                                        isfile(fullfile(of_dir, 'constant', 'polyMesh', 'boundary')) && ...
                                                         isfile(fullfile(pq_dir, 'reference_speciation.pqo')) && ...
                                                         menke_dbs_pb2_conserved;
 
@@ -535,7 +570,9 @@ function receipt = m7_3d_eda_and_simulink_bridge()
     receipt.menke_dbs_pb2_conserved = menke_dbs_pb2_conserved;
     receipt.menke_dbs_pb2_rel_residual = menke_dbs_pb2_rel_residual;
     receipt.five_graph_topology_distinction_valid = five_graph_topology_distinction_valid;
+    receipt.five_graph_topology_distinction = fx.five_graph_topology_distinction;
     receipt.section_6_all_9_flags_codified = section_6_all_9_flags_codified;
+    receipt.section_6_scientific_and_engineering_flags = fx.section_6_scientific_and_engineering_flags;
     receipt.swarm_biconnected_verification_valid = swarm_biconnected_valid;
     receipt.unified_substrate_swap_L31_L32_valid = unified_substrate_swap_L31_L32_valid;
     receipt.openmc_tally_variance_rel_diff = openmc_rel_diff;
@@ -602,7 +639,8 @@ function receipt = m7_3d_eda_and_simulink_bridge()
             'radical_quenching_efficiency_eta', 0.35, ...
             'point_kernel_equation', 'D_dot_shielded(r, z, t) = D_dot_0 * (r_0 / r)^2 * B(mu*z) * exp(-mu*z) * (1 - eta_melanin)', ...
             'closed_loop_actuators', {{'u_valve(t)', 'z_shield(t)', 'Phi_light(t)'}}, ...
-            'alara_compliant', true ...
+            'alara_compliant', true, ...
+            'epistemic_classification', 'passive_attenuation_and_radical_scavenging_model_specification_not_experimentally_established_net_metabolic_radiosynthesis' ...
         ) ...
     );
 
@@ -645,6 +683,12 @@ function receipt = m7_3d_eda_and_simulink_bridge()
                         movefile(tmp_fp, dst_fp, 'f');
                     end
                 end
+                if isfolder(fullfile(fixture_dir, 'openfoam_case'))
+                    copyfile(fullfile(fixture_dir, 'openfoam_case'), fullfile(dst_dir, 'openfoam_case'), 'f');
+                end
+                if isfolder(fullfile(fixture_dir, 'phreeqc'))
+                    copyfile(fullfile(fixture_dir, 'phreeqc'), fullfile(dst_dir, 'phreeqc'), 'f');
+                end
             end
         end
     end
@@ -652,4 +696,24 @@ function receipt = m7_3d_eda_and_simulink_bridge()
     fprintf('M7_MATLAB_R2026B_BRIDGE_PASS: all_checks_passed=%d, simulink=%d, mat_v7_v73=%d, png=%dx%d\n', ...
             receipt.all_checks_passed, simulink_model_simulated, mat_v7_and_v73_saved, img_info.Width, img_info.Height);
 end
+
+function vals = parse_openfoam_scalar_field(fp)
+    if ~isfile(fp)
+        vals = NaN;
+        return;
+    end
+    txt = fileread(fp);
+    tok = regexp(txt, 'nonuniform\s+List<scalar>\s+(\d+)\s*\(([^)]*)\)', 'tokens', 'once');
+    if isempty(tok)
+        vals = NaN;
+        return;
+    end
+    n_expected = str2double(tok{1});
+    lines_raw  = regexp(strtrim(tok{2}), '\s+', 'split');
+    vals       = str2double(lines_raw(:));
+    if (numel(vals) ~= n_expected) || any(~isfinite(vals))
+        vals = NaN(max(1, numel(vals)), 1);
+    end
+end
+
 

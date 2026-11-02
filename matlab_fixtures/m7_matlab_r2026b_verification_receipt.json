@@ -1,5 +1,5 @@
 {
-  "verified_at_utc": "2026-11-02T18:31:41Z",
+  "verified_at_utc": "2026-11-02T19:13:11Z",
   "matlab_version": "26.2.0.3433840 (R2026b) Update 1",
   "all_14_student_suite_toolboxes_present": true,
   "installed_toolbox_count": 14,
@@ -322,7 +322,61 @@
   "menke_dbs_pb2_conserved": true,
   "menke_dbs_pb2_rel_residual": 0,
   "five_graph_topology_distinction_valid": true,
+  "five_graph_topology_distinction": {
+    "inter_solver_orchestration_graph": {
+      "cycles_permitted": false,
+      "max_scc_size": 1,
+      "beta_1_inter_solver": 0,
+      "role": "Acyclic Tarjan bridge orchestration (OpenFOAM -> PHREEQC -> FlowCytometry -> SMBR -> MATLAB)"
+    },
+    "biological_state_dynamics_graph": {
+      "cycles_permitted": true,
+      "role": "Internal biological state feedback loops permitted (frq/wc-1/wc-2 circadian negative feedback and nutrient-growth-EPS coupling)"
+    },
+    "hyphal_anastomosis_graph": {
+      "cycles_permitted": true,
+      "beta_0": 1,
+      "beta_1": 3,
+      "biconnected": true,
+      "epistemic_disposition": "Graph topology can be tested; biological interpretation needs image-derived network data"
+    },
+    "bayesian_inference_graph": {
+      "cycles_permitted": false,
+      "beta_1": 0,
+      "role": "Turing.jl / Hastings-Metropolis posterior dependency DAG conditioned on biomass and trace metal removal data"
+    },
+    "visualization_observer_graph": {
+      "cycles_permitted": false,
+      "can_inject_physical_causality": false,
+      "default_vizard_endpoint": "tcp://localhost:5570",
+      "role": "Read-only non-causal observer graph; cannot overwrite upstream finite-volume or geochemical ground truth"
+    }
+  },
   "section_6_all_9_flags_codified": true,
+  "section_6_scientific_and_engineering_flags": {
+    "neurospora_circadian_oscillator": "Model specification; parameters require strain- and condition-specific calibration",
+    "hyphal_streaming_5_to_60_um_s": "Reported range; not a universal constant",
+    "hex1_woronin_septal_plugging": "Established biological mechanism; the model's representation still needs validation",
+    "anastomosis_cycles": "Graph topology can be tested; biological interpretation needs image-derived network data",
+    "melanin_shielding": "Plausible material response; coefficient and dose-response must be calibrated",
+    "alara_compliance": "A software audit flag, not regulatory approval or a radiation-safety authorization",
+    "openmc_tally_comparison": "A numerical comparison, not proof that the source geometry, particle spectrum, or material model is accurate",
+    "eight_chamber_pool_hydraulics": "Simscape/PHREEQC reference configuration; not a flight-qualified bioreactor",
+    "inter_solver_dag": "Structurally verifiable from the fixture; does not demonstrate live end-to-end coupling",
+    "eight_chamber_system_classification": "numerical_and_software_architecture_not_operational_space_bioreactor",
+    "operational_space_bioreactor_verdict": "Incomplete",
+    "required_flight_budgets": {
+      "nutrient_budget_demonstrated": "Incomplete",
+      "oxygen_budget_demonstrated": "Incomplete",
+      "carbon_budget_demonstrated": "Incomplete",
+      "heat_budget_demonstrated": "Incomplete",
+      "waste_budget_demonstrated": "Incomplete",
+      "energy_budget_demonstrated": "Incomplete",
+      "microgravity_gas_liquid_management_demonstrated": "Incomplete"
+    },
+    "fission_power_and_biological_reactor_separated": true,
+    "biological_inherits_nuclear_criticality_assumptions": false
+  },
   "swarm_biconnected_verification_valid": true,
   "unified_substrate_swap_L31_L32_valid": true,
   "openmc_tally_variance_rel_diff": 0.020689655172413786,
@@ -414,7 +468,8 @@
         "z_shield(t)",
         "Phi_light(t)"
       ],
-      "alara_compliant": true
+      "alara_compliant": true,
+      "epistemic_classification": "passive_attenuation_and_radical_scavenging_model_specification_not_experimentally_established_net_metabolic_radiosynthesis"
     }
   }
 }

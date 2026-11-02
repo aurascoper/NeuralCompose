@@ -32,8 +32,8 @@ def test_cohens_d_large_effect():
     """Constant samples with different means are an unbounded effect.
 
     Both groups have zero within-group variance, so pooled SD is 0 and the
-    effect size diverges. The implementation used to return 0.0 here — "no
-    effect" for the most extreme separation representable — and the test asserted
+    effect size diverges. The implementation used to return 0.0 here  -  "no
+    effect" for the most extreme separation representable  -  and the test asserted
     `d > 2.0`, which is a magnitude claim written as a signed one: the fixture
     has a < b, so d is negative.
 
@@ -61,7 +61,7 @@ def test_cohens_d_unequal_sizes_uses_df_weighted_pooling():
     """Pooled variance must be weighted by degrees of freedom.
 
     The unweighted (var_a + var_b) / 2 form coincides with the conventional
-    estimator only at equal n, and this function accepts arbitrary lengths — so
+    estimator only at equal n, and this function accepts arbitrary lengths  -  so
     an unequal-n caller was silently dividing by the wrong denominator. Every
     earlier test used equal groups, which is exactly why it survived.
 
@@ -86,7 +86,7 @@ def test_cohens_d_unequal_sizes_uses_df_weighted_pooling():
 def test_mann_whitney_method_is_explicit_not_inherited():
     """Ties must not be scored with the exact distribution.
 
-    The implementation used to call SciPy without `method=`, inheriting `auto` —
+    The implementation used to call SciPy without `method=`, inheriting `auto`  - 
     a selection rule that has changed across releases and would move a reported
     p-value between versions. With ties present, exact is invalid, so the
     asymptotic approximation is required and the p-value must differ from the
@@ -101,7 +101,7 @@ def test_mann_whitney_u_disjoint():
     """Perfect separation at n=3 vs 3 gives p = 0.1, not p < 0.05.
 
     The exact two-sided p-value cannot go below 2 / C(6,3) = 2/20 = 0.1 at these
-    sample sizes, so the previous `p < 0.05` was unreachable by construction —
+    sample sizes, so the previous `p < 0.05` was unreachable by construction  - 
     no implementation could have passed it. The test never ran (this module
     failed collection), which is why an impossible assertion survived.
 

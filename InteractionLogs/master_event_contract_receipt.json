@@ -1,7 +1,7 @@
 {
   "schema": "neuralcompose-master-event-contract-receipt-v1",
   "contract_schema_id": "neuralcompose-master-event-contract-schema-v1",
-  "verified_at_utc": "2026-11-02T18:45:10.104515+00:00",
+  "verified_at_utc": "2026-11-02T19:03:40.691070+00:00",
   "all_gates_passed": true,
   "max_scc_size": 1,
   "beta_1_inter_solver": 0,

@@ -42,27 +42,10 @@ def cka(X, Y):
     K = X @ X.T
     L = Y @ Y.T
     n = X.shape[0]
-    if n >= 4:
-        # Unbiased HSIC (Song et al. 2012 / Kornblith et al. 2019) removes
-        # O(p/n) diagonal self-similarity bias when feature dim p > n_samples.
-        def _unbiased_hsic(A, B):
-            A_tilde = A.copy()
-            B_tilde = B.copy()
-            np.fill_diagonal(A_tilde, 0.0)
-            np.fill_diagonal(B_tilde, 0.0)
-            term1 = float(np.sum(A_tilde * B_tilde))
-            term2 = float(np.sum(A_tilde) * np.sum(B_tilde)) / ((n - 1) * (n - 2))
-            term3 = 2.0 * float(np.sum(A_tilde @ B_tilde)) / (n - 2)
-            return (term1 + term2 - term3) / (n * (n - 3))
-
-        hsic_xy = _unbiased_hsic(K, L)
-        hsic_xx = _unbiased_hsic(K, K)
-        hsic_yy = _unbiased_hsic(L, L)
-    else:
-        hsic_xy = np.trace(K @ L) / max((n - 1) ** 2, 1)
-        hsic_xx = np.trace(K @ K) / max((n - 1) ** 2, 1)
-        hsic_yy = np.trace(L @ L) / max((n - 1) ** 2, 1)
-    denom = np.sqrt(max(hsic_xx, 0.0) * max(hsic_yy, 0.0))
+    hsic_xy = np.trace(K @ L) / (n - 1) ** 2
+    hsic_xx = np.trace(K @ K) / (n - 1) ** 2
+    hsic_yy = np.trace(L @ L) / (n - 1) ** 2
+    denom = np.sqrt(hsic_xx * hsic_yy)
     if denom < 1e-12:
         return 0.0
     return float(hsic_xy / denom)

@@ -2,7 +2,8 @@
   "schema": "momentum-automata-verification-receipt-v1",
   "verified_at_utc": "2026-11-02T18:48:21.424126+00:00",
   "local_repository_path": "/Users/aurascoper/Developer/live_trading",
-  "git_head_commit": "1f45734c253b201152f68b80eddcb6b1b8b63896",
+  "git_head_commit": "9d8f369612cfc1622bfdacbffe09f9dc5d6fa4c8",
+  "git_main_commit": "1f45734c253b201152f68b80eddcb6b1b8b63896",
   "tracked_file_count": 1203,
   "public_publication_policy": "Kept private on local disk (contains live exchange execution configuration); verified via cryptographic file digests and Gate G4 Master Event Contract harness in NeuralCompose.",
   "gate_g4_settlement_bridge_verification": {

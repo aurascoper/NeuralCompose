@@ -1,9 +1,9 @@
 """Tests for the overnight zero-throughput watchdog (overnight-telemetry.py).
 
 Covers the pure stall-decision predicate (`evaluate_capture_health`) across the
-failure modes that mattered on night-2026-07-18 — never-started, stalled
+failure modes that mattered on night-2026-07-18  -  never-started, stalled
 mid-stream, a stale eeg_session symlink reading as a large-but-constant sample
-count, plus the healthy and warm-up-grace cases — and the `abort_capture`
+count, plus the healthy and warm-up-grace cases  -  and the `abort_capture`
 action: write CAPTURE_FAILED.json and terminate caffeinate so the Mac can sleep.
 
 pytest-style + __main__ runner (pytest is not installed in the calibration venv).
@@ -32,7 +32,7 @@ tel = _load("overnight-telemetry")
 def _run_ticks(sample_series, *, interval_min=1.0, warmup_min=2.0, stall_ticks=3):
     """Drive the sample series through the predicate exactly as the main loop does.
 
-    Returns (fail_index, reason) — the tick index where it aborted, or (None, None).
+    Returns (fail_index, reason)  -  the tick index where it aborted, or (None, None).
     """
     prev, flat, ever = None, 0, False
     for i, s in enumerate(sample_series):
@@ -46,7 +46,7 @@ def _run_ticks(sample_series, *, interval_min=1.0, warmup_min=2.0, stall_ticks=3
 
 
 def test_never_started_aborts_after_warmup():
-    # 0 samples forever — but only counts against us once past warm-up.
+    # 0 samples forever  -  but only counts against us once past warm-up.
     idx, reason = _run_ticks([0] * 20, warmup_min=2.0, stall_ticks=3)
     assert reason == "never_started", reason
     # first flat tick at elapsed>=2 (i=2), abort on the 3rd → i=4
@@ -115,7 +115,7 @@ def test_abort_capture_writes_marker_and_kills_caffeinate():
 
 
 def test_abort_capture_survives_missing_pid_file():
-    # No .caffeinate.pid present — must still write the marker, not raise.
+    # No .caffeinate.pid present  -  must still write the marker, not raise.
     with tempfile.TemporaryDirectory() as tmp:
         night = Path(tmp)
         tel.abort_capture(night, "stalled_mid_stream", {"elapsed_min": 90.0}, 3, 60,

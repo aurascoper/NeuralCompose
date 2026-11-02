@@ -58,13 +58,16 @@ ADVISORY_ROOTS: Tuple[Path, ...] = (
     Path("README.md"),
     Path("docs/reviews"),
     Path("Evaluation/reports"),
+    Path("Tests/Fixtures/InteractionLogs"),
 )
 
-# These files necessarily contain synthetic malformed references and checker
-# terminology. They test the policy; they are not normative ADR consumers.
+# These files necessarily contain synthetic malformed references, checker
+# terminology, or historical interaction log fixtures. They test the policy
+# or archive non-normative dialogue; they are not normative ADR consumers.
 HARD_SCAN_EXCLUSIONS: Set[Path] = {
     Path("Scripts/check_adr_references.py"),
     Path("Tests/eval/test_adr_references.py"),
+    Path("Tests/Fixtures/InteractionLogs"),
 }
 
 ADR_FILENAME_RE = re.compile(
@@ -388,7 +391,9 @@ def _scan_references(
     ):
         relative_path = _relative(path, root)
 
-        if relative_path in exclusions:
+        if relative_path in exclusions or any(
+            parent in exclusions for parent in relative_path.parents
+        ):
             continue
 
         text = _read_text(path)
