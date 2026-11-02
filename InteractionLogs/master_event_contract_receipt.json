@@ -1,7 +1,7 @@
 {
   "schema": "neuralcompose-master-event-contract-receipt-v1",
   "contract_schema_id": "neuralcompose-master-event-contract-schema-v1",
-  "verified_at_utc": "2026-11-02T09:45:48.724321+00:00",
+  "verified_at_utc": "2026-11-02T10:56:18.135510+00:00",
   "all_gates_passed": true,
   "max_scc_size": 1,
   "beta_1_inter_solver": 0,
@@ -133,6 +133,7 @@
         ]
       ],
       "max_scc_size": 1,
+      "beta_0_inter_solver": 1,
       "beta_1_inter_solver": 0,
       "recursion_depth": 0,
       "consolidation_rule_immutable": true,
@@ -214,6 +215,7 @@
       "L30_biconnected_swarm_feed_swap": {
         "swarm_node_count": 4,
         "swarm_edge_count": 5,
+        "beta_0_swarm_components": 1,
         "beta_1_swarm_verification_cycles": 2,
         "cut_vertices": [],
         "bridge_edges": [],
@@ -227,6 +229,9 @@
         ],
         "stage2_swarm_filter_rejects": [
           "cand_divergent_swarm_reject"
+        ],
+        "stage3_openmc_filter_rejects": [
+          "cand_openmc_variance_reject"
         ],
         "verified_survivors": [
           "cand_valid_mesh_and_swarm"

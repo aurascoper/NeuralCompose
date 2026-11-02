@@ -217,4 +217,74 @@ def test_full_master_event_contract_evaluation_and_cli(tmp_path: Path):
     assert data["beta_1_inter_solver"] == 0
     assert data["recursion_depth"] == 0
     assert data["neurospora_crassa_4block_8pool_summary"]["n_pool"] == 8
+    assert data["neuralcompose_session_and_four_pillar_summary"]["verified"] is True
+    assert data["four_subsystem_envelopes_summary"]["verified"] is True
+    assert data["four_subsystem_envelopes_summary"]["envelope_count"] == 4
     assert all(data["multica_defect_axes_verified"].values())
+
+
+def test_g3_and_g6_reject_disconnected_graphs_and_bowtie_articulation_vertices():
+    # G3: Disconnected graph with an undirected triangle (A->B, B->C, A->C) + isolated edge (D->E)
+    # 5 nodes, 4 edges -> |E| - |V| + 1 = 0, but beta_0 = 2 so true beta_1 = 4 - 5 + 2 = 1!
+    with pytest.raises(ValueError, match="beta_1_inter_solver == 0 and beta_0 == 1"):
+        verifier.verify_gate_g3_acyclic_tarjan_solver_bridge(
+            nodes=["A", "B", "C", "D", "E"],
+            directed_edges=[("A", "B"), ("B", "C"), ("A", "C"), ("D", "E")],
+        )
+
+    # G6: Disconnected 5-agent graph (K_4 on a,b,c,d + isolated agent e)
+    # 5 nodes, 6 edges, 0 cut-vertices within components, 0 bridges, but beta_0 = 2
+    with pytest.raises(ValueError, match="beta_0 == 1"):
+        verifier.verify_gate_g6_unified_substrate_swap_primitive(
+            swarm_nodes=["a", "b", "c", "d", "e"],
+            swarm_undirected_edges=[
+                ("a", "b"),
+                ("b", "c"),
+                ("c", "d"),
+                ("d", "a"),
+                ("a", "c"),
+                ("b", "d"),
+            ],
+        )
+
+    # G6: Bowtie graph (2 triangles sharing central articulation vertex c)
+    # 5 nodes, 6 edges, beta_0 = 1, beta_1 = 2, 0 bridge edges, 1 cut-vertex ("c")
+    with pytest.raises(ValueError, match="cut_vertices"):
+        verifier.verify_gate_g6_unified_substrate_swap_primitive(
+            swarm_nodes=["a", "b", "c", "d", "e"],
+            swarm_undirected_edges=[
+                ("a", "b"),
+                ("b", "c"),
+                ("c", "a"),
+                ("c", "d"),
+                ("d", "e"),
+                ("e", "c"),
+            ],
+        )
+
+
+def test_g5_inspects_mat_v7_and_v73_header_bytes():
+    with pytest.raises(ValueError, match="MAT v7.3 HDF5"):
+        verifier.verify_gate_g5_horizon_collar_leaf_seam(
+            mat_v73_bytes=b"CORRUPTED_NOT_HDF5_BYTES"
+        )
+    with pytest.raises(ValueError, match="MAT v7"):
+        verifier.verify_gate_g5_horizon_collar_leaf_seam(
+            mat_v7_bytes=b"CORRUPTED_NOT_MAT_V7_BYTES"
+        )
+
+
+def test_neuralcompose_session_event_and_four_subsystem_envelopes():
+    nc_summary = verifier.verify_neuralcompose_session_event_and_four_pillar_contracts()
+    assert nc_summary["verified"] is True
+    assert nc_summary["forbidden_stage_claim_rejected"] is True
+
+    env_summary = verifier.verify_four_subsystem_synthetic_event_envelopes()
+    assert env_summary["verified"] is True
+    assert set(env_summary["subsystems_validated"]) == {
+        "NeuralCompose",
+        "MomentumAutomata",
+        "ReactorPools",
+        "BiofilmsSessions",
+    }
+

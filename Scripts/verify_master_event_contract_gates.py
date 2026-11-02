@@ -128,6 +128,37 @@ def _tarjan_scc(nodes: list[str], directed_edges: list[tuple[str, str]]) -> list
     return sccs
 
 
+def _count_connected_components(
+    nodes: list[str], edges: list[tuple[str, str]]
+) -> tuple[int, list[tuple[str, str]]]:
+    """Count undirected connected components (beta_0) and deduplicate undirected edges."""
+    adj: dict[str, set[str]] = {u: set() for u in nodes}
+    unique_undirected: set[tuple[str, str]] = set()
+    for u, v in edges:
+        adj.setdefault(u, set())
+        adj.setdefault(v, set())
+        if u != v:
+            adj[u].add(v)
+            adj[v].add(u)
+            edge_key = (u, v) if u <= v else (v, u)
+            unique_undirected.add(edge_key)
+
+    visited: set[str] = set()
+    components = 0
+    for start in adj:
+        if start not in visited:
+            components += 1
+            stack = [start]
+            visited.add(start)
+            while stack:
+                curr = stack.pop()
+                for nxt in adj.get(curr, ()):
+                    if nxt not in visited:
+                        visited.add(nxt)
+                        stack.append(nxt)
+    return components, sorted(unique_undirected)
+
+
 def _find_articulation_points_and_bridges(
     nodes: list[str], undirected_edges: list[tuple[str, str]]
 ) -> tuple[list[str], list[tuple[str, str]]]:
@@ -357,14 +388,14 @@ def verify_gate_g3_acyclic_tarjan_solver_bridge(
 
     sccs = _tarjan_scc(nodes, directed_edges)
     max_scc_size = max((len(c) for c in sccs), default=0)
-    # Check for self-loops as well
     has_self_loop = any(u == v for u, v in directed_edges)
-    beta_1_inter_solver = len(directed_edges) - len(nodes) + 1
+    beta_0_inter_solver, unique_undirected = _count_connected_components(nodes, directed_edges)
+    beta_1_inter_solver = len(unique_undirected) - len(nodes) + beta_0_inter_solver
 
-    if max_scc_size != 1 or has_self_loop or beta_1_inter_solver != 0:
+    if max_scc_size != 1 or has_self_loop or beta_0_inter_solver != 1 or beta_1_inter_solver != 0:
         raise ValueError(
-            f"Gate G3 Violation (Turn L21): cross-solver Tarjan bridge chain is not a DAG "
-            f"(max_scc_size={max_scc_size}, beta_1_inter_solver={beta_1_inter_solver})"
+            f"Gate G3 Violation (Turn L21): cross-solver Tarjan bridge chain is not a connected tree DAG "
+            f"(max_scc_size={max_scc_size}, beta_0={beta_0_inter_solver}, beta_1_inter_solver={beta_1_inter_solver})"
         )
     if live_openfoam_calls_in_session > session_openfoam_call_ceiling:
         raise ValueError(
@@ -379,6 +410,7 @@ def verify_gate_g3_acyclic_tarjan_solver_bridge(
         "nodes": nodes,
         "directed_edges": [list(e) for e in directed_edges],
         "max_scc_size": max_scc_size,
+        "beta_0_inter_solver": beta_0_inter_solver,
         "beta_1_inter_solver": beta_1_inter_solver,
         "recursion_depth": recursion_depth,
         "consolidation_rule_immutable": consolidation_rule_immutable,
@@ -453,12 +485,54 @@ def verify_gate_g4_multiclock_settlement_bridge(
 # ==============================================================================
 # Gate G5: Horizon-Collar Leaf Pull Seam (MATLAB -> NeuralCompose Double-Tree)
 # ==============================================================================
+HDF5_MAGIC_SIGNATURE = b"\x89HDF\r\n\x1a\n"
+MAT_V7_MAGIC_PREFIX = b"MATLAB 5.0 MAT-file"
+MAT_V73_MAGIC_PREFIX = b"MATLAB 7.3 MAT-file"
+
+
+def _verify_mat_v7_and_v73_header_bytes(
+    mat_v7_bytes: Optional[bytes] = None,
+    mat_v73_bytes: Optional[bytes] = None,
+    fixture_dir: Optional[Path] = None,
+) -> tuple[bool, bool]:
+    """Inspect MAT v7 ('MATLAB 5.0 MAT-file') and MAT v7.3 HDF5 ('MATLAB 7.3 MAT-file' +
+    0x89 'HDF\\r\\n\\x1a\\n' at offset 0 or 512) binary container headers."""
+    if fixture_dir is None:
+        fixture_dir = DEFAULT_MATLAB_FIXTURE_JSON.parent
+    if mat_v7_bytes is None:
+        v7_path = fixture_dir / "m7_multiscale_3d_eda_fixture_v7.mat"
+        if v7_path.exists():
+            with v7_path.open("rb") as fh:
+                mat_v7_bytes = fh.read(64)
+    if mat_v73_bytes is None:
+        v73_path = fixture_dir / "m7_multiscale_3d_eda_fixture_v73.mat"
+        if v73_path.exists():
+            with v73_path.open("rb") as fh:
+                mat_v73_bytes = fh.read(528)
+
+    v7_ok = bool(mat_v7_bytes is not None and len(mat_v7_bytes) >= 19 and mat_v7_bytes[:19] == MAT_V7_MAGIC_PREFIX)
+    v73_ok = False
+    if mat_v73_bytes is not None:
+        if len(mat_v73_bytes) >= 8 and mat_v73_bytes[:8] == HDF5_MAGIC_SIGNATURE:
+            v73_ok = True
+        elif (
+            len(mat_v73_bytes) >= 520
+            and mat_v73_bytes[:19] == MAT_V73_MAGIC_PREFIX
+            and mat_v73_bytes[512:520] == HDF5_MAGIC_SIGNATURE
+        ):
+            v73_ok = True
+    return v7_ok, v73_ok
+
+
 def verify_gate_g5_horizon_collar_leaf_seam(
     collar_leaves: tuple[str, ...] = ("u_valve", "z_shield", "Phi_light"),
     assume_shared_in_memory_process_without_collar: bool = False,
     mat_v7_magic_ok: bool = True,
     mat_v73_hdf5_magic_ok: bool = True,
     json_fixture_ok: bool = True,
+    mat_v7_bytes: Optional[bytes] = None,
+    mat_v73_bytes: Optional[bytes] = None,
+    fixture_dir: Optional[Path] = None,
 ) -> dict[str, Any]:
     """Gate G5 (Nov 1 L110, L111, L114; Nov 2 L3, L7, L28):
     Verify c = 3 MATLAB control/biofilm collar leaves attach to the NeuralCompose
@@ -469,8 +543,16 @@ def verify_gate_g5_horizon_collar_leaf_seam(
             "Gate G5 Violation (Turn L28): Antigravity, MATLAB R2026b, SmallModularBioReactors.jl, and NeuralCompose "
             "run in distinct OS processes and must couple via an explicit MAT v7 / MAT v7.3 HDF5 / JSON collar"
         )
-    if not (mat_v7_magic_ok and mat_v73_hdf5_magic_ok and json_fixture_ok):
-        raise ValueError("Gate G5 Violation: MAT v7, MAT v7.3 HDF5, and JSON collar containers must all be valid")
+    byte_v7_ok, byte_v73_ok = _verify_mat_v7_and_v73_header_bytes(
+        mat_v7_bytes=mat_v7_bytes, mat_v73_bytes=mat_v73_bytes, fixture_dir=fixture_dir
+    )
+    effective_v7_ok = mat_v7_magic_ok and byte_v7_ok
+    effective_v73_ok = mat_v73_hdf5_magic_ok and byte_v73_ok
+    if not (effective_v7_ok and effective_v73_ok and json_fixture_ok):
+        raise ValueError(
+            f"Gate G5 Violation: MAT v7 ({effective_v7_ok}), MAT v7.3 HDF5 ({effective_v73_ok}), "
+            f"and JSON ({json_fixture_ok}) collar containers must all be valid"
+        )
     c = len(collar_leaves)
     if c < 2:
         raise ValueError(f"Gate G5 Violation: requires at least 2 collar leaves to close a horizon cycle, got {c}")
@@ -491,8 +573,8 @@ def verify_gate_g5_horizon_collar_leaf_seam(
         "collar_leaf_count_c": c,
         "delta_beta_1_collar_cycle_rank": delta_beta_1,
         "beta_1_inter_solver": 0,
-        "mat_v7_magic_verified": mat_v7_magic_ok,
-        "mat_v73_hdf5_magic_verified": mat_v73_hdf5_magic_ok,
+        "mat_v7_magic_verified": effective_v7_ok,
+        "mat_v73_hdf5_magic_verified": effective_v73_ok,
         "json_intermediate_verified": json_fixture_ok,
     }
 
@@ -513,7 +595,7 @@ def verify_gate_g6_unified_substrate_swap_primitive(
     swarm_undirected_edges: Optional[list[tuple[str, str]]] = None,
     agent_triggers_feed_a: Optional[dict[str, tuple[str, ...]]] = None,
     agent_triggers_feed_b_swapped: Optional[dict[str, tuple[str, ...]]] = None,
-    # (c) L31: Sequential 2-filter reject logging
+    # (c) L31: Sequential multi-stage filter reject logging
     candidate_items: Optional[list[dict[str, Any]]] = None,
     log_stage_rejects_separately: bool = True,
     # (d) L32: OpenMC nuclear cross-section library / source-term substrate swap + ICRP-116 dosimetry + workplace geometry
@@ -527,7 +609,7 @@ def verify_gate_g6_unified_substrate_swap_primitive(
     Unified Headless Substrate-Swap Verification Primitive across 4 domains:
       (a) L29: OpenFOAM/Basilisk/MATLAB mesh-field interpolation preserving
                Delta_beta_0 == 0 and Delta_beta_1 == 0 without topological tearing;
-      (b) L30: Biconnected swarm (beta_1 >= 2, zero cut-vertices) counterfactual
+      (b) L30: Biconnected swarm (beta_0 == 1, beta_1 >= 2, zero cut-vertices) counterfactual
                market-data feed-swap trigger invariance;
       (c) L31: Unified headless CLI pass/fail contract + explicit stage-reject log;
       (d) L32: OpenMC nuclear cross-section library / source-term substrate-swap
@@ -564,12 +646,13 @@ def verify_gate_g6_unified_substrate_swap_primitive(
             ("agent_collar_auditor", "agent_warrant_sonnet_5"),
             ("agent_warrant_sonnet_5", "agent_fast_haiku_4_5"),
         ]
-    cut_vertices, bridge_edges = _find_articulation_points_and_bridges(swarm_nodes, swarm_undirected_edges)
-    beta_1_swarm = len(swarm_undirected_edges) - len(swarm_nodes) + 1
-    if len(cut_vertices) > 0 or len(bridge_edges) > 0 or beta_1_swarm < 2:
+    beta_0_swarm, unique_swarm_edges = _count_connected_components(swarm_nodes, swarm_undirected_edges)
+    cut_vertices, bridge_edges = _find_articulation_points_and_bridges(swarm_nodes, unique_swarm_edges)
+    beta_1_swarm = len(unique_swarm_edges) - len(swarm_nodes) + beta_0_swarm
+    if beta_0_swarm != 1 or len(cut_vertices) > 0 or len(bridge_edges) > 0 or beta_1_swarm < 2:
         raise ValueError(
-            f"Gate G6 / Turn L30 Violation: Swarm graph is not biconnected with beta_1 >= 2 "
-            f"(beta_1={beta_1_swarm}, cut_vertices={cut_vertices}, bridges={bridge_edges})"
+            f"Gate G6 / Turn L30 Violation: Swarm graph is not biconnected with beta_0 == 1 and beta_1 >= 2 "
+            f"(beta_0={beta_0_swarm}, beta_1={beta_1_swarm}, cut_vertices={cut_vertices}, bridges={bridge_edges})"
         )
 
     if agent_triggers_feed_a is None:
@@ -587,19 +670,41 @@ def verify_gate_g6_unified_substrate_swap_primitive(
             "Gate G6 / Turn L30 Violation: Swarm agent trigger conditions diverged under counterfactual market-data feed swap"
         )
 
-    # --- (c) Turn L31: Unified headless CLI pass/fail + sequential 2-filter reject log ---
+    # --- (c) Turn L31: Unified headless CLI pass/fail + sequential multi-stage reject log ---
     if not log_stage_rejects_separately:
         raise ValueError(
-            "Gate G6 / Turn L31 Violation: Sequential 2-filter pipeline must log Stage-1 and Stage-2 rejects separately"
+            "Gate G6 / Turn L31 Violation: Sequential filter pipeline must log stage-specific rejects separately"
         )
     if candidate_items is None:
         candidate_items = [
-            {"id": "cand_valid_mesh_and_swarm", "mesh_beta1_preserved": True, "feed_swap_invariant": True},
-            {"id": "cand_torn_mesh_reject", "mesh_beta1_preserved": False, "feed_swap_invariant": True},
-            {"id": "cand_divergent_swarm_reject", "mesh_beta1_preserved": True, "feed_swap_invariant": False},
+            {
+                "id": "cand_valid_mesh_and_swarm",
+                "mesh_beta1_preserved": True,
+                "feed_swap_invariant": True,
+                "openmc_tally_within_tol": True,
+            },
+            {
+                "id": "cand_torn_mesh_reject",
+                "mesh_beta1_preserved": False,
+                "feed_swap_invariant": True,
+                "openmc_tally_within_tol": True,
+            },
+            {
+                "id": "cand_divergent_swarm_reject",
+                "mesh_beta1_preserved": True,
+                "feed_swap_invariant": False,
+                "openmc_tally_within_tol": True,
+            },
+            {
+                "id": "cand_openmc_variance_reject",
+                "mesh_beta1_preserved": True,
+                "feed_swap_invariant": True,
+                "openmc_tally_within_tol": False,
+            },
         ]
     stage1_rejects: list[str] = []
     stage2_rejects: list[str] = []
+    stage3_rejects: list[str] = []
     survivors: list[str] = []
     for item in candidate_items:
         cid = str(item["id"])
@@ -607,6 +712,8 @@ def verify_gate_g6_unified_substrate_swap_primitive(
             stage1_rejects.append(cid)
         elif not item.get("feed_swap_invariant", False):
             stage2_rejects.append(cid)
+        elif not item.get("openmc_tally_within_tol", True):
+            stage3_rejects.append(cid)
         else:
             survivors.append(cid)
 
@@ -643,7 +750,8 @@ def verify_gate_g6_unified_substrate_swap_primitive(
         },
         "L30_biconnected_swarm_feed_swap": {
             "swarm_node_count": len(swarm_nodes),
-            "swarm_edge_count": len(swarm_undirected_edges),
+            "swarm_edge_count": len(unique_swarm_edges),
+            "beta_0_swarm_components": beta_0_swarm,
             "beta_1_swarm_verification_cycles": beta_1_swarm,
             "cut_vertices": cut_vertices,
             "bridge_edges": [list(e) for e in bridge_edges],
@@ -654,6 +762,7 @@ def verify_gate_g6_unified_substrate_swap_primitive(
             "log_stage_rejects_separately": log_stage_rejects_separately,
             "stage1_mesh_filter_rejects": stage1_rejects,
             "stage2_swarm_filter_rejects": stage2_rejects,
+            "stage3_openmc_filter_rejects": stage3_rejects,
             "verified_survivors": survivors,
         },
         "L32_openmc_cross_section_and_dosimetry_swap": {
@@ -806,12 +915,335 @@ def verify_neurospora_crassa_4block_8pool_contract(
     }
 
 
+# ==============================================================================
+# NeuralCompose Session Event (nc-eeg-session-event-v0) & FourPillarFrameRecord
+# ==============================================================================
+def verify_neuralcompose_session_event_and_four_pillar_contracts(
+    session_event_payload: Optional[dict[str, Any]] = None,
+    session_manifest_payload: Optional[dict[str, Any]] = None,
+    four_pillar_frame_payload: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Validate nc-eeg-session-event-v0, nc-eeg-session-manifest-v0 via session_event_contract.py,
+    and FourPillarFrameRecord (neuralcompose-four-pillar-fixture-v1) payloads."""
+    scripts_dir = Path(__file__).resolve().parent
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    from session_event_contract import (
+        ContractError,
+        SESSION_EVENT_SCHEMA,
+        SESSION_MANIFEST_SCHEMA,
+        validate_session_event,
+        validate_session_event_file,
+        validate_session_manifest,
+    )
+
+    sample_sha = "a" * 64
+    if session_event_payload is None:
+        session_event_payload = {
+            "schema_version": SESSION_EVENT_SCHEMA,
+            "event_id": "evt_band_excursion_0001",
+            "kind": "band_excursion",
+            "interpretation": "signal_observation_only",
+            "stage_claim": None,
+            "intervention_claim": None,
+            "source": {
+                "recording_sha256": sample_sha,
+                "start_sample": 256,
+                "sample_count": 512,
+                "channel_order": ["TP9", "AF7", "AF8", "TP10"],
+                "sample_rate_hz": 256,
+            },
+            "observed": {
+                "channel": "AF7",
+                "theta_alpha_ratio": 1.42,
+                "rms_uv": 18.5,
+            },
+            "baseline_ref": {
+                "start_sample": 0,
+                "sample_count": 256,
+            },
+        }
+    validate_session_event(session_event_payload, recording_sample_count=2048)
+    validate_session_event_file([session_event_payload], recording_sample_count=2048)
+
+    if session_manifest_payload is None:
+        session_manifest_payload = {
+            "schema_version": SESSION_MANIFEST_SCHEMA,
+            "recording_sha256": sample_sha,
+            "recording_sample_count": 2048,
+            "sample_interval_convention": "half_open_[start,start+count)",
+            "channels": {
+                "TP9": {"detector_status": "eligible", "suppressed_reason": None},
+                "AF7": {"detector_status": "eligible", "suppressed_reason": None},
+                "AF8": {"detector_status": "eligible", "suppressed_reason": None},
+                "TP10": {"detector_status": "suppressed", "suppressed_reason": "channel_saturated"},
+            },
+            "contains_signal": False,
+            "science_status": "pipeline_only",
+            "label_status": "heuristic_observation",
+            "live_control": False,
+            "promotion_status": "not_eligible",
+            "clean_session_gate_credited": False,
+        }
+    validate_session_manifest(session_manifest_payload)
+
+    # Verify negative rejection of forbidden stage/REM claims
+    bad_event = dict(session_event_payload)
+    bad_event["stage_claim"] = "REM"
+    rejected_stage_claim = False
+    try:
+        validate_session_event(bad_event)
+    except ContractError:
+        rejected_stage_claim = True
+    if not rejected_stage_claim:
+        raise ValueError("session_event_contract failed to reject non-null stage_claim")
+
+    if four_pillar_frame_payload is None:
+        four_pillar_frame_payload = {
+            "schema": "neuralcompose-four-pillar-fixture-v1",
+            "stepIndex": 1,
+            "timestampSeconds": 0.25,
+            "eeg": {
+                "channels": ["TP9", "AF7", "AF8", "TP10"],
+                "sampleRateHz": 256.0,
+                "alphaBetaCoherence": 0.74,
+            },
+            "bioreactor": {
+                "nPool": 8,
+                "meanBiomassKgM3": 2.9125,
+                "alaraSafingMargin": 0.305,
+            },
+            "astronomy": {
+                "spiceFrame": "J2000",
+                "positionMeters": [1.495978707e11, 0.0, 0.0],
+                "dcmDetOne": True,
+            },
+            "quantumTopology": {
+                "beta0": 1,
+                "beta1Collar": 2,
+                "beta1InterSolver": 0,
+                "maxSccSize": 1,
+            },
+        }
+    if four_pillar_frame_payload.get("schema") != "neuralcompose-four-pillar-fixture-v1":
+        raise ValueError(f"Unexpected FourPillarFrameRecord schema: {four_pillar_frame_payload.get('schema')}")
+    for pillar_key in ("eeg", "bioreactor", "astronomy", "quantumTopology"):
+        if not isinstance(four_pillar_frame_payload.get(pillar_key), dict):
+            raise ValueError(f"FourPillarFrameRecord missing required pillar object: {pillar_key}")
+    if not isinstance(four_pillar_frame_payload.get("stepIndex"), int) or isinstance(four_pillar_frame_payload.get("stepIndex"), bool):
+        raise ValueError("FourPillarFrameRecord.stepIndex must be Int64")
+    if not isinstance(four_pillar_frame_payload.get("timestampSeconds"), float):
+        raise ValueError("FourPillarFrameRecord.timestampSeconds must be Float64")
+
+    return {
+        "verified": True,
+        "session_event_schema": SESSION_EVENT_SCHEMA,
+        "session_manifest_schema": SESSION_MANIFEST_SCHEMA,
+        "four_pillar_schema": "neuralcompose-four-pillar-fixture-v1",
+        "forbidden_stage_claim_rejected": rejected_stage_claim,
+    }
+
+
+def validate_master_event_envelope(
+    envelope: dict[str, Any],
+    schema: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Validate a single MasterEventEnvelope and its subsystem-specific payload against
+    configs/master_event_contract_schema_v1.json."""
+    if schema is None:
+        schema = load_master_event_contract_schema()
+    event_schemas = schema["event_schemas"]
+    master_def = event_schemas["MasterEventEnvelope"]
+    for req_key in master_def["required_fields"]:
+        if req_key not in envelope:
+            raise ValueError(f"MasterEventEnvelope missing required field: {req_key}")
+
+    if envelope["schema_version"] != "neuralcompose-master-event-contract-v1":
+        raise ValueError(f"Invalid MasterEventEnvelope.schema_version: {envelope['schema_version']}")
+    subsystem = envelope["subsystem"]
+    if subsystem not in schema["subsystems"]:
+        raise ValueError(f"Invalid MasterEventEnvelope.subsystem: {subsystem}")
+    if envelope["defect_axis"] not in schema["multica_defect_axes"]:
+        raise ValueError(f"Invalid MasterEventEnvelope.defect_axis: {envelope['defect_axis']}")
+    if envelope["epistemic_verdict"] not in ("Accepted", "Incomplete", "Rejected"):
+        raise ValueError(f"Invalid MasterEventEnvelope.epistemic_verdict: {envelope['epistemic_verdict']}")
+
+    gates_passed = envelope["gates_passed"]
+    if not isinstance(gates_passed, list) or len(gates_passed) == 0:
+        raise ValueError("MasterEventEnvelope.gates_passed must be a non-empty list")
+    for gid in gates_passed:
+        if gid not in schema["logic_gates"]:
+            raise ValueError(f"Unknown logic gate in MasterEventEnvelope.gates_passed: {gid}")
+
+    collar_sig = envelope["collar_signature"]
+    for sig_key in master_def["properties"]["collar_signature"]["required"]:
+        if sig_key not in collar_sig:
+            raise ValueError(f"MasterEventEnvelope.collar_signature missing {sig_key}")
+    if (
+        collar_sig["beta_1_inter_solver"] != 0
+        or collar_sig["max_scc_size"] != 1
+        or collar_sig["recursion_depth"] != 0
+        or collar_sig["consolidation_rule_immutable"] is not True
+    ):
+        raise ValueError("MasterEventEnvelope.collar_signature violates Tarjan DAG or recursion_depth == 0 invariants")
+
+    payload = envelope["payload"]
+    if not isinstance(payload, dict):
+        raise ValueError("MasterEventEnvelope.payload must be a dict")
+
+    subsystem_to_schema_name = {
+        "NeuralCompose": "NeuralComposeFixtureEnvelope",
+        "MomentumAutomata": "MomentumAutomataEnvelope",
+        "ReactorPools": "MultiPoolReactorEnvelope",
+        "BiofilmsSessions": "BiofilmSessionEnvelope",
+    }
+    sub_schema_name = subsystem_to_schema_name[subsystem]
+    sub_def = event_schemas[sub_schema_name]
+    for req_field in sub_def["required_fields"]:
+        if req_field not in payload:
+            raise ValueError(f"{sub_schema_name} payload missing required field: {req_field}")
+
+    return {"valid": True, "subsystem": subsystem, "payload_schema": sub_schema_name}
+
+
+def verify_four_subsystem_synthetic_event_envelopes(
+    schema: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Construct and validate synthetic MasterEventEnvelope records across all 4 subsystems:
+    NeuralCompose, MomentumAutomata, ReactorPools, and BiofilmsSessions."""
+    if schema is None:
+        schema = load_master_event_contract_schema()
+
+    base_collar = {
+        "collar_leaves": ["u_valve", "z_shield", "Phi_light"],
+        "delta_beta_1": 2,
+        "beta_1_inter_solver": 0,
+        "max_scc_size": 1,
+        "recursion_depth": 0,
+        "consolidation_rule_immutable": True,
+    }
+    synthetic_envelopes = [
+        {
+            "schema_version": "neuralcompose-master-event-contract-v1",
+            "event_id": "evt_nc_0001",
+            "subsystem": "NeuralCompose",
+            "m7_stage_header": "M7.5",
+            "defect_axis": "Boundary",
+            "timestamp_utc": "2026-11-02T04:30:00Z",
+            "gates_passed": ["G1", "G2", "G5", "G6"],
+            "epistemic_verdict": "Accepted",
+            "collar_signature": base_collar,
+            "payload": {
+                "session_event_schema": "nc-eeg-session-event-v0",
+                "four_pillar_schema": "neuralcompose-four-pillar-fixture-v1",
+                "channel_order": ["TP9", "AF7", "AF8", "TP10"],
+                "sample_rate_hz": 256,
+                "interpretation": "signal_observation_only",
+                "stage_claim": None,
+                "intervention_claim": None,
+                "recording_sha256": "a" * 64,
+                "start_sample": 256,
+                "sample_count": 512,
+                "horizon_collar_step": 1,
+                "double_tree_glued_leaves": 3,
+                "collar_delta_beta_1": 2,
+            },
+        },
+        {
+            "schema_version": "neuralcompose-master-event-contract-v1",
+            "event_id": "evt_ma_0002",
+            "subsystem": "MomentumAutomata",
+            "m7_stage_header": "M7.7",
+            "defect_axis": "Control",
+            "timestamp_utc": "2026-11-02T04:30:01Z",
+            "gates_passed": ["G4", "G6"],
+            "epistemic_verdict": "Accepted",
+            "collar_signature": base_collar,
+            "payload": {
+                "clock_domains": {
+                    "tau_fast_s": 0.25,
+                    "tau_task_s": 45.0,
+                    "tau_warrant_s": 180.0,
+                },
+                "branching_factor_sigma": 0.96,
+                "mahalanobis_distance_d_M": 1.15,
+                "cec_actuation_permitted": True,
+                "swarm_biconnected_beta_1": 2,
+                "counterfactual_feed_swap_trigger_invariant": True,
+            },
+        },
+        {
+            "schema_version": "neuralcompose-master-event-contract-v1",
+            "event_id": "evt_rp_0003",
+            "subsystem": "ReactorPools",
+            "m7_stage_header": "M7.4",
+            "defect_axis": "Source",
+            "timestamp_utc": "2026-11-02T04:30:02Z",
+            "gates_passed": ["G1", "G2", "G3", "G6", "G7"],
+            "epistemic_verdict": "Accepted",
+            "collar_signature": base_collar,
+            "payload": {
+                "n_pool": 8,
+                "pool_indices": [1, 2, 3, 4, 5, 6, 7, 8],
+                "S_i_mol_m3": [55.5, 53.2, 51.0, 49.4, 48.1, 46.8, 45.5, 44.2],
+                "C_O2_i_mol_m3": [0.24, 0.235, 0.23, 0.225, 0.22, 0.215, 0.21, 0.205],
+                "D_dot_eff_i_Gy_s": [3.42e-7, 3.21e-7, 2.98e-7, 2.79e-7, 2.61e-7, 2.45e-7, 2.31e-7, 2.18e-7],
+                "cumulative_dose_Gy": [0.0295, 0.0277, 0.0257, 0.0241, 0.0226, 0.0212, 0.0200, 0.0188],
+                "alara_80pct_safing_limit_Gy": 0.040,
+                "openmc_cross_section_libraries_compared": ["ENDF/B-VIII.0", "JEFF-3.3"],
+                "openmc_tally_dose_rel_diff": 0.020906,
+                "icrp116_dosimetry_verified": True,
+            },
+        },
+        {
+            "schema_version": "neuralcompose-master-event-contract-v1",
+            "event_id": "evt_bs_0004",
+            "subsystem": "BiofilmsSessions",
+            "m7_stage_header": "M7.8",
+            "defect_axis": "Coordination",
+            "timestamp_utc": "2026-11-02T04:30:03Z",
+            "gates_passed": ["G2", "G3", "G5", "G6", "G7"],
+            "epistemic_verdict": "Accepted",
+            "collar_signature": base_collar,
+            "payload": {
+                "organism": "Neurospora crassa",
+                "n_pool": 8,
+                "M_frq": [0.82, 0.79, 0.85, 0.81, 0.77, 0.84, 0.80, 0.78],
+                "F_c": [0.64, 0.61, 0.67, 0.63, 0.59, 0.66, 0.62, 0.60],
+                "F_n": [0.51, 0.49, 0.54, 0.50, 0.47, 0.53, 0.49, 0.48],
+                "phi_t_rad": [1.047, 1.052, 1.041, 1.049, 1.055, 1.043, 1.050, 1.053],
+                "B_i_kg_m3": [2.85, 2.78, 2.94, 2.88, 2.71, 2.91, 2.83, 2.76],
+                "rho_tip_i_m_inv3": [1.42e8, 1.38e8, 1.49e8, 1.45e8, 1.33e8, 1.47e8, 1.41e8, 1.36e8],
+                "phi_EPS_i": [0.34, 0.33, 0.36, 0.35, 0.32, 0.35, 0.34, 0.33],
+                "beta_0": 1,
+                "beta_1_syncytial_loops": 12,
+                "woronin_body_hex1_active": True,
+                "D_mel_i_kg_m3": [0.42, 0.40, 0.45, 0.43, 0.39, 0.44, 0.41, 0.40],
+                "actuators": {
+                    "u_valve": [0.62, 0.60, 0.64, 0.61, 0.58, 0.63, 0.59, 0.57],
+                    "z_shield": [0.10, 0.10, 0.11, 0.11, 0.12, 0.12, 0.13, 0.13],
+                    "Phi_light": [12.5, 12.5, 12.0, 12.0, 11.5, 11.5, 11.0, 11.0],
+                },
+            },
+        },
+    ]
+
+    validated = [validate_master_event_envelope(env, schema=schema) for env in synthetic_envelopes]
+    return {
+        "verified": True,
+        "envelope_count": len(validated),
+        "subsystems_validated": [v["subsystem"] for v in validated],
+        "payload_schemas_validated": [v["payload_schema"] for v in validated],
+    }
+
+
 def evaluate_master_event_contract(
     schema_path: Path = DEFAULT_SCHEMA_PATH,
     receipt_out_path: Optional[Path] = DEFAULT_RECEIPT_PATH,
 ) -> dict[str, Any]:
-    """Run all 7 logic gates (G1..G7), the 4 multica defect axes, and the 4-block
-    Neurospora crassa 8-pool verification, writing the canonical receipt JSON."""
+    """Run all 7 logic gates (G1..G7), the 4 multica defect axes, the 4-block
+    Neurospora crassa 8-pool verification, nc-eeg-session-event-v0 / FourPillarFrameRecord
+    validation, and 4-subsystem MasterEventEnvelope round-trips, writing the canonical receipt JSON."""
     schema = load_master_event_contract_schema(schema_path)
     g1 = verify_gate_g1_spice_basilisk_si_and_dcm()
     g2 = verify_gate_g2_m7_header_vs_numeric_types()
@@ -821,9 +1253,16 @@ def evaluate_master_event_contract(
     g6 = verify_gate_g6_unified_substrate_swap_primitive()
     g7 = verify_gate_g7_health_physics_alara_and_hippocratism()
     nc4 = verify_neurospora_crassa_4block_8pool_contract()
+    nc_contracts = verify_neuralcompose_session_event_and_four_pillar_contracts()
+    envelopes_summary = verify_four_subsystem_synthetic_event_envelopes(schema=schema)
 
     gates = {"G1": g1, "G2": g2, "G3": g3, "G4": g4, "G5": g5, "G6": g6, "G7": g7}
-    all_gates_passed = all(g["gate_passed"] for g in gates.values()) and nc4["verified"]
+    all_gates_passed = (
+        all(g["gate_passed"] for g in gates.values())
+        and nc4["verified"]
+        and nc_contracts["verified"]
+        and envelopes_summary["verified"]
+    )
 
     defect_axes_status = {
         "Boundary": g1["gate_passed"] and g2["gate_passed"] and g5["gate_passed"] and g6["gate_passed"],
@@ -844,6 +1283,8 @@ def evaluate_master_event_contract(
         "subsystems_verified": list(schema["subsystems"].keys()),
         "multica_defect_axes_verified": defect_axes_status,
         "neurospora_crassa_4block_8pool_summary": nc4,
+        "neuralcompose_session_and_four_pillar_summary": nc_contracts,
+        "four_subsystem_envelopes_summary": envelopes_summary,
         "gates": gates,
     }
 
