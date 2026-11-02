@@ -1,0 +1,5 @@
+openfoam_cell_id,openfoam_center_x_m,openfoam_center_y_m,openfoam_center_z_m,openfoam_volume_m3,phreeqc_solution_id,phreeqc_zone_name,phreeqc_center_x_m,phreeqc_span_x_m,overlap_weight,pH_cell,a_H_plus_mol_kgw,pe_cell,a_e_minus
+1,0.0005,0.0,0.0,1.0e-9,1,zone_upstream,0.001,0.002,1.0,7.35,4.46683592150963e-8,4.10,7.94328234724282e-5
+2,0.0015,0.0,0.0,1.0e-9,1,zone_upstream,0.001,0.002,1.0,7.35,4.46683592150963e-8,4.10,7.94328234724282e-5
+3,0.0025,0.0,0.0,1.0e-9,2,zone_downstream,0.003,0.002,1.0,6.85,1.41253754462275e-7,2.40,3.98107170553497e-3
+4,0.0035,0.0,0.0,1.0e-9,2,zone_downstream,0.003,0.002,1.0,6.85,1.41253754462275e-7,2.40,3.98107170553497e-3

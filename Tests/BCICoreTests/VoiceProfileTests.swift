@@ -1,7 +1,7 @@
 import XCTest
 @testable import BCICore
 
-/// Stage 4 — persisted voice preferences. These pin that a partial/absent profile
+/// Stage 4  -  persisted voice preferences. These pin that a partial/absent profile
 /// degrades gracefully (every key optional → env-var/auto-select fallback) and
 /// that prosody round-trips, so a hand- or script-written voice-profile.json can't
 /// silently fail to load.
@@ -26,6 +26,22 @@ final class VoiceProfileTests: XCTestCase {
         XCTAssertNil(p.voiceIdentifier)
         XCTAssertNil(p.prosody)
         XCTAssertNil(p.register)
+        XCTAssertNil(p.recognitionVocabulary)
+        XCTAssertNil(p.endOfUtteranceSilence)
+    }
+
+    func testRecognitionSettingsDecodeAlongsideTheExistingKeys() throws {
+        // The shape of Hunter's live profile plus the two hand-edited keys.
+        let json = Data("""
+        {"usePersonalVoice": true,
+         "voiceIdentifier": "com.apple.speech.personalvoice.5EF4C909",
+         "recognitionVocabulary": ["Oklo", "samarium"],
+         "endOfUtteranceSilence": 2.5}
+        """.utf8)
+        let p = try JSONDecoder().decode(VoiceProfile.self, from: json)
+        XCTAssertEqual(p.usePersonalVoice, true)
+        XCTAssertEqual(p.recognitionVocabulary, ["Oklo", "samarium"])
+        XCTAssertEqual(p.endOfUtteranceSilence, 2.5)
     }
 
     func testRoundTripsWithProsody() throws {
@@ -43,5 +59,30 @@ final class VoiceProfileTests: XCTestCase {
     func testDefaultURLIsUnderDocumentsNeuralCompose() throws {
         let url = try XCTUnwrap(VoiceProfile.defaultURL())
         XCTAssertTrue(url.path.hasSuffix("Documents/NeuralCompose/voice-profile.json"), url.path)
+    }
+
+    func testEffectiveRecognitionVocabularyIncludesColdRunDefaultsAndDeduplicates() {
+        let coldVocab = VoiceProfile.effectiveRecognitionVocabulary(for: nil)
+        XCTAssertTrue(coldVocab.contains("Hunter"))
+        XCTAssertTrue(coldVocab.contains("aurascoper"))
+        XCTAssertTrue(coldVocab.contains("GitHub"))
+        XCTAssertTrue(coldVocab.contains("Antigravity"))
+        XCTAssertTrue(coldVocab.contains("NeuralCompose"))
+        XCTAssertTrue(coldVocab.contains("automorphism"))
+        XCTAssertTrue(coldVocab.contains("Cantor space"))
+        XCTAssertTrue(coldVocab.contains("eigen-behaviors"))
+        XCTAssertTrue(coldVocab.contains("Yang-Mills"))
+        XCTAssertTrue(coldVocab.contains("Exponential Time Hypothesis"))
+        XCTAssertTrue(coldVocab.contains("equifinality"))
+        XCTAssertTrue(coldVocab.contains("von Bertalanffy"))
+        XCTAssertTrue(coldVocab.contains("genomes"))
+        XCTAssertTrue(coldVocab.contains("renormalization group"))
+        XCTAssertTrue(coldVocab.contains("Brett"))
+        XCTAssertTrue(coldVocab.contains("Qwen"))
+
+        let custom = VoiceProfile(recognitionVocabulary: ["CustomTerm", "aurascoper"])
+        let merged = VoiceProfile.effectiveRecognitionVocabulary(for: custom)
+        XCTAssertEqual(merged.first, "CustomTerm")
+        XCTAssertEqual(merged.filter { $0.lowercased() == "aurascoper" }.count, 1)
     }
 }

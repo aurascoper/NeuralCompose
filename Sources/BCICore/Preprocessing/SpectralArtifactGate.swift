@@ -5,7 +5,7 @@ import Foundation
 /// larger than cortical rhythms. A blink is band-specific (a huge slow delta
 /// transient), so it survives band-ratio normalization and would masquerade
 /// as slow-wave/deep activity. Reject such windows on raw amplitude BEFORE
-/// any spectral projection — band ratios cancel a broadband gain change
+/// any spectral projection - band ratios cancel a broadband gain change
 /// (impedance drift) but NOT a band-specific spike like a blink.
 public enum SpectralArtifactGate {
 
@@ -14,15 +14,21 @@ public enum SpectralArtifactGate {
     /// `ARTIFACT_PEAK_UV` in `eeg_spectral.py` exactly.
     public static let defaultPeakThresholdMicrovolts: Float = 150.0
 
-    /// True if no channel in `window` swings beyond `+/-thresholdMicrovolts`.
+    /// True if no channel in `window` is empty, contains non-finite values, or
+    /// swings beyond `+/-thresholdMicrovolts`.
     public static func isClean(
         _ window: EEGWindow,
         thresholdMicrovolts: Float = defaultPeakThresholdMicrovolts
     ) -> Bool {
-        guard !window.samples.isEmpty else { return false }
+        guard !window.samples.isEmpty,
+              thresholdMicrovolts.isFinite,
+              thresholdMicrovolts >= 0 else { return false }
         for channel in window.samples {
-            for value in channel where abs(value) > thresholdMicrovolts {
-                return false
+            guard !channel.isEmpty else { return false }
+            for value in channel {
+                guard value.isFinite, abs(value) <= thresholdMicrovolts else {
+                    return false
+                }
             }
         }
         return true

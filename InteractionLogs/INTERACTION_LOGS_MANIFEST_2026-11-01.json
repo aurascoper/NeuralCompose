@@ -1,0 +1,262 @@
+{
+  "schema_version": "interaction-logs-manifest-v1",
+  "session_date": "2026-11-01/2026-11-02",
+  "generated_at_utc": "2026-11-02T07:25:01Z",
+  "adr_reference": "ADR-005",
+  "eligible_for_science": false,
+  "eligible_for_encoder_training": false,
+  "privacy_scrubbed": true,
+  "typography_em_en_dash_count": 0,
+  "files": {
+    "NeuralCompose_Brett_Model_and_Biofilms_Dialogues_2026-10-31.md": {
+      "bytes": 69191,
+      "lines": 478,
+      "sha256": "08511859dfdf7357a5e6d563c407df687e2b538a66f0a702e3dcf3083a2d7433"
+    },
+    "NeuralCompose_Dialectical_Dialogues_2026-10-31.md": {
+      "bytes": 112927,
+      "lines": 946,
+      "sha256": "b7c9f02212560092c58db0204145b449ab58d5ad67cd2ed4b9663bfc125d6a57"
+    },
+    "autobank-manifest-2026-11-01.jsonl": {
+      "bytes": 122698,
+      "lines": 172,
+      "sha256": "8886ca6f73ce8f33426938238358abee384a8499d550fb4c2c93f4acf38b4419"
+    },
+    "autobank-manifest-2026-11-02.jsonl": {
+      "bytes": 67035,
+      "lines": 82,
+      "sha256": "40e43dcf3729bd953dbbb9a97b39565a24473d27c29ca9f52cfef6f3888b059c"
+    },
+    "dialectic-autobank-2026-07-19.jsonl": {
+      "bytes": 70203,
+      "lines": 40,
+      "sha256": "b21213ce767a90e8598b140875fa9728cecc78d883e5f2ee4ecb2d1ff120062f"
+    },
+    "dialectic-autobank-2026-07-20.jsonl": {
+      "bytes": 370634,
+      "lines": 197,
+      "sha256": "813e537d551e7c591d32797402ef4a63a06acc364bbffc2377e5434f304e21d0"
+    },
+    "dialectic-autobank-2026-07-21.jsonl": {
+      "bytes": 483194,
+      "lines": 369,
+      "sha256": "315a6c8f9b2a863c45269f67b12ce224d59fb7fa0fcbd364211eec6ffe979dd6"
+    },
+    "dialectic-autobank-2026-07-22.jsonl": {
+      "bytes": 124600,
+      "lines": 103,
+      "sha256": "b3198c78b2445e25b94583920b4bcf8ee3899f21d6743c7079a1d522a44caaeb"
+    },
+    "dialectic-autobank-2026-07-23.jsonl": {
+      "bytes": 73401,
+      "lines": 59,
+      "sha256": "099edf0f97016c8625280e07e5bc2f3310308cb6dbd3fbe98b935636d8b74635"
+    },
+    "dialectic-autobank-2026-07-27.jsonl": {
+      "bytes": 65559,
+      "lines": 28,
+      "sha256": "dd0690154db343903f6f04c0879e67eceafed446a0bac7bdc73d72aa8f04c1f3"
+    },
+    "dialectic-autobank-2026-07-28.jsonl": {
+      "bytes": 99888,
+      "lines": 45,
+      "sha256": "698d31052a4a6da7d099191fb0ed536daf95e6c01f202d671402cdb50295e1d9"
+    },
+    "dialectic-autobank-2026-07-29.jsonl": {
+      "bytes": 8756,
+      "lines": 4,
+      "sha256": "f4f11ce7f6392f90ccf7e2cfac6b1d5726e22b234a44d1a16ce350d0cf627231"
+    },
+    "dialectic-autobank-2026-08-07.jsonl": {
+      "bytes": 46269,
+      "lines": 25,
+      "sha256": "1f50befea102e4fb4a2db8a44d713c385032432442a2ba2f26dabb99419fb935"
+    },
+    "dialectic-autobank-2026-10-13.jsonl": {
+      "bytes": 32901,
+      "lines": 17,
+      "sha256": "7e6d8ea7d72e45a759846780527003677a65364782c43ac981b168f3338f6c10"
+    },
+    "dialectic-autobank-2026-10-14.jsonl": {
+      "bytes": 6473,
+      "lines": 3,
+      "sha256": "62cd8145efe81f790a7736ee962b22299d993ec8dac76cfea8d815f7c1bcfa87"
+    },
+    "dialectic-autobank-2026-10-31.jsonl": {
+      "bytes": 234328,
+      "lines": 81,
+      "sha256": "aa4a3621808d11a1b856f7da5b7de3332e60da2925f0b3738a527e22bafac909"
+    },
+    "dialectic-autobank-2026-11-01.jsonl": {
+      "bytes": 393170,
+      "lines": 125,
+      "sha256": "3337c81c676d55b8cb0380a2181214f690dbcd447e9ddc9a407cdd19d07e4364"
+    },
+    "dialectic-autobank-2026-11-02.jsonl": {
+      "bytes": 175033,
+      "lines": 50,
+      "sha256": "62217e51dc7733fd92cd5d52c3d532240ec30f4f732371d0447ee501e6513d31"
+    },
+    "dialectic-turns-2026-07-19.jsonl": {
+      "bytes": 78213,
+      "lines": 45,
+      "sha256": "8e8105d5ceb5bcc2e55b7ce76a39232b336ed2ff0f5fffb81bd566a13ae6bcdd"
+    },
+    "dialectic-turns-2026-07-20.jsonl": {
+      "bytes": 413015,
+      "lines": 223,
+      "sha256": "1a06d6d44f28f1f0600ef156abbacf8453d2c8ff1d6092787214eb6bfe429fd3"
+    },
+    "dialectic-turns-2026-07-21.jsonl": {
+      "bytes": 505774,
+      "lines": 391,
+      "sha256": "7aef9a42032a7729b9fdf252e8a2712249017c6f5422e3a61e908e402a980780"
+    },
+    "dialectic-turns-2026-07-22.jsonl": {
+      "bytes": 168283,
+      "lines": 130,
+      "sha256": "5d313abe42eec90e205ddf7c6719ddb606c5a2a31de2fb429681d4b475c02aac"
+    },
+    "dialectic-turns-2026-07-23.jsonl": {
+      "bytes": 119369,
+      "lines": 100,
+      "sha256": "0eeeb9ad66f74aebeb93be7c748cb1a18993866bfe30606af0d0154d424b32c1"
+    },
+    "dialectic-turns-2026-07-27.jsonl": {
+      "bytes": 65559,
+      "lines": 28,
+      "sha256": "dd0690154db343903f6f04c0879e67eceafed446a0bac7bdc73d72aa8f04c1f3"
+    },
+    "dialectic-turns-2026-07-28.jsonl": {
+      "bytes": 107378,
+      "lines": 50,
+      "sha256": "cef580fc7e758daaa68d43c8788d791eaa1efcce6d7e58f651eae6013bb88587"
+    },
+    "dialectic-turns-2026-07-29.jsonl": {
+      "bytes": 10944,
+      "lines": 5,
+      "sha256": "044af52acc9003a926f5099c80dd58acd29faef056b2ffd340bf8ab6d6c8d81c"
+    },
+    "dialectic-turns-2026-08-07.jsonl": {
+      "bytes": 54443,
+      "lines": 30,
+      "sha256": "9d9d50043ceeb2c14fdb006c53f3d4fe8535645691a6f3dbd68deb73f270b7d3"
+    },
+    "dialectic-turns-2026-10-13.jsonl": {
+      "bytes": 35981,
+      "lines": 19,
+      "sha256": "8f31135df28146a4e45bb8858686e7503c65e04da1d0fbd22d1d4b050c8db016"
+    },
+    "dialectic-turns-2026-10-14.jsonl": {
+      "bytes": 6473,
+      "lines": 3,
+      "sha256": "62cd8145efe81f790a7736ee962b22299d993ec8dac76cfea8d815f7c1bcfa87"
+    },
+    "dialectic-turns-2026-10-31.jsonl": {
+      "bytes": 322368,
+      "lines": 122,
+      "sha256": "d6d1921f6cd02ca27fde497100462cb33475b7049d7b2712a10ec839f55de0d2"
+    },
+    "dialectic-turns-2026-11-01.jsonl": {
+      "bytes": 459622,
+      "lines": 156,
+      "sha256": "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7"
+    },
+    "dialectic-turns-2026-11-02.jsonl": {
+      "bytes": 175552,
+      "lines": 51,
+      "sha256": "4bed458a31ac5e5b549bb2b02afde1013cd1ef13dac2202adf5c06db8bbdb786",
+      "historical_28_line_prefix_bytes": 100060,
+      "historical_28_line_prefix_sha256": "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013"
+    },
+    "equifinal-dialectic-turns.jsonl": {
+      "bytes": 3203820,
+      "lines": 1540,
+      "sha256": "132f4e4639d87fe362e9ca54b3ed214f17bbc0cfd8fdecedadc77136f78a40bd"
+    },
+    "golden-reconciliation-synthesis.json": {
+      "bytes": 2833,
+      "lines": 46,
+      "sha256": "d61b3df5c7fca257afed2771980730cb05fe648e7c65596a106cbf475ea61a82"
+    },
+    "interactions-2026-07-19.jsonl": {
+      "bytes": 561,
+      "lines": 2,
+      "sha256": "476197ea8125bbe67c57b8270992ea0acbd72fed4ed65b81c324d39d378588ab"
+    },
+    "interactions-2026-10-30.jsonl": {
+      "bytes": 732,
+      "lines": 2,
+      "sha256": "34aab26b62f526b5233ca37413c52bf05aa15ca83a5ee3737c79ac561a664f71"
+    },
+    "interactions-2026-11-01.jsonl": {
+      "bytes": 570,
+      "lines": 2,
+      "sha256": "6fa25008a7a98ff38a23dcc3f5f766c6241f2f46298e8dacbcdebcaf98ef1c50"
+    },
+    "matlab-alara-bridge-telemetry.json": {
+      "bytes": 14874,
+      "lines": 434,
+      "sha256": "55d75a6a091cbaa5ec6c9d95940ef49b7af53a3a2e5d094eb3d7a94567d8becd"
+    },
+    "offline-dream-cron.err.log": {
+      "bytes": 2365,
+      "lines": 30,
+      "sha256": "c637b96ca5ffe8320ac91251ca9f2cf7776ed93bcd852b0cddb6022fdc87c6e4"
+    },
+    "offline-dream-cron.log": {
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "offline-dream-report.jsonl": {
+      "bytes": 2276,
+      "lines": 1,
+      "sha256": "786916ef49c0d401d2b58b1b8bb1786d86b3a3b8f3f2cb22278cf0ee64b26dcf"
+    },
+    "poller-self-improvement-synthesis-v2.json": {
+      "bytes": 1153277,
+      "lines": 5631,
+      "sha256": "e4b12969b3ed5a75affe48c9c4e71ec8f4b67e3aaf8f78ab8e83c162506024bd"
+    },
+    "poller_watermark.json": {
+      "bytes": 1037,
+      "lines": 22,
+      "sha256": "64220e3d3a63a76255f49efe618e56a4d7a0a5d026d912c74afb7bbb26161f03"
+    },
+    "CLAUDE_MIND_SQLITE_VERIFICATION_RECEIPT_2026-11-02.json": {
+      "bytes": 15163,
+      "lines": 478,
+      "sha256": "230df599f6e44962a0c621f5b8b70c1d9383455ad851692f47b26e78bbc9b0f1"
+    },
+    "MOMENTUM_AUTOMATA_VERIFICATION_RECEIPT_2026-11-02.json": {
+      "bytes": 8046,
+      "lines": 244,
+      "sha256": "75a8b7c5e8fe074e2c4f084511b6a3d13aa05518f5e1177d284231e537730e39"
+    }
+  },
+  "updatedAtUTC": "2026-11-02T07:57:48.340104+00:00",
+  "excluded_private_telemetry_patterns": [
+    "health-*.jsonl",
+    "prosody-trace-*.jsonl",
+    "spoken-trace-*.jsonl"
+  ],
+  "append_only_dialectic_corpus_summary": {
+    "dialectic-turns-2026-10-31.jsonl": {
+      "lines": 122
+    },
+    "dialectic-turns-2026-11-01.jsonl": {
+      "lines": 156
+    },
+    "dialectic-turns-2026-11-02.jsonl": {
+      "lines": 51,
+      "eligible_warranted_turns": 50,
+      "historical_28_line_prefix_bytes": 100060,
+      "historical_28_line_prefix_sha256": "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013",
+      "full_51_line_bytes": 175552,
+      "full_51_line_sha256": "4bed458a31ac5e5b549bb2b02afde1013cd1ef13dac2202adf5c06db8bbdb786"
+    },
+    "total_turns_across_3_files": 329
+  }
+}

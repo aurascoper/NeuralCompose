@@ -7,6 +7,12 @@ NeuralCompose ships with no weights. Out of the box, the app uses:
 
 Drop in real models when you want them.
 
+Where the app looks (`Sources/BCICore/Models/ModelLocator.swift`):
+`$NEURALCOMPOSE_MODELS_DIR`, then `Models/` under the working directory
+(`swift run` from the repo), then `~/Library/Application Support/NeuralCompose/Models`.
+An installed app's working directory is `/`, so it only finds models in
+Application Support; copy them there with `./Scripts/install-models.sh`.
+
 ---
 
 ## 1. Core ML intent classifier
@@ -178,7 +184,44 @@ rm -rf .build && ./Scripts/build.sh --with-brainflow
 
 ---
 
-## 3. Why this split?
+## 3. Sentence embedder (BGE)
+
+The semantic graph and the spectral estimator need real embeddings. Without
+`Models/BGE-small-en-v1.5/model.mlpackage` the app falls back to the
+deterministic stub embedder, which places nodes by hash.
+
+One command rebuilds the model from pinned inputs and checks the result:
+
+```sh
+./Scripts/rebuild-bge.sh                # convert, then verify
+./Scripts/rebuild-bge.sh --verify-only  # check the model already on disk
+swift test --filter SemanticBGEReplayRegressionTests
+```
+
+The Hugging Face revision and the expected sha256s live in
+`Scripts/bge-small-en-v1.5.lock.json`; the Python stack is pinned in
+`Scripts/requirements-bge-conversion.txt` (Python 3.11). The script exits 1
+if any hash differs from the lock. The replay test then confirms the model
+reproduces the committed fixture, which is what makes it the same embedding
+space and not merely the same files.
+
+A rebuild ends by locking the model package and the virtualenv's
+`libtorch_cpu.dylib` with the user-immutable flag. Both vanished together on
+2026-07-27 and on 2026-09-28, and macOS's Storage settings offer them for
+deletion as large files. While locked they can be read but not deleted, moved
+or overwritten. Unlock before upgrading torch or replacing the model by hand:
+
+```sh
+./Scripts/rebuild-bge.sh --unlock
+./Scripts/rebuild-bge.sh --lock
+```
+
+`swift run` from the repository root finds it in `Models/`; for the installed
+app, run `./Scripts/install-models.sh` afterwards.
+
+---
+
+## 4. Why this split?
 
 Core ML (ANE) for classification + MLX (GPU) for generation is the sweet spot
 on Apple Silicon: the two engines don't fight for the same compute. Routing

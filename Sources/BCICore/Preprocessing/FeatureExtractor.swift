@@ -4,7 +4,7 @@ import Foundation
 /// the metrics view so you can see what the pipeline is "seeing" without
 /// needing a trained model.
 ///
-/// The real Core ML classifier consumes the raw window directly — these
+/// The real Core ML classifier consumes the raw window directly - these
 /// features exist for the mock path and for explainability.
 public struct EEGFeatures: Sendable, Hashable {
     /// Per-channel RMS amplitude.
@@ -41,16 +41,27 @@ public struct EEGFeatures: Sendable, Hashable {
 public enum FeatureExtractor {
 
     public static func features(for window: EEGWindow) -> EEGFeatures {
-        // Real EEG carries a large per-channel DC baseline (Muse ~800µV) that
+        features(for: window, substituteBadChannels: false, thresholds: .default)
+    }
+
+    public static func features(
+        for window: EEGWindow,
+        substituteBadChannels: Bool,
+        thresholds: ChannelHealthThresholds = .default
+    ) -> EEGFeatures {
+        // Real EEG carries a large per-channel DC baseline (Muse ~800uV) that
         // synthetic data never had. Remove it per channel so RMS reflects signal
         // amplitude and zero-crossings actually cross zero (an always-positive
         // DC-offset signal never crosses, giving a bogus count of 0). Band
         // energies use lag-differencing, which already cancels a constant offset,
-        // so they read the raw window unchanged.
-        let centered = window.samples.map(demeaned)
+        // so they read the source window directly.
+        let source = substituteBadChannels
+            ? window.substitutingBadChannels(thresholds: thresholds)
+            : window
+        let centered = source.samples.map(demeaned)
         let rms  = centered.map(rmsOf)
         let zcs  = centered.map(zeroCrossingsOf)
-        let bands = bandEnergies(window: window)
+        let bands = bandEnergies(window: source)
         return EEGFeatures(
             rmsByChannel: rms,
             zeroCrossingsByChannel: zcs,
@@ -63,14 +74,23 @@ public enum FeatureExtractor {
     }
 
     /// Subtract the per-channel mean (DC baseline). Real EEG sources carry a
-    /// large constant offset (Muse ~800µV) that swamps amplitude-based features;
-    /// synthetic data is already ~0-mean, so this is a no-op there.
+    /// large constant offset (Muse ~800uV) that swamps amplitude-based features;
+    /// synthetic data is already ~0-mean, so this is a no-op there. Non-finite
+    /// samples are excluded from the mean and zeroed so a single corrupted sample
+    /// in an unsubstituted channel does not poison downstream RMS/zero-crossings.
     private static func demeaned(_ x: [Float]) -> [Float] {
         guard !x.isEmpty else { return x }
         var sum: Double = 0
-        for v in x { sum += Double(v) }
-        let mean = Float(sum / Double(x.count))
-        return x.map { $0 - mean }
+        var finiteCount = 0
+        for v in x where v.isFinite {
+            sum += Double(v)
+            finiteCount += 1
+        }
+        guard finiteCount > 0 else {
+            return Array(repeating: 0, count: x.count)
+        }
+        let mean = Float(sum / Double(finiteCount))
+        return x.map { $0.isFinite ? ($0 - mean) : 0 }
     }
 
     private static func rmsOf(_ x: [Float]) -> Float {
@@ -92,7 +112,7 @@ public enum FeatureExtractor {
     private struct Bands { let delta, theta, alpha, beta, emg: Float }
 
     /// Naive band energy via Goertzel-style proxy: not a real FFT, but for
-    /// the mock path we don't need precision — just monotonic differentiation
+    /// the mock path we don't need precision - just monotonic differentiation
     /// between EEG bands and high-frequency EMG. Good enough to drive a
     /// "muscle-vs-not" rule.
     private static func bandEnergies(window: EEGWindow) -> Bands {
@@ -110,7 +130,10 @@ public enum FeatureExtractor {
             for ch in window.samples {
                 if ch.count <= lag { continue }
                 for i in lag..<ch.count {
-                    let d = Double(ch[i] - ch[i - lag])
+                    let a = ch[i]
+                    let b = ch[i - lag]
+                    guard a.isFinite, b.isFinite else { continue }
+                    let d = Double(a - b)
                     sum += d * d
                     n += 1
                 }

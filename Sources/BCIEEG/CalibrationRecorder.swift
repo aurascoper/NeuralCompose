@@ -76,6 +76,25 @@ public actor CalibrationRecorder {
     private var windowingConfig: (seconds: Double, strideSeconds: Double) = (2.0, 1.0)
     private var profile: MuseBoardProfile = .synthetic
     private var sampleRate: Double = 256.0
+    /// Clock provenance for offline protocol alignment. `EEGSample` preserves
+    /// the acquisition source's time coordinate, so it is not necessarily a
+    /// Unix timestamp even though protocol cues are wall-clock timestamps.
+    private var firstSampleTimestamp: Double?
+    private var firstSampleWallClockUnix: Double?
+    private var eegTimestampClock: String = "unavailable"
+
+    private var deviceProfile: String {
+        switch profile {
+        case .museSNativeBLE: return "muse_s_native_ble"
+        case .museSBLED: return "muse_s_bled"
+        case .museSAthena: return "muse_s_athena"
+        case .museTwoNativeBLE: return "muse_2_native_ble"
+        case .museTwoBLED: return "muse_2_bled"
+        case .synthetic: return "synthetic"
+        case .playback: return "playback"
+        case .oscRemote: return "osc_remote"
+        }
+    }
 
     public init() {}
 
@@ -99,6 +118,9 @@ public actor CalibrationRecorder {
         self.profile = profile
         self.sampleRate = sampleRate
         self.windowingConfig = (windowingSeconds, strideSeconds)
+        firstSampleTimestamp = nil
+        firstSampleWallClockUnix = nil
+        eegTimestampClock = "unavailable"
         channelLabels = profile.channelLabels.isEmpty ? ["ch0","ch1","ch2","ch3"] : profile.channelLabels
 
         let eegHeader = "t_seconds," + channelLabels.joined(separator: ",") + "\n"
@@ -193,6 +215,15 @@ public actor CalibrationRecorder {
 
     public func recordSample(_ sample: EEGSample) {
         guard let fh = eegFileHandle else { return }
+        if firstSampleTimestamp == nil {
+            firstSampleTimestamp = sample.timestamp
+            firstSampleWallClockUnix = Date().timeIntervalSince1970
+            // BrainFlow commonly reports epoch seconds while synthetic and
+            // playback streams use an arbitrary stream-relative origin. The
+            // threshold deliberately avoids declaring a synthetic sequence
+            // with a large-but-non-epoch offset to be wall-clock time.
+            eegTimestampClock = sample.timestamp >= 1_000_000_000 ? "unix_epoch" : "stream_relative"
+        }
         let chStr = sample.channels.map { String(format: "%.6f", $0) }.joined(separator: ",")
         let row = "\(String(format: "%.9f", sample.timestamp)),\(chStr)\n"
         fh.write(Data(row.utf8))
@@ -291,11 +322,13 @@ public actor CalibrationRecorder {
             let metadata: [String: Any] = [
                 "session_id": self.sessionID,
                 "profile": self.profile == .synthetic ? "synthetic" : "muses",
+                "device_profile": self.deviceProfile,
                 "transport": self.profile.transportLabel,
                 "sample_rate": self.sampleRate,
                 "window_seconds": self.windowingConfig.seconds,
                 "stride_seconds": self.windowingConfig.strideSeconds,
                 "timestamp": ISO8601DateFormatter().string(from: Date()),
+                "eeg_timestamp_clock": self.eegTimestampClock,
                 // A non-empty transport event log means the live link
                 // stalled, retried, or fell back to synthetic at some
                 // point during this session — see transport_events.csv
@@ -306,7 +339,12 @@ public actor CalibrationRecorder {
                 "transport_degraded": !self.transportEvents.isEmpty,
                 "transport_event_count": self.transportEvents.count
             ]
-            if let jsonData = try? JSONSerialization.data(withJSONObject: metadata, options: .prettyPrinted) {
+            var completeMetadata = metadata
+            if let firstSampleTimestamp, let firstSampleWallClockUnix {
+                completeMetadata["first_sample_timestamp"] = firstSampleTimestamp
+                completeMetadata["first_sample_wallclock_unix"] = firstSampleWallClockUnix
+            }
+            if let jsonData = try? JSONSerialization.data(withJSONObject: completeMetadata, options: .prettyPrinted) {
                 let metadataURL = sessionURL.appendingPathComponent("metadata.json")
                 FileManager.default.createFile(atPath: metadataURL.path, contents: jsonData)
             }

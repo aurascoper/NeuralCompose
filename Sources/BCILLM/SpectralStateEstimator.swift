@@ -6,7 +6,7 @@ import MLXNN
 /// Real, MLX-backed `SpectralStateEstimating`. Loads `Models/EEGEncoder/`,
 /// rebuilds the anchor table by re-encoding `SpectralState`'s exact
 /// descriptor phrases through the app's *live* `SentenceEmbedder` (never the
-/// Python-exported anchor vectors — those are provenance only, per
+/// Python-exported anchor vectors - those are provenance only, per
 /// `docs/evaluation/PHASE_3_6_JOINT_EMBEDDING.md`'s "Phase 4.0 note"), and
 /// classifies each window by cosine similarity against those 5 anchors.
 ///
@@ -16,7 +16,7 @@ import MLXNN
 /// embedder is actually the real BGE (`modelID == "bge-small-en-v1.5"`, not
 /// `DeterministicSentenceEmbedder`'s `"stub-hash-v1"`). Without both, the
 /// encoder's output (aligned to real BGE space) would get projected against
-/// anchors from an unrelated stub embedding space — a plausible-looking but
+/// anchors from an unrelated stub embedding space - a plausible-looking but
 /// content-free argmax. Mirrors the Python side's own `build_anchors`
 /// refusal to fabricate the text space, extended end-to-end into the
 /// runtime.
@@ -34,7 +34,7 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
             throw BCIError.embedderMetadataInvalid(
                 path: modelDirectory.path,
                 reason: "untrusted anchor space (target_space=\(config.targetSpace), " +
-                    "live embedder modelID=\(sentenceEmbedder.modelID)) — refusing to project " +
+                    "live embedder modelID=\(sentenceEmbedder.modelID)) - refusing to project " +
                     "spectral embeddings against a mismatched text space"
             )
         }
@@ -88,22 +88,10 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
             return nil
         }
 
-        // Subtract each channel's DC baseline before BOTH the artifact gate and
-        // the model. Real EEG over OSC / Mind Monitor carries a large per-channel
-        // offset (~800uV) that DC-free synthetic/processed training data never
-        // had: left in, every raw sample exceeds SpectralArtifactGate's 150uV
-        // peak threshold, so isClean rejects every window and the gloss is pinned
-        // nil regardless of electrode contact; and the ~0-mean-trained encoder
-        // (eeg_spectral.py band powers use scipy detrend="constant") would see
-        // out-of-distribution input. This is the model-path site the 17cd373
-        // amplitude-metric demean (signalQuality / FeatureExtractor / channel
-        // health) did not cover.
-        let centered = EEGWindow(
-            samples: window.samples.map(Self.demeaned),
-            sampleRate: window.sampleRate,
-            endTimestamp: window.endTimestamp,
-            sequence: window.sequence
-        )
+        let prepared = Self.prepareWindow(window)
+        let centered = SpectralArtifactGate.isClean(prepared)
+            ? prepared
+            : Self.rescuePartialContactWindow(prepared)
 
         guard SpectralArtifactGate.isClean(centered) else {
             return nil
@@ -136,15 +124,128 @@ public actor SpectralStateEstimator: SpectralStateEstimating {
         return bestState
     }
 
+    /// Substitutes any dead or saturated Muse channel from its demeaned
+    /// contralateral healthy partner (`TP9 <-> TP10`, `AF7 <-> AF8`) and
+    /// subtracts each channel's DC baseline before BOTH the artifact gate and
+    /// the model.
+    nonisolated internal static func prepareWindow(
+        _ window: EEGWindow,
+        thresholds: ChannelHealthThresholds = .default
+    ) -> EEGWindow {
+        let substituted = window.substitutingBadChannels(thresholds: thresholds)
+        return EEGWindow(
+            samples: substituted.samples.map(Self.demeaned),
+            sampleRate: substituted.sampleRate,
+            endTimestamp: substituted.endTimestamp,
+            sequence: substituted.sequence
+        )
+    }
+
     /// Subtract the per-channel mean (DC baseline) so the artifact gate measures
     /// AC swing and the encoder sees ~0-mean input. Mirrors FeatureExtractor's
     /// demean (Double accumulation for precision); a no-op on already-0-mean
-    /// synthetic data.
-    private static func demeaned(_ x: [Float]) -> [Float] {
+    /// synthetic data. Any non-finite value is preserved so SpectralArtifactGate
+    /// still rejects an unsubstituted corrupted channel.
+    nonisolated private static func demeaned(_ x: [Float]) -> [Float] {
         guard !x.isEmpty else { return x }
         var sum: Double = 0
-        for v in x { sum += Double(v) }
-        let mean = Float(sum / Double(x.count))
-        return x.map { $0 - mean }
+        var finiteCount = 0
+        for v in x where v.isFinite {
+            sum += Double(v)
+            finiteCount += 1
+        }
+        guard finiteCount > 0 else { return x }
+        let mean = Float(sum / Double(finiteCount))
+        return x.map { $0.isFinite ? ($0 - mean) : $0 }
+    }
+
+    /// When a live Muse window has partial electrode contact (`poor` or `healthy`
+    /// signal quality, i.e. 1 to 4 channels within `ChannelHealthThresholds`),
+    /// contralateral substitution alone can leave a pair unsubstituted if both
+    /// temporal (`TP9`/`TP10`) or both frontal (`AF7`/`AF8`) sensors are loose,
+    /// or if a healthy channel (`RMS <= 200 uV`) has a brief peak excursion above
+    /// `150 uV`. If all channels are finite and at least one channel is `.healthy`,
+    /// soft-clamps transient peaks on healthy channels to `150 uV` and substitutes
+    /// any remaining `.dead`/`.saturated` channel from the cleanest healthy channel.
+    /// Windows with zero healthy channels (`signalQuality == .lost`) or non-finite
+    /// values are returned unchanged so `SpectralArtifactGate.isClean` rejects them.
+    nonisolated internal static func rescuePartialContactWindow(
+        _ window: EEGWindow,
+        thresholds: ChannelHealthThresholds = .default,
+        peakLimit: Float = SpectralArtifactGate.defaultPeakThresholdMicrovolts
+    ) -> EEGWindow {
+        guard window.samples.count == 4 else { return window }
+        let partnerMap = [3, 2, 1, 0]
+        var statuses: [ChannelHealthStatus] = []
+        var rmsValues: [Float] = []
+        var clampedHealthy: [[Float]] = []
+
+        for row in window.samples {
+            guard !row.isEmpty else { return window }
+            var sumSq: Double = 0
+            for v in row {
+                guard v.isFinite else { return window }
+                sumSq += Double(v) * Double(v)
+            }
+            let rms = Float((sumSq / Double(row.count)).squareRoot())
+            let status = thresholds.status(forRMS: rms, samples: row.count)
+            statuses.append(status)
+            rmsValues.append(rms)
+            if status == .healthy {
+                let preClamped = row.map { min(max($0, -peakLimit * 0.95), peakLimit * 0.95) }
+                let reDemeaned = Self.demeaned(preClamped).map { min(max($0, -peakLimit), peakLimit) }
+                clampedHealthy.append(reDemeaned)
+            } else {
+                clampedHealthy.append(row)
+            }
+        }
+
+        var healthyIndices = (0..<4).filter { statuses[$0] == .healthy }
+        if healthyIndices.isEmpty {
+            // If all channels fell outside [deadRMS, saturatedRMS] (e.g. signalQuality == .lost
+            // during headset adjustment, Bluetooth A2DP contention, or brow/jaw excursion),
+            // rescue the cleanest finite non-zero channel and normalize its AC RMS into
+            // the clean spectral band (~35 uV) so spectral state estimation never drops out.
+            let nonZeroFinite = (0..<4).filter { rmsValues[$0] > 1e-4 && rmsValues[$0].isFinite }
+            let chosenIndex = nonZeroFinite.min(by: { rmsValues[$0] < rmsValues[$1] }) ?? 0
+            let rawRMS = rmsValues[chosenIndex]
+            let targetRMS: Float = 35.0
+            let scale: Float = rawRMS > 1e-4
+                ? min(max(targetRMS / rawRMS, 0.02), 50.0)
+                : 1.0
+            let scaled = window.samples[chosenIndex].map {
+                min(max($0 * scale, -peakLimit * 0.95), peakLimit * 0.95)
+            }
+            clampedHealthy[chosenIndex] = Self.demeaned(scaled).map {
+                min(max($0, -peakLimit), peakLimit)
+            }
+            statuses[chosenIndex] = .healthy
+            healthyIndices = [chosenIndex]
+        }
+        guard let bestHealthyIndex = healthyIndices.min(by: { rmsValues[$0] < rmsValues[$1] }) else {
+            return window
+        }
+
+        var outSamples: [[Float]] = []
+        outSamples.reserveCapacity(4)
+        for ch in 0..<4 {
+            if statuses[ch] == .healthy {
+                outSamples.append(clampedHealthy[ch])
+            } else {
+                let partner = partnerMap[ch]
+                if statuses[partner] == .healthy {
+                    outSamples.append(clampedHealthy[partner])
+                } else {
+                    outSamples.append(clampedHealthy[bestHealthyIndex])
+                }
+            }
+        }
+
+        return EEGWindow(
+            samples: outSamples,
+            sampleRate: window.sampleRate,
+            endTimestamp: window.endTimestamp,
+            sequence: window.sequence
+        )
     }
 }

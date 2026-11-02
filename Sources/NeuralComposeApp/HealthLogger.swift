@@ -3,18 +3,19 @@ import Foundation
 
 /// Always-on writer for the app watchdog's `HealthSnapshot`.
 ///
-/// - `~/Documents/NeuralCompose/health.json` — the latest snapshot, atomically
+/// - `~/Documents/NeuralCompose/health.json` - the latest snapshot, atomically
 ///   overwritten each tick, so `cat health.json` always shows current health
 ///   (this is the file that replaces the unreadable `os_log` during a live run).
-/// - `~/Documents/NeuralCompose/InteractionLogs/health-<day>.jsonl` — appended
+/// - `~/Documents/NeuralCompose/InteractionLogs/health-<day>.jsonl` - appended
 ///   only when the degraded-reason set changes, plus a ~60s heartbeat, so it is a
 ///   sparse transition log rather than a firehose.
 ///
-/// Diagnostic metadata only (backends / throughput / state — never transcripts),
+/// Diagnostic metadata only (backends / throughput / state - never transcripts),
 /// so it is always-on and independent of the interaction-log opt-in (ADR-005).
 public actor HealthLogger {
     private let latestURL: URL
     private let logDirectory: URL
+    private let mirrorLogDirectory: URL?
     private let dayFormatter: DateFormatter
     private let pretty: JSONEncoder
     private let compact: JSONEncoder
@@ -24,6 +25,14 @@ public actor HealthLogger {
     public init(baseDirectory: URL = HealthLogger.defaultBaseDirectory()) {
         self.latestURL = baseDirectory.appendingPathComponent("health.json")
         self.logDirectory = baseDirectory.appendingPathComponent("InteractionLogs", isDirectory: true)
+        let defaultBase = HealthLogger.defaultBaseDirectory().standardizedFileURL
+        if baseDirectory.standardizedFileURL == defaultBase {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            let devLogs = home.appendingPathComponent("Developer/NeuralCompose/InteractionLogs", isDirectory: true)
+            self.mirrorLogDirectory = FileManager.default.fileExists(atPath: devLogs.path) ? devLogs : nil
+        } else {
+            self.mirrorLogDirectory = nil
+        }
 
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
@@ -46,7 +55,7 @@ public actor HealthLogger {
     }
 
     public func write(_ snapshot: HealthSnapshot) {
-        // 1. Latest snapshot — atomic overwrite so a reader never sees a torn file.
+        // 1. Latest snapshot - atomic overwrite so a reader never sees a torn file.
         if let data = try? pretty.encode(snapshot) {
             try? FileManager.default.createDirectory(
                 at: latestURL.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -66,12 +75,18 @@ public actor HealthLogger {
     private func appendEvent(_ snapshot: HealthSnapshot, day: String) {
         guard var line = try? compact.encode(snapshot) else { return }
         line.append(0x0A)
-        let url = logDirectory.appendingPathComponent("health-\(day).jsonl")
-        try? FileManager.default.createDirectory(at: logDirectory, withIntermediateDirectories: true)
+        Self.appendLine(line, to: logDirectory.appendingPathComponent("health-\(day).jsonl"), dir: logDirectory)
+        if let mirrorDir = mirrorLogDirectory {
+            Self.appendLine(line, to: mirrorDir.appendingPathComponent("health-\(day).jsonl"), dir: mirrorDir)
+        }
+    }
+
+    private static func appendLine(_ line: Data, to url: URL, dir: URL) {
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         if let handle = try? FileHandle(forWritingTo: url) {
             defer { try? handle.close() }
             _ = try? handle.seekToEnd()
-            try? handle.write(contentsOf: line)  // catchable (unlike write(_:)) — see TelemetryLogger
+            try? handle.write(contentsOf: line)  // catchable (unlike write(_:)) - see TelemetryLogger
         } else {
             try? line.write(to: url, options: .atomic)  // first write of the day: create it
         }

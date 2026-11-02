@@ -34,7 +34,7 @@ public enum WorldModelDemoFactory {
         // relative default to nothing.
         let directory = modelsDirectory
             ?? ProcessInfo.processInfo.environment["NEURALCOMPOSE_WORLDMODEL_DEMO_MODELS"]
-            ?? defaultModelsDirectory
+            ?? ModelLocator.url(for: "WorldModelDemo").path
         let base = URL(fileURLWithPath: directory)
 
         do {

@@ -1,4 +1,4 @@
-"""Tests for Phase 3.6 EEG→text-aligned spectral embedding.
+"""Tests for Phase 3.6 EEG->text-aligned spectral embedding.
 
 Covers the shared spectral module (eeg_spectral) and the MLX trainer
 (train_joint_embedding): the channels-last transpose trap, encoder output
@@ -34,7 +34,7 @@ def test_encoder_forward_shape_and_norm():
 def test_channels_last_required():
     # MLX Conv1d is channels-last: input must be [B, samples, channels] = [B, 512, 4].
     # Feeding PyTorch-style [B, 4, 512] puts 512 in the channel axis and must fail
-    # against conv1's 4 input channels — this guards the #1 shape trap of this milestone.
+    # against conv1's 4 input channels - this guards the #1 shape trap of this milestone.
     enc = tje.SpectralEncoder(in_channels=4, out_dim=384)
     mx.eval(enc.parameters())
     bad = mx.array(np.zeros((2, 4, 512), dtype=np.float32))
@@ -67,7 +67,7 @@ def test_supcon_loss_properties():
     assert aligned < misaligned, f"aligned loss {aligned} should be < misaligned {misaligned}"
 
     # A batch where every window shares one descriptor must stay finite (no
-    # false-negative degeneracy — this is why we classify against fixed anchors).
+    # false-negative degeneracy - this is why we classify against fixed anchors).
     one = float(loss_fn(_Fixed(mx.array(anchors_np[[0, 0]])), None,
                         mx.array(np.array([0, 0], dtype=np.int32))))
     assert np.isfinite(one)
@@ -87,7 +87,7 @@ def test_supcon_training_decreases():
     x_cl = np.transpose(x_np, (0, 2, 1)).astype(np.float32)
     _, hist = tje.train_encoder(x_cl, labels, anchors, epochs=15, batch_size=16,
                                 lr=2e-3, temperature=0.07, val_frac=0.2, seed=0)
-    assert hist[-1] < hist[0], f"loss did not decrease: {hist[0]:.3f} → {hist[-1]:.3f}"
+    assert hist[-1] < hist[0], f"loss did not decrease: {hist[0]:.3f} -> {hist[-1]:.3f}"
 
 
 def test_spectral_alpha_dominant_descriptor():
@@ -99,6 +99,56 @@ def test_spectral_alpha_dominant_descriptor():
     descriptor = spec.descriptor_for_ratios(spec.spectral_ratios(bp))
     assert descriptor in spec.STATE_DESCRIPTORS
     assert "alpha" in descriptor, f"pure 10 Hz should read as alpha-dominant, got {descriptor!r}"
+
+
+def test_window_is_clean_demeans_dc_offset():
+    fs = 256.0
+    t = np.arange(512) / fs
+    dc = 820.0
+    clean_ac = 25.0 * np.sin(2.0 * np.pi * 10.0 * t)
+    window = np.stack([dc + clean_ac for _ in range(4)]).astype(np.float32)
+    assert spec.window_is_clean(window), "820 uV DC offset + 25 uV AC must pass window_is_clean"
+
+    spiked = window.copy()
+    spiked[1, 100] = dc + 220.0
+    assert not spec.window_is_clean(spiked), "220 uV AC spike above DC baseline must fail window_is_clean"
+
+
+def test_load_session_windows_substitutes_bad_channel_and_demeans_dc_offset():
+    fs = 256.0
+    n = 1024
+    t = np.arange(n) / fs
+    dc = 820.0
+    tp9_dead = np.full(n, dc, dtype=np.float64)
+    af7_healthy = dc + 25.0 * np.sin(2.0 * np.pi * 10.0 * t)
+    af8_healthy = dc + 25.0 * np.sin(2.0 * np.pi * 12.0 * t)
+    tp10_healthy = dc + 30.0 * np.sin(2.0 * np.pi * 10.0 * t)
+    data = np.column_stack([t, tp9_dead, af7_healthy, af8_healthy, tp10_healthy])
+
+    with tempfile.TemporaryDirectory() as tmp:
+        sdir = Path(tmp)
+        np.savetxt(
+            sdir / "eeg.csv",
+            data,
+            delimiter=",",
+            header="timestamp,TP9,AF7,AF8,TP10",
+            comments="",
+        )
+        (sdir / "metadata.json").write_text(json.dumps({
+            "sample_rate": 256.0,
+            "window_seconds": 2.0,
+            "stride_seconds": 1.0,
+        }))
+        windows = tje.load_session_windows(sdir)
+        assert len(windows) == 3, f"expected 3 windows, got {len(windows)}"
+        for w in windows:
+            assert w.shape == (4, 512)
+            # Every channel must be 0-mean after _window_signal demeaning
+            channel_means = np.mean(w, axis=-1)
+            assert np.all(np.abs(channel_means) < 1e-2), f"expected 0-mean channels, got {channel_means}"
+            # Dead TP9 (ch 0) must be substituted from demeaned TP10 (ch 3)
+            assert np.allclose(w[0], w[3], atol=1e-2), "dead TP9 should match demeaned TP10 partner"
+            assert spec.window_is_clean(w), "substituted and demeaned window must pass window_is_clean"
 
 
 def test_export_writes_artifacts():

@@ -49,9 +49,86 @@ xcode-select --install
 
 Confirm the toolchain:
 
+- `BCICore` — pure-Swift models, protocols, FSMs, buffers. **No third-party deps.**
+- `BCIBridge` — Obj-C++ shim for BrainFlow (stub by default, gated by `BCI_BRAINFLOW_AVAILABLE`).
+- `BCIEEG` — `BrainFlowService`, `SyntheticEEGStream`, `PlaybackEEGStream`, `EEGScalpPlotterView`, `NeuralWorkspaceView`.
+- `BCIClassifier` — Core ML wrapper + deterministic mock (also the CI classifier); also hosts `CoreMLSentenceEmbedder` + `WordPieceTokenizer` for real semantic embeddings.
+- `BCILLM` — **MLX-Swift linked only here.** Adapter + stub + tokenizer.
+- `NeuralComposeApp` — SwiftUI views, Phase B debug window, menu-bar UI.
+- `EmbeddingBench` — sibling executable (not part of the app) that benchmarks any `SentenceEmbedder` conformer; knows nothing about Core ML or MLX.
+
+The app talks to `BCILLM` through `NextWordPredicting`, so there's exactly
+**one** MLX runtime copy in the linked binary.
+
+Related architecture notes:
+
+- [Three Orthogonal Concerns](docs/architecture/three-orthogonal-concerns.md)
+  separates Science, Engineering, and Computation.
+- [Engineering Runtime](docs/architecture/engineering-runtime.md)
+  scopes bounded implementation backends.
+- [Julia Science Workspace](docs/architecture/julia-science-workspace.md)
+  keeps Julia as an offline scientific laboratory, not an app runtime.
+- [NeuralComposeEEG](NeuralComposeEEG/README.md) defines a separate,
+  shadow-only four-channel Muse encoder benchmark with complete-session splits;
+  it has no Swift or live-control dependency.
+- [EEG Mathematics, Physics, and Methods Scope](docs/scoping/eeg-mathematics-physics-methods-scope.md)
+  keeps the current encoder work grounded in the necessary linear-algebra,
+  signal-processing, and evaluation foundations while deferring forward models
+  and policy/control theory to later falsifiable experiments.
+- [State Reconstruction Goal 0](docs/science/state-reconstruction-goal-0.md)
+  and [Trajectory Analysis Goal 1](docs/science/trajectory-analysis-goal-1.md)
+  turn soak telemetry into falsifiable science artifacts.
+- [Sobolev and ZPD Hypotheses](docs/science/sobolev-zpd-hypotheses.md)
+  places smooth dynamics and proximal intervention as falsifiable research claims.
+- [Symbolic Systems as Hypothesis Sources](docs/science/symbolic-systems-hypothesis-sources.md)
+  keeps traditions like geomancy as testable abstractions, not runtime modes.
+- [Semantic-to-Prosody Boundary](docs/architecture/semantic-to-prosody-boundary.md)
+  separates what text is generated from how it is spoken.
+- [Prosody Feature Contract](docs/architecture/prosody-feature-contract.md)
+  defines the cadence fields that Engineering can measure and Science can model.
+- [Prosody MVP Experiment](docs/experiments/prosody-mvp-001.yaml)
+  preregisters the first cadence hypothesis:
+  [reflective_prosody_v1](docs/hypotheses/reflective_prosody_v1.yaml).
+
+### Rust Phase 0
+
+`Rust/prosody_features` is the first deterministic measurement crate.
+It is not wired into the Swift runtime. It measures mono audio into
+prosody features that can later feed telemetry contracts:
+
 ```bash
-swift --version
-xcode-select -p
+cd Rust/prosody_features
+cargo test
+```
+
+### Four-layer model
+
+The codebase is organized into four layers, named for *role* (not
+current contents) so they remain meaningful as the platform grows:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                      Interface                      │
+│  SwiftUI · SceneKit · Plotters · Channel-health UI  │
+└────────────────────────▲────────────────────────────┘
+                         │ depends on
+┌────────────────────────┴────────────────────────────┐
+│                     Intelligence                    │
+│  DSP · Features · Classifier · Embeddings · Project │
+└────────────────────────▲────────────────────────────┘
+                         │ depends on
+┌────────────────────────┴────────────────────────────┐
+│                      Runtime                        │
+│  EEGStreaming · AsyncMulticastChannel · Supervisors │
+│  Recording · Diagnostics                            │
+└────────────────────────▲────────────────────────────┘
+                         │ depends on
+┌────────────────────────┴────────────────────────────┐
+│                  External Systems                   │
+│   Muse · BrainFlow · OSC · Playback · Synthetic     │
+└─────────────────────────────────────────────────────┘
+
+  ▼ data flows downward
 ```
 
 ### Full local feature build
@@ -351,7 +428,27 @@ Run the deterministic golden-recording regression:
 swift test --filter GoldenRecordingRegressionTests
 ```
 
-Run app/runtime-focused suites:
+## macOS packaging
+
+Create a relocatable release bundle, then a drag-to-Applications disk image:
+
+```bash
+./Scripts/package-macos-app.sh
+./Scripts/create-dmg.sh
+```
+
+The artifacts are written to `dist/NeuralCompose.app` and
+`dist/NeuralCompose-<version>.dmg`. The bundle includes the app metadata,
+icon, SwiftPM resource bundles, and any dynamic libraries produced by a
+BrainFlow-enabled build. Both scripts use ad-hoc signing by default for local
+use; pass `--sign 'Developer ID Application: ...'` when preparing a signed
+distribution. See each script's `--help` output for build and output options.
+
+Before distributing beyond the development machine, launch the bundle itself
+and manually confirm permissions, Personal Voice, model/resource discovery,
+telemetry location, runtime selection, and `neuralcompose://` routing.
+
+## Experimental status & limitations
 
 ```bash
 swift test --filter NeuralComposeAppTests

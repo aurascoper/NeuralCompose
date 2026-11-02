@@ -68,8 +68,10 @@ public enum ClassifierFactory {
 
     private static func resolvePath() -> String {
         let fm = FileManager.default
-        if fm.fileExists(atPath: defaultModelPath) { return defaultModelPath }
-        if fm.fileExists(atPath: defaultPackagePath) { return defaultPackagePath }
+        for name in ["IntentClassifier.mlmodelc", "IntentClassifier.mlpackage"] {
+            let url = ModelLocator.url(for: name)
+            if fm.fileExists(atPath: url.path) { return url.path }
+        }
         return defaultModelPath
     }
 }

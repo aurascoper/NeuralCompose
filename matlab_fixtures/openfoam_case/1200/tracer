@@ -1,0 +1,36 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "1200";
+    object      C_substrate;
+}
+dimensions      [0 -3 0 0 1 0 0];
+internalField   nonuniform List<scalar>
+4
+(
+0.95
+0.58
+0.29
+0.11
+);
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        flux_mol_s      1.9e-10;
+        value           nonuniform List<scalar> 1 ( 1.0 );
+    }
+    outlet
+    {
+        type            zeroGradient;
+        flux_mol_s      -2.2e-11;
+    }
+    walls
+    {
+        type            zeroGradient;
+        flux_mol_s      0;
+    }
+}

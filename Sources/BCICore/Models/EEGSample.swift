@@ -7,7 +7,10 @@ import Foundation
 /// Two-byte BLE precision (Muse 2 is 12-bit ADC) trivially round-trips through
 /// `Float`, so there's no fidelity loss.
 public struct EEGSample: Sendable, Hashable {
-    /// Time of sample relative to stream start, in seconds. Monotonic, never NaN.
+    /// Source-provided time coordinate in seconds. It is monotonic and never
+    /// NaN, but may be Unix epoch time (for a live bridge) or stream-relative
+    /// time (for synthetic/playback). Offline consumers must read the recorder
+    /// metadata clock declaration rather than infer one globally.
     public let timestamp: TimeInterval
 
     /// One value per electrode. For Muse 2 this is 4: TP9, AF7, AF8, TP10.

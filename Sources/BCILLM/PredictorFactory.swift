@@ -129,18 +129,17 @@ public enum PredictorFactory {
 
     /// Where we look for MLX weights, in priority order:
     ///   1. `NEURALCOMPOSE_MLX_MODEL` env var: an absolute path *or* a folder
-    ///      name resolved under `Models/`. Applies to either backend.
-    ///   2. `Models/<backend.defaultModelName>/`.
+    ///      name looked up by `ModelLocator`. Applies to either backend.
+    ///   2. `<backend.defaultModelName>/`, looked up by `ModelLocator`.
     private static func resolveDefaultDirectory(backend: MLXBackend) -> URL? {
         let env = ProcessInfo.processInfo.environment["NEURALCOMPOSE_MLX_MODEL"]
         if let env = env, !env.isEmpty {
             if env.hasPrefix("/") {
                 return URL(fileURLWithPath: env)
             }
-            return URL(fileURLWithPath: defaultMLXBaseDir).appendingPathComponent(env)
+            return ModelLocator.url(for: env)
         }
-        return URL(fileURLWithPath: defaultMLXBaseDir)
-            .appendingPathComponent(backend.defaultModelName)
+        return ModelLocator.url(for: backend.defaultModelName)
     }
 
     /// `NEURALCOMPOSE_MLX_BACKEND` env var (`"qwen"`/`"gemma"`,

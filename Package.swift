@@ -35,9 +35,11 @@ let package = Package(
         .library(name: "BCILLM",        targets: ["BCILLM"]),
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
         .library(name: "BCICloudBridge", targets: ["BCICloudBridge"]),
+        .library(name: "BCIPeerBridge",  targets: ["BCIPeerBridge"]),
         .library(name: "WorldModelDemo", targets: ["WorldModelDemo"]),
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
+        .executable(name: "RSPEmbedding", targets: ["RSPEmbedding"]),
         .executable(name: "MLXProbe", targets: ["MLXProbe"]),
         .executable(name: "SpectralProbe", targets: ["SpectralProbe"]),
         .executable(name: "GenerationEval", targets: ["GenerationEval"]),
@@ -72,6 +74,7 @@ let package = Package(
         .target(
             name: "BCICore",
             path: "Sources/BCICore",
+            exclude: ["Dialectic/MATH.md", "Dialectic/FIELD_V2.md", "Dialectic/README.md", "Dialectic/WITNESS.md"],
             swiftSettings: strictConcurrency
         ),
 
@@ -121,20 +124,46 @@ let package = Package(
             linkerSettings: [.linkedFramework("Speech")]
         ),
 
-        // ── Cloud bridge (the ONE deliberate network-egress module) ──────
-        // Quarantines the sole runtime exception to the "No network at
-        // runtime" invariant (decision_registry.md entry 8): the opt-in
-        // Stage-5 hypnagogic loop's cloud LLM. Kept OUT of BCILLM on purpose —
-        // the boundary contract names Sources/BCILLM/ as off-limits for cloud
+        // ── Cloud bridge (one of two deliberate network-egress modules) ──
+        // Quarantines one runtime exception to the "No network at runtime"
+        // invariant (decision_registry.md entry 8; see entry 9 and
+        // BCIPeerBridge below for the second): the opt-in Stage-5
+        // hypnagogic loop's cloud LLM. Kept OUT of BCILLM on purpose — the
+        // boundary contract names Sources/BCILLM/ as off-limits for cloud
         // models — and depends only on BCICore (the TextGenerating seam), with
         // no MLX/AVFoundation. Egress is via the local `claude` CLI subprocess
         // (Foundation.Process); no HTTP client, no API key on disk. Imported
         // only by NeuralComposeApp; must never become a dependency of any other
         // BCI* target.
+        //
+        // The `Prompts/` subdirectory is the source of truth for system
+        // prompts (ADR-009 invariant #1: prompt profiles are repository
+        // resources, not code on the runtime). Declared as a processed
+        // resource so each `.md` is a `Bundle.module`-accessible URL.
         .target(
             name: "BCICloudBridge",
             dependencies: ["BCICore"],
             path: "Sources/BCICloudBridge",
+            resources: [.process("Prompts")],
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── Peer bridge (the second deliberate network-egress module) ────
+        // Quarantines the second runtime exception to the "No network at
+        // runtime" invariant (decision_registry.md entry 9): the opt-in
+        // two-machine hypnagogic dialectic bridge, which swaps
+        // `HypnagogicDialecticLoop`'s injected listener/speaker seam for a
+        // direct TCP connection to a peer machine over Tailscale, behind the
+        // NEURALCOMPOSE_BRIDGE_PEER/_SESSION launch-environment pair. Egress
+        // is a plain TCP socket to a tailnet address — no HTTP client, no
+        // credentials, no API key. Depends only on BCICore (the
+        // Listening/Speaking seams), no AVFoundation/MLX. Imported only by
+        // NeuralComposeApp; must never become a dependency of any other
+        // BCI* target.
+        .target(
+            name: "BCIPeerBridge",
+            dependencies: ["BCICore"],
+            path: "Sources/BCIPeerBridge",
             swiftSettings: strictConcurrency
         ),
 
@@ -155,13 +184,13 @@ let package = Package(
         // ── Application ──────────────────────────────────────────────────
         .executableTarget(
             name: "NeuralComposeApp",
-            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice", "BCICloudBridge", "WorldModelDemo"],
+            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice", "BCICloudBridge", "BCIPeerBridge", "WorldModelDemo"],
             path: "Sources/NeuralComposeApp",
             // Info.plist lives in Resources/ for reference / Xcode builds but
             // is intentionally NOT declared as a SwiftPM resource: SwiftPM
             // forbids Info.plist as a top-level resource. `swift run` produces
             // a runnable binary without one.
-            exclude: ["Resources/Info.plist"],
+            exclude: ["Resources/Info.plist", "Resources/NeuralCompose.icns"],
             swiftSettings: strictConcurrency
         ),
 
@@ -194,6 +223,18 @@ let package = Package(
             name: "SemanticEval",
             dependencies: ["BCICore", "BCIClassifier"],
             path: "Sources/SemanticEval",
+            swiftSettings: strictConcurrency
+        ),
+
+        // ── Offline RSP embedding bridge ──────────────────────────────────
+        // A scientific CLI only: it reads text from a temporary local file and
+        // emits normalized vectors for the Python feature exporter. It is not
+        // linked into the app and never writes dialogue text or vectors into a
+        // telemetry artifact.
+        .executableTarget(
+            name: "RSPEmbedding",
+            dependencies: ["BCICore", "BCIClassifier"],
+            path: "Sources/RSPEmbedding",
             swiftSettings: strictConcurrency
         ),
 
@@ -319,13 +360,18 @@ let package = Package(
             path: "Tests/BCICloudBridgeTests"
         ),
         .testTarget(
+            name: "BCIPeerBridgeTests",
+            dependencies: ["BCIPeerBridge", "BCICore"],
+            path: "Tests/BCIPeerBridgeTests"
+        ),
+        .testTarget(
             name: "WorldModelDemoTests",
             dependencies: ["WorldModelDemo", "BCICore"],
             path: "Tests/WorldModelDemoTests"
         ),
         .testTarget(
             name: "NeuralComposeAppTests",
-            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice"],
+            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice", "BCIPeerBridge", "BCICloudBridge"],
             path: "Tests/NeuralComposeAppTests"
         ),
     ],

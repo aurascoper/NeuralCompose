@@ -145,8 +145,8 @@ public enum SpectralStateEstimatorFactory {
             if env.hasPrefix("/") {
                 return URL(fileURLWithPath: env)
             }
-            return URL(fileURLWithPath: "Models").appendingPathComponent(env)
+            return ModelLocator.url(for: env)
         }
-        return URL(fileURLWithPath: defaultModelDirectory)
+        return ModelLocator.url(for: "EEGEncoder")
     }
 }

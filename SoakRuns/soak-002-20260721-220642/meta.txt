@@ -1,0 +1,8 @@
+soak-matrix run @ Tue Jul 21 22:06:42 CDT 2026
+base_dir: /Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220642
+runs_per_cell: 1
+cells: 1
+heard_lines: 1
+branch: research/rust-workspace
+commit: 9eff129856034b13727edbab5bf0f1c88e72bc9a
+binary: .build/debug/dialectic-session

@@ -1,0 +1,88 @@
+hypothesis:
+  id: reflective_prosody_v1
+  status: pre_registered
+  proposed_at: 2026-07-22
+  concern: Science
+  title: Pause-before synthesis predictor
+
+  question: >
+    Do measured pre-utterance pauses predict whether a dialectical turn
+    resolves as synthesis?
+
+  claim: >
+    Longer measured pauses before a voiced dialectical response increase the
+    probability that the same turn resolves as a synthesis outcome.
+
+  rationale: >
+    The semantic turn stream already distinguishes coherence, displacement,
+    synthesis, and silence. The prosody feature contract adds timing and
+    cadence targets without changing dialogue behavior. If synthesis is a
+    reflective integration event, it may be preceded by longer local delay
+    than ordinary coherence or displacement responses.
+
+  inputs:
+    dialectical_turns:
+      stream: dialectic-turns-YYYY-MM-DD.jsonl
+      schema: DialecticalTurnEvent
+      required_fields:
+        - index
+        - outcome
+        - spokenText
+    prosody_trace:
+      stream: prosody-trace-YYYY-MM-DD.jsonl
+      schema: ProsodyTraceEvent
+      required_fields:
+        - index
+        - source_kind
+        - dialogue_state.turn_index
+        - measured.pause_before
+      required_scope: dialectical_turn
+      current_pipeline_validation_source_kind: dialectical-turn-requested-prosody
+
+  join:
+    key: dialogue_state.turn_index -> DialecticalTurnEvent.index
+    eligibility: >
+      A record is eligible only when a ProsodyTraceEvent carries an explicit
+      turn index in dialogue_state and a measured.pause_before value. Requested
+      controls are useful for pipeline validation but must not be used as
+      acoustic evidence for acceptance.
+
+  prediction:
+    feature: measured.pause_before
+    unit: seconds
+    label: DialecticalTurnEvent.outcome starts with "synthesized:"
+    direction: positive
+    threshold_probe: 0.600
+    expected_effect: >
+      P(synthesis | pause_before > 0.600) is greater than
+      P(synthesis | pause_before <= 0.600).
+
+  acceptance:
+    primary_metric: roc_auc
+    criterion: roc_auc >= 0.70
+    minimum_sample_size:
+      eligible_spoken_turns: 100
+      synthesis_turns: 10
+    held_out_requirement: >
+      The acceptance result must be computed on a run that was not used to tune
+      pause thresholds, feature extraction parameters, or analysis code.
+    analysis_runner: Scripts/analyze_prosody_hypothesis.py
+    output_schema: prosody-hypothesis-analysis-v0
+
+  rejection:
+    - roc_auc < 0.70 on eligible held-out telemetry
+    - eligible_spoken_turns < 100
+    - synthesis_turns < 10
+    - effect direction is negative
+    - analysis relies on requested controls instead of measured prosody
+
+  non_goals:
+    - Change dialogue generation.
+    - Change speech synthesis behavior.
+    - Clone or select a voice.
+    - Infer mental state from cadence.
+    - Promote any Julia model or Rust kernel into the Swift runtime.
+
+  promotion_rule: >
+    A supported result promotes this question to Julia reference modeling over
+    joined telemetry. It does not by itself justify a Rust production kernel.

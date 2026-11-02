@@ -1,0 +1,140 @@
+{
+  "input_path": "/Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220821/runs/F_qwen05b.jsonl",
+  "turn_count": 1,
+  "outcome_counts": {
+    "displacement-seeking": 1
+  },
+  "repetition": {
+    "total_spoken": 1,
+    "total_bigrams": 24,
+    "total_trigrams": 23,
+    "distinct_bigrams": 24,
+    "distinct_trigrams": 23,
+    "bigram_diversity": 1.0,
+    "trigram_diversity": 1.0,
+    "most_repeated_bigrams": [],
+    "most_repeated_trigrams": []
+  },
+  "opening_diversity": {
+    "total_turns": 1,
+    "distinct_openings": 1,
+    "opening_diversity": 1.0,
+    "most_repeated_openings": []
+  },
+  "self_distance": {
+    "n_pairs": 0,
+    "mean_jaccard": 0.0,
+    "mean_existing_self_similarity": null,
+    "note": ""
+  },
+  "witness_frequency": {
+    "total_turns": 1,
+    "witness_attempted": 0,
+    "witness_finding_present": 0,
+    "witness_finding_rate": 0.0,
+    "witness_finding_rate_overall": 0.0,
+    "by_outcome": {
+      "displacement-seeking": {
+        "attempted": 0,
+        "finding": 0,
+        "total": 1
+      }
+    }
+  },
+  "entropy": {
+    "window": 10,
+    "mean_entropy": 0.0,
+    "min_entropy": 0.0,
+    "max_entropy": 0.0,
+    "first_half_mean": 0.0,
+    "second_half_mean": 0.0
+  },
+  "attractor_persistence": {
+    "epsilon": 0.65,
+    "mean_persistence_turns": 0.0,
+    "max_persistence_turns": 0,
+    "persistence_distribution": {
+      "0": 1
+    }
+  },
+  "transitions": {
+    "matrix": {
+      "coherence-seeking": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 0,
+        "synthesis": 0,
+        "silent": 0
+      },
+      "displacement-seeking": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 0,
+        "synthesis": 0,
+        "silent": 0
+      },
+      "synthesis": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 0,
+        "synthesis": 0,
+        "silent": 0
+      },
+      "silent": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 0,
+        "synthesis": 0,
+        "silent": 0
+      }
+    },
+    "row_totals": {},
+    "column_totals": {
+      "displacement-seeking": 1
+    }
+  },
+  "witness_influence": {
+    "n_with_finding": 0,
+    "horizon": 3,
+    "overall_next_k_distribution": {
+      "coherence-seeking": 0.0,
+      "displacement-seeking": 0.0,
+      "synthesis": 0.0,
+      "silent": 0.0
+    },
+    "witness_next_k_distribution": {
+      "coherence-seeking": 0.0,
+      "displacement-seeking": 0.0,
+      "synthesis": 0.0,
+      "silent": 0.0
+    },
+    "per_outcome_shift": {
+      "coherence-seeking": 0.0,
+      "displacement-seeking": 0.0,
+      "synthesis": 0.0,
+      "silent": 0.0
+    }
+  },
+  "latency": {
+    "n_intervals": 0,
+    "note": "insufficient turns",
+    "mean_turn_index_gap": 0.0,
+    "median_turn_index_gap": 0.0
+  },
+  "provenance": {
+    "total_turns": 1,
+    "turns_with_fingerprint": 1,
+    "fingerprint_rate": 1.0,
+    "note": "0/140 is the expected baseline pre-b9c09fd-live-app. The core runtime records fingerprints (commit b9c09fd); the live app will start recording them once the AppViewModel + LiveRuntimeFactory wiring lands."
+  },
+  "named_phrases": {
+    "we should consider whether there might be another variable": {
+      "count": 0,
+      "positions": []
+    },
+    "in a live dialogue": {
+      "count": 0,
+      "positions": []
+    },
+    "as a human i": {
+      "count": 0,
+      "positions": []
+    }
+  }
+}

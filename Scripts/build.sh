@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# build.sh — build NeuralCompose with sensible defaults.
+# build.sh - build NeuralCompose with sensible defaults.
 #
 # Usage:
 #   ./Scripts/build.sh                   # synthetic / stub build (no BrainFlow, no MLX weights)
@@ -63,9 +63,42 @@ if [[ "$USE_BRAINFLOW" -eq 1 ]]; then
     echo "Linking against BrainFlow at ${BRAINFLOW_PATH}"
 fi
 
-echo "swift build ${ARGS[*]}"
-swift build "${ARGS[@]}"
-BUILD_EXIT=$?
+CAP_CONFIG="Debug"
+if [[ "$CONFIG" == "release" ]]; then
+    CAP_CONFIG="Release"
+fi
+
+LINK_FILE_LIST="$REPO_ROOT/.build/out/Intermediates.noindex/NeuralCompose.build/$CAP_CONFIG/NeuralCompose-p.build/Objects-normal/arm64/NeuralCompose.LinkFileList"
+CMLX_OBJ="$REPO_ROOT/.build/out/Products/$CAP_CONFIG/Cmlx.o"
+OUT_BIN="$REPO_ROOT/.build/out/Products/$CAP_CONFIG/NeuralCompose"
+
+if [[ "$USE_BRAINFLOW" -eq 1 && -f "$LINK_FILE_LIST" && -f "$CMLX_OBJ" ]]; then
+    echo "swift build --target BCIEEG ${ARGS[*]}"
+    swift build --target BCIEEG "${ARGS[@]}"
+    SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
+    SWIFT_LIB_DIR="$(dirname "$(xcrun --find swiftc)")/../lib/swift/macosx"
+    echo "Relinking $OUT_BIN with libBoardController.dylib..."
+    xcrun clang++ -target arm64-apple-macosx14.0 -isysroot "$SDK_PATH" \
+        -L"$REPO_ROOT/.build/out/Products/$CAP_CONFIG" \
+        -L"$SWIFT_LIB_DIR" \
+        -L"/usr/lib/swift" \
+        -F"$REPO_ROOT/.build/out/Products/$CAP_CONFIG/PackageFrameworks" \
+        -F"$SDK_PATH/System/Library/Frameworks" \
+        "@$LINK_FILE_LIST" \
+        -L"${BRAINFLOW_PATH}/compiled" -lBoardController \
+        -lc++ -framework Accelerate -framework Metal -framework Foundation -framework AppKit \
+        -framework SwiftUI -framework Combine -framework CoreBluetooth -framework AVFoundation \
+        -framework Speech -framework CoreAudio -framework AudioToolbox \
+        -Xlinker -rpath -Xlinker "$SWIFT_LIB_DIR" \
+        -Xlinker -rpath -Xlinker "@executable_path" \
+        -Xlinker -rpath -Xlinker "${BRAINFLOW_PATH}/compiled" \
+        -o "$OUT_BIN"
+    BUILD_EXIT=$?
+else
+    echo "swift build ${ARGS[*]}"
+    swift build "${ARGS[@]}"
+    BUILD_EXIT=$?
+fi
 
 # Copy BrainFlow runtime dylibs next to binary for local testing
 if [[ "$USE_BRAINFLOW" -eq 1 && "$BUILD_EXIT" -eq 0 ]]; then
@@ -78,3 +111,4 @@ if [[ "$USE_BRAINFLOW" -eq 1 && "$BUILD_EXIT" -eq 0 ]]; then
 fi
 
 exit $BUILD_EXIT
+

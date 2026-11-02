@@ -6,10 +6,27 @@ captures *why* the work happened, not just *what* changed. A **negative result i
 
 Sequence: **Integrate → Benchmark → Optimize → Stop.** The loop resumes from the last entry below.
 
+**`Harness:` is mandatory and is not decoration.** Node 26 was drafted comparing a
+rho measured on `ParticleNavigatorEnv`/`mpc.py` against one measured on
+`synthetic_1f`/`forward_eval.py`, and read as though the two spoke to each other.
+They do not: different env, encoder, task and planner. The vocabulary matched at
+every level except the code underneath, because both lines independently built an
+oracle and independently repaired their benchmark. **A node may not compare a
+number against one from a different `Harness:` line without saying so in the same
+sentence.** A third harness (real EEG) is planned, so this will recur.
+
+**Harness of nodes 0-25.** All twenty-six predate the `Harness:` field and all are
+`synthetic_1f` / `forward_eval.py` / CEM. This is a recorded fact, not an inference
+per node: a term audit at 0a53620 over the whole ledger counted `synthetic_1f` 14,
+`forward_eval` 14, `cem_iters` 8, against `ParticleNavigator` 0, `mpc.py` 0,
+`sweep.py` 0, `HARD_CASES` 0, `MPPI` 0. Per-node declarations begin at node 27.
+
 Entry template:
 ```
 ## <n> — <short title>  (<date>, commit <sha>)
 - Category: Integrate | Benchmark | Test | Optimize | Document
+- Harness: <env> / <eval entry point> / <planner>
+- Provenance: <checkpoint id | trained in-process> / <config that fixes the number>
 - Hypothesis:
 - Prediction:
 - Implementation:      (files touched; provenance: ported-from / reason / differences)
@@ -502,3 +519,146 @@ Two reviewers verified the delivered synthetic A/Bs are sound (symlog threaded i
 - Decision: **THERE ARE TWO INDEPENDENT COST DEFECTS, not one.** (i) the latent distance is a weak proxy for the control objective, rho ~ 0.25 at best, and (ii) the predictor destroys even that, rho -0.018. Node 24 correctly rejected forward-model ACCURACY as the lever and named rank preservation; this refines it. **A perfectly rank-preserving predictor on this metric would cap near 76%, not the 93.5% ceiling.** The remaining ~17.5 points are the goal metric's own weakness and no forward-model change can recover them.
 - **The complete measured chain, ceiling downward:** true position cost 93.5% -> true latent cost, one frame (rho 0.25) 76.0% -> true latent cost, two frames (rho 0.074, 41% inverted) 37.5% -> predictor cost (rho -0.018) 35.0%. Each step is a measured loss with a named cause.
 - Next question: unchanged in kind and now fully specified. This is the design decision node 13 reserved for the user, and both halves of it now have numbers. A control-aware goal metric must lift rho from 0.25; a rank-preserving training signal must stop the predictor driving it to zero. **They are separable and should be attempted separately**, since fixing only the predictor caps at 76% and fixing only the metric leaves the predictor destroying it. The one-frame goal is a prerequisite for either — it is free, it removes a 41.3% sign inversion, and nodes 22 and 25 both show it is necessary though not sufficient.
+
+---
+
+## 26 — RETRACTED BEFORE COMMIT: a cross-harness comparison, and the branch that produced it (2026-08-03, commit <pending>)
+- Category: Document
+- Harness: n/a — this node is about two harnesses being conflated
+- Provenance: n/a — retracts rather than reports. The retracted draft's own
+  provenance was `ParticleNavigatorEnv` checkpoints trained in-process at
+  n=2000 trajectories / 75 epochs / latent_dim=32 / seed=0, which is exactly
+  the field whose absence from node 25 makes that comparison unrecoverable.
+- Hypothesis: a draft node 26 claimed to resolve node 25's branch (i). It reported that a
+  nonlinear head on a frozen latent reads `rho = 0.938` where the incumbent
+  `norm(z - z_goal)` reads `0.43`, and set that against node 25's `rho ~ 0.25` — concluding
+  the goal metric's FORM is the defect and the representation is adequate.
+- Prediction: two were registered before the run and both were wrong, which is the only part
+  of the draft worth keeping. Reviewer predicted `rho 0.8-0.9` for a learned head; operator
+  revised to `~0.4` after seeing a LINEAR head at `+0.483`, on the argument that the latent
+  lacked velocity. The MLP reached `+0.938`. The linear result measured **linear
+  decodability**, not information content — a robustness check was the only thing that caught
+  it before it was reported as a conclusion.
+- Implementation: **the defect.** Every number in the draft came from `ParticleNavigatorEnv` +
+  `mpc.py` (MPPI, `HARD_CASES`, the PD reference controller) on checkpoints trained on that
+  env. Node 25 measured on `synthetic_1f` + `forward_eval.py` (CEM, 150 episodes x 64
+  candidates). Different env, encoder, task and planner. `rho 0.938` and `rho 0.25` were never
+  comparable and the draft's central sentence set them side by side.
+- Evidence — how a conflation survived two careful readers:
+  - `grep` over this ledger, nodes 0-25: `synthetic_1f` 14, `forward_eval` 14, `cem_iters` 8;
+    `ParticleNavigator` **0**, `mpc.py` **0**, `sweep.py` **0**, `HARD_CASES` **0**, `MPPI` **0**.
+  - **Both lines independently built an oracle and independently repaired their benchmark.**
+    Line A: node 19's action-channel ablation ladder (ORACLE full 100%) and node 15's
+    `log(d_final/d_start)` with per-episode generators. Line B: a PD controller reaching 7/7 in
+    21-33 of 50 steps, and a graded `normalized_progress` validated against oracle/random/zero.
+    The vocabulary matched at every level except the code underneath, which is precisely why
+    neither reader caught it from the prose.
+  - **The tell was present and was explained away.** A review correction moved the true-state
+    control input from 5-d to 6-d. A 6-d state of position/velocity/goal is TWO-dimensional;
+    `synthetic_1f`'s `pos` and `vel` are scalars. The dimensionality mismatch was pointing at a
+    harness mismatch and was filed as an arithmetic slip instead.
+  - **A numbering collision had the same root.** This branch forked at `611b07e` when the
+    ledger genuinely ended at node 6, then appended its own 7, 8, 9 while `origin/main`
+    independently reached 25. The mismatch was flagged three times and each time adjudicated
+    between two machines rather than against their shared upstream, which was one `git fetch`
+    away throughout.
+- Decision: **RETRACT the draft; do not re-file it silently.** The MEASUREMENT is real and the
+  method is sound — it simply measures Line B, where node 25's question was never asked.
+  **Line B (`ParticleNavigatorEnv`/MPPI) is CLOSED**, and not because Line A duplicated its
+  instruments: node 21 repaired the representation completely (`pos`/`vel` R^2 1.0000) and
+  control did not move, so an objective change cannot be the lever on either line. This
+  branch's nodes 7-9 (a SIGReg/VICReg objective A/B, an unbounded-arena test, and a benchmark
+  repair) are **dropped rather than renumbered** — renumbering them into this sequence would
+  make them read as continuous with Line A, which is the same misreading the draft made.
+  - **Two independent convergences are worth keeping.** Line B's objective A/B found
+    representation metrics improving while control stayed flat, which is node 21's finding by a
+    different route on a different env. And Line B hit the rotational-gauge obstruction between
+    the online and target encoders (a goal-anchored L2 is not O(n)-invariant when the two
+    latents come from different maps) — the same defect node 14 measured as ~75-80% pure
+    translation from the EMA lag.
+  - **A tested SIGReg implementation exists** (Epps-Pulley on random 1-D projections, 18
+    regressions) on `research/worldmodel-sigreg-ab`. `origin/main` has none while this ledger
+    discusses SIGReg 3x and VISReg 2x. It is deliberately NOT ported: node 14 parked objectives
+    for a resolving-power reason that node 16 has since removed, but node 21 supplies a better
+    one. If the cost defects are fixed and the objective question reopens, it is there.
+- Next question: node 25's branch (i) is **still open on Line A** and this is the right
+  instrument for it — a nonlinear head on the frozen `forward_eval` latent, regressing true
+  cost-to-go, against the incumbent `norm(z - z_goal)`. **Register the prediction first and
+  expect it may not replicate:** `synthetic_1f`'s latent is dominated by held per-trajectory
+  nuisance factors (`chi`, `peak_amp`, `offset`) in a way `ParticleNavigatorEnv`'s is not, so a
+  head may recover far less there. A null would be informative — it would say the two lines
+  differ in whether the goal-relevant structure is nonlinearly present, which is a fact about
+  the generators worth having. The `Harness:` field added to the template above is the gate for
+  the failure this node records.
+
+---
+
+## 27 — Characterization: epochs and latent_dim move frame alignment and goal geometry SEPARATELY (2026-08-03, commit a43469a)
+- Category: Benchmark
+- Harness: synthetic_1f / forward_eval.py + frame_diagnostic.py / CEM-era encode path (no planner; TRUE-env rollouts)
+- Provenance: trained in-process, n=384, mode=signal, epochs {8, 22, 30} x latent_dim {32, 64} x seeds {0,1,2} (18 runs); frame diagnostic over 200 start/goal pairs, goal_offset 0.4; rho over 60 episodes x 64 candidates, horizon 6.
+- Hypothesis: node 25's `rho ~ 0.25` and its 41.3% two-frame inversion could not be reproduced
+  (a fresh run read one-frame **0.668**, two-frame **0.648**, 2.0% inverted, `mismatch_to_displacement_ratio`
+  **0.381**). Two candidate levers were proposed: training maturity, and `latent_dim` per node 13.
+  Framed as a CHARACTERIZATION of this harness, not a reproduction — node 25 records no provenance,
+  so matching its numbers could never identify its config.
+- Prediction: **two were registered before the run and BOTH held, on different axes** — the cleanest
+  prediction record in this ledger, most of which records a wrong one.
+  - **Reviewer:** ratio falls monotonically with epochs and one-frame rho rises monotonically with it.
+  - **Operator:** `latent_dim` moves one-frame rho while leaving the ratio roughly flat (node 13's
+    dissociation), and epochs move neither much. The second clause was WRONG; epochs move both.
+- Evidence:
+
+  | epochs | ldim | ratio | centroid_gap | 1f mean | 1f med | 1f neg | 2f mean | 2f neg |
+  |---|---|---|---|---|---|---|---|---|
+  | 8 | 32 | 1.231 | 0.457 | 0.377 | 0.364 | 8.9% | 0.307 | 18.3% |
+  | 8 | 64 | 1.319 | 0.705 | 0.326 | 0.328 | 13.9% | 0.262 | 22.8% |
+  | 22 | 32 | 0.440 | 0.093 | 0.565 | 0.567 | 2.2% | 0.558 | 2.8% |
+  | 22 | 64 | 0.434 | 0.116 | 0.471 | 0.485 | 6.7% | 0.447 | 8.9% |
+  | 30 | 32 | **0.397** | 0.094 | **0.638** | 0.681 | 0.6% | 0.621 | 1.1% |
+  | 30 | 64 | 0.389 | 0.113 | 0.524 | 0.549 | 5.6% | 0.503 | 8.3% |
+
+  - **Epochs move both, monotonically at both latent_dim.** Ratio 1.231 -> 0.440 -> 0.397; one-frame
+    rho 0.377 -> 0.565 -> 0.638.
+  - **`latent_dim` moves ONLY the goal geometry, and the separation is an order of magnitude.** At 22
+    epochs, 32->64 changes the ratio by **-1.4%** and one-frame rho by **-16.6%**; at 30 epochs,
+    **-2.0%** against **-17.9%**. Node 13's dissociation, reproduced on a second instrument.
+  - **The maturity curve is FLAT by 22 epochs.** 8->22 is 2.75x the gradient steps and buys 2.8x on the
+    ratio; 22->30 is 1.36x and buys 1.11x. **Maturity therefore cannot close a 10x gap anywhere in the
+    mature range** — the EMA time constant at tau=0.99 is ~100 steps and every cell here is thousands
+    of steps past it.
+  - **The `latent_dim` penalty GROWS with training**, which node 13 does not state: the one-frame gap
+    between ldim 32 and 64 is 0.051 at 8 epochs, 0.094 at 22, 0.114 at 30. The larger latent does not
+    catch up; it falls further behind. Invisible in any single-epoch comparison.
+  - **`centroid_gap` plateaus while the ratio keeps falling.** 0.457 -> 0.093 -> 0.094 against ratio
+    1.231 -> 0.440 -> 0.397. Translation converges by 22 epochs, so the ratio's continued improvement
+    past that is NON-translational — and node 14 measured the mismatch as ~75-80% pure translation, so
+    what maturity is still working on after 22 epochs is the remaining 20-25%.
+  - **The `latent_dim` effect on the ratio flips sign at 8 epochs**: **+7.1%** (1.231 -> 1.319) against
+    -1.4% and -2.0% at 22 and 30. State the dissociation as "flat to within noise at >= 22 epochs, sign
+    inconsistent at 8" — a reader extrapolating it to short training would be extrapolating past data.
+- **OPEN AND UNEXPLAINED: node 21's ratio is inconsistent with this characterization.** Node 21 reports
+  **4.25** post-repair; a 22-epoch / ldim-32 run — Line A's own cited standard, same harness, same
+  repaired generator — reads **0.440** here. That is a factor of ten inside a single line, and the flat
+  maturity curve above rules out training length as the explanation anywhere in the mature range.
+  Either node 21's checkpoint departed substantially from the standard config, or a parameter outside
+  this sweep differs, or that measurement needs review. **Node 21 records no provenance either**, so it
+  cannot be settled from the ledger — the second instance of the gap `Provenance:` was added to close,
+  found by the first work done under the rule.
+- **Node 25 is CONSISTENT WITH a node-21-era checkpoint, and is not identified.** The frame penalty
+  (two-frame minus one-frame negative rate) tracks the ratio: +9.4/+8.9pp at ratio ~1.2-1.3,
+  +0.6/+2.2pp at ~0.44, +0.5/+2.7pp at ~0.39. Node 25's penalty is **+23.5pp** (41.3% against 17.8%),
+  which extrapolates to a ratio of roughly **2-4** — a bracket containing node 21's 4.25. Six noisy
+  points and no established functional form: this is a BRACKET, not a fit, and consistency is not
+  identification. Node 25's provenance is unrecorded and no amount of matching recovers it.
+- Decision: **KEEP as characterization.** Two levers, separable, with `latent_dim` specific to goal
+  geometry and epochs general but saturating. `n=384` is crossed off the residual list (it matches Line
+  A's standard and was used here); remaining candidates for the node-21 discrepancy are learning rate,
+  `ema_tau`, batch size and mode.
+- Next question: **test `ema_tau` first.** It targets the ratio directly, it is one parameter, and it is
+  the only candidate whose mechanism is specifically frame alignment rather than general training
+  quality — a tau above 0.99 slows target tracking and should raise the ratio without much touching
+  one-frame rho. If tau alone reaches ~4 at 22 epochs, the residual is identified. **Cheaper first:**
+  any surviving Line A checkpoint on the GPD answers both open questions outright, since the v2 format
+  persists `config` (`eeg_jepa.py:609-619`). That check short-circuits node 21's ratio and node 25's
+  rho together.

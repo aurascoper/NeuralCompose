@@ -1,0 +1,35 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "1200";
+    object      pH;
+}
+dimensions      [0 0 0 0 0 0 0];
+internalField   nonuniform List<scalar>
+4
+(
+7.35
+7.35
+6.85
+6.85
+);
+boundaryField
+{
+    inlet
+    {
+        type            zeroGradient;
+        flux_mol_s      0;
+    }
+    outlet
+    {
+        type            zeroGradient;
+        flux_mol_s      0;
+    }
+    walls
+    {
+        type            zeroGradient;
+        flux_mol_s      0;
+    }
+}

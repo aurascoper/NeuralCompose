@@ -1,5 +1,6 @@
 import Foundation
 import BCICore
+import BCIBridge
 import BCIEEG
 import BCIClassifier
 import BCILLM
@@ -60,6 +61,10 @@ public struct AppContainer: Sendable {
     /// default). Deliberately excluded from `PipelineMode` — that type
     /// drives the real pipeline's status banner.
     public let worldModelDemoResolved: WorldModelDemoFactory.Resolved
+    /// `~/Documents/NeuralCompose/voice-profile.json` as loaded at launch (nil if
+    /// absent or malformed). Kept for the hypnagogic listener, which the view
+    /// model builds lazily and which reads the recognition vocabulary from it.
+    public let voiceProfile: VoiceProfile?
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
@@ -110,8 +115,10 @@ public struct AppContainer: Sendable {
         jepaTransitionCapture: any JEPATransitionCapturing = NullJEPATransitionCapture(),
         worldModelDemoResolved: WorldModelDemoFactory.Resolved = .init(
             engine: BaselineWorldModelDemoPlanner(), kind: .baseline, warning: nil
-        )
+        ),
+        voiceProfile: VoiceProfile? = nil
     ) {
+        self.voiceProfile = voiceProfile
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
         self.predictorResolved = predictorResolved
@@ -189,7 +196,7 @@ public struct AppContainer: Sendable {
         let sentenceEmbedderBackend: String
         do {
             sentenceEmbedder = try CoreMLSentenceEmbedder(
-                modelDirectory: URL(fileURLWithPath: "Models/BGE-small-en-v1.5")
+                modelDirectory: ModelLocator.url(for: "BGE-small-en-v1.5")
             )
             sentenceEmbedderBackend = "coreml"
         } catch {
@@ -236,12 +243,17 @@ public struct AppContainer: Sendable {
             spectralEstimatorResolved: spectralEstimator,
             interactionLogger: interactionLogger,
             jepaTransitionCapture: jepaTransitionCapture,
-            worldModelDemoResolved: worldModelDemo
+            worldModelDemoResolved: worldModelDemo,
+            voiceProfile: voiceProfile
         )
     }
 
     private static func profileFromEnvironment() -> MuseBoardProfile {
-        let raw = ProcessInfo.processInfo.environment["NEURALCOMPOSE_BOARD_PROFILE"] ?? "synthetic"
+        let env = ProcessInfo.processInfo.environment
+        let defaultProfile = (NSClassFromString("XCTestCase") == nil && bci_bridge_is_available())
+            ? "muses"
+            : "synthetic"
+        let raw = env["NEURALCOMPOSE_BOARD_PROFILE"] ?? defaultProfile
         switch raw.lowercased() {
         case "muse2", "musetwo", "muse2-ble", "musetwo-ble":
             return .museTwoNativeBLE

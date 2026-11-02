@@ -13,6 +13,8 @@ import BCIBridge
 public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
 
     public let profile: MuseBoardProfile
+    public private(set) var activeProfile: MuseBoardProfile
+    internal private(set) var preferredProfile: MuseBoardProfile
     public private(set) var effectiveSampleRate: Double
     public private(set) var channelCount: Int
 
@@ -29,12 +31,12 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
     ///   than this, the stream finishes with `.streamFailed` instead of
     ///   polling forever. `bci_bridge_drain_samples` returning `BCI_OK`
     ///   with zero samples is BrainFlow's normal "nothing new yet"
-    ///   response — indistinguishable, at the status-code level, from a
+    ///   response - indistinguishable, at the status-code level, from a
     ///   BLE link that has silently died (device out of range, powered
     ///   off, or Muse's own ~30s poor-signal auto-shutoff). Without this,
     ///   a silent disconnect never throws or completes, so
     ///   `AppViewModel`'s retry/backoff/fallback-to-synthetic supervisor
-    ///   — which only reacts to the stream throwing or finishing — never
+    ///   - which only reacts to the stream throwing or finishing - never
     ///   fires, and the UI's last-known channel health/signal-quality
     ///   state freezes indefinitely with no indication it's stale. 5s
     ///   default: long enough that normal per-poll jitter never
@@ -48,6 +50,8 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
         macAddress: String? = nil
     ) {
         self.profile = profile
+        self.activeProfile = profile
+        self.preferredProfile = profile
         self.pollIntervalSec = pollIntervalSec
         self.staleTimeoutSec = staleTimeoutSec
         self.serialPort = serialPort
@@ -56,44 +60,161 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
         self.channelCount = profile.channelLabels.count
     }
 
+    /// Returns the sibling native BLE profile to retry when a Muse S headset
+    /// has updated (Athena) or legacy GATT firmware.
+    internal static func fallbackMuseSProfile(for profile: MuseBoardProfile) -> MuseBoardProfile? {
+        switch profile {
+        case .museSNativeBLE, .museTwoNativeBLE:
+            return .museSAthena
+        case .museSAthena:
+            return .museSNativeBLE
+        default:
+            return nil
+        }
+    }
+
+    /// Strips Athena-only `other_info` tokens (`low_latency`, `p10xx`/`p41xx` presets)
+    /// when targeting a legacy Muse native BLE board (`38` or `39`), because
+    /// BrainFlow's `MuseOptions::parse_preset_options(..., PresetFamily::Legacy, false)`
+    /// rejects those tokens with `INVALID_ARGUMENTS_ERROR`.
+    internal static func sanitizeOtherInfo(_ raw: String, for targetProfile: MuseBoardProfile) -> String {
+        guard targetProfile == .museSNativeBLE || targetProfile == .museTwoNativeBLE else {
+            return raw
+        }
+        let separators = CharacterSet(charactersIn: ",; \t\n\r")
+        let tokens = raw
+            .components(separatedBy: separators)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        var kept: [String] = []
+        for token in tokens {
+            let lower = token.lowercased()
+            if lower == "low_latency" || lower.hasPrefix("low_latency=") {
+                continue
+            }
+            let value: String
+            if let eq = lower.firstIndex(of: "=") {
+                let key = String(lower[..<eq]).trimmingCharacters(in: .whitespaces)
+                let rhs = String(lower[lower.index(after: eq)...]).trimmingCharacters(in: .whitespaces)
+                if key == "preset" || key == "board_preset" {
+                    value = rhs
+                } else {
+                    kept.append(token)
+                    continue
+                }
+            } else {
+                value = lower
+            }
+            if value.hasPrefix("p10") || value.hasPrefix("p41") {
+                continue
+            }
+            kept.append(token)
+        }
+        return kept.joined(separator: ";")
+    }
+
+    /// Promotes the sibling Muse S profile for the next `start()` attempt when
+    /// a session connects and starts streaming but yields zero EEG samples
+    /// before the stall timeout (which happens when board 39 connects to an
+    /// Athena headset's control characteristic without receiving legacy EEG
+    /// notifications).
+    @discardableResult
+    internal func recordZeroSampleStall(for stalledProfile: MuseBoardProfile) -> MuseBoardProfile? {
+        guard let sibling = Self.fallbackMuseSProfile(for: stalledProfile) else {
+            return nil
+        }
+        lock.withLock {
+            self.preferredProfile = sibling
+        }
+        BCILog.eeg.notice(
+            "BrainFlow: zero samples drained on \(stalledProfile.displayName); promoting sibling profile \(sibling.displayName) for next retry"
+        )
+        return sibling
+    }
+
     public func start() async throws -> AsyncThrowingStream<EEGSample, any Error> {
         guard bci_bridge_is_available() else {
             throw BCIError.bridgeUnavailable(reason: "BCIBridge compiled in stub mode")
         }
-        guard let boardID = profile.brainFlowBoardID else {
+        let primaryProfile = lock.withLock { preferredProfile }
+        guard primaryProfile.brainFlowBoardID != nil else {
             throw BCIError.streamConnectFailed(
-                profile: profile,
+                profile: primaryProfile,
                 underlying: "profile has no BrainFlow board id"
             )
         }
-        let paramsJSON = makeParamsJSON()
-        BCILog.eeg.debug("BrainFlow: boardID=\(boardID), profile=\(self.profile.displayName)")
 
-        var newHandle: bci_session_handle_t?
-        let status = bci_bridge_create_session(boardID, paramsJSON, &newHandle)
-        let statusCode = Int32(status.rawValue)
-        BCILog.eeg.debug("BrainFlow: prepare_session completed with status=\(statusCode)")
-
-        guard status == BCI_OK, let h = newHandle else {
-            throw BCIError.streamConnectFailed(profile: self.profile, underlying: "status \(status.rawValue)")
+        var candidates: [MuseBoardProfile] = [primaryProfile]
+        if let fallback = Self.fallbackMuseSProfile(for: primaryProfile),
+           fallback.brainFlowBoardID != nil,
+           !candidates.contains(fallback) {
+            candidates.append(fallback)
         }
+        if (primaryProfile == .museSNativeBLE || primaryProfile == .museSAthena),
+           !candidates.contains(.museTwoNativeBLE) {
+            candidates.append(.museTwoNativeBLE)
+        }
+
+        var openedHandle: bci_session_handle_t?
+        var currentProfile = primaryProfile
+        var lastFailureReason = "unknown"
+
+        for (index, candidate) in candidates.enumerated() {
+            guard let boardID = candidate.brainFlowBoardID else { continue }
+            let paramsJSON = makeParamsJSON(for: candidate)
+            if index > 0 {
+                BCILog.eeg.notice(
+                    "BrainFlow: retrying with sibling profile \(candidate.displayName) (boardID=\(boardID)) after \(primaryProfile.displayName) failed (\(lastFailureReason))"
+                )
+            } else {
+                BCILog.eeg.debug("BrainFlow: boardID=\(boardID), profile=\(candidate.displayName)")
+            }
+
+            var candidateHandle: bci_session_handle_t?
+            let createStatus = bci_bridge_create_session(boardID, paramsJSON, &candidateHandle)
+            let createCode = Int32(createStatus.rawValue)
+            BCILog.eeg.debug("BrainFlow: prepare_session (\(candidate.displayName)) completed with status=\(createCode)")
+
+            guard createStatus == BCI_OK, let h = candidateHandle else {
+                if let h = candidateHandle {
+                    bci_bridge_destroy_session(h)
+                }
+                lastFailureReason = "status \(createStatus.rawValue)"
+                continue
+            }
+
+            let startStatus = bci_bridge_start_stream(h, 30)
+            guard startStatus == BCI_OK else {
+                bci_bridge_destroy_session(h)
+                lastFailureReason = "start_stream \(startStatus.rawValue)"
+                continue
+            }
+
+            openedHandle = h
+            currentProfile = candidate
+            break
+        }
+
+        guard let h = openedHandle else {
+            throw BCIError.streamConnectFailed(profile: currentProfile, underlying: lastFailureReason)
+        }
+
+        lock.withLock {
+            self.preferredProfile = currentProfile
+        }
+        self.activeProfile = currentProfile
         let bridgeCh  = bci_bridge_eeg_channel_count(h)
         let bridgeSR  = bci_bridge_sample_rate(h)
         if bridgeCh > 0 { self.channelCount = Int(bridgeCh) }
         if bridgeSR > 0 { self.effectiveSampleRate = bridgeSR }
         BCILog.eeg.debug("BrainFlow: channels=\(self.channelCount), sampleRate=\(self.effectiveSampleRate) Hz")
-
-        let startStatus = bci_bridge_start_stream(h, 30)
-        guard startStatus == BCI_OK else {
-            bci_bridge_destroy_session(h)
-            throw BCIError.streamConnectFailed(profile: self.profile, underlying: "start_stream \(startStatus.rawValue)")
-        }
-        BCILog.eeg.notice("BrainFlow stream started: \(self.profile.displayName)")
+        BCILog.eeg.notice("BrainFlow stream started: \(currentProfile.displayName)")
         self.lock.withLock { self.handle = h }
 
         let cc = channelCount
         let poll = pollIntervalSec
         let staleTimeout = staleTimeoutSec
+        let streamProfile = currentProfile
 
         return AsyncThrowingStream<EEGSample, any Error> { continuation in
             let task = Task.detached(priority: .userInitiated) { [weak self] in
@@ -106,7 +227,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                     tsBuf.deallocate()
                 }
                 // The poll task OWNS the C++ session's lifetime: it grabs the
-                // handle once and is the ONLY code that destroys it — in the
+                // handle once and is the ONLY code that destroys it - in the
                 // `defer` below, after the loop has fully exited. So a drain
                 // (get_board_data) and a destroy (delete handle) can never
                 // overlap (the C1 use-after-free). `stop()` merely cancels this
@@ -123,6 +244,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                 }
 
                 var sampleCount = 0
+                var totalSamplesDrained = 0
                 var lastLogTime = Date()
                 var lastSampleAt = Date()
                 while !Task.isCancelled {
@@ -135,6 +257,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                     if got > 0 {
                         lastSampleAt = Date()
                         sampleCount += Int(got)
+                        totalSamplesDrained += Int(got)
                         let now = Date()
                         if now.timeIntervalSince(lastLogTime) >= 1.0 {
                             BCILog.eeg.debug("BrainFlow: \(sampleCount) samples, rate=\(Double(sampleCount) / now.timeIntervalSince(lastLogTime)) Hz")
@@ -152,28 +275,31 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
                     } else {
                         // BCI_OK + zero samples is BrainFlow's normal "nothing
                         // new yet" response, indistinguishable at the status
-                        // level from a silently dead BLE link — see
+                        // level from a silently dead BLE link - see
                         // staleTimeoutSec's doc comment. Only this watchdog
                         // catches that case; a real drain error is already
                         // handled above.
                         let staleness = Date().timeIntervalSince(lastSampleAt)
                         if staleness > staleTimeout {
-                            BCILog.eeg.error("BrainFlow: no samples for \(staleness, format: .fixed(precision: 1))s (>\(staleTimeout, format: .fixed(precision: 1))s timeout) — treating as a dead link")
+                            if totalSamplesDrained == 0 {
+                                self.recordZeroSampleStall(for: streamProfile)
+                            }
+                            BCILog.eeg.error("BrainFlow: no samples for \(staleness, format: .fixed(precision: 1))s (>\(staleTimeout, format: .fixed(precision: 1))s timeout) - treating as a dead link")
                             continuation.finish(throwing: BCIError.streamFailed(
-                                reason: "no samples received for \(Int(staleness))s — BLE link likely dead"
+                                reason: "no samples received for \(Int(staleness))s - BLE link likely dead"
                             ))
                             return
                         }
                     }
                     try? await Task.sleep(nanoseconds: UInt64(poll * 1_000_000_000))
                 }
-                // Loop exited (cancelled) — the teardown `defer` above finishes
+                // Loop exited (cancelled) - the teardown `defer` above finishes
                 // the continuation and destroys the session.
             }
             self.lock.withLock { self.pollTask = task }
             continuation.onTermination = { @Sendable [weak self] _ in
                 // Cancel promptly; `stop()` awaits the poll task, whose `defer`
-                // owns the session teardown (never destroy here — it would race
+                // owns the session teardown (never destroy here - it would race
                 // the drain).
                 task.cancel()
                 Task { await self?.stop() }
@@ -185,7 +311,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
         // Structured teardown: cancel the poll task and AWAIT it. The poll task's
         // own `defer` performs stop_stream + destroy_session after its loop has
         // exited, so a destroy can never overlap an in-flight drain (C1). `stop()`
-        // never touches the C++ session directly. Idempotent — a second `stop()`
+        // never touches the C++ session directly. Idempotent - a second `stop()`
         // (e.g. the redundant one from the supervisor) sees `pollTask == nil`.
         let task: Task<Void, Never>? = lock.withLock {
             let t = self.pollTask
@@ -198,8 +324,11 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
 
     // MARK: - Helpers
 
-    private func makeParamsJSON() -> String {
-        let env = ProcessInfo.processInfo.environment
+    internal func makeParamsJSON(
+        for targetProfile: MuseBoardProfile? = nil,
+        environment env: [String: String] = ProcessInfo.processInfo.environment
+    ) -> String {
+        let effectiveProfile = targetProfile ?? profile
 
         // BrainFlow's board_controller requires ALL fields to be present in the JSON
         // (even if empty strings for string fields, 0 for int fields).
@@ -227,7 +356,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
         // otherwise honor NEURALCOMPOSE_MUSE_SERIAL for the BLED profiles.
         if let serialPort = self.serialPort {
             serial_port = serialPort
-        } else if profile.usesBLEDDongle,
+        } else if effectiveProfile.usesBLEDDongle,
                   let envSerial = env["NEURALCOMPOSE_MUSE_SERIAL"] {
             serial_port = envSerial
         }
@@ -248,7 +377,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
         }
 
         // timeout: seconds BrainFlow's Muse driver spends BLE-scanning
-        // before giving up. Left at 0, BrainFlow's own default kicks in —
+        // before giving up. Left at 0, BrainFlow's own default kicks in -
         // muse.cpp's prepare_session() falls back to a bare 6s scan
         // window, which is frequently too short for macOS
         // CoreBluetooth/SimpleBLE discovery (cold adapter state,
@@ -270,8 +399,8 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
         // We supply a sensible default for Athena; any profile can override
         // via NEURALCOMPOSE_BRAINFLOW_OTHER_INFO.
         if let envOther = env["NEURALCOMPOSE_BRAINFLOW_OTHER_INFO"], !envOther.isEmpty {
-            other_info = envOther
-        } else if profile == .museSAthena {
+            other_info = Self.sanitizeOtherInfo(envOther, for: effectiveProfile)
+        } else if effectiveProfile == .museSAthena {
             other_info = "preset=p1041;low_latency=true"
         }
 
@@ -307,7 +436,7 @@ public final class BrainFlowService: EEGStreaming, @unchecked Sendable {
     /// log a precise diagnostic.
     ///
     /// In stub-mode builds (no BrainFlow linked) this returns
-    /// `.bridgeUnavailable` and skips the comparison — pretending to verify
+    /// `.bridgeUnavailable` and skips the comparison - pretending to verify
     /// against nothing would be worse than honestly saying we can't.
     public static func verifyBoardIDsAgainstBridge() -> BoardIDVerification {
         guard bci_bridge_is_available() else {

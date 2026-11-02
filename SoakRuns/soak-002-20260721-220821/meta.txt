@@ -1,0 +1,8 @@
+soak-matrix run @ Tue Jul 21 22:08:21 CDT 2026
+base_dir: /Users/aurascoper/Developer/NeuralCompose/SoakRuns/soak-002-20260721-220821
+runs_per_cell: 1
+cells: 1
+heard_lines: 1
+branch: feature/pluggable-generators
+commit: 94541a378ffc77971c54003037838d9e499b55af
+binary: .build/debug/dialectic-session

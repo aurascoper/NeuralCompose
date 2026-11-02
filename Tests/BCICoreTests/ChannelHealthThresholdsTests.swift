@@ -94,4 +94,12 @@ final class ChannelHealthThresholdsTests: XCTestCase {
         XCTAssertEqual(a.saturatedRMS, 200)
         XCTAssertEqual(a.minimumSamples, 32)
     }
+
+    func testNonFiniteRMSIsClassifiedAsSaturated() {
+        let thresholds = ChannelHealthThresholds.default
+        XCTAssertEqual(thresholds.status(forRMS: .nan, samples: 256), .saturated)
+        XCTAssertEqual(thresholds.status(forRMS: .infinity, samples: 256), .saturated)
+        XCTAssertEqual(thresholds.status(forRMS: -.infinity, samples: 256), .saturated)
+        XCTAssertEqual(thresholds.status(forRMS: .nan, samples: 10), .unknown)
+    }
 }

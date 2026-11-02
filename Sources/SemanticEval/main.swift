@@ -9,15 +9,36 @@ import Foundation
 // Scripts/generate-semantic-eval-artifacts.py, regenerable without
 // rerunning the model.
 
-func parseModelFlag() -> String {
-    let args = CommandLine.arguments
-    if let idx = args.firstIndex(of: "--model"), idx + 1 < args.count {
-        return args[idx + 1]
+let usage = """
+Usage: SemanticEval [--model <name>]
+
+  --model <name>   Sentence embedder to evaluate (default: bge)
+
+Run from the repository root. Writes Evaluation/<UTC date>-<model>/data.json.
+"""
+
+/// BSD `EX_USAGE`, distinct from `fail`'s 1 so a caller can tell "bad
+/// arguments" from "the evaluation failed".
+let usageExitCode: Int32 = 64
+
+/// Strict by design: the only accepted arguments are `--model <name>` and
+/// `--model=<name>`. Anything else, `--help` included, returns nil. An
+/// unrecognised flag used to be ignored, so `SemanticEval --help` ran a full
+/// evaluation and wrote a results folder into Evaluation/.
+func parseModel(_ arguments: [String]) -> String? {
+    var model = "bge"
+    var remaining = arguments.makeIterator()
+    while let argument = remaining.next() {
+        if argument == "--model" {
+            guard let value = remaining.next() else { return nil }
+            model = value
+        } else if argument.hasPrefix("--model=") {
+            model = String(argument.dropFirst("--model=".count))
+        } else {
+            return nil
+        }
     }
-    for arg in args where arg.hasPrefix("--model=") {
-        return String(arg.dropFirst("--model=".count))
-    }
-    return "bge"
+    return model
 }
 
 func fail(_ message: String) -> Never {
@@ -49,7 +70,10 @@ func meanPairwiseSimilarity(_ texts: [String], embeddingByText: [String: Embeddi
     return count > 0 ? total / Float(count) : 1
 }
 
-let modelName = parseModelFlag()
+guard let modelName = parseModel(Array(CommandLine.arguments.dropFirst())) else {
+    FileHandle.standardError.write((usage + "\n").data(using: .utf8)!)
+    exit(usageExitCode)
+}
 
 // Adding a second conformer means adding one case here, not restructuring
 // the tool — everything below touches only `any SentenceEmbedder`. This is

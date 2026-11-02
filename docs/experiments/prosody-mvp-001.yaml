@@ -1,0 +1,88 @@
+experiment:
+  id: EP-PROSODY-001
+  status: proposed
+  proposed_at: 2026-07-22
+  title: Prosody telemetry predicts synthesis
+
+  question: >
+    Can a single measured prosody feature, pause_before, predict synthesis
+    outcomes in NeuralCompose dialogue telemetry?
+
+  background: >
+    NeuralCompose now separates semantic generation from vocal realization.
+    DialecticalTurnEvent records semantic turn outcomes, while ProsodyTraceEvent
+    records requested, predicted, and measured cadence vectors. This experiment
+    exercises the three orthogonal concerns with one falsifiable claim, one
+    telemetry join, and one deterministic feature-extraction path, without
+    changing dialogue behavior.
+
+  hypotheses:
+    - id: reflective_prosody_v1
+      summary: Long measured pauses before voiced turns predict synthesis.
+      source: docs/hypotheses/reflective_prosody_v1.yaml
+
+  concerns:
+    science:
+      artifact: docs/hypotheses/reflective_prosody_v1.yaml
+      role: Define the falsifiable claim and rejection criteria.
+    engineering:
+      artifacts:
+        - dialectic-turns-YYYY-MM-DD.jsonl
+        - prosody-trace-YYYY-MM-DD.jsonl
+        - docs/architecture/prosody-feature-contract.md
+      role: Record local telemetry streams with stable schemas.
+    computation:
+      artifacts:
+        - Rust/prosody_features
+      role: Produce deterministic measured prosody features for telemetry.
+
+  required_streams:
+    dialectical_turns:
+      schema: DialecticalTurnEvent
+      source: local interaction logging
+      join_field: index
+    prosody_trace:
+      schema: ProsodyTraceEvent
+      source: local interaction logging
+      join_field: dialogue_state.turn_index
+      required_phase: measured
+
+  analysis_plan:
+    - Join ProsodyTraceEvent records to DialecticalTurnEvent records by turn
+      index.
+    - Keep only non-silent dialectical turns with measured.pause_before.
+    - Label each joined record as synthesis when outcome starts with
+      "synthesized:".
+    - Compute ROC AUC for measured.pause_before as a synthesis predictor.
+    - Report the threshold probe at pause_before > 0.600 seconds.
+    - Reject the hypothesis if the minimum sample-size gates fail.
+
+  analysis_runner:
+    command: >
+      python3 Scripts/analyze_prosody_hypothesis.py
+      --dialectic-turns dialectic-turns-YYYY-MM-DD.jsonl
+      --prosody-trace prosody-trace-YYYY-MM-DD.jsonl
+      --output prosody-hypothesis-analysis.json
+      --pretty
+    output_schema: prosody-hypothesis-analysis-v0
+    tests: Tests/eval/test_prosody_hypothesis.py
+
+  decision_rule:
+    type: single_hypothesis_threshold
+    primary_metric: roc_auc
+    accept_if: roc_auc >= 0.70
+    reject_if: roc_auc < 0.70
+
+  runtime_constraints:
+    behavior_changes_allowed: false
+    raw_audio_required_by_science: false
+    requested_controls_allowed_for_acceptance: false
+    network_egress_change_allowed: false
+    julia_in_runtime_allowed: false
+
+  milestone_fit:
+    current: Milestone A
+    description: >
+      Prosody telemetry, Rust deterministic feature extraction, and a
+      preregistered analysis target. Julia reference modeling and experiment
+      runner automation remain later milestones.

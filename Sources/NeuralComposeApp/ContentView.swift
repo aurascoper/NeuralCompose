@@ -55,7 +55,10 @@ struct ContentView: View {
                 spokenGenerationLoopEnabled: $viewModel.spokenGenerationLoopEnabled,
                 hypnagogicLoopEnabled: $viewModel.hypnagogicLoopEnabled,
                 hypnagogicMode: $viewModel.hypnagogicMode,
-                health: viewModel.healthSnapshot
+                hypnagogicRuntimePreference: $viewModel.hypnagogicRuntimePreference,
+                hypnagogicRuntimeDiagnostics: viewModel.hypnagogicRuntimeDiagnostics,
+                health: viewModel.healthSnapshot,
+                onReconnectMuse: { Task { await viewModel.reconnectLiveEEG() } }
             )
             Divider()
 

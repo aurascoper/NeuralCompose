@@ -1,0 +1,400 @@
+{
+  "input_path": "SoakRuns/soak-002-20260721-220848/runs/F_qwen05b.jsonl",
+  "turn_count": 30,
+  "outcome_counts": {
+    "coherence-seeking": 18,
+    "displacement-seeking": 6,
+    "synthesis": 6
+  },
+  "repetition": {
+    "total_spoken": 30,
+    "total_bigrams": 533,
+    "total_trigrams": 503,
+    "distinct_bigrams": 365,
+    "distinct_trigrams": 353,
+    "bigram_diversity": 0.6848030018761726,
+    "trigram_diversity": 0.7017892644135189,
+    "most_repeated_bigrams": [
+      [
+        "let s",
+        9
+      ],
+      [
+        "in a",
+        4
+      ],
+      [
+        "i see",
+        4
+      ],
+      [
+        "is a",
+        4
+      ],
+      [
+        "a mirror",
+        3
+      ],
+      [
+        "mirror in",
+        3
+      ],
+      [
+        "in which",
+        3
+      ],
+      [
+        "which i",
+        3
+      ],
+      [
+        "see myself",
+        3
+      ]
+    ],
+    "most_repeated_trigrams": [
+      [
+        "a mirror in",
+        3
+      ],
+      [
+        "mirror in which",
+        3
+      ],
+      [
+        "in which i",
+        3
+      ],
+      [
+        "which i see",
+        3
+      ],
+      [
+        "i see myself",
+        3
+      ]
+    ]
+  },
+  "opening_diversity": {
+    "total_turns": 29,
+    "distinct_openings": 23,
+    "opening_diversity": 0.7931034482758621,
+    "most_repeated_openings": []
+  },
+  "self_distance": {
+    "n_pairs": 29,
+    "mean_jaccard": 0.9658257794748925,
+    "mean_existing_self_similarity": 0.5946595689655172,
+    "note": ""
+  },
+  "witness_frequency": {
+    "total_turns": 30,
+    "witness_attempted": 0,
+    "witness_finding_present": 0,
+    "witness_finding_rate": 0.0,
+    "witness_finding_rate_overall": 0.0,
+    "by_outcome": {
+      "coherence-seeking": {
+        "attempted": 0,
+        "finding": 0,
+        "total": 18
+      },
+      "displacement-seeking": {
+        "attempted": 0,
+        "finding": 0,
+        "total": 6
+      },
+      "synthesis": {
+        "attempted": 0,
+        "finding": 0,
+        "total": 6
+      }
+    }
+  },
+  "entropy": {
+    "window": 10,
+    "mean_entropy": 6.773763161470372,
+    "min_entropy": 6.451236317767988,
+    "max_entropy": 7.088643088730915,
+    "first_half_mean": 6.670216231524482,
+    "second_half_mean": 6.867896734148453
+  },
+  "attractor_persistence": {
+    "epsilon": 0.65,
+    "mean_persistence_turns": 0.0,
+    "max_persistence_turns": 0,
+    "persistence_distribution": {
+      "0": 30
+    }
+  },
+  "transitions": {
+    "matrix": {
+      "coherence-seeking": {
+        "coherence-seeking": 12,
+        "displacement-seeking": 4,
+        "synthesis": 2,
+        "silent": 0
+      },
+      "displacement-seeking": {
+        "coherence-seeking": 4,
+        "displacement-seeking": 1,
+        "synthesis": 1,
+        "silent": 0
+      },
+      "synthesis": {
+        "coherence-seeking": 1,
+        "displacement-seeking": 1,
+        "synthesis": 3,
+        "silent": 0
+      },
+      "silent": {
+        "coherence-seeking": 0,
+        "displacement-seeking": 0,
+        "synthesis": 0,
+        "silent": 0
+      }
+    },
+    "row_totals": {
+      "coherence-seeking": 18,
+      "displacement-seeking": 6,
+      "synthesis": 5
+    },
+    "column_totals": {
+      "coherence-seeking": 18,
+      "displacement-seeking": 6,
+      "synthesis": 6
+    }
+  },
+  "witness_influence": {
+    "n_with_finding": 0,
+    "horizon": 3,
+    "overall_next_k_distribution": {
+      "coherence-seeking": 0.5714285714285714,
+      "displacement-seeking": 0.21428571428571427,
+      "synthesis": 0.21428571428571427,
+      "silent": 0.0
+    },
+    "witness_next_k_distribution": {
+      "coherence-seeking": 0.0,
+      "displacement-seeking": 0.0,
+      "synthesis": 0.0,
+      "silent": 0.0
+    },
+    "per_outcome_shift": {
+      "coherence-seeking": -0.5714285714285714,
+      "displacement-seeking": -0.21428571428571427,
+      "synthesis": -0.21428571428571427,
+      "silent": 0.0
+    }
+  },
+  "latency": {
+    "n_intervals": 29,
+    "note": "per-turn wall-clock latency is NOT in this log shape; turn-index gap is a proxy. Real latency requires a log schema with timestamps per turn.",
+    "mean_turn_index_gap": 1.0,
+    "median_turn_index_gap": 1
+  },
+  "provenance": {
+    "total_turns": 30,
+    "turns_with_fingerprint": 30,
+    "fingerprint_rate": 1.0,
+    "fingerprint_models": {
+      "qwen2.5:0.5b": 30
+    },
+    "note": "0/140 is the expected baseline pre-b9c09fd-live-app. The core runtime records fingerprints (commit b9c09fd); the live app will start recording them once the AppViewModel + LiveRuntimeFactory wiring lands."
+  },
+  "inertia": {
+    "semantic_inertia": 0.034266704702009494,
+    "linguistic_inertia": 0.2068965517241379,
+    "policy_inertia": 0.35883763212525377,
+    "exploration_pressure": 0.6411623678747462,
+    "heard_length_variance": 280.89,
+    "heard_length_autocorrelation_lag1": 0.09015555236373055,
+    "note": ""
+  },
+  "symbolic_drift": {
+    "total_turns": 30,
+    "total_words": 563,
+    "relational": {
+      "first": 0.0037698412698412695,
+      "second": 0.02025252525252525,
+      "drift": 0.01648268398268398,
+      "top_words": {
+        "frame": 2,
+        "value": 2,
+        "within": 1,
+        "space": 1,
+        "through": 1,
+        "together": 1
+      }
+    },
+    "object": {
+      "first": 0.0,
+      "second": 0.0,
+      "drift": 0.0,
+      "top_words": {}
+    },
+    "process": {
+      "first": 0.014603174603174602,
+      "second": 0.019570707070707072,
+      "drift": 0.0049675324675324695,
+      "top_words": {
+        "listen": 2,
+        "examine": 1,
+        "consider": 1,
+        "observes": 1,
+        "explore": 1,
+        "reflect": 1
+      }
+    },
+    "other": {
+      "first": 0.9816269841269841,
+      "second": 0.9601767676767676,
+      "drift": -0.021450216450216497,
+      "top_words": {}
+    },
+    "note": "P(relational) \u2191 without P(object) \u2193 \u2014 broader drift"
+  },
+  "rrb": {
+    "p_relational_spoken": 0.01201118326118326,
+    "p_relational_heard": 0.022008547008547007,
+    "rrb": 0.5457508510906569,
+    "amplification_class": "suppression",
+    "note": ""
+  },
+  "rhetorical_motifs": {
+    "total_turns": 30,
+    "total_words": 563,
+    "motif_counts": {
+      "adversity": 5,
+      "inwardness": 1,
+      "transcendence": 1,
+      "observation": 8,
+      "investigation": 3
+    },
+    "motif_rates_per_1000": {
+      "adversity": 8.880994671403197,
+      "inwardness": 1.7761989342806395,
+      "transcendence": 1.7761989342806395,
+      "observation": 14.209591474245116,
+      "investigation": 5.328596802841918
+    },
+    "per_outcome_rates_per_1000": {
+      "coherence-seeking": {
+        "adversity": 4.739336492890995,
+        "inwardness": 0.0,
+        "transcendence": 4.739336492890995,
+        "observation": 14.218009478672986,
+        "investigation": 4.739336492890995
+      },
+      "displacement-seeking": {
+        "adversity": 10.256410256410257,
+        "inwardness": 5.128205128205129,
+        "transcendence": 0.0,
+        "observation": 15.384615384615385,
+        "investigation": 10.256410256410257
+      },
+      "synthesis": {
+        "adversity": 12.738853503184714,
+        "inwardness": 0.0,
+        "transcendence": 0.0,
+        "observation": 12.738853503184714,
+        "investigation": 0.0
+      }
+    },
+    "teleological_rate": 0.003552397868561279,
+    "epistemic_rate": 0.019538188277087035,
+    "teleological_ratio": 0.18181818181818182,
+    "orientation": "epistemic",
+    "note": ""
+  },
+  "level_of_abstraction": {
+    "total_turns": 30,
+    "total_words": 552,
+    "distribution": {
+      "concrete": 0.16666666666666666,
+      "interactional": 0.3263888888888889,
+      "relational": 0.2638888888888889,
+      "societal": 0.0,
+      "existential": 0.24305555555555555
+    },
+    "per_outcome": {
+      "coherence-seeking": {
+        "concrete": 0.25,
+        "interactional": 0.5,
+        "relational": 0.25,
+        "societal": 0.0,
+        "existential": 0.0
+      },
+      "displacement-seeking": {
+        "concrete": 0.2,
+        "interactional": 0.11666666666666665,
+        "relational": 0.36666666666666664,
+        "societal": 0.0,
+        "existential": 0.31666666666666665
+      },
+      "synthesis": {
+        "concrete": 0.0,
+        "interactional": 0.4444444444444444,
+        "relational": 0.1111111111111111,
+        "societal": 0.0,
+        "existential": 0.4444444444444444
+      }
+    },
+    "first_half": {
+      "concrete": 0.3333333333333333,
+      "interactional": 0.3888888888888889,
+      "relational": 0.05555555555555555,
+      "societal": 0.0,
+      "existential": 0.2222222222222222
+    },
+    "second_half": {
+      "concrete": 0.0,
+      "interactional": 0.2638888888888889,
+      "relational": 0.47222222222222227,
+      "societal": 0.0,
+      "existential": 0.2638888888888889
+    },
+    "drift": {
+      "concrete": -0.3333333333333333,
+      "interactional": -0.125,
+      "relational": 0.41666666666666674,
+      "societal": 0.0,
+      "existential": 0.041666666666666685
+    },
+    "centroid_first": [
+      0.3333333333333333,
+      0.3888888888888889,
+      0.05555555555555555,
+      0.0,
+      0.2222222222222222
+    ],
+    "centroid_second": [
+      0.0,
+      0.2638888888888889,
+      0.47222222222222227,
+      0.0,
+      0.2638888888888889
+    ],
+    "abstraction_shift": 0.21875000000000006,
+    "note": "upward abstraction drift detected (H\u2084 supported)"
+  },
+  "named_phrases": {
+    "we should consider whether there might be another variable": {
+      "count": 1,
+      "positions": [
+        12
+      ]
+    },
+    "in a live dialogue": {
+      "count": 2,
+      "positions": [
+        1,
+        18
+      ]
+    },
+    "as a human i": {
+      "count": 0,
+      "positions": []
+    }
+  }
+}

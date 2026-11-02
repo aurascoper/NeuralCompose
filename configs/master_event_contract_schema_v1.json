@@ -1,0 +1,1079 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_id": "neuralcompose-master-event-contract-schema-v1",
+  "contract_version": "1.0.0",
+  "created_at_utc": "2026-11-02T08:36:00Z",
+  "description": "Formal Master Event Contract connecting NeuralCompose functorial fixtures, Momentum Automata criticality engine, Reactor Pools (SmallModularBioReactors.jl + OpenMC + MATLAB R2026b M7.1..M7.8), and Biofilms Sessions (Neurospora crassa syncytial hyphal biofilm and M7 Multiscale workbench) across 7 directional logic gates (G1..G7) and 4 multica_channel.jsonl defect axes.",
+  "dialectic_provenance": {
+    "nov_01_log": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
+    "nov_01_turn_range": [
+      1,
+      156
+    ],
+    "nov_02_log": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-02.jsonl",
+    "nov_02_turn_range": [
+      1,
+      50
+    ],
+    "substrate_swap_primitive_turns": [
+      "L29",
+      "L30",
+      "L31",
+      "L32"
+    ],
+    "substrate_swap_indices": [
+      47,
+      48,
+      49,
+      50
+    ]
+  },
+  "subsystems": {
+    "NeuralCompose": {
+      "subsystem_id": "S1_NeuralCompose_Functorial_Fixtures",
+      "repositories": [
+        "/Users/aurascoper/Developer/NeuralCompose",
+        "/Users/aurascoper/Developer/NeuralCompose-events"
+      ],
+      "contracts": [
+        "nc-eeg-session-event-v0",
+        "FourPillarFrameRecord",
+        "F: NetGraph -> PhaseHull",
+        "DoubleTreeHorizonBridge"
+      ],
+      "eeg_channels": [
+        "TP9",
+        "AF7",
+        "AF8",
+        "TP10"
+      ],
+      "event_bus": "/Users/aurascoper/Library/Application Support/NeuralCompose/multica_channel.jsonl"
+    },
+    "MomentumAutomata": {
+      "subsystem_id": "S2_Momentum_Automata_Criticality_Engine",
+      "repositories": [
+        "/Users/aurascoper/Developer/live_trading"
+      ],
+      "contracts": [
+        "criticality_branching_ratio_sigma",
+        "hysteresis_area",
+        "wbr_mode",
+        "propose_match_and_settle"
+      ],
+      "orderbook_topology": {
+        "graph_type": "cyclic_matching_engine",
+        "beta_1_min": 1
+      },
+      "balance_ledger_topology": {
+        "graph_type": "append_only_acyclic_tree",
+        "beta_1": 0,
+        "settlement_bridge": "propose_match_and_settle",
+        "max_scc_size": 1
+      },
+      "redemption_latency_clocks": {
+        "Fast_Wireframe": {
+          "tau_redemption_s": 2.0,
+          "classification_axis": "redemption_unwinding_latency_not_dollar_size",
+          "positions": [
+            {
+              "position_id": "Hyperliquid_perp_150_USDC",
+              "notional_usd": 150.0,
+              "venue": "Hyperliquid",
+              "unwind_latency_s": 1.2
+            },
+            {
+              "position_id": "ZEC_USDC_spot",
+              "notional_usd": 50.0,
+              "venue": "spot_orderbook",
+              "unwind_latency_s": 2.0
+            }
+          ]
+        },
+        "Slow_Core": {
+          "tau_redemption_s": 86400.0,
+          "classification_axis": "unbonding_claim_countdown_window",
+          "positions": [
+            {
+              "position_id": "MEXC_staking_51_USD",
+              "notional_usd": 51.0,
+              "venue": "MEXC",
+              "unbonding_countdown_s": 86400.0
+            }
+          ]
+        },
+        "Plasticity_Shell": {
+          "tau_redemption_s": 3.4,
+          "classification_axis": "autonomous_trigger_governance_with_stoppable_kill_switch",
+          "positions": [
+            {
+              "position_id": "ZEC_CEC_algo_900_to_2500_ladder",
+              "cost_basis_bounds_usd": [
+                900.0,
+                2500.0
+              ],
+              "stoppable_exit_trigger_lever_required": true
+            }
+          ]
+        }
+      }
+    },
+    "ReactorPools": {
+      "subsystem_id": "S3_Reactor_Pools_SMBR_OpenMC_MATLAB",
+      "repositories": [
+        "/Users/aurascoper/Developer/SmallModularBioReactors.jl"
+      ],
+      "modular_chamber_topology": {
+        "n_pool": 8,
+        "hardware_analogs": [
+          "Sartorius_Ambr_250",
+          "ESA_BIM_Carousel",
+          "MURR_10MW_Pool_Reference"
+        ],
+        "vessel_volume_L": 0.25
+      },
+      "contracts": [
+        "convert_spice_state_to_basilisk_si",
+        "evaluate_openmc_cross_section_substrate_swap_gate",
+        "HealthPhysicsALARAContract",
+        "evaluate_health_physics_alara_and_hippocratism"
+      ]
+    },
+    "BiofilmsSessions": {
+      "subsystem_id": "S4_Biofilms_Sessions_Neurospora_M7_Workbench",
+      "repositories": [
+        "/Users/aurascoper/Developer/SmallModularBioReactors.jl",
+        "/Users/aurascoper/Developer/M7Multiscale",
+        "/Users/aurascoper/Developer/flow-cytometry-model-bridge"
+      ],
+      "model_organism": "Neurospora_crassa",
+      "m7_stages": [
+        "M7.1",
+        "M7.2",
+        "M7.3",
+        "M7.4",
+        "M7.5",
+        "M7.6",
+        "M7.7",
+        "M7.8"
+      ],
+      "contracts": [
+        "NeurosporaCrassaCircadianHyphalPreset",
+        "evaluate_neurospora_crassa_4block_matlab_state",
+        "evaluate_matlab_neuralcompose_collar_and_multipool_biofilm_seam",
+        "audit_m7_v2_non_recursive_poller_and_fun_neurology_graph"
+      ]
+    }
+  },
+  "multica_defect_axes": {
+    "Boundary": {
+      "axis_id": "Boundary",
+      "description": "Cross-process, unit-scale, container-format, and mesh-field boundary integrity.",
+      "governed_gates": [
+        "G1",
+        "G2",
+        "G5",
+        "G6"
+      ],
+      "invariants": [
+        "SPICE.jl km and km/s scaled by exact 1000.0 in convert_spice_state_to_basilisk_si with IAU DCM carried separately",
+        "M7.1..M7.8 stage headers strictly separated from Int64 discrete indices/Betti counts and Float64 SI observables",
+        "4-process collar boundary (Antigravity, MATLAB R2026b, SmallModularBioReactors.jl, NeuralCompose) via MAT v7, MAT v7.3 HDF5, and JSON",
+        "OpenFOAM/Basilisk boundary mesh topology to MATLAB field interpolation preserves Delta_beta_0 == 0 and Delta_beta_1 == 0"
+      ]
+    },
+    "Control": {
+      "axis_id": "Control",
+      "description": "Closed-loop Simulink LQR/MPC actuators, ALARA 80% payload safing, and stoppable algorithmic exit triggers.",
+      "governed_gates": [
+        "G4",
+        "G5",
+        "G7"
+      ],
+      "invariants": [
+        "Simulink MIMO LQR/MPC actuators [u_valve(t), z_shield(t), Phi_light(t)]^T maintain negative closed-loop pole real parts",
+        "Automated payload safing triggers at 80% of max allowable cumulative dose (0.040 Gy of 0.050 Gy / 0.40 Gy of 0.50 Gy)",
+        "CEC 900..2500 algorithmic ladder enforces an explicit stoppable exit-trigger kill-switch lever"
+      ]
+    },
+    "Source": {
+      "axis_id": "Source",
+      "description": "External physical/empirical ground-truth verification and 3-valued Epistemic Hippocratism quarantine.",
+      "governed_gates": [
+        "G1",
+        "G6",
+        "G7"
+      ],
+      "invariants": [
+        "SPICE.jl unit conventions held in Incomplete quarantine until spkpos is verified against known orbital radius at same epoch",
+        "OpenMC cross-section library swap (ENDF/B-VIII.0 vs JEFF-3.3) bounds dose-rate tally variance with separate ICRP-116 / ANSI/ANS-6.1.1 flux-to-dose conversion check",
+        "NutMEG maintenance power below 280 K, unverified low-dose radiation hormesis, and direct net ATP radiosynthesis without electron-donor mass balance remain quarantined in Incomplete"
+      ]
+    },
+    "Coordination": {
+      "axis_id": "Coordination",
+      "description": "Acyclic Tarjan solver orchestration, biconnected swarm verification, and non-recursive self-improvement guard.",
+      "governed_gates": [
+        "G3",
+        "G4",
+        "G5",
+        "G6"
+      ],
+      "invariants": [
+        "Cross-solver pipeline (OpenFOAM -> PHREEQC -> FlowCytometry -> SmallModularBioReactors -> MATLAB_Simulink_Simscape_3D_EDA) has max_scc_size == 1 and beta_1_inter_solver == 0",
+        "Orderbook-to-ledger settlement bridge (propose_match_and_settle) has max_scc_size == 1",
+        "Swarm dependency graph is biconnected (beta_1_swarm >= 2, zero cut-vertices) and invariant under counterfactual market-data feed swap",
+        "Non-recursive poller enforces recursion_depth == 0, consolidation_rule_immutable == true, and O_RDONLY log ingestion"
+      ]
+    }
+  },
+  "neurospora_crassa_matlab_r2026b_blocks": {
+    "n_pool": 8,
+    "vogels_chamber_ids": [
+      "vogels_pool_1",
+      "vogels_pool_2",
+      "vogels_pool_3",
+      "vogels_pool_4",
+      "vogels_pool_5",
+      "vogels_pool_6",
+      "vogels_pool_7",
+      "vogels_pool_8"
+    ],
+    "block_1_circadian_frq_wc1_wc2_oscillator": {
+      "m7_stages": [
+        "M7.4",
+        "M7.5"
+      ],
+      "solver": "MATLAB_ode15s_3state_Leloup_Goldbeter_Hill_ODE",
+      "states": [
+        "M_frq",
+        "F_c",
+        "F_n",
+        "phi_t"
+      ],
+      "hill_cooperativity_n": 4,
+      "tau_DD_hr": 22.5,
+      "tau_LD_hr": 24.0,
+      "photoentrainment_actuator": "Phi_light(t)"
+    },
+    "block_2_syncytial_hyphal_biofilm_and_cytometry_anastomosis": {
+      "m7_stages": [
+        "M7.1",
+        "M7.3",
+        "M7.5"
+      ],
+      "states": [
+        "B_i",
+        "rho_tip_i",
+        "phi_EPS_i",
+        "tau_w_i"
+      ],
+      "flow_cytometry_observables_float64": [
+        "FSC-A",
+        "SSC-A",
+        "FL1-A",
+        "melanin_pg_cell"
+      ],
+      "confocal_anastomosis_betti_int64": {
+        "beta_0": 1,
+        "beta_1_min": 1,
+        "beta_1_default": 3
+      },
+      "cytoplasmic_streaming_um_s_bounds": [
+        5.0,
+        60.0
+      ],
+      "woronin_body_protein": "HEX-1",
+      "B_max_kg_m3": 1.2
+    },
+    "block_3_eight_pool_vogels_medium_phreeqc_and_nutmeg": {
+      "m7_stages": [
+        "M7.1",
+        "M7.2",
+        "M7.4"
+      ],
+      "n_pool": 8,
+      "states": [
+        "S_i",
+        "C_O2_i",
+        "pH_i",
+        "pe_i",
+        "T_i_K",
+        "H2O2_scavenged_uM"
+      ],
+      "medium": "Aerobic_Vogels_Minimal_Medium",
+      "geochemical_solver": "PHREEQC_carbonate_pH_pe_speciation",
+      "nutmeg_calibrated_temperature_K_bounds": [
+        288.0,
+        371.0
+      ],
+      "nutmeg_below_280K_verdict": "Incomplete"
+    },
+    "block_4_alara_melanin_shielding_and_simulink_lqr_mpc": {
+      "m7_stages": [
+        "M7.6",
+        "M7.7",
+        "M7.8"
+      ],
+      "pigments": [
+        "DHN-melanin",
+        "neurosporaxanthin"
+      ],
+      "states": [
+        "D_mel_i",
+        "D_dot_eff_i",
+        "cumulative_dose_D_i_Gy"
+      ],
+      "simulink_mimo_actuators": [
+        "u_valve(t)",
+        "z_shield(t)",
+        "Phi_light(t)"
+      ],
+      "alara_80pct_safing_fraction": 0.8,
+      "alara_pass_80pct_safing_limit_Gy": 0.04,
+      "alara_pass_max_allowable_dose_Gy": 0.05,
+      "reactor_80pct_safing_limit_Gy": 0.4,
+      "reactor_max_allowable_dose_Gy": 0.5,
+      "hormesis_quarantine_verdict": "Incomplete"
+    }
+  },
+  "logic_gates": {
+    "G1": {
+      "gate_id": "G1",
+      "name": "SPICE_to_Basilisk_SI_Boundary_and_Separate_IAU_DCM_Diff",
+      "provenance_turns": [
+        "2026-11-01-L115",
+        "2026-11-01-L154",
+        "2026-11-01-L156",
+        "2026-11-02-L1",
+        "2026-11-02-L2"
+      ],
+      "source_subsystem": "SPICE.jl_CSPICE",
+      "target_subsystem": "Basilisk_SmallModularBioReactors_M7VisualizationBridge",
+      "defect_axes": [
+        "Boundary",
+        "Source"
+      ],
+      "unit_scale_km_to_m": 1000.0,
+      "max_rel_err": 1e-09,
+      "max_dcm_orthogonality_frobenius_err": 1e-12,
+      "require_reentrant_spice_lock": true,
+      "require_separate_dcm_pck_vintage_diff": true
+    },
+    "G2": {
+      "gate_id": "G2",
+      "name": "M7_Stage_Header_vs_Int64_and_Float64_Type_Separation",
+      "provenance_turns": [
+        "2026-11-02-L13",
+        "2026-11-02-L14",
+        "2026-11-02-L16"
+      ],
+      "source_subsystem": "M7_Container_Stage_Schema",
+      "target_subsystem": "SmallModularBioReactors_M7Multiscale_MATLAB_R2026b",
+      "defect_axes": [
+        "Boundary"
+      ],
+      "valid_stage_headers": [
+        "M7.1",
+        "M7.2",
+        "M7.3",
+        "M7.4",
+        "M7.5",
+        "M7.6",
+        "M7.7",
+        "M7.8"
+      ],
+      "int64_fields": [
+        "chamber_index",
+        "cell_index",
+        "codon_count",
+        "beta_0",
+        "beta_1",
+        "beta_2"
+      ],
+      "float64_fields": [
+        "FSC-A",
+        "SSC-A",
+        "FL1-A",
+        "melanin_pg_cell",
+        "position_m",
+        "velocity_m_s",
+        "pressure_Pa",
+        "temperature_K",
+        "concentration_mol_m3",
+        "dose_rate_Gy_s"
+      ],
+      "forbid_header_numeric_conflation": true
+    },
+    "G3": {
+      "gate_id": "G3",
+      "name": "Acyclic_Tarjan_Solver_Bridge_and_POD_DMD_Cache_Miss_Gate",
+      "provenance_turns": [
+        "2026-11-01-L112",
+        "2026-11-02-L4",
+        "2026-11-02-L5",
+        "2026-11-02-L20",
+        "2026-11-02-L21"
+      ],
+      "source_subsystem": "OpenFOAM_PHREEQC_FlowCytometry_SmallModularBioReactors",
+      "target_subsystem": "MATLAB_R2026b_Simulink_Simscape_3D_EDA",
+      "defect_axes": [
+        "Coordination"
+      ],
+      "ordered_dag_nodes": [
+        "OpenFOAM_FiniteVolume_CFD",
+        "PHREEQC_Geochemical_Speciation",
+        "FlowCytometry_SingleCell_Bridge",
+        "SmallModularBioReactors_Multiscale_ODE",
+        "MATLAB_R2026b_Simulink_Simscape_3D_EDA"
+      ],
+      "max_scc_size": 1,
+      "beta_1_inter_solver": 0,
+      "recursion_depth": 0,
+      "consolidation_rule_immutable": true,
+      "pod_dmd_rom_residual_tolerance": 0.05,
+      "session_openfoam_call_ceiling": 4
+    },
+    "G4": {
+      "gate_id": "G4",
+      "name": "One_Way_Settlement_Bridge_and_Redemption_Latency_Clock_Assignment",
+      "provenance_turns": [
+        "2026-11-02-L22",
+        "2026-11-02-L23",
+        "2026-11-02-L24",
+        "2026-11-02-L25",
+        "2026-11-02-L26",
+        "2026-11-02-L27"
+      ],
+      "source_subsystem": "MomentumAutomata_Orderbook_and_Portfolio",
+      "target_subsystem": "Balance_Engine_Tree_and_NeuralCompose",
+      "defect_axes": [
+        "Coordination",
+        "Control"
+      ],
+      "settlement_bridge_function": "propose_match_and_settle",
+      "orderbook_beta_1_min": 1,
+      "balance_tree_beta_1": 0,
+      "max_scc_size": 1,
+      "classification_axis": "redemption_unwinding_latency_not_dollar_size",
+      "fast_wireframe_positions": [
+        "Hyperliquid_perp_150_USDC",
+        "ZEC_USDC_spot"
+      ],
+      "slow_core_positions": [
+        "MEXC_staking_51_USD"
+      ],
+      "plasticity_shell_positions": [
+        "ZEC_CEC_algo_900_to_2500_ladder"
+      ],
+      "require_stoppable_algo_exit_trigger": true
+    },
+    "G5": {
+      "gate_id": "G5",
+      "name": "Horizon_Collar_Leaf_Pull_Seam",
+      "provenance_turns": [
+        "2026-11-01-L110",
+        "2026-11-01-L111",
+        "2026-11-01-L114",
+        "2026-11-02-L3",
+        "2026-11-02-L7",
+        "2026-11-02-L28"
+      ],
+      "source_subsystem": "SmallModularBioReactors_MATLAB_R2026b_Controls_Fixture",
+      "target_subsystem": "NeuralCompose_DoubleTreeHorizonBridge",
+      "defect_axes": [
+        "Boundary",
+        "Control",
+        "Coordination"
+      ],
+      "collar_leaf_count_c": 3,
+      "collar_leaves": [
+        "u_valve",
+        "z_shield",
+        "Phi_light"
+      ],
+      "expected_delta_beta_1": 2,
+      "beta_1_inter_solver": 0,
+      "supported_containers": [
+        "MAT_v5_v7_struct",
+        "MAT_v7_3_HDF5",
+        "JSON_intermediate"
+      ],
+      "mat_v7_magic_prefix": "MATLAB 5.0 MAT-file",
+      "mat_v73_magic_prefix": "MATLAB 7.3 MAT-file"
+    },
+    "G6": {
+      "gate_id": "G6",
+      "name": "Unified_Headless_Substrate_Swap_Verification_Primitive",
+      "provenance_turns": [
+        "2026-11-02-L29",
+        "2026-11-02-L30",
+        "2026-11-02-L31",
+        "2026-11-02-L32"
+      ],
+      "source_subsystem": "OpenFOAM_Basilisk_MATLAB_Mesh_Swarm_OpenMC",
+      "target_subsystem": "Master_Event_Contract_PreCommit_Gate",
+      "defect_axes": [
+        "Boundary",
+        "Source",
+        "Coordination"
+      ],
+      "sub_checks": {
+        "L29_mesh_field_interpolation_swap": {
+          "delta_beta_0": 0,
+          "delta_beta_1": 0,
+          "topological_tearing_allowed": false
+        },
+        "L30_biconnected_swarm_feed_swap": {
+          "beta_1_swarm_min": 2,
+          "cut_vertices_allowed": 0,
+          "counterfactual_feed_swap_trigger_invariant": true
+        },
+        "L31_unified_headless_cli_and_reject_log": {
+          "single_headless_pass_fail_primitive": true,
+          "log_stage_rejects_separately": true
+        },
+        "L32_openmc_cross_section_and_dosimetry_swap": {
+          "nuclear_data_libraries": [
+            "ENDF/B-VIII.0",
+            "JEFF-3.3"
+          ],
+          "flux_to_dose_conversion_standard": "ICRP-116_ANSI_ANS_6_1_1",
+          "max_tally_dose_rel_diff": 0.05,
+          "require_workplace_regulatory_geometry_match": true
+        }
+      }
+    },
+    "G7": {
+      "gate_id": "G7",
+      "name": "Health_Physics_ALARA_and_Epistemic_Hippocratism_3Valued_Quarantine",
+      "provenance_turns": [
+        "2026-11-02-L3",
+        "2026-11-02-L32",
+        "2026-11-02-L33",
+        "2026-11-02-L34"
+      ],
+      "source_subsystem": "RadiationField_MelaninResponse_BiofilmDynamics_EvidenceGates",
+      "target_subsystem": "All_Subsystems_Memory_and_Actuator_Safety",
+      "defect_axes": [
+        "Control",
+        "Source"
+      ],
+      "alara_pillars": [
+        "Time_Delta_t",
+        "Distance_inv_r2",
+        "Shielding_exp_minus_mu_z_plus_Melanin_Neurospora"
+      ],
+      "safing_threshold_fraction": 0.8,
+      "valid_verdicts": [
+        "Accepted",
+        "Incomplete",
+        "Rejected"
+      ],
+      "mandatory_incomplete_quarantine_items": [
+        "unverified_low_dose_radiation_hormesis",
+        "direct_net_atp_radiosynthesis_without_electron_donor_mass_balance",
+        "nutmeg_maintenance_power_below_280K",
+        "unverified_spice_jl_units_prior_to_spkpos_check"
+      ]
+    }
+  },
+  "event_schemas": {
+    "NeuralComposeFixtureEnvelope": {
+      "type": "object",
+      "required": [
+        "sequence_id",
+        "subsystem_id",
+        "functor_stage",
+        "frame_index",
+        "betti_numbers",
+        "defect_axes",
+        "toy_drive_active",
+        "mahalanobis_tension_D_M"
+      ],
+      "properties": {
+        "sequence_id": {
+          "type": "string"
+        },
+        "subsystem_id": {
+          "type": "string",
+          "enum": [
+            "S1_NeuralCompose_Functorial_Fixtures",
+            "NeuralCompose"
+          ]
+        },
+        "functor_stage": {
+          "type": "string",
+          "enum": [
+            "F_Laya",
+            "F_ST",
+            "F_Mem",
+            "F_MM"
+          ]
+        },
+        "frame_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 59
+        },
+        "betti_numbers": {
+          "type": "object",
+          "required": [
+            "beta_0",
+            "beta_1"
+          ],
+          "properties": {
+            "beta_0": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "beta_1": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "defect_axes": {
+          "type": "object",
+          "required": [
+            "boundary",
+            "control",
+            "source",
+            "coordination"
+          ],
+          "properties": {
+            "boundary": {
+              "type": "boolean"
+            },
+            "control": {
+              "type": "boolean"
+            },
+            "source": {
+              "type": "boolean"
+            },
+            "coordination": {
+              "type": "boolean"
+            }
+          }
+        },
+        "toy_drive_active": {
+          "type": "boolean"
+        },
+        "mahalanobis_tension_D_M": {
+          "type": "number",
+          "minimum": 0.0
+        }
+      }
+    },
+    "MomentumAutomataEnvelope": {
+      "type": "object",
+      "required": [
+        "sequence_id",
+        "subsystem_id",
+        "criticality_metrics",
+        "criticality_regime",
+        "wbr_mode",
+        "hysteresis_loop_area",
+        "retention_pool_active"
+      ],
+      "properties": {
+        "sequence_id": {
+          "type": "string"
+        },
+        "subsystem_id": {
+          "type": "string",
+          "enum": [
+            "S2_Momentum_Automata_Criticality_Engine",
+            "MomentumAutomata"
+          ]
+        },
+        "criticality_metrics": {
+          "type": "object",
+          "required": [
+            "k_eff",
+            "rho_pcm",
+            "z_crit",
+            "chi"
+          ],
+          "properties": {
+            "k_eff": {
+              "type": "number",
+              "minimum": 0.0
+            },
+            "rho_pcm": {
+              "type": "number"
+            },
+            "z_crit": {
+              "type": "number"
+            },
+            "chi": {
+              "type": "number",
+              "minimum": 0.0
+            }
+          }
+        },
+        "criticality_regime": {
+          "type": "string",
+          "enum": [
+            "SUBCRITICAL",
+            "CRITICAL_WITHIN_NOISE",
+            "SUPERCRITICAL",
+            "PROMPT_SCRAM"
+          ]
+        },
+        "wbr_mode": {
+          "type": "string",
+          "enum": [
+            "Focus",
+            "Frustration",
+            "Panic"
+          ]
+        },
+        "hysteresis_loop_area": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "retention_pool_active": {
+          "type": "boolean"
+        },
+        "orderbook_betti_1": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "balance_tree_betti_1": {
+          "type": "integer",
+          "enum": [
+            0
+          ]
+        },
+        "cec_algo_exit_trigger_stoppable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "MultiPoolReactorEnvelope": {
+      "type": "object",
+      "required": [
+        "sequence_id",
+        "subsystem_id",
+        "container_header",
+        "n_pool",
+        "chamber_ids",
+        "sucrose_concentrations_mol_m3",
+        "temperatures_kelvin",
+        "phreeqc_activity_avg_ph",
+        "phreeqc_charge_imbalance_pct",
+        "radiolytic_h2o2_scavenged_uM",
+        "nutmeg_quarantine_status"
+      ],
+      "properties": {
+        "sequence_id": {
+          "type": "string"
+        },
+        "subsystem_id": {
+          "type": "string",
+          "enum": [
+            "S3_Reactor_Pools_SMBR_OpenMC_MATLAB",
+            "ReactorPools"
+          ]
+        },
+        "container_header": {
+          "type": "string",
+          "enum": [
+            "M7.1",
+            "M7.2",
+            "M7.3",
+            "M7.4",
+            "M7.5",
+            "M7.6",
+            "M7.7",
+            "M7.8"
+          ]
+        },
+        "n_pool": {
+          "type": "integer",
+          "enum": [
+            8
+          ]
+        },
+        "chamber_ids": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "string"
+          }
+        },
+        "sucrose_concentrations_mol_m3": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          }
+        },
+        "temperatures_kelvin": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          }
+        },
+        "phreeqc_activity_avg_ph": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 14.0
+        },
+        "phreeqc_charge_imbalance_pct": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "radiolytic_h2o2_scavenged_uM": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          }
+        },
+        "nutmeg_quarantine_status": {
+          "type": "string",
+          "enum": [
+            ":Accepted",
+            ":Incomplete",
+            ":Rejected",
+            "Accepted",
+            "Incomplete",
+            "Rejected"
+          ]
+        }
+      }
+    },
+    "BiofilmSessionEnvelope": {
+      "type": "object",
+      "required": [
+        "sequence_id",
+        "subsystem_id",
+        "container_header",
+        "circadian_state",
+        "cytoplasmic_streaming_velocity_um_s",
+        "hex1_woronin_plugging_active",
+        "anastomosis_topology",
+        "biomass_density_kg_m3",
+        "tip_density_m3",
+        "eps_streamer_fraction"
+      ],
+      "properties": {
+        "sequence_id": {
+          "type": "string"
+        },
+        "subsystem_id": {
+          "type": "string",
+          "enum": [
+            "S4_Biofilms_Sessions_Neurospora_M7_Workbench",
+            "BiofilmsSessions"
+          ]
+        },
+        "container_header": {
+          "type": "string",
+          "enum": [
+            "M7.1",
+            "M7.2",
+            "M7.3",
+            "M7.4",
+            "M7.5",
+            "M7.6",
+            "M7.7",
+            "M7.8"
+          ]
+        },
+        "circadian_state": {
+          "type": "object",
+          "required": [
+            "M_frq",
+            "F_c",
+            "F_n",
+            "phi_radians"
+          ],
+          "properties": {
+            "M_frq": {
+              "type": "number",
+              "minimum": 0.0
+            },
+            "F_c": {
+              "type": "number",
+              "minimum": 0.0
+            },
+            "F_n": {
+              "type": "number",
+              "minimum": 0.0
+            },
+            "phi_radians": {
+              "type": "number"
+            }
+          }
+        },
+        "cytoplasmic_streaming_velocity_um_s": {
+          "type": "number",
+          "minimum": 5.0,
+          "maximum": 60.0
+        },
+        "hex1_woronin_plugging_active": {
+          "type": "boolean"
+        },
+        "anastomosis_topology": {
+          "type": "object",
+          "required": [
+            "beta_0",
+            "beta_1"
+          ],
+          "properties": {
+            "beta_0": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            },
+            "beta_1": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "biomass_density_kg_m3": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.2
+          }
+        },
+        "tip_density_m3": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          }
+        },
+        "eps_streamer_fraction": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        },
+        "wall_shear_stress_Pa": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          }
+        }
+      }
+    },
+    "MasterEventEnvelope": {
+      "type": "object",
+      "required": [
+        "event_id",
+        "timestamp_utc",
+        "subsystem_id",
+        "envelope_type",
+        "recursion_depth",
+        "defect_flags",
+        "epistemic_status",
+        "payload"
+      ],
+      "properties": {
+        "event_id": {
+          "type": "string"
+        },
+        "timestamp_utc": {
+          "type": "string"
+        },
+        "subsystem_id": {
+          "type": "string",
+          "enum": [
+            "S1_NeuralCompose_Functorial_Fixtures",
+            "S2_Momentum_Automata_Criticality_Engine",
+            "S3_Reactor_Pools_SMBR_OpenMC_MATLAB",
+            "S4_Biofilms_Sessions_Neurospora_M7_Workbench",
+            "NeuralCompose",
+            "MomentumAutomata",
+            "ReactorPools",
+            "BiofilmsSessions"
+          ]
+        },
+        "envelope_type": {
+          "type": "string",
+          "enum": [
+            "NeuralComposeFixtureEnvelope",
+            "MomentumAutomataEnvelope",
+            "MultiPoolReactorEnvelope",
+            "BiofilmSessionEnvelope"
+          ]
+        },
+        "causal_parent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recursion_depth": {
+          "type": "integer",
+          "enum": [
+            0
+          ]
+        },
+        "defect_flags": {
+          "type": "object",
+          "required": [
+            "Boundary",
+            "Control",
+            "Source",
+            "Coordination"
+          ],
+          "properties": {
+            "Boundary": {
+              "type": "boolean"
+            },
+            "Control": {
+              "type": "boolean"
+            },
+            "Source": {
+              "type": "boolean"
+            },
+            "Coordination": {
+              "type": "boolean"
+            }
+          }
+        },
+        "epistemic_status": {
+          "type": "string",
+          "enum": [
+            ":Accepted",
+            ":Incomplete",
+            ":Rejected",
+            "Accepted",
+            "Incomplete",
+            "Rejected"
+          ]
+        },
+        "payload": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+# World Model (JEPA + MPC) research spike
+
+- **Lives entirely in `WorldModel/`, decoupled from the app on purpose.** PyTorch, not MLX; no import of `BCICore`/`BCIEEG`/`BCIClassifier`/`BCILLM`. The repo-root MLX-isolation rule doesn't apply here because nothing here touches the SwiftPM target graph.
+- **Synthetic by design, not a shortcut.** The motivating idea — a JEPA-style transition predictor over EEG-derived `SpectralState`/`GenerationAdaptation` — is real but currently unbuildable: one processed night of sleep data, zero logged interaction events (`InteractionLogging` is opt-in, off by default per `ADR-005-local-interaction-logging.md`). A JEPA needs volume, action variation, and temporal transitions none of that provides yet. So the architecture gets proven on a synthetic 2D continuous-control task first, where ground truth and volume are both free.
+- **Multi-day, staged.** Day 1 (synthetic env + trajectory dataset + DataLoader) is the only stage landed so far. See `README.md` here for the full four-day plan and current status — don't assume later days exist without checking.
+- **Pointing this at real EEG data is a future decision, not an assumption.** Nothing here should be read as committing to that path; it's contingent on the architecture actually working on the toy task first.

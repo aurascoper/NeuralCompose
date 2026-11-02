@@ -36,3 +36,6 @@ Design/Verification/Runtime artifact taxonomy — it contains the
 | [embedding-model-survey.md](embedding-model-survey.md) | 3.0 | Survey (this commit) |
 | [methodology-review_v1.md](methodology-review_v1.md) | 3.4/3.5 | Review (superseded by v2) |
 | [methodology-review_v2.md](methodology-review_v2.md) | 3.4/3.5 | Review (this commit) |
+| [svd-four-channel-eeg-decision-memo_v1.md](svd-four-channel-eeg-decision-memo_v1.md) | EEG D0 | Foundational study only |
+| [jepa-four-channel-eeg-decision-memo-v0.md](jepa-four-channel-eeg-decision-memo-v0.md) | EEG D0 | Scope complete; foundational Pass 1.5 study only |
+| [function-space-foundations-decision-memo-v0.md](function-space-foundations-decision-memo-v0.md) | Mathematical D0 | Synthetic foundational study only |

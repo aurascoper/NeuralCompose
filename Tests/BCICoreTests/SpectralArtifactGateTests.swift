@@ -39,4 +39,16 @@ final class SpectralArtifactGateTests: XCTestCase {
         XCTAssertFalse(SpectralArtifactGate.isClean(w, thresholdMicrovolts: 10.0))
         XCTAssertTrue(SpectralArtifactGate.isClean(w, thresholdMicrovolts: 100.0))
     }
+
+    func testNonFiniteAndEmptyChannelArraysReject() {
+        var nanSamples = Array(repeating: Array(repeating: Float(10.0), count: 512), count: 4)
+        nanSamples[1][42] = .nan
+        XCTAssertFalse(SpectralArtifactGate.isClean(window(nanSamples)))
+
+        var infSamples = Array(repeating: Array(repeating: Float(10.0), count: 512), count: 4)
+        infSamples[3][0] = .infinity
+        XCTAssertFalse(SpectralArtifactGate.isClean(window(infSamples)))
+
+        XCTAssertFalse(SpectralArtifactGate.isClean(window([[], [], [], []])))
+    }
 }

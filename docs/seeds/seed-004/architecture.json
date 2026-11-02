@@ -1,0 +1,52 @@
+{
+  "seed_id": "004",
+  "part": "architecture",
+  "content_version": 1,
+  "architecture_version": "2026-07-21",
+  "field_version": "v1 implemented; v2 (fieldEnergy) spec-only — Sources/BCICore/Dialectic/FIELD_V2.md",
+  "modules": [
+    {"name": "BCICore", "role": "pure-Swift models, protocols, ring buffer, intent FSM, and the dialectic engine (Sources/BCICore/Dialectic/). No third-party deps."},
+    {"name": "BCIEEG", "role": "EEG streams: BrainFlow facade + synthetic + playback; supervisor retry/backoff -> synthetic fallback."},
+    {"name": "BCIClassifier", "role": "Core ML intent classifier (ANE-preferred) + mock; CoreMLSentenceEmbedder (BGE-small-en-v1.5)."},
+    {"name": "BCILLM", "role": "ISOLATED MLX adapter: next-word predictor, tokenizer, spectral-state estimator. The ONLY MLX-importing target."},
+    {"name": "BCIVoice", "role": "on-device STT (Speech.framework) + AVSpeechSynthesizer TTS."},
+    {"name": "BCICloudBridge", "role": "the network-egress module. ClaudeCLIGenerator (claude -p, Sonnet 5, no API key) and future runtime transports. Must never be a dependency of any BCI* target."},
+    {"name": "NeuralComposeApp", "role": "SwiftUI app; AppContainer composition root; AppViewModel."},
+    {"name": "WorldModelDemo", "role": "synthetic-task JEPA+MPC research demo, decoupled from the EEG pipeline."}
+  ],
+  "invariants": [
+    "MLX isolation: import MLX only in BCILLM — one runtime copy in the linked binary.",
+    "No network at runtime EXCEPT the opt-in network-runtimes in BCICloudBridge (Claude today; Ollama in this branch). Each non-local transport is its own opt-in surface and its own banner disclosure.",
+    "Stub-by-default: missing model -> mock, missing weights -> stub, bridge stub -> synthetic EEG; the privacy banner reflects the active path.",
+    "App talks to subsystems through BCICore protocols only.",
+    "Strict concurrency + ExistentialAny enabled on every target.",
+    "SpectralState is a heuristic gloss/bias, never a cognitive decode — 4-ch Muse cannot support mental-state claims.",
+    "Track A (jaw/blink/rest carousel + dwell-select) is the only supported typing path; Track B (imagined speech) is experimental and pre-registration-gated.",
+    "GENERATION RUNTIME INVARIANTS (ADR-009): (1) Prompt profiles belong to the dialectical engine, never to the runtime. (2) The runtime SHALL NOT modify semantic intent. (3) The runtime is transport; the model is configuration. (4) The runtime is capability-advertised, not method-mandatory. (5) Benchmark governance is a separate document, referenced not defined here.",
+    "WorldModel/ and Sources/ remain decoupled. The WorldModel branch (worldmodel/overnight-transform-ab) is the historical record of the JEPA+MPC investigation; this branch does not touch it."
+  ],
+  "public_api_seams": [
+    {"protocol": "TextGenerating", "file": "Sources/BCICore/Protocols/TextGenerating.swift", "conformers": ["ClaudeCLIGenerator (Sonnet 5, cloud)", "MLXNextWordPredictor / StubNextWordPredictor (on-device)"], "status": "legacy; preserved as a compatibility shim during the GenerationRuntime transition. New conformers implement GenerationRuntime directly; existing call sites migrate incrementally."},
+    {"protocol": "GenerationRuntime", "file": "Sources/BCICore/Protocols/GenerationRuntime.swift", "status": "NEW (this branch). The provider-neutral runtime surface the dialectical engine depends on. Composed over a GenerationTransport.", "conformers": ["ClaudeCLIGenerationRuntime (Claude CLI transport)", "OllamaGenerationRuntime (HTTP transport; models: deepseek-v4-flash:cloud, qwen2.5:3b, qwen2.5:1.5b, qwen2.5:0.5b, deepseek-r1:1.5b, ...)", "StubGenerationRuntime (test/dev)"]},
+    {"protocol": "GenerationTransport", "file": "Sources/BCICore/Protocols/GenerationTransport.swift", "status": "NEW (this branch). Transport-level abstraction (HTTP / subprocess / local-process). Composed underneath each GenerationRuntime conformer; not a runtime itself."},
+    {"protocol": "SpeechSynthesizing", "file": "Sources/BCICore/Protocols/SpeechSynthesizing.swift", "conformers": ["AVSpeechSynthesizerService", "StubSpeechSynthesizer"]},
+    {"protocol": "SentenceEmbedder", "conformers": ["CoreMLSentenceEmbedder (BGE-small-en-v1.5, dim 384)", "DeterministicSentenceEmbedder (stub)"]},
+    {"protocol": "HypnagogicRunnable", "file": "Sources/BCICore/Composition/HypnagogicRunnable.swift", "conformers": ["HypnagogicDialogueLoop (mirror)", "HypnagogicDialecticLoop (dialectical)"]},
+    {"seam": "Personal Voice (PR #14)", "file": "Sources/BCIVoice/AVSpeechSynthesizerService.swift", "note": "selects the user's on-device Personal Voice (bestPersonalVoiceIdentifier / requestPersonalVoiceAuthorization) over Premium/compact; persisted via VoiceProfile (Sources/BCICore/Composition/VoiceProfile.swift -> ~/Documents/NeuralCompose/voice-profile.json). Verified: an ad-hoc-signed app CAN use Personal Voice without the restricted entitlement."},
+    {"seam": "neuralcompose:// URL scheme (PR #14)", "file": "Sources/BCICore/Models/URLCommand.swift", "note": "the 'Apple Shortcuts' emitter AppCommand always anticipated: .onOpenURL -> URLCommand.parse -> AppCommand dispatcher, so a Siri Shortcut can trigger speak(text:) in the Personal Voice. Cannot make Siri ITSELF speak in the voice (Apple separation)."}
+  ],
+  "prompts": {
+    "location": "Sources/BCICloudBridge/Prompts/",
+    "status": "NEW (this branch). Decoupled from ClaudeCLIGenerator; consumed by every runtime conformer via a PromptProfile value.",
+    "files": [
+      {"name": "hypnagogic.md", "purpose": "passive mirror for the hypnagogic (N1) rung; reserved for future sleep modes."},
+      {"name": "waking-dialectical.md", "purpose": "waking dialectical exchange; used by Focused / Reflective / Contemplative."},
+      {"name": "witness.md", "purpose": "non-voiced post-compete observer; used by Reflective only."}
+    ]
+  },
+  "telemetry": {
+    "fingerprint_field": "DialecticalTurnEvent.generatorFingerprint",
+    "shape": "struct GeneratorFingerprint { runtime: String, transport: String, provider: String, model: String, prompt_profile: String, interaction_style: String, prompt_hash: String, generation_parameters: [String: Double] }",
+    "status": "NEW (this branch). Optional field on DialecticalTurnEvent; old logs continue to decode. Richer than a single string for cross-provider comparison."
+  }
+}

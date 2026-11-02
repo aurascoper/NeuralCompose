@@ -1,0 +1,59 @@
+experiment:
+  id: EXP-RSP-001
+  status: proposed
+  title: Turn-local recurrence prediction after apparent synthesis
+
+  question: >
+    Can causal information available at the end of a runtime-labeled synthesis
+    turn predict recurrence over the following five turns in held-out soaks?
+
+  hypothesis:
+    id: H-RSP-001
+    source: docs/hypotheses/h-rsp-001.yaml
+
+  concerns:
+    science:
+      role: Define and falsify a conditional recurrence-prediction claim.
+    engineering:
+      role: Preserve immutable soak JSONL and frozen metric vocabulary.
+    computation:
+      role: Run offline Python feature extraction and Julia reference analysis.
+
+  input_contract:
+    source: SoakRuns/<run>/runs/<configuration>.jsonl
+    required_stream: DialecticalTurnEvent
+    run_identity: isolated JSONL path plus immutable input SHA-256
+    excluded_sources:
+      - daily InteractionLogs without explicit soak identity
+      - non-synthesis matched controls
+    invalid_json_policy: reject_entire_run
+
+  feature_export:
+    command: >
+      python3 Scripts/export_rsp_features.py --run <turns.jsonl>
+      --encoder-dir <local-coreml-bge-directory> --encoder-revision <pinned-revision>
+      --output <rsp-dataset.json>
+    output_schema: rsp-dataset-v0
+    privacy: >
+      The dataset stores numeric features, labels, source checksums, and
+      encoder provenance only. It never copies raw text or embedding vectors.
+
+  analysis:
+    command: >
+      julia --project=. scripts/evaluate_rsp.jl --dataset <rsp-dataset.json>
+      --output <rsp-analysis.json>
+    output_schema: rsp-analysis-v0
+    pilot_regularization: ridge lambda = 1.0
+    confirmation_regularization: nested leave-one-soak-out over fixed grid
+
+  runtime_constraints:
+    behavior_changes_allowed: false
+    telemetry_schema_changes_allowed: false
+    julia_in_runtime_allowed: false
+    rust_promotion_allowed: false
+
+  non_goals:
+    - Establish Residual Semantic Potential as a validated latent construct.
+    - Infer a psychological property from dialogue telemetry.
+    - Change dialogue selection, prompting, speech, or pacing.
+    - Fit an ODE, nonlinear model, or production kernel.

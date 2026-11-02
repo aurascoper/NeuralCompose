@@ -1,0 +1,375 @@
+# Three Orthogonal Concerns
+
+> **Status:** Draft (2026-07-21). The architecture review
+> named a structural separation that supersedes the
+> five-stage execution pipeline. This document captures
+> the new frame as the canonical structural reference.
+
+## The shift
+
+The project has matured from "an AI application" to
+"an experimental platform." The previous structural
+model was a five-stage execution pipeline:
+
+```
+  Experiment → ResearchHypothesis → Runtime → Telemetry → Metrics
+```
+
+That's a useful pipeline but it conflates two distinct
+kinds of concern. The architecture review's reframing
+splits the pipeline into **three orthogonal concerns**:
+
+```
+  SCIENCE
+   - What are we trying to learn?
+   - Experiment
+   - ResearchHypothesis
+
+  ENGINEERING
+   - How is it executed?
+   - Runtime
+   - Telemetry
+   - Metrics
+
+  COMPUTATION
+   - What executes the algorithms?
+   - Swift Runtime
+   - Rust Kernels
+   - Scientific Services (Julia / Python / R / Stan)
+```
+
+The five-stage pipeline is preserved *inside* the
+three concerns:
+
+```
+  SCIENCE:        Experiment → ResearchHypothesis
+  ENGINEERING:   Runtime → Telemetry → Metrics
+  COMPUTATION:   Swift Runtime, Rust Kernels, ...
+```
+
+Each concern evolves at a *different rate*:
+
+- **Science** changes frequently — new questions, new
+  hypotheses, new experimental designs
+- **Engineering** changes occasionally — runtime refactors,
+  telemetry schema changes, metric contract updates
+- **Computation** changes slowly — Swift, Rust, Julia
+  boundaries; the choice of language and the boundary
+  surface
+
+The separation is valuable because it lets you replace
+one layer without disturbing the others. Concretely:
+
+- A new `ResearchHypothesis` (Science) is implemented
+  without touching the runtime (Engineering) or the
+  compute kernels (Computation).
+- The runtime can be refactored (Engineering) without
+  changing the hypothesis or the computation layer.
+- Rust can be substituted for Swift (Computation) without
+  changing what hypotheses ask or what metrics measure,
+  as long as the runtime contract is preserved.
+
+## Concern goals
+
+Each concern has its own goal. The goals are intentionally
+different because the layers optimize for different kinds of
+progress.
+
+### Science
+
+```text
+/goal
+Produce falsifiable hypotheses that explain observed dialogue
+dynamics.
+```
+
+Science is about asking better questions. Its artifacts are
+experiments, hypotheses, papers, and mathematical models.
+
+### Engineering
+
+```text
+/goal
+Execute experiments reproducibly while preserving measurement
+integrity.
+```
+
+Engineering is about trustworthy execution. Its artifacts are
+runtime paths, telemetry, metrics, and benchmarks.
+
+### Computation
+
+```text
+/goal
+Provide deterministic computational implementations behind stable
+interfaces.
+```
+
+Computation is about reliable implementation boundaries. Its
+artifacts are Swift application code, Rust production kernels,
+Julia reference implementations, and Python tooling.
+
+## The closed loop, recast
+
+The closed empirical loop in the three-concern frame:
+
+```
+  SCIENCE
+    Experiment (the question)
+       │
+       ▼
+    ResearchHypothesis (the proposed answer)
+       │
+       │   ────────────────────────────
+       ▼                                │
+  ENGINEERING                       COMPUTATION
+    Runtime                            Swift kernels
+       │                              Rust kernels
+       │   ──────────────────────     Scientific services
+       ▼                                │
+    Telemetry                            │
+       │   ──────────────────────       │
+       ▼                                │
+    Metrics                              │
+       │   ──────────────────────────── │
+       ▼
+    Compare to predictions
+       │
+       ▼
+    Pareto analysis
+       │
+       ▼
+    Next hypothesis
+       │
+       └─── loops back to SCIENCE ─────┘
+```
+
+The arrows between concerns are *contracts*, not
+implementations. The hypothesis (Science) refers to
+metric ids (Engineering) by name. The runtime
+(Engineering) calls into compute kernels (Computation)
+through a stable interface (e.g., the C ABI for Rust,
+the protocol seam for Swift).
+
+The contracts that bridge the concerns are:
+
+- **Science ↔ Engineering:** metric contracts in
+  `docs/evaluation/metrics.md`. Hypotheses target metric
+  ids; the implementation can change without breaking
+  hypotheses.
+- **Engineering ↔ Computation:** runtime interfaces
+  (the `TextGenerating` protocol seam for Swift; the
+  C ABI for Rust; the cross-language contract for
+  scientific services). The runtime can call into any
+  computation layer that satisfies the interface.
+
+The speech stack has the same boundary discipline: semantic
+generation produces text, while a separate prosody layer maps text,
+embeddings, and dialogue state into speech controls. See
+`semantic-to-prosody-boundary.md`. The measurable cadence fields live
+under `prosody-feature-contract.md`, below metrics and above raw
+audio or requested controls.
+
+Sobolev learning and ZPD follow the same rule: they are Science-layer
+hypothesis generators until Engineering can measure their claims and
+Computation can provide validated implementations. See
+`../science/sobolev-zpd-hypotheses.md`.
+
+Historical symbolic systems such as geomancy are even further from the
+runtime path: they may inform literature review and hypothesis
+generation, but they must not become modes or decision mechanisms. See
+`../science/symbolic-systems-hypothesis-sources.md`.
+
+## What this changes
+
+### Before the three-concern frame
+
+Hypotheses were often *philosophies*:
+- "Lacan mode" (a profile that embodies a philosophical
+  tradition)
+- "Wolframian dynamics" (a profile shaped by a particular
+  theoretical framework)
+
+The books were *authorities embedded in code*. The
+problem: philosophical traditions are not falsifiable.
+A profile that "follows Lacan" can be defended
+indefinitely because there's no criterion for being
+wrong.
+
+### After the three-concern frame
+
+Hypotheses are *parameterizations*:
+- "Increasing continuation pressure changes measurable
+  dialogue behavior" (a falsifiable claim about a
+  parameter and an outcome)
+- "Reducing synthesis pressure lowers abstraction drift"
+  (a falsifiable claim about a parameter and a metric)
+
+The books are *sources of hypothesis generation*. The
+Wolfram framing suggests a parameter (continuation
+pressure); the Lacan framing suggests another parameter
+(signifier weight). The parameters are the *test* of
+whether the framing has predictive value.
+
+This is the shift from "the books tell us how to write
+profiles" to "the books tell us what parameters to test."
+
+## The runtime as the single execution path
+
+The architecture review named a structural problem:
+
+```
+  Live App
+        \
+         \
+  Harness -------> Telemetry
+```
+
+The live app and the harness use *different* runtime
+paths. The live app uses `LiveRuntimeFactory`; the
+harness uses `dialectic-session`. They share telemetry
+but not the runtime itself.
+
+The target is *one* execution path:
+
+```
+             RuntimeFactory
+                  │
+      ┌───────────┴───────────┐
+      ▼                       ▼
+   Live App               Harness
+      │                       │
+      └───────────┬───────────┘
+                  ▼
+              Telemetry
+```
+
+Once there is one execution path, every future
+experiment is more trustworthy. The live-app
+`LiveRuntimeFactory` env-var fix and the cross-model
+dialectic harness extension are the prerequisites for
+this unification.
+
+**The next merge is more important than the next feature.**
+Opening `feature/research-hypotheses` before the runtime
+path is unified risks fragmenting the experiments across
+two execution paths. The merge candidate is
+`feature/pluggable-generators` into `main` after the
+runtime unification lands.
+
+## The Rust role, clarified
+
+Rust is *not* arriving to "make NeuralCompose faster."
+It's arriving to stabilize **deterministic computational
+kernels** beneath a mature experimental framework.
+
+Rust is not a hardware layer. It belongs in the Computation concern,
+beside Swift, MLX/Core ML, and scientific services. Hardware sits
+below that concern:
+
+```text
+COMPUTATION
+  Swift      -> Apple APIs, orchestration, MLX/Core ML integration
+  Rust       -> deterministic numeric kernels, DSP, graphs, simulation
+  MLX/Core ML -> learned inference through Apple's optimized stack
+  Julia      -> scientific reference models
+
+HARDWARE
+  CPU
+  GPU
+  ANE
+```
+
+For Phase 0-2, Swift continues to own MLX, Metal, Core ML, and
+Apple-framework orchestration. Rust may later use GPU-capable
+libraries only after measurement proves a bottleneck and the stable
+interface remains intact. Rust does not program the ANE directly; the
+practical Apple-platform path to ANE remains Core ML.
+
+The four-gate evaluation order (Correctness → Numerical
+stability → Determinism → Performance) is *the* discipline
+that makes this scientific. A kernel that passes gate 1
+(correctness) but fails gate 3 (determinism) is *not
+ready* for Phase 1, even if it's fast. Performance
+alone is not sufficient.
+
+Rust Phase 0 can begin before Julia models mature when the work is
+measurement infrastructure: deterministic feature extraction,
+timestamp processing, signal processing, telemetry normalization, and
+other reproducible numeric kernels. It should not infer behavioral
+meaning from those signals. That belongs to Science.
+
+When a Rust kernel is promoted beyond measurement infrastructure, it
+should have:
+
+- Stable telemetry or feature contracts.
+- Stable benchmarks or input corpora.
+- Acceptance criteria for correctness, stability, determinism, and
+  performance.
+- Repeatable experiments that prove the kernel preserves the intended
+  measurement.
+- Reproducible runtime selection through the unified RuntimeFactory
+  when the kernel reaches the Swift boundary.
+
+That means every Rust kernel can be evaluated
+scientifically instead of anecdotally. The four-gate
+order is the evaluation discipline.
+
+## Julia / Python / R as offline scientific services
+
+The scientific services tier (Julia, Python, R, Stan)
+is *not* a runtime tier. It's an offline research
+service tier that *consumes* runtime artifacts (telemetry,
+hypotheses, metric outputs) and produces *insights* that
+inform the next Science-layer artifact (a new
+hypothesis, a refined metric, a new experiment).
+
+The closed loop has a Science-tier role for these
+services: they help generate the *next* question, not
+the *current* answer. Julia for state-space
+reconstruction, stability analysis, bifurcation diagrams,
+and manifold learning. R for statistical inference. Stan
+for Bayesian uncertainty. Python for general scripting and
+analysis glue.
+
+These services are not in the runtime path. They are
+in the *research path* that surrounds the runtime.
+
+See `julia-science-workspace.md` for the repository boundary and
+promotion path for Julia models.
+
+## Status
+
+- Three orthogonal concerns named and documented
+- Closed loop recast in the three-concern frame
+- Runtime unification identified as Priority 1
+- Metric contracts identified as the Science ↔ Engineering
+  bridge (`docs/evaluation/metrics.md`)
+- Experiment schema identified as the Science-layer
+  entry point (`docs/evaluation/experiments.md`)
+- Rust's clarified role: deterministic kernels beneath
+  a mature framework, not optimization
+- Scientific services clarified: offline, not runtime
+- Concern goals added for Science, Engineering, and
+  Computation
+
+## Next steps (per the architecture review)
+
+1. **Runtime unification** — `LiveRuntimeFactory` env-var
+   fix + cross-model harness + merge into `main`
+2. **Freeze the measurement layer** — metric contracts in
+   `docs/evaluation/metrics.md` plus feature contracts such as
+   `prosody-feature-contract.md`
+3. **Open `feature/research-hypotheses`** — the
+   `Experiment → ResearchHypothesis` schema
+4. **Use the four metrics** to evaluate carefully chosen
+   hypotheses
+5. **Continue Rust Phase 0 for measurement infrastructure** —
+   deterministic kernels such as `Rust/prosody_features`
+6. **Start Julia Science in parallel** — state reconstruction,
+   reference models, parameter estimation, and falsification against
+   telemetry artifacts
+
+Refs: The architecture review on 2026-07-21; the
+metric contracts in `docs/evaluation/metrics.md`; the
+experiment schema in `docs/evaluation/experiments.md`.

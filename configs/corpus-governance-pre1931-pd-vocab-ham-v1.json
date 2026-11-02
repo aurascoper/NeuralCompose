@@ -1,0 +1,130 @@
+{
+  "schema_version": "corpus-governance-pre1931-pd-vocab-ham-v1",
+  "policy_id": "NC-CORPUS-GOV-PRE1931-PD-VOCAB-HAM-001",
+  "status": "enforced",
+  "dash_invariant": "zero_em_or_en_dashes",
+  "governing_principle": "Full-text literary or prose ingestion is restricted to verified pre-1931 public-domain works (publication_year <= 1930). Post-1930 external sources are restricted to isolated domain vocabulary tokens and taxonomic identifiers (zero verbatim prose sentences). Local human-authored autobiographical memory (HAM) and interaction logs are governed under ADR-005 quarantine (eligible_for_encoder_training: false, eligible_for_science: false).",
+  "tiers": {
+    "pre_1931_public_domain": {
+      "tier_id": "TIER_1_PRE_1931_PUBLIC_DOMAIN",
+      "max_publication_year": 1930,
+      "jurisdiction_cutoff_rule": "US copyright public-domain cutoff (works published on or before 1930-12-31)",
+      "full_text_prose_allowed": true,
+      "verbatim_quotation_allowed": true,
+      "required_provenance_fields": [
+        "work_id",
+        "title",
+        "author",
+        "publication_year",
+        "public_domain_basis",
+        "sha256_digest"
+      ],
+      "eligible_for_dialectical_grounding": true,
+      "eligible_for_prosodic_cadence_priors": true,
+      "canonical_seed_works": [
+        {
+          "work_id": "james_1890_principles_of_psychology",
+          "title": "The Principles of Psychology",
+          "author": "William James",
+          "publication_year": 1890,
+          "public_domain_basis": "pre_1931_published_1890",
+          "sha256_digest": "f1907a8e0e43919c8719ca82a452697f420f95e9226f50d52b633c61dc14f741"
+        },
+        {
+          "work_id": "poincare_1895_analysis_situs",
+          "title": "Analysis Situs",
+          "author": "Henri Poincare",
+          "publication_year": 1895,
+          "public_domain_basis": "pre_1931_published_1895",
+          "sha256_digest": "8c5d9a12b17f62c03d991c7d86399b91b55264f9538eb24cb6c8e0f1053bd82a"
+        },
+        {
+          "work_id": "bergson_1896_matiere_et_memoire",
+          "title": "Matter and Memory",
+          "author": "Henri Bergson",
+          "publication_year": 1896,
+          "public_domain_basis": "pre_1931_published_1896",
+          "sha256_digest": "a3f0418276b7c547299f809b2c1a8b9496e49d2730262df1f7d19244059d65d2"
+        },
+        {
+          "work_id": "berger_1929_elektrenkephalogramm",
+          "title": "Uber das Elektrenkephalogramm des Menschen",
+          "author": "Hans Berger",
+          "publication_year": 1929,
+          "public_domain_basis": "pre_1931_published_1929",
+          "sha256_digest": "d7b2101a8b683b921c39a9b3d6c4e129f02a5b6248e79a261490801e2b8f5413"
+        },
+        {
+          "work_id": "whitehead_1929_process_and_reality",
+          "title": "Process and Reality",
+          "author": "Alfred North Whitehead",
+          "publication_year": 1929,
+          "public_domain_basis": "pre_1931_published_1929",
+          "sha256_digest": "52c8711479c2697254e6b1a3d0f94e2c76a0b48c19e2d83a756f092c3e1b4480"
+        }
+      ]
+    },
+    "vocabulary_only_modern": {
+      "tier_id": "TIER_2_VOCABULARY_ONLY_POST_1930",
+      "min_publication_year": 1931,
+      "full_text_prose_allowed": false,
+      "verbatim_sentence_ingestion_allowed": false,
+      "max_tokens_per_term": 6,
+      "max_chars_per_term": 64,
+      "allowed_artifact_classes": [
+        "asr_cold_vocabulary_bias_terms",
+        "mathematical_and_topological_identifiers",
+        "electrode_and_spectral_band_labels",
+        "chemical_and_biological_nomenclature"
+      ],
+      "code_binding_paths": [
+        "Sources/BCICore/Composition/VoiceProfile.swift",
+        "Scripts/eeg_spectral.py"
+      ],
+      "privacy_hygiene_rule": "Zero private household names or non-public personal identifiers in cold vocabulary lists."
+    },
+    "local_ham_quarantined": {
+      "tier_id": "TIER_3_LOCAL_HAM_AND_INTERACTION_LOGS",
+      "source_origin": "first_party_human_authored_and_dialectical_telemetry",
+      "storage_locations_redacted": [
+        "~/Documents/NeuralCompose/InteractionLogs/",
+        "~/Library/Application Support/ClaudeMind/MemoryStore.sqlite",
+        "postgresql://localhost:5432/claude_mind"
+      ],
+      "repo_synchronized_fixtures": [
+        "InteractionLogs/dialectic-turns-2026-11-01.jsonl",
+        "InteractionLogs/dialectic-autobank-2026-11-01.jsonl",
+        "InteractionLogs/autobank-manifest-2026-11-01.jsonl",
+        "InteractionLogs/prosody-trace-2026-11-01.jsonl",
+        "InteractionLogs/health-2026-11-01.jsonl",
+        "InteractionLogs/equifinal-dialectic-turns.jsonl",
+        "InteractionLogs/INTERACTION_LOGS_MANIFEST_2026-11-01.json"
+      ],
+      "warrant_and_autoforget_gate": {
+        "script": "Scripts/memory-gate.py",
+        "swift_gate": "Sources/BCICore/Dialectic/DialecticalMemory.swift::evaluateAutobankWarrant",
+        "max_self_similarity": 0.92,
+        "min_substantive_tokens": 5,
+        "autoforget_triggers": [
+          "silent_turn",
+          "empty_spoken",
+          "single_token_stutter",
+          "short_backchannel_or_hedge",
+          "transient_control_or_transit",
+          "reflexive_collapse_gt_0.92"
+        ]
+      },
+      "disposition": {
+        "corpus_role": "engineering_replay_only",
+        "development_only_permanent": true,
+        "eligible_for_encoder_training": false,
+        "eligible_for_encoder_evaluation": false,
+        "eligible_for_policy_training": false,
+        "eligible_for_policy_evaluation": false,
+        "eligible_for_science": false,
+        "contains_private_dialogue": false,
+        "cloud_exposure_allowed": false
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schemaId": "neuralcompose.functor.faithfulness-pareto-sweep.v1",
+  "epistemicBadge": "[MODEL ILLUSTRATION - RUNG_4_MODEL]",
+  "evalFrames": [10, 25, 28, 30, 32, 38],
+  "trueBeta1": [2, 3, 4, 6, 8, 9],
+  "nSweepPoints": 15,
+  "nParetoFrontier": 6,
+  "points": [
+    {"gamma": 0.00, "theta": 0.22, "meanAbsBeta1Defect": 5.3333, "exactMatchFraction": 0.0000, "meanShellL2Distortion": 0.0000, "meanActiveVolFraction": 0.07781, "predBeta1": [0, 0, 0, 0, 0, 0], "isParetoOptimal": true},
+    {"gamma": 0.00, "theta": 0.36, "meanAbsBeta1Defect": 5.3333, "exactMatchFraction": 0.0000, "meanShellL2Distortion": 0.0000, "meanActiveVolFraction": 0.03997, "predBeta1": [0, 0, 0, 0, 0, 0], "isParetoOptimal": true},
+    {"gamma": 0.00, "theta": 0.50, "meanAbsBeta1Defect": 5.3333, "exactMatchFraction": 0.0000, "meanShellL2Distortion": 0.0000, "meanActiveVolFraction": 0.02097, "predBeta1": [0, 0, 0, 0, 0, 0], "isParetoOptimal": true},
+    {"gamma": 0.25, "theta": 0.22, "meanAbsBeta1Defect": 2.0000, "exactMatchFraction": 0.3333, "meanShellL2Distortion": 0.3148, "meanActiveVolFraction": 0.06454, "predBeta1": [2, 3, 1, 3, 5, 6], "isParetoOptimal": true},
+    {"gamma": 0.25, "theta": 0.36, "meanAbsBeta1Defect": 5.0000, "exactMatchFraction": 0.0000, "meanShellL2Distortion": 0.3148, "meanActiveVolFraction": 0.02659, "predBeta1": [0, 0, 0, 0, 0, 2], "isParetoOptimal": false},
+    {"gamma": 0.25, "theta": 0.50, "meanAbsBeta1Defect": 5.3333, "exactMatchFraction": 0.0000, "meanShellL2Distortion": 0.3148, "meanActiveVolFraction": 0.01072, "predBeta1": [0, 0, 0, 0, 0, 0], "isParetoOptimal": false},
+    {"gamma": 0.50, "theta": 0.22, "meanAbsBeta1Defect": 0.6667, "exactMatchFraction": 0.5000, "meanShellL2Distortion": 0.6296, "meanActiveVolFraction": 0.04794, "predBeta1": [2, 3, 2, 5, 8, 10], "isParetoOptimal": false},
+    {"gamma": 0.50, "theta": 0.36, "meanAbsBeta1Defect": 0.5000, "exactMatchFraction": 0.5000, "meanShellL2Distortion": 0.6296, "meanActiveVolFraction": 0.01938, "predBeta1": [2, 3, 3, 5, 8, 10], "isParetoOptimal": true},
+    {"gamma": 0.50, "theta": 0.50, "meanAbsBeta1Defect": 4.1667, "exactMatchFraction": 0.0000, "meanShellL2Distortion": 0.6296, "meanActiveVolFraction": 0.00557, "predBeta1": [0, 0, 2, 1, 2, 2], "isParetoOptimal": false},
+    {"gamma": 0.75, "theta": 0.22, "meanAbsBeta1Defect": 1.3333, "exactMatchFraction": 0.3333, "meanShellL2Distortion": 0.9443, "meanActiveVolFraction": 0.03258, "predBeta1": [2, 3, 3, 7, 10, 13], "isParetoOptimal": false},
+    {"gamma": 0.75, "theta": 0.36, "meanAbsBeta1Defect": 0.3333, "exactMatchFraction": 0.6667, "meanShellL2Distortion": 0.9443, "meanActiveVolFraction": 0.01688, "predBeta1": [2, 3, 4, 6, 9, 10], "isParetoOptimal": false},
+    {"gamma": 0.75, "theta": 0.50, "meanAbsBeta1Defect": 0.0000, "exactMatchFraction": 1.0000, "meanShellL2Distortion": 0.9443, "meanActiveVolFraction": 0.01108, "predBeta1": [2, 3, 4, 6, 8, 9], "isParetoOptimal": true},
+    {"gamma": 1.00, "theta": 0.22, "meanAbsBeta1Defect": 1.5000, "exactMatchFraction": 0.5000, "meanShellL2Distortion": 1.2591, "meanActiveVolFraction": 0.03243, "predBeta1": [2, 3, 4, 8, 11, 13], "isParetoOptimal": false},
+    {"gamma": 1.00, "theta": 0.36, "meanAbsBeta1Defect": 1.5000, "exactMatchFraction": 0.5000, "meanShellL2Distortion": 1.2591, "meanActiveVolFraction": 0.01967, "predBeta1": [2, 3, 4, 8, 11, 13], "isParetoOptimal": false},
+    {"gamma": 1.00, "theta": 0.50, "meanAbsBeta1Defect": 0.0000, "exactMatchFraction": 1.0000, "meanShellL2Distortion": 1.2591, "meanActiveVolFraction": 0.01331, "predBeta1": [2, 3, 4, 6, 8, 9], "isParetoOptimal": false}
+  ]
+}

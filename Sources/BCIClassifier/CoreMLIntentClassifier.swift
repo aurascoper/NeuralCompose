@@ -18,7 +18,7 @@ import BCICore
 ///   • Classes follow `IntentClass.modelOutputOrder`.
 ///
 /// If your trained model uses different I/O names, change `inputFeatureName`
-/// and `outputFeatureName` — that's the only place in the codebase that
+/// and `outputFeatureName` - that's the only place in the codebase that
 /// mentions them.
 public final class CoreMLIntentClassifier: IntentClassifying, @unchecked Sendable {
 
@@ -32,7 +32,7 @@ public final class CoreMLIntentClassifier: IntentClassifying, @unchecked Sendabl
     private let expectedSamples: Int
 
     /// Try to load a Core ML model at `url`. Falls back to throwing if either
-    /// the file is missing or the model can't be initialized for any reason —
+    /// the file is missing or the model can't be initialized for any reason -
     /// the factory catches and returns a `MockIntentClassifier` instead.
     public init(
         modelURL: URL,
@@ -51,7 +51,7 @@ public final class CoreMLIntentClassifier: IntentClassifying, @unchecked Sendabl
 
         // Core ML's `MLModel(contentsOf:)` wants a compiled `.mlmodelc`. A
         // raw `.mlpackage` from coremltools.convert() must be compiled first
-        // via `MLModel.compileModel(at:)` — which writes a `.mlmodelc` into
+        // via `MLModel.compileModel(at:)` - which writes a `.mlmodelc` into
         // the temp dir, valid until next launch. We cache that location for
         // the lifetime of the process; for production, compile once with
         // `xcrun coremlcompiler` and ship the `.mlmodelc` instead.
@@ -89,7 +89,7 @@ public final class CoreMLIntentClassifier: IntentClassifying, @unchecked Sendabl
     public func setComputeMode(_ mode: ClassifierComputeMode) throws -> CoreMLIntentClassifier {
         // MLModel is immutable wrt its configuration, so to change compute
         // mode we re-instantiate at the same URL. We don't store the URL
-        // back-reference — caller (the factory) does.
+        // back-reference - caller (the factory) does.
         throw BCIError.classifierInferenceFailed(reason: "use factory.reload(with:) to change compute mode")
     }
 
@@ -117,8 +117,22 @@ public final class CoreMLIntentClassifier: IntentClassifying, @unchecked Sendabl
     // MARK: - Helpers
 
     private func multiArray(from window: EEGWindow) throws -> MLMultiArray {
+        try Self.makeMultiArray(
+            from: window,
+            expectedChannels: expectedChannels,
+            expectedSamples: expectedSamples
+        )
+    }
+
+    internal static func makeMultiArray(
+        from window: EEGWindow,
+        expectedChannels: Int = 4,
+        expectedSamples: Int = 512
+    ) throws -> MLMultiArray {
         // Pad / truncate to expectedSamples so a 2-second window at any
-        // sample rate fits the model.
+        // sample rate fits the model, and subtract the per-channel DC mean
+        // in Double precision so raw Muse windows (~800 uV DC offset) do not
+        // saturate the linear/conv layers trained on 0-mean EEG.
         let array = try MLMultiArray(
             shape: [1, NSNumber(value: expectedChannels), NSNumber(value: expectedSamples)],
             dataType: .float32
@@ -126,10 +140,23 @@ public final class CoreMLIntentClassifier: IntentClassifying, @unchecked Sendabl
         let pointer = array.dataPointer.assumingMemoryBound(to: Float32.self)
         let stride0 = expectedChannels * expectedSamples
         for ch in 0..<expectedChannels {
-            let row = window.samples[ch]
+            let row = ch < window.samples.count ? window.samples[ch] : []
             let rowSamples = min(row.count, expectedSamples)
+            var sum: Double = 0
+            var finiteCount: Int = 0
             for s in 0..<rowSamples {
-                pointer[0 * stride0 + ch * expectedSamples + s] = row[s]
+                let v = row[s]
+                if v.isFinite {
+                    sum += Double(v)
+                    finiteCount += 1
+                }
+            }
+            let mean: Double = finiteCount > 0 ? sum / Double(finiteCount) : 0
+            for s in 0..<rowSamples {
+                let v = row[s]
+                pointer[0 * stride0 + ch * expectedSamples + s] = v.isFinite
+                    ? Float32(Double(v) - mean)
+                    : 0
             }
             // Zero-pad the tail.
             for s in rowSamples..<expectedSamples {

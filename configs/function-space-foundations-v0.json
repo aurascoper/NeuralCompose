@@ -1,0 +1,161 @@
+{
+  "schema_version": "function-space-foundations-config-v0",
+  "report_schema_version": "function-space-foundations-report-v0",
+  "experiment_id": "EXP-FUNC-SYN-000",
+  "status": "foundational_study_only",
+  "data_gate": "D0",
+  "decision": "insufficient_evidence",
+  "promotion_status": "not_eligible",
+  "runtime_change": "none",
+  "physical_eeg_used": false,
+  "dialogue_logs_used": false,
+  "fallback_capture_used": false,
+  "scientific_claim_allowed": false,
+  "input_policy": {
+    "source_kind": "embedded_deterministic_synthetic_parameters",
+    "external_data_arguments_allowed": false,
+    "physical_eeg_allowed": false,
+    "historical_eeg_allowed": false,
+    "dialogue_allowed": false,
+    "telemetry_allowed": false,
+    "fallback_data_allowed": false,
+    "model_outputs_allowed": false
+  },
+  "serialization": {
+    "float_significant_digits": 12,
+    "same_platform_byte_identity_required": true,
+    "cross_platform_numerical_tolerance_required": true,
+    "wall_clock_fields_allowed": false,
+    "absolute_paths_allowed": false
+  },
+  "source_files": [
+    "src/FunctionSpaceFoundations.jl",
+    "scripts/run_function_space_foundations.jl",
+    "notebooks/01_empirical_measure_curve_fit.jl",
+    "notebooks/02_ad_vs_finite_difference.jl",
+    "notebooks/03_sobolev_curve_fit.jl",
+    "notebooks/04_egorov_convergence_fixture.jl",
+    "notebooks/05_operator_stability.jl",
+    "notebooks/06_stieltjes_event_integration.jl"
+  ],
+  "tolerances": {
+    "absolute": 1e-10,
+    "gradient": 1e-10,
+    "quadrature": 1e-7,
+    "operator_scaling_relative": 0.05,
+    "positive_distance_minimum": 1e-6
+  },
+  "studies": {
+    "FS0": {
+      "id": "FS0",
+      "name": "empirical_measure_and_pseudometric",
+      "sample_points": [0.0, 0.25, 0.5, 0.75, 1.0],
+      "atomic_weights": [0.2, 0.2, 0.2, 0.2, 0.2],
+      "dense_grid_size": 1001,
+      "normalization": "maximum_absolute_value_on_dense_grid",
+      "negative_fixture_sample_index": 3,
+      "negative_fixture_perturbation": 0.1
+    },
+    "FS1": {
+      "id": "FS1",
+      "name": "automatic_vs_numerical_differentiation",
+      "parameters": [0.8, 1.7, -0.2],
+      "evaluation_time": 0.37,
+      "signal": "sin(2*pi*t)",
+      "finite_difference_scheme": "forward",
+      "step_sizes": [0.03125, 0.015625, 0.0078125, 0.00390625],
+      "noise_model": {
+        "kind": "deterministic_alternating_sample_perturbation",
+        "amplitude": 0.001,
+        "seed": 1201
+      }
+    },
+    "FS2": {
+      "id": "FS2",
+      "name": "sobolev_tikhonov_curve_fit",
+      "domain": [0.0, 1.0],
+      "sample_count": 65,
+      "basis": {
+        "kind": "fourier",
+        "maximum_harmonic": 12,
+        "coefficient_order": "intercept_then_sin_cos_by_harmonic"
+      },
+      "truth": {
+        "intercept": 0.35,
+        "sine_coefficients": [0.7, 0.0, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "cosine_coefficients": [0.0, -0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      },
+      "noise_model": {
+        "kind": "gaussian",
+        "standard_deviation": 0.15
+      },
+      "sessions": {
+        "training": [
+          {"id": "fs2-train-01", "seed": 1101},
+          {"id": "fs2-train-02", "seed": 1102},
+          {"id": "fs2-train-03", "seed": 1103},
+          {"id": "fs2-train-04", "seed": 1104}
+        ],
+        "validation": [
+          {"id": "fs2-validation-01", "seed": 2101},
+          {"id": "fs2-validation-02", "seed": 2102}
+        ],
+        "held_out": [
+          {"id": "fs2-held-out-01", "seed": 3101},
+          {"id": "fs2-held-out-02", "seed": 3102}
+        ]
+      },
+      "regularization_grid": [0.0, 1e-6, 0.0001, 0.01, 1.0, 100.0],
+      "validation_derivative_weight": 0.25,
+      "normalization": "training_target_mean_and_standard_deviation_only",
+      "quadrature_rule": "analytic_fourier_roughness_matrix",
+      "overfit_baseline_lambda": 0.0
+    },
+    "FS3": {
+      "id": "FS3",
+      "name": "egorov_theorem_fixture",
+      "domain": [0.0, 1.0],
+      "sequence": "x^n",
+      "n_values": [1, 2, 4, 8, 16, 32, 64],
+      "epsilon_values": [0.1, 0.05],
+      "interpretation": "theorem_illustration"
+    },
+    "FS4": {
+      "id": "FS4",
+      "name": "operator_stability",
+      "domain": [0.0, 1.0],
+      "grid_sizes": [17, 33, 65, 129],
+      "vector_norm": "l2",
+      "induced_matrix_norm": "spectral_l2",
+      "derivative_operator": "forward_difference",
+      "integration_operator": "cumulative_trapezoid",
+      "control_operator": "identity",
+      "perturbation_amplitude": 1e-6,
+      "perturbation_frequency": 6.5,
+      "negative_fixtures": ["dimension_mismatch", "nonfinite_input"]
+    },
+    "FS5": {
+      "id": "FS5",
+      "name": "continuous_and_atomic_integration",
+      "domain": [0.0, 1.0],
+      "test_function": "exp(t)",
+      "density": "1+t",
+      "quadrature_rule": "composite_trapezoid",
+      "quadrature_points": 4097,
+      "event_times": [0.2, 0.55, 0.9],
+      "event_weights": [0.5, -0.25, 0.75],
+      "perturbed_event_index": 2,
+      "event_weight_delta": 0.1,
+      "event_semantics": "synthetic_cue_only",
+      "measure_language": "lebesgue_stieltjes_mixed_measure"
+    }
+  },
+  "representation_regularization_boundary": {
+    "implemented_here": false,
+    "new_trainer_authorized": false,
+    "existing_contracts": [
+      "EXP-NC-EEG-JEPA-001:J2-J5",
+      "jepa-collapse-diagnostics-v0"
+    ]
+  }
+}

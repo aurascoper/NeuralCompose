@@ -1,0 +1,244 @@
+{
+  "schema": "momentum-automata-verification-receipt-v1",
+  "verified_at_utc": "2026-11-02T18:48:21.424126+00:00",
+  "local_repository_path": "/Users/aurascoper/Developer/live_trading",
+  "git_head_commit": "1f45734c253b201152f68b80eddcb6b1b8b63896",
+  "tracked_file_count": 1203,
+  "public_publication_policy": "Kept private on local disk (contains live exchange execution configuration); verified via cryptographic file digests and Gate G4 Master Event Contract harness in NeuralCompose.",
+  "gate_g4_settlement_bridge_verification": {
+    "gate_id": "G4",
+    "gate_passed": true,
+    "settlement_bridge": "propose_match_and_settle",
+    "orderbook_beta_1": 2,
+    "balance_tree_beta_1": 0,
+    "max_scc_size": 1,
+    "classification_axis": "redemption_unwinding_latency_not_dollar_size",
+    "fast_wireframe": {
+      "tau_redemption_s": 2.0,
+      "positions": [
+        "Hyperliquid_perp_150_USDC",
+        "ZEC_USDC_spot"
+      ]
+    },
+    "slow_core": {
+      "tau_redemption_s": 86400.0,
+      "positions": [
+        "MEXC_staking_51_USD"
+      ],
+      "unbonding_countdown_active": true
+    },
+    "plasticity_shell": {
+      "tau_redemption_s": 3.4,
+      "positions": [
+        "ZEC_CEC_algo_900_to_2500_ladder"
+      ],
+      "cost_basis_bounds_usd": [
+        900.0,
+        2500.0
+      ],
+      "stoppable_exit_trigger_lever_verified": true
+    }
+  },
+  "sample_tracked_file_digests": [
+    {
+      "path": ".env.example",
+      "bytes": 1823,
+      "sha256": "041aa258db93d1a30bd9add42b8f3db0dd32129f0dc347f67cb416f4c18ee8a6"
+    },
+    {
+      "path": ".gitattributes",
+      "bytes": 142,
+      "sha256": "84af3ef352fca8d86755487b4bbcb97babb3187b4a513933ccf314787ba11a11"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 1164,
+      "sha256": "f0eca6f5a90088eb97d7202201ad526e374f22ac7819f82afbcbb0fb3bc11147"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 2642,
+      "sha256": "21fa3e51fd29e4b16f9a321af1f21a0ff8de98869ec089edb1db906a1f4379e7"
+    },
+    {
+      "path": ".screener_watch_state.json",
+      "bytes": 25275,
+      "sha256": "8b0423f5950e6b000ef0f2f51b4bbde14bbcbb7f081516cbb679aec10ef5cb88"
+    },
+    {
+      "path": "ALPACA_LIVE_ACTIVATION.md",
+      "bytes": 2771,
+      "sha256": "4f00068875e25ad7457130b2c31a29c0f0bfc071557ead3924e145017df78e39"
+    },
+    {
+      "path": "BABYSITTER_GOAL.md",
+      "bytes": 2825,
+      "sha256": "10e4efdfc82d8f96caed5b2451cc534ab4d9d0bded5835e9860d0232f9bbb025"
+    },
+    {
+      "path": "CLAUDE.md",
+      "bytes": 13383,
+      "sha256": "e8008141747567fa12cfd2b46f46f0a06a6a2cfc577ba437b80f74189f84ea36"
+    },
+    {
+      "path": "CODEX_GOAL_rev3.md",
+      "bytes": 8906,
+      "sha256": "eafe41c4e9a3196e422d98d800f724abf2964c7aa3464744019db50a89477f8f"
+    },
+    {
+      "path": "CODEX_GOAL_rev4.md",
+      "bytes": 11347,
+      "sha256": "ecb6285abd3f597d18cafda16c986ab63168722a0f307a45d560b04e61668499"
+    },
+    {
+      "path": "CODEX_GOAL_rev5.md",
+      "bytes": 9422,
+      "sha256": "27e6644f8a99ae5d2465df3620a3a3ee4bc3ef5d4bdb42456b90cf2d782e0ad6"
+    },
+    {
+      "path": "CODEX_GOAL_rev6.md",
+      "bytes": 6594,
+      "sha256": "2c7851c2aa79fd7404a4b526457040aec9bdd1c6731c9566632d79a9dbe0952b"
+    },
+    {
+      "path": "CODEX_GOAL_rev7.md",
+      "bytes": 6130,
+      "sha256": "e9cc6665a88d9469686d5f6b2be40bc2fe684744068d6bfc1120f449ffbe18c4"
+    },
+    {
+      "path": "CODEX_GOAL_rev8.md",
+      "bytes": 10705,
+      "sha256": "9eee1552ee8ea09789f229300a05e4a582ea3b318a69f63b873f6b38366b552d"
+    },
+    {
+      "path": "CODEX_MISSION.md",
+      "bytes": 5512,
+      "sha256": "29fafcd4638a014db1786faac834f21d8e6882441ce92baf31081dc487f7d1cc"
+    },
+    {
+      "path": "HANDOFF_discretionary_trim.md",
+      "bytes": 2008,
+      "sha256": "ad4718c858bf24408becaf080682edfe645ea3175385218c82dd31774eba4092"
+    },
+    {
+      "path": "HANDOFF_soxl_gold_protection.md",
+      "bytes": 4104,
+      "sha256": "0e80def064654e1b8d96f9ab6028c5db9c4ccb73b6b0237a8ea66f96a51189db"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1078,
+      "sha256": "9bbd030b5ee7d9797507d0acc3a879e2e46149a1557bc8128c7b2bdfbf3997a8"
+    },
+    {
+      "path": "README.md",
+      "bytes": 34976,
+      "sha256": "a1867712bc642d47c24cd14adbda1226743505fd0af1ec1bf93c7a0de79d3d08"
+    },
+    {
+      "path": "RED_TEAM_AUDIT_GOAL.md",
+      "bytes": 7613,
+      "sha256": "2660d7931071a8171e4645739b10615ab8b11e82ac3d2c300785533e4a62d97c"
+    },
+    {
+      "path": "STANDING_GOAL_rev2.md",
+      "bytes": 6148,
+      "sha256": "e8f49f215372ea4e397a7e8c251fbae116ec187646b5be1f8f9ae7adabb64ae3"
+    },
+    {
+      "path": "USDT_USDC_SUPERVISED_ROUND_TRIP.md",
+      "bytes": 3591,
+      "sha256": "d88a62b22bb4b1305ecc393352140378337dbec00304de1c694c497e28673520"
+    },
+    {
+      "path": "analysis/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "analysis/basis_carry.py",
+      "bytes": 9835,
+      "sha256": "691f1ca437c7f37256bc221e04e2638fb8a678cdcd54f6f3c955e87551e2ebfc"
+    },
+    {
+      "path": "analysis/funding_forecast.py",
+      "bytes": 6686,
+      "sha256": "b14450922e3d8ddefe1ead5f22043f90ece494e636d62cdb93b523a88bc0f59a"
+    },
+    {
+      "path": "analysis/funding_gap_regression.py",
+      "bytes": 8307,
+      "sha256": "7d54fcfcd9250da0eb318b6dcfd3a7cc4187685bab9ce60e5e3156a71a1aaa0d"
+    },
+    {
+      "path": "analysis/regime_runlength.py",
+      "bytes": 12945,
+      "sha256": "18fcc54b8fbb2195293a866df29fca15509e0c8b64a93d7df874db0ff59e40e9"
+    },
+    {
+      "path": "analysis_outputs/regime_runlength_history_15m_30d.jsonl",
+      "bytes": 2651882,
+      "sha256": "be0d247bd5588c056a72e73f1f075fbba4e6d0edd95738ee4b1e83ab3509c14f"
+    },
+    {
+      "path": "analysis_outputs/regime_runlength_history_1h_90d.jsonl",
+      "bytes": 1973361,
+      "sha256": "d1217205222b12ad1f52bddb170e1f18fae5db1c2707feee3f28cf72573d863f"
+    },
+    {
+      "path": "analysis_outputs/regime_runlength_history_1m_7d.jsonl",
+      "bytes": 4695348,
+      "sha256": "640975f546c776690f65487d32251f999c9123995c4e21616eec6b1254bdfd9c"
+    },
+    {
+      "path": "analysis_outputs/regime_runlength_latest_15m_30d.csv",
+      "bytes": 818,
+      "sha256": "64a802c3ef8a3d908c11e764f3d4751056b4640a471b95ded61e97e0b032dde1"
+    },
+    {
+      "path": "analysis_outputs/regime_runlength_latest_1h_90d.csv",
+      "bytes": 779,
+      "sha256": "011c35c7449a0ff66fd65a8c07b59b769b4fbb03bdabd83a40652646f16fd87b"
+    },
+    {
+      "path": "analysis_outputs/regime_runlength_latest_1m_7d.csv",
+      "bytes": 776,
+      "sha256": "fbc7d88dc584a60fe7f015709c084a95a05900481e83f607674f708f1db4ae6d"
+    },
+    {
+      "path": "analyze_session.py",
+      "bytes": 9056,
+      "sha256": "393e6ab055c36f7f8b22a331bc387e3f9f8c11bcb24fd1a544ddca128db5cad9"
+    },
+    {
+      "path": "autoresearch_energy_market_bridge/README.md",
+      "bytes": 5260,
+      "sha256": "5bf56d9df029cebd31de342a884f4835d21b88b1c8a0a447251e946ba5ece2da"
+    },
+    {
+      "path": "autoresearch_energy_market_bridge/correlation_report.json",
+      "bytes": 23474,
+      "sha256": "3b5e34f41480f100a364a5d4e20f71d85e0ca5a7e501b54a1046ebf988db3ba8"
+    },
+    {
+      "path": "autoresearch_energy_market_bridge/snapshots/snapshot_20260826_3cab3812aab7.json",
+      "bytes": 621925,
+      "sha256": "fb78132de53006c9017c968440e8310e4de6e6c383113eb1f0b96d1c8d765c3f"
+    },
+    {
+      "path": "autoresearch_energy_market_bridge/study_manifest.json",
+      "bytes": 1522,
+      "sha256": "11abfb9107b4001e9f31a2580fe06ea076ac351f18f8df1e3c8825efa085b135"
+    },
+    {
+      "path": "autoresearch_energy_market_bridge_rev4/README.md",
+      "bytes": 4954,
+      "sha256": "9d9372ff794a0d2098cb3972e409aea1f7a516c8cbf8ccbf716473ec17034c39"
+    },
+    {
+      "path": "autoresearch_energy_market_bridge_rev4/correlation_report.json",
+      "bytes": 21050,
+      "sha256": "07d71941f0904e0059439287febd86dacb40dfb6fc609ac6320c0f95811409df"
+    }
+  ]
+}

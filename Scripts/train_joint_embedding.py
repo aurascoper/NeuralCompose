@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-train_joint_embedding.py — Phase 3.6: EEG → text-aligned spectral embedding.
+train_joint_embedding.py - Phase 3.6: EEG -> text-aligned spectral embedding.
 
 Trains a lightweight MLX encoder that projects a rolling 2-second, 4-channel EEG
 window into a 384-d latent vector aligned with a *text* embedding space
@@ -8,13 +8,13 @@ window into a 384-d latent vector aligned with a *text* embedding space
 state descriptor" derived self-supervised from that window's own PSD
 (see eeg_spectral.py). Alignment is a contrastive classification of each window
 against the fixed BGE embeddings of the descriptor vocabulary (cross-entropy over
-text anchors) — this is the well-posed realization of "align signal embeddings to
+text anchors) - this is the well-posed realization of "align signal embeddings to
 a text space": exactly one correct anchor per window, so no false-negative
-degeneracy, and retrieval@1 falls out as argmax(Z · Aᵀ).
+degeneracy, and retrieval@1 falls out as argmax(Z . A^T).
 
 NOT to be confused with the deferred RQ5 "joint embeddings" work
-(docs/evaluation/STAGE_3_4_3_5_DESIGN.md), which fuses multiple *text↔text*
-model spaces. This is *cross-modal* EEG↔text.
+(docs/evaluation/STAGE_3_4_3_5_DESIGN.md), which fuses multiple *text<->text*
+model spaces. This is *cross-modal* EEG<->text.
 
 Output: Models/EEGEncoder/{encoder.safetensors, config.json, metadata.json},
 a weight directory mirroring the MLX LLM drop-in convention. The live Swift-side
@@ -63,10 +63,10 @@ TEMPERATURE = 0.07
 DEFAULT_BGE = "Models/bge-small-en-v1.5-hf"
 
 
-# ── Encoder ──────────────────────────────────────────────────────────────
+# -- Encoder -------------------------------------------------------------
 
 class SpectralEncoder(nn.Module):
-    """Tiny 1-D CNN over a [B, samples, channels] window → L2-normalized [B, out_dim].
+    """Tiny 1-D CNN over a [B, samples, channels] window -> L2-normalized [B, out_dim].
 
     NOTE: MLX nn.Conv1d is channels-LAST ([N, L, C_in]), unlike PyTorch's
     channels-first. Windows are stored [channels, samples] on disk and must be
@@ -84,18 +84,26 @@ class SpectralEncoder(nn.Module):
         x = nn.relu(self.conv1(x))
         x = nn.relu(self.conv2(x))
         x = nn.relu(self.conv3(x))
-        x = mx.mean(x, axis=1)                                     # temporal global average → [B, hidden]
+        x = mx.mean(x, axis=1)                                     # temporal global average -> [B, hidden]
         x = self.proj(x)                                          # [B, out_dim]
         return x / (mx.sqrt(mx.sum(x * x, axis=-1, keepdims=True)) + 1e-8)
 
 
-# ── Data ─────────────────────────────────────────────────────────────────
+# -- Data ----------------------------------------------------------------
 
-def _window_signal(eeg_x: np.ndarray, sr: float, window_seconds: float, stride_seconds: float) -> list[np.ndarray]:
-    """Slide [N, channels] → list of [channels, EXPECTED_SAMPLES] windows.
+def _window_signal(
+    eeg_x: np.ndarray,
+    sr: float,
+    window_seconds: float,
+    stride_seconds: float,
+    demean: bool = True,
+) -> list[np.ndarray]:
+    """Slide [N, channels] -> list of [channels, EXPECTED_SAMPLES] windows.
 
     Mirrors train-intent-classifier.py's windowing (np.interp resample to a fixed
-    512-sample grid) but is self-supervised — no events, so no per-window labels.
+    512-sample grid) and subtracts the per-channel DC mean per window so the
+    trained SpectralEncoder matches SpectralStateEstimator's demeaned inputs at
+    inference time.
     """
     win_n = int(round(window_seconds * sr))
     stride_n = int(round(stride_seconds * sr))
@@ -108,7 +116,10 @@ def _window_signal(eeg_x: np.ndarray, sr: float, window_seconds: float, stride_s
             block = np.stack(
                 [np.interp(new, old, block[:, c]) for c in range(EXPECTED_CHANNELS)], axis=1
             ).astype(np.float32)
-        windows.append(block.T.astype(np.float32))               # [channels, samples]
+        w = block.T.astype(np.float64)                            # [channels, samples]
+        if demean:
+            w = w - np.mean(w, axis=-1, keepdims=True)
+        windows.append(w.astype(np.float32))
     return windows
 
 
@@ -159,7 +170,7 @@ def load_session_windows(session_dir: Path) -> list[np.ndarray]:
 
 def synthetic_windows(n: int, sr: float = EXPECTED_RATE, seed: int = 0) -> list[np.ndarray]:
     """Generate n windows with cycling band structure so descriptors distribute
-    across the vocabulary — for hardware-free smoke tests. Returns [channels, samples]."""
+    across the vocabulary - for hardware-free smoke tests. Returns [channels, samples]."""
     rng = np.random.default_rng(seed)
     t = np.arange(EXPECTED_SAMPLES) / sr
     profiles = [("alpha", 10.0), ("beta", 20.0), ("theta", 6.0), ("mixed", None)]
@@ -179,7 +190,7 @@ def synthetic_windows(n: int, sr: float = EXPECTED_RATE, seed: int = 0) -> list[
 
 
 def build_anchors(bge_model: str, allow_fake: bool, seed: int = 0) -> tuple[np.ndarray, str]:
-    """Encode STATE_DESCRIPTORS with BGE → [n_desc, OUT_DIM] unit-norm float32.
+    """Encode STATE_DESCRIPTORS with BGE -> [n_desc, OUT_DIM] unit-norm float32.
 
     Refuses to silently fabricate the text space (repo convention: use the real
     BGE space or omit the number). --allow-fake-anchors is an explicit,
@@ -192,20 +203,20 @@ def build_anchors(bge_model: str, allow_fake: bool, seed: int = 0) -> tuple[np.n
         if embs.shape[1] != OUT_DIM:
             raise ValueError(f"expected {OUT_DIM}-d BGE embeddings, got {embs.shape[1]}")
         return embs, f"bge:{bge_model}"
-    except Exception as e:  # noqa: BLE001 — surface any load/encode failure the same way
+    except Exception as e:  # noqa: BLE001 - surface any load/encode failure the same way
         if not allow_fake:
             raise SystemExit(
                 f"failed to load BGE text encoder from '{bge_model}': {e}\n"
                 f"Refusing to fabricate the text target space. Pass --allow-fake-anchors "
                 f"only for offline plumbing tests (results are NOT semantically meaningful).")
-        print(f"WARNING: BGE unavailable ({e}); using RANDOM fake anchors — plumbing only, "
+        print(f"WARNING: BGE unavailable ({e}); using RANDOM fake anchors - plumbing only, "
               f"NOT semantic.", file=sys.stderr)
         rng = np.random.default_rng(seed)
         a = rng.normal(size=(len(STATE_DESCRIPTORS), OUT_DIM)).astype(np.float32)
         return a / np.linalg.norm(a, axis=1, keepdims=True), "random-fallback (NOT bge)"
 
 
-# ── Loss / training ──────────────────────────────────────────────────────
+# -- Loss / training -----------------------------------------------------
 
 def _make_loss(anchors: mx.array, temperature: float):
     """Cross-entropy of each window over the fixed text anchors (unit-norm)."""

@@ -227,7 +227,7 @@ final class MindMonitorOSCStreamTests: XCTestCase {
 
         // Deliberately send nothing more. staleTimeoutSec is 1.0s; allow
         // up to 3s for the watchdog to fire and the stream to throw.
-        let outcome = await withTimeout(seconds: 3) { await collectTask.value }
+        let outcome = await value(of: collectTask, within: 3)
         await stream.stop()
 
         let thrown = try XCTUnwrap(
@@ -278,7 +278,7 @@ final class MindMonitorOSCStreamTests: XCTestCase {
 
         // staleTimeoutSec is 1.0s; the sample watchdog should fire ~2s in
         // despite the ongoing /muse/acc traffic. Allow up to 5s.
-        let outcome = await withTimeout(seconds: 5) { await collectTask.value }
+        let outcome = await value(of: collectTask, within: 5)
         pump.cancel()
         await stream.stop()
 
@@ -353,8 +353,8 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         await sendUDP(makeAccPacket(), port: port)           // movement (/muse/acc)
         await sendUDP(makeEEGPacket([1, 2, 3, 4]), port: port) // eeg
 
-        let movement = (await withTimeout(seconds: 3) { await movementTask.value }) ?? nil
-        _ = await withTimeout(seconds: 3) { await eegTask.value }
+        let movement = (await value(of: movementTask, within: 3)) ?? nil
+        _ = await value(of: eegTask, within: 3)
         await stream.stop()
 
         XCTAssertEqual(movement?.kind, .accel, "an accel packet must be yielded on the movement channel")
@@ -369,10 +369,38 @@ final class MindMonitorOSCStreamTests: XCTestCase {
     /// (/muse/eeg with <4 floats) is real corruption and must count as a DROP
     /// (not be silently rebucketed as benign ignoredNonEEG). A genuinely
     /// non-sample address (/muse/batt) stays ignoredNonEEG.
+    ///
+    /// Regression note (2026-09-24): this test previously hung the xctest
+    /// process. Three independent defects stacked:
+    ///   1. The returned AsyncThrowingStream was discarded (`_ =`), so its
+    ///      onTermination fired ~1 ms after start() and cancelled the
+    ///      NWListener before the datagrams were sent — packetsReceived never
+    ///      advanced and the poll below could never succeed.
+    ///   2. The poll was raced with withTimeout's task-group helper: a group
+    ///      waits for ALL its children, and the poller child swallowed its
+    ///      own cancellation (`try? await Task.sleep` → CancellationError →
+    ///      instant re-loop with no suspension), so once the 2 s timeout child
+    ///      "won", the poller spun at ~97% CPU with unbounded allocation churn
+    ///      (RSS oscillated 3.3–4.7 GB) until the process died under memory
+    ///      pressure with no crash report.
+    ///   3. Nothing bounded the overall wait: XCTest's async support waits
+    ///      forever when the test body never returns.
+    ///
+    /// The rewrite keeps the stream alive, polls in a Task that CHECKS
+    /// Task.isCancelled (so cancellation is honoured), and bounds the wait
+    /// with XCTMultipleExpectations (`fulfillment(of:timeout:)`) — the test
+    /// now FAILS inside its stated 2 s bound with a message instead of
+    /// hanging the runner. The stream contract (onTermination tearing down
+    /// the listener when the consumer drops the stream) is deliberate
+    /// resource cleanup, not a defect; the behavioural question of what a
+    /// discarded stream should mean is recorded in the Phase-2 notes, not
+    /// changed here.
     func testTruncatedSampleAddressCountsAsDroppedNotIgnored() async throws {
         let port = testPort + 8
         let stream = MindMonitorOSCStream(port: port)
-        _ = try await stream.start()
+        // Retain the returned stream: discarding it cancels the listener via
+        // onTermination before the datagrams below are ever delivered.
+        let eegStream = try await stream.start()
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         var truncatedEEG = oscString("/muse/eeg")   // only 2 floats — truncated
@@ -388,14 +416,32 @@ final class MindMonitorOSCStreamTests: XCTestCase {
 
         await sendUDP(truncatedEEG, port: port)
         await sendUDP(batt, port: port)
-        _ = await withTimeout(seconds: 2) { () -> Int in
-            var received = 0
-            while received < 2 {
+
+        // Bounded wait for BOTH datagrams to land in the diagnostics counter.
+        // `received both datagrams` fulfils as soon as packetsReceived >= 2;
+        // if the datagrams are lost, the wait times out at 2 s and the test
+        // FAILS here with the message below — the stated bound, honoured.
+        let bothDatagrams = expectation(description: "received both datagrams")
+        let poller = Task {
+            while !Task.isCancelled {
+                if stream.currentDiagnostics().packetsReceived >= 2 {
+                    bothDatagrams.fulfill()
+                    return
+                }
+                // Sleep BETWEEN polls so a cancelled poller suspends and
+                // exits instead of spinning (the pre-rewrite hang mechanism).
                 try? await Task.sleep(nanoseconds: 20_000_000)
-                received = stream.currentDiagnostics().packetsReceived
             }
-            return received
         }
+        defer { poller.cancel() }
+        await fulfillment(of: [bothDatagrams], timeout: 2)
+        // Keep the stream (and with it the listener, via onTermination) alive
+        // until the wait has resolved; the local is otherwise unused, so the
+        // optimizer may release it early. The stdlib overload is synchronous
+        // and can't wrap the await, but its guarantee runs to this call site,
+        // so an empty body placed after the await covers the whole wait.
+        withExtendedLifetime(eegStream) {}
+
         await stream.stop()
 
         let diag = stream.currentDiagnostics()
@@ -405,20 +451,246 @@ final class MindMonitorOSCStreamTests: XCTestCase {
         XCTAssertEqual(diag.movementYielded, 0)
     }
 
-    /// Races `operation` against a timeout, returning `nil` on timeout
-    /// instead of hanging the test indefinitely if the watchdog regresses.
-    private func withTimeout<T: Sendable>(
-        seconds: Double, _ operation: @escaping @Sendable () async -> T
-    ) async -> T? {
-        await withTaskGroup(of: T?.self) { group in
-            group.addTask { await operation() }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                return nil
-            }
-            let result = await group.next() ?? nil
-            group.cancelAll()
-            return result
+    /// D-behavioural: a DISCARDED stream (consumer releases it) must report
+    /// `.cancelled` in diagnostics — the whole point of `StreamListenerState`.
+    /// Before it existed, a terminated listener and a quiet live one were
+    /// indistinguishable (packetsReceived == 0 either way), which is exactly
+    /// what made the discarded-stream bug expensive: datagrams went to a
+    /// listener that had already torn itself down, and the counters said
+    /// nothing. Keeping the drop-ends-subscription semantics (standard
+    /// AsyncStream behaviour; the app consumes the stream) — this pins the
+    /// OBSERVABILITY of it, not a change.
+    func testDiscardedStreamReportsCancelledListener() async throws {
+        let port = testPort + 9
+        let stream = MindMonitorOSCStream(port: port)
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .idle,
+            "a fresh, never-started stream must read .idle"
+        )
+
+        do {
+            _ = try await stream.start()   // deliberately discarded
+        } catch {
+            return XCTFail("start() unexpectedly threw: \(error)")
         }
+        // onTermination fires shortly after the last reference drops; give
+        // the teardown a bounded moment to land, then it must read cancelled.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .cancelled,
+            "a discarded stream must report a cancelled listener — a quiet live listener must be distinguishable from a dead one"
+        )
+    }
+
+    /// D-behavioural: a RETAINED stream must report `.ready` while alive, and
+    /// `.cancelled` after an explicit `stop()` — so callers reading
+    /// diagnostics between sessions can tell "waiting for the first packet"
+    /// (ready, quiet) from "no subscription at all" (cancelled). `.ready` is
+    /// the listener's own asynchronous report, so the test waits for it.
+    func testRetainedStreamReportsReadyThenCancelledOnStop() async throws {
+        let port = testPort + 10
+        let stream = MindMonitorOSCStream(port: port)
+        let eegStream = try await stream.start()
+        let state = await listenerState(of: stream, reaching: .ready, within: 2)
+        XCTAssertEqual(
+            state, .ready,
+            "a live, retained stream must report ready even with zero packets — quiet ≠ dead"
+        )
+
+        await stream.stop()
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .cancelled,
+            "stop() must move diagnostics to cancelled"
+        )
+        // The retained stream is never consumed; keep it alive past the stop()
+        // assertion. `_ = eegStream` is not enough: it has no side effect, so
+        // the optimizer may drop it and release the stream early.
+        withExtendedLifetime(eegStream) {}
+    }
+
+    /// `.ready` must be OBSERVED from the listener, never asserted by
+    /// start(). A second stream on a port the first already holds gets
+    /// EADDRINUSE from Network.framework, so it must not read `.ready` even
+    /// immediately after start() (it was, before start() stopped writing
+    /// it), must settle on `.failed`, and a later stop() must not launder
+    /// the failure into `.cancelled`.
+    func testListenerThatCannotBindNeverReportsReady() async throws {
+        let port = testPort + 11
+        let holder = MindMonitorOSCStream(port: port)
+        let holderStream = try await holder.start()
+        let holderState = await listenerState(of: holder, reaching: .ready, within: 2)
+        XCTAssertEqual(holderState, .ready, "precondition: the first stream must hold the port")
+
+        let blocked = MindMonitorOSCStream(port: port)
+        let blockedStream = try await blocked.start()
+        XCTAssertNotEqual(
+            blocked.currentDiagnostics().listenerState, .ready,
+            "start() must not claim ready before the listener reports it"
+        )
+        let blockedState = await listenerState(of: blocked, reaching: .failed, within: 2)
+        XCTAssertEqual(blockedState, .failed, "a bind collision must surface as .failed")
+
+        await blocked.stop()
+        XCTAssertEqual(
+            blocked.currentDiagnostics().listenerState, .failed,
+            "stop() after a failure must keep .failed — the failure is the actionable fact"
+        )
+        await holder.stop()
+        withExtendedLifetime((holderStream, blockedStream)) {}
+    }
+
+    /// Pins how each Network.framework listener state reads in diagnostics,
+    /// in particular `.waiting` (can't listen now, retrying on its own),
+    /// which no live test can induce on demand: it reads as neither ready
+    /// nor failed.
+    func testListenerStateMapping() {
+        let error = NWError.posix(.ENETDOWN)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .setup), .starting)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .waiting(error)), .waiting)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .ready), .ready)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .failed(error)), .failed)
+        XCTAssertEqual(MindMonitorOSCStream.diagnosticState(for: .cancelled), .cancelled)
+    }
+
+    /// A callback from a listener that is no longer the stream's current one
+    /// must not move the state. The write rule takes (state, source), so the
+    /// test hands it a stale source directly; no race has to be scheduled.
+    func testStaleListenerCallbackCannotRewriteState() async throws {
+        let port = testPort + 12
+        let stream = MindMonitorOSCStream(port: port)
+        let eegStream = try await stream.start()
+        let live = await listenerState(of: stream, reaching: .ready, within: 2)
+        XCTAssertEqual(live, .ready, "precondition: the current listener reported ready")
+
+        let stale = try NWListener(using: .udp)   // never started, never the stream's listener
+        let error = NWError.posix(.EADDRINUSE)
+        stream.recordListenerState(.failed(error), of: stale)
+        stream.recordListenerState(.waiting(error), of: stale)
+        stream.recordListenerCancelled(stale)
+        XCTAssertEqual(
+            stream.currentDiagnostics().listenerState, .ready,
+            "a stale listener's callbacks must not rewrite the current session's state"
+        )
+
+        await stream.stop()
+        withExtendedLifetime(eegStream) {}
+    }
+
+    /// Terminal states hold for a SESSION, not for the instance: the
+    /// supervisor reuses one stream across its reconnect retries, so a
+    /// `.failed` or `.cancelled` that survived stop()/start() would make
+    /// diagnostics lie after every reconnect. Session 1 fails on an occupied
+    /// port; once the port is freed, session 2 on the same instance must
+    /// reach `.ready`. The occupier is a bare NWListener so the test can
+    /// wait for its own `.cancelled` report instead of sleeping and hoping
+    /// the port has been released.
+    func testTerminalStateIsPerSessionRestartReachesReady() async throws {
+        let port = testPort + 13
+        let occupier = try NWListener(using: .udp, on: NWEndpoint.Port(rawValue: port)!)
+        let occupierReady = expectation(description: "occupier ready")
+        let occupierCancelled = expectation(description: "occupier cancelled")
+        occupier.newConnectionHandler = { $0.cancel() }
+        occupier.stateUpdateHandler = { state in
+            switch state {
+            case .ready: occupierReady.fulfill()
+            case .cancelled: occupierCancelled.fulfill()
+            default: break
+            }
+        }
+        occupier.start(queue: .global())
+        await fulfillment(of: [occupierReady], timeout: 2)
+
+        let stream = MindMonitorOSCStream(port: port)
+        let session1 = try await stream.start()
+        let failed = await listenerState(of: stream, reaching: .failed, within: 2)
+        XCTAssertEqual(failed, .failed, "precondition: session 1 fails on the occupied port")
+        await stream.stop()
+        XCTAssertEqual(stream.currentDiagnostics().listenerState, .failed)
+        withExtendedLifetime(session1) {}
+
+        occupier.cancel()
+        await fulfillment(of: [occupierCancelled], timeout: 2)
+
+        let session2 = try await stream.start()
+        let restarted = await listenerState(of: stream, reaching: .ready, within: 2)
+        XCTAssertEqual(
+            restarted, .ready,
+            "session 1's terminal .failed must not carry into session 2 — reconnect diagnostics depend on it"
+        )
+        await stream.stop()
+        withExtendedLifetime(session2) {}
+    }
+
+    /// Polls `stream`'s listener state until it reads `target`, `seconds`
+    /// pass, or the task is cancelled (checked, so a cancelled poll exits
+    /// instead of spinning), returning the last state read.
+    private func listenerState(
+        of stream: MindMonitorOSCStream, reaching target: StreamListenerState, within seconds: Double
+    ) async -> StreamListenerState {
+        let deadline = Date().addingTimeInterval(seconds)
+        var state = stream.currentDiagnostics().listenerState
+        while state != target, Date() < deadline, !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            state = stream.currentDiagnostics().listenerState
+        }
+        return state
+    }
+
+    /// `task`'s value, or `nil` if it doesn't finish within `seconds` — in
+    /// which case `task` is cancelled and abandoned, never awaited, so this
+    /// ALWAYS returns within `seconds` instead of hanging the test if the
+    /// watchdog regresses.
+    ///
+    /// Regression note (C1 audit, 2026-09-24): this helper was built on
+    /// `withTaskGroup` — and a task group waits for ALL its children. When
+    /// the timeout child won and the operation child was itself awaiting an
+    /// external `Task.value` (cancellation-insensitive: cancelling the
+    /// awaiting task does not complete the await), the group could never
+    /// exit and the test hung forever at 0% CPU inside XCTWaiter — a second,
+    /// quieter sibling of the Phase-0 unbounded-wait defect, exposed live by
+    /// the C1 wrong-port mutation on testMovementYieldedAndNotCountedAsDropped
+    /// (movement channel has no watchdog, so nothing ever completed the
+    /// abandoned await). Now the abandoning pattern — same shape as BCILLM's
+    /// `withAbandoningTimeout`: unstructured tasks + a once-flag. It takes the
+    /// Task rather than a closure because cancellation does not propagate
+    /// through `await task.value`: a closure-based helper could only cancel
+    /// its own wrapper, never the task actually holding the stream. Every
+    /// caller's task iterates an AsyncStream, which does honour cancellation,
+    /// so the loser really ends — including a `movementStream` consumer,
+    /// which `stop()` alone never finishes (that stream outlives sessions).
+    private func value<T: Sendable>(of task: Task<T, Never>, within seconds: Double) async -> T? {
+        let once = TimeoutOnceFlag()
+        return await withCheckedContinuation { (cont: CheckedContinuation<T?, Never>) in
+            let timer = Task.detached {
+                try? await Task.sleep(nanoseconds: UInt64(max(0, seconds) * 1_000_000_000))
+                if once.claim() {
+                    task.cancel()
+                    cont.resume(returning: nil)
+                }
+            }
+            Task.detached {
+                let value = await task.value
+                if once.claim() {
+                    timer.cancel()
+                    cont.resume(returning: value)
+                }
+            }
+        }
+    }
+}
+
+/// Once-flag for `value(of:within:)`: whichever of (task, timer) finishes
+/// first claims the right to resume the continuation; the loser's result is
+/// dropped. `@unchecked Sendable` is correct, not a shortcut: `claimed` is
+/// only touched under `lock`.
+private final class TimeoutOnceFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var claimed = false
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if claimed { return false }
+        claimed = true
+        return true
     }
 }

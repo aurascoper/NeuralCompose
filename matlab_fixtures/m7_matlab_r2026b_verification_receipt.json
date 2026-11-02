@@ -1,0 +1,420 @@
+{
+  "verified_at_utc": "2026-11-02T18:31:41Z",
+  "matlab_version": "26.2.0.3433840 (R2026b) Update 1",
+  "all_14_student_suite_toolboxes_present": true,
+  "installed_toolbox_count": 14,
+  "m7_schema_headers_vs_types_valid": true,
+  "spice_basilisk_si_seam_valid": true,
+  "live_spice_jl_runtime_verified": true,
+  "spice_jl_pos_scale_ratio_me": 1000.0000000000001,
+  "spice_jl_vel_scale_ratio_me": 1000,
+  "vizard_transport_distinction_verified": true,
+  "dcm_orthogonality_frobenius_error": 1.5700924586837752E-16,
+  "pod_mode1_energy_fraction": 0.99936400591215657,
+  "control_loop_stable": true,
+  "control_settling_time_s": 18.930963621198092,
+  "simulink_model_simulated": true,
+  "simulink_slx_model_saved": true,
+  "simulink_slx_model_path": "/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures/m7_reactor_alara_closed_loop.slx",
+  "simulink_final_value": 1.0027730132206889,
+  "multipool_biofilm_conserved": true,
+  "multipool_mass_rel_residual": 0,
+  "neurospora_4block_8pool_verified": true,
+  "neurospora_n_pool_vogels_chambers": 8,
+  "neurospora_4block_state": {
+    "n_pool": 8,
+    "M_frq": [
+      0.92,
+      0.89,
+      0.85,
+      0.81,
+      0.77,
+      0.73,
+      0.69,
+      0.65
+    ],
+    "F_c": [
+      1.14,
+      1.11,
+      1.07,
+      1.03,
+      0.99,
+      0.95,
+      0.91,
+      0.87
+    ],
+    "F_n": [
+      0.95,
+      0.92,
+      0.89,
+      0.86,
+      0.83,
+      0.8,
+      0.77,
+      0.74
+    ],
+    "phi_t": [
+      0.67474094222355274,
+      0.63754879813869347,
+      0.63363300806974632,
+      0.61466295192216613,
+      -2.4668517113662412,
+      -2.4879567566702727,
+      -2.4920432314541379,
+      -2.4937812266626951
+    ],
+    "phi_rad": [
+      0.67474094222355274,
+      0.63754879813869347,
+      0.63363300806974632,
+      0.61466295192216613,
+      -2.4668517113662412,
+      -2.4879567566702727,
+      -2.4920432314541379,
+      -2.4937812266626951
+    ],
+    "ode15s_final_state": [
+      2.3013937986418118,
+      0.36636114804329983,
+      0.49299780169987378
+    ],
+    "B_i": [
+      0.84,
+      0.8,
+      0.76,
+      0.72,
+      0.68,
+      0.64,
+      0.6,
+      0.56
+    ],
+    "B_kg_m3": [
+      0.84,
+      0.8,
+      0.76,
+      0.72,
+      0.68,
+      0.64,
+      0.6,
+      0.56
+    ],
+    "rho_tip_i": [
+      1.45E+9,
+      1.38E+9,
+      1.31E+9,
+      1.24E+9,
+      1.18E+9,
+      1.12E+9,
+      1.06E+9,
+      1.01E+9
+    ],
+    "rho_tip": [
+      1.45E+9,
+      1.38E+9,
+      1.31E+9,
+      1.24E+9,
+      1.18E+9,
+      1.12E+9,
+      1.06E+9,
+      1.01E+9
+    ],
+    "phi_EPS_i": [
+      0.22,
+      0.21,
+      0.2,
+      0.19,
+      0.18,
+      0.17,
+      0.16,
+      0.15
+    ],
+    "phi_EPS": [
+      0.22,
+      0.21,
+      0.2,
+      0.19,
+      0.18,
+      0.17,
+      0.16,
+      0.15
+    ],
+    "beta_0": 1,
+    "beta_1": 3,
+    "beta_1_syncytial_loops": 3,
+    "S_i": [
+      55,
+      51.2,
+      47.6,
+      44.1,
+      40.8,
+      37.6,
+      34.5,
+      31.6
+    ],
+    "S_mol_m3": [
+      55,
+      51.2,
+      47.6,
+      44.1,
+      40.8,
+      37.6,
+      34.5,
+      31.6
+    ],
+    "C_O2_i": [
+      0.24,
+      0.235,
+      0.23,
+      0.225,
+      0.22,
+      0.215,
+      0.21,
+      0.205
+    ],
+    "C_O2": [
+      0.24,
+      0.235,
+      0.23,
+      0.225,
+      0.22,
+      0.215,
+      0.21,
+      0.205
+    ],
+    "conidial_cytometry": {
+      "FSC_A": [
+        42000,
+        41200,
+        40500,
+        39800,
+        39100,
+        38400,
+        37700,
+        37000
+      ],
+      "SSC_A": [
+        18500,
+        18100,
+        17700,
+        17300,
+        16900,
+        16500,
+        16100,
+        15700
+      ],
+      "FL1_A": [
+        3100,
+        3020,
+        2940,
+        2860,
+        2780,
+        2700,
+        2620,
+        2540
+      ],
+      "melanin_pg_cell": [
+        14.2,
+        13.8,
+        13.4,
+        13,
+        12.6,
+        12.2,
+        11.8,
+        11.4
+      ]
+    },
+    "D_mel_i": [
+      0.18,
+      0.175,
+      0.17,
+      0.165,
+      0.16,
+      0.155,
+      0.15,
+      0.145
+    ],
+    "D_mel_kg_m3": [
+      0.18,
+      0.175,
+      0.17,
+      0.165,
+      0.16,
+      0.155,
+      0.15,
+      0.145
+    ],
+    "D_dot_eff_i": [
+      8.2E-7,
+      7.6E-7,
+      7.1E-7,
+      6.6E-7,
+      6.1E-7,
+      5.7E-7,
+      5.3E-7,
+      4.9E-7
+    ],
+    "D_dot_eff_Gy_s": [
+      8.2E-7,
+      7.6E-7,
+      7.1E-7,
+      6.6E-7,
+      6.1E-7,
+      5.7E-7,
+      5.3E-7,
+      4.9E-7
+    ],
+    "cumulative_dose_D_i_Gy": [
+      0.0295,
+      0.0274,
+      0.0256,
+      0.0238,
+      0.022,
+      0.0205,
+      0.0191,
+      0.0176
+    ],
+    "u_valve": [
+      0.00025,
+      0.00025,
+      0.00025,
+      0.00025,
+      0.00025,
+      0.00025,
+      0.00025,
+      0.00025
+    ],
+    "z_shield": [
+      0.1,
+      0.105,
+      0.11,
+      0.115,
+      0.12,
+      0.125,
+      0.13,
+      0.135
+    ],
+    "z_shield_m": [
+      0.1,
+      0.105,
+      0.11,
+      0.115,
+      0.12,
+      0.125,
+      0.13,
+      0.135
+    ],
+    "Phi_light": [
+      45,
+      45,
+      45,
+      45,
+      45,
+      45,
+      45,
+      45
+    ],
+    "openmc_tally_variance_rel_diff": 0.020689655172413786
+  },
+  "mat_v7_and_v73_hdf5_saved": true,
+  "mat_v7_header_prefix": "MATLAB 5.0 MAT-file",
+  "openfoam_matlab_roundtrip_beta1_valid": true,
+  "openfoam_phreeqc_actual_output_ingestion_verified": true,
+  "menke_dbs_pb2_conserved": true,
+  "menke_dbs_pb2_rel_residual": 0,
+  "five_graph_topology_distinction_valid": true,
+  "section_6_all_9_flags_codified": true,
+  "swarm_biconnected_verification_valid": true,
+  "unified_substrate_swap_L31_L32_valid": true,
+  "openmc_tally_variance_rel_diff": 0.020689655172413786,
+  "tarjan_bridge_dag_valid": true,
+  "beta_1_inter_solver": 0,
+  "health_physics_alara_valid": true,
+  "asr_reticulation_valid": true,
+  "beta_1_reticulation_cycles": 2,
+  "exported_png_width": 2584,
+  "exported_png_height": 1460,
+  "matlab_api_and_context7_sync": {
+    "matlab_extern_include_verified": true,
+    "matlab_help_docset_verified": true,
+    "cpp_engine_headers": [
+      "MatlabEngine.hpp",
+      "MatlabDataArray.hpp",
+      "MatlabController.hpp",
+      "mat.h",
+      "engine.h",
+      "mex.hpp"
+    ],
+    "context7_cli_version": "0.8.2",
+    "context7_verified_library_ids": [
+      "/websites/mathworks_help_matlab",
+      "/mathworks/matlab-engine-for-python",
+      "/websites/mathworks_help_simscape",
+      "/websites/doc_openfoam_2606",
+      "/websites/cpp_openfoam_v11",
+      "/phreeqc-dev/phreeqc3",
+      "/phreeqc-dev/phreeqcrm"
+    ],
+    "neuralcompose_master_event_subsystems": [
+      "NeuralCompose",
+      "MomentumAutomata",
+      "ReactorPools",
+      "BiofilmsSessions"
+    ]
+  },
+  "all_checks_passed": true,
+  "neurospora_crassa_matlab_r2026b_4_block_state_spec": {
+    "source_turn": "2026-11-02-L34",
+    "block_1_frq_wc1_wc2_circadian_oscillator": {
+      "states": [
+        "M_frq",
+        "F_c",
+        "F_n",
+        "phi(t)"
+      ],
+      "ode_order": 3,
+      "free_running_period_hr": 22.5,
+      "photoentrainment_input": "Phi_light(t)",
+      "role": "Governs circadian conidiation banding and rhythmic antioxidant/catalase/SOD expression"
+    },
+    "block_2_syncytial_hyphal_streaming_and_woronin_hex1": {
+      "cytoplasmic_streaming_velocity_um_s_range": [
+        5,
+        60
+      ],
+      "septal_pore_occlusion_protein": "Woronin_body_HEX_1",
+      "anastomosis_cycle_rank_beta_1_min": 1,
+      "beta_1_verified": 3,
+      "role": "Syncytial mass-flow transport with HEX-1 emergency septal plugging and biconnected hyphal fusion loops"
+    },
+    "block_3_eight_chamber_vogels_medium_simscape_phreeqc_hydraulics": {
+      "chamber_count": 8,
+      "state_variables": [
+        "C_sucrose",
+        "C_NH4",
+        "C_NO3",
+        "DO",
+        "pH",
+        "pe",
+        "T"
+      ],
+      "phreeqc_pH": 5.8,
+      "phreeqc_pe": 6.4,
+      "temperature_K": 298.15,
+      "role": "8-chamber Vogels Minimal Medium Simscape hydraulic manifold coupled to USGS PHREEQC speciation"
+    },
+    "block_4_dhn_melanin_neurosporaxanthin_alara_point_kernel_shielding": {
+      "pigments": [
+        "DHN-melanin",
+        "neurosporaxanthin"
+      ],
+      "radical_quenching_efficiency_eta": 0.35,
+      "point_kernel_equation": "D_dot_shielded(r, z, t) = D_dot_0 * (r_0 / r)^2 * B(mu*z) * exp(-mu*z) * (1 - eta_melanin)",
+      "closed_loop_actuators": [
+        "u_valve(t)",
+        "z_shield(t)",
+        "Phi_light(t)"
+      ],
+      "alara_compliant": true
+    }
+  }
+}

@@ -7,14 +7,14 @@ import BCICore
 /// headband's raw EEG as OSC packets).
 ///
 /// This is the one `EEGStreaming` conformer that touches the network at
-/// runtime — see `MuseBoardProfile.requiresNetwork` and
+/// runtime - see `MuseBoardProfile.requiresNetwork` and
 /// `PipelineMode.Acquisition.remotePhone`. It is meant to be reached only over a
 /// private VPN interface (e.g. Tailscale) between the phone and this Mac,
 /// never over the public internet: OSC has no authentication or encryption
 /// of its own, so exposing this port publicly would let anyone on the
 /// internet inject arbitrary "EEG" samples into the pipeline.
 ///
-/// Binds to `0.0.0.0` (all interfaces) on the configured UDP port — that's
+/// Binds to `0.0.0.0` (all interfaces) on the configured UDP port - that's
 /// necessary, not a bug: a VPN like Tailscale creates a virtual interface
 /// with an IP not known in advance, and a UDP listener has to bind broadly
 /// to receive on it. The privacy/security boundary here is "only reachable
@@ -31,7 +31,7 @@ import BCICore
 ///         -> EEGSample
 ///
 /// This class owns exactly the networking (`NWListener`/`NWConnection`)
-/// and the diagnostics bookkeeping (arrival timing, packet counts) — see
+/// and the diagnostics bookkeeping (arrival timing, packet counts) - see
 /// `MuseOSCDecoder` and `MindMonitorDecoder` for the decoding, which is
 /// independently unit-testable without a socket.
 public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unchecked Sendable {
@@ -52,10 +52,16 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
     private let staleTimeoutSec: Double
     private let lock = NSLock()
     private var listener: NWListener?
+    private var activeConnections: [NWConnection] = []
     private var startNanos: UInt64?
     private var watchdogTask: Task<Void, Never>?
+    /// Listener lifecycle for `currentDiagnostics()` - see
+    /// `StreamListenerState`. Guarded by `lock`. `start()` opens a session at
+    /// `.starting`; after that it moves only on what the listener itself
+    /// reports, on `stop()`, or on the consumer dropping the stream.
+    private var listenerState: StreamListenerState = .idle
 
-    // Diagnostics bookkeeping — see `currentDiagnostics()`.
+    // Diagnostics bookkeeping - see `currentDiagnostics()`.
     private var lastArrivalNanos: UInt64?
     private var interArrivalMillis: [Double] = []
     private let interArrivalWindow = 64
@@ -66,13 +72,13 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
     private var ignoredNonEEG = 0
     private var samplesYielded = 0
     private var lastHeartbeat: Date?
-    /// Wall-clock of the most recent *EEG sample* actually yielded — distinct
+    /// Wall-clock of the most recent *EEG sample* actually yielded - distinct
     /// from `lastHeartbeat` (any datagram). The stall watchdog keys off THIS so
     /// that continuing non-EEG traffic (`/muse/acc`, `/muse/gyro`, `/muse/batt`)
     /// can't hold the link "alive" while the `/muse/eeg` substream is silently
     /// dead (electrodes lifted, EEG toggled off).
     private var lastSampleWallClock: Date?
-    /// Best-effort — set from the most recent connection's `NWPath`, once
+    /// Best-effort - set from the most recent connection's `NWPath`, once
     /// that path resolves. `nil` until the first connection reports a path,
     /// which can lag the first received packet slightly.
     private var localInterfaceName: String?
@@ -88,8 +94,8 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
     ///     can't mask a dead `/muse/eeg` substream. Same failure mode as
     ///     `BrainFlowService`'s equivalent watchdog: a phone that stops
     ///     sending (backgrounded, out of Tailscale range, Mind Monitor
-    ///     killed) never causes an `NWConnection` error — the
-    ///     `receiveMessage` callback just never fires again — so without
+    ///     killed) never causes an `NWConnection` error - the
+    ///     `receiveMessage` callback just never fires again - so without
     ///     this, `AppViewModel`'s retry/backoff/reconnecting-UI supervisor,
     ///     which only reacts to the stream throwing or finishing, never
     ///     fires either. Default matches `BrainFlowService`'s 5s.
@@ -119,19 +125,35 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         recordStarted(newListener, startNanos: DispatchTime.now().uptimeNanoseconds)
 
         BCILog.eeg.notice(
-            "MindMonitorOSCStream listening on UDP port \(self.port.rawValue, privacy: .public) (all interfaces) — reach this only via a private VPN (e.g. Tailscale), never the public internet"
+            "MindMonitorOSCStream listening on UDP port \(self.port.rawValue, privacy: .public) (all interfaces) - reach this only via a private VPN (e.g. Tailscale), never the public internet"
         )
 
         return AsyncThrowingStream<EEGSample, any Error> { continuation in
             newListener.newConnectionHandler = { [weak self] connection in
-                guard let self else { return }
+                guard let self else {
+                    connection.cancel()
+                    return
+                }
+                guard self.trackConnection(connection, for: newListener) else {
+                    connection.cancel()
+                    return
+                }
                 connection.pathUpdateHandler = { [weak self] path in
                     self?.recordLocalInterfaceName(path.availableInterfaces.first?.name)
+                }
+                connection.stateUpdateHandler = { [weak self] state in
+                    switch state {
+                    case .failed, .cancelled:
+                        self?.removeConnection(connection)
+                    default:
+                        break
+                    }
                 }
                 connection.start(queue: .global(qos: .userInitiated))
                 self.receiveLoop(on: connection, continuation: continuation)
             }
             newListener.stateUpdateHandler = { state in
+                self.recordListenerState(state, of: newListener)
                 switch state {
                 case .failed(let error):
                     continuation.finish(throwing: BCIError.streamFailed(reason: "OSC listener failed: \(error)"))
@@ -161,8 +183,8 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
                         let packetsAlsoStopped =
                             self.secondsSinceLastHeartbeat(sessionStart: sessionStart) > self.staleTimeoutSec
                         let reason = packetsAlsoStopped
-                            ? "no OSC packets received for \(Int(staleness))s — link likely dead"
-                            : "no EEG samples for \(Int(staleness))s while other OSC traffic continues — EEG substream stalled (electrodes lifted or EEG stream off)"
+                            ? "no OSC packets received for \(Int(staleness))s - link likely dead"
+                            : "no EEG samples for \(Int(staleness))s while other OSC traffic continues - EEG substream stalled (electrodes lifted or EEG stream off)"
                         BCILog.eeg.error(
                             "MindMonitorOSCStream: \(reason, privacy: .public) (>\(self.staleTimeoutSec, format: .fixed(precision: 1))s timeout)"
                         )
@@ -176,18 +198,22 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
             continuation.onTermination = { @Sendable [weak self] _ in
                 newListener.cancel()
                 self?.cancelWatchdog()
+                self?.cancelAllConnections()
+                self?.recordListenerCancelled(newListener)
             }
         }
     }
 
     public func stop() async {
         takeListenerForStop()?.cancel()
+        cancelWatchdog()
+        cancelAllConnections()
     }
 
     // MARK: - Locking helpers
     //
     // NSLock.lock()/.unlock() can't be called directly inside an `async`
-    // function under strict concurrency (they're flagged as unsafe —
+    // function under strict concurrency (they're flagged as unsafe -
     // Swift wants async-safe scoped locking instead). These stay plain
     // synchronous methods so start()/stop() call into them rather than
     // locking inline.
@@ -205,10 +231,11 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         defer { lock.unlock() }
         self.listener = newListener
         self.startNanos = startNanos
+        self.listenerState = .starting
         // Reset the per-session timing references. The supervisor reuses ONE
         // stream instance across live retries (stop()/start() in a loop), so a
         // reconnect must measure staleness from THIS attempt's sessionStart, not
-        // inherit the prior attempt's last sample/heartbeat — otherwise the
+        // inherit the prior attempt's last sample/heartbeat - otherwise the
         // sample watchdog's reconnect grace collapses to a single ~1s tick and
         // tears down an otherwise-recoverable link. lastArrivalNanos is cleared
         // too so the first post-restart inter-arrival isn't a cross-session gap.
@@ -223,7 +250,45 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         defer { lock.unlock() }
         let current = listener
         listener = nil
+        if current != nil { applyListenerStateLocked(.cancelled) }
         return current
+    }
+
+    @discardableResult
+    private func trackConnection(_ connection: NWConnection, for source: NWListener) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard listener === source else { return false }
+        activeConnections.append(connection)
+        return true
+    }
+
+    private func removeConnection(_ connection: NWConnection) {
+        lock.lock()
+        defer { lock.unlock() }
+        activeConnections.removeAll { $0 === connection }
+    }
+
+    private func cancelAllConnections() {
+        lock.lock()
+        let connections = activeConnections
+        activeConnections.removeAll()
+        lock.unlock()
+        for connection in connections {
+            connection.cancel()
+        }
+    }
+
+    internal var activeConnectionCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return activeConnections.count
+    }
+
+    internal var hasActiveWatchdog: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return watchdogTask != nil
     }
 
     private func recordLocalInterfaceName(_ name: String?) {
@@ -237,6 +302,55 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         lock.lock()
         defer { lock.unlock() }
         watchdogTask = task
+    }
+
+    /// Listener lifecycle transitions - see `StreamListenerState`. Only the
+    /// current session's listener may move the state: a late callback from a
+    /// listener that stop()/start() already replaced is stale and dropped.
+    /// Internal rather than private so tests can hand it a stale source
+    /// directly instead of trying to schedule the race.
+    func recordListenerState(_ state: NWListener.State, of source: NWListener) {
+        guard let next = Self.diagnosticState(for: state) else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        guard listener === source else { return }
+        applyListenerStateLocked(next)
+    }
+
+    func recordListenerCancelled(_ source: NWListener) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard listener === source else { return }
+        applyListenerStateLocked(.cancelled)
+    }
+
+    /// Terminal states hold for the rest of the session. `.failed` is never
+    /// overwritten: the failure is the actionable fact, and Network.framework
+    /// does report `.cancelled` after `.failed` once a failed listener is torn
+    /// down. After `.cancelled` only a failure may land, so a `.ready` queued
+    /// before a teardown can't revive a dead listener. `recordStarted` opens
+    /// the next session. Caller holds `lock`.
+    private func applyListenerStateLocked(_ next: StreamListenerState) {
+        switch listenerState {
+        case .failed: return
+        case .cancelled where next != .failed: return
+        default: listenerState = next
+        }
+    }
+
+    /// How each `NWListener.State` reads in diagnostics; `nil` leaves it
+    /// unchanged. `.waiting` gets its own state: the listener can't listen
+    /// right now but Network.framework retries on its own, so it is neither
+    /// ready (nothing is being received) nor failed (it may recover).
+    static func diagnosticState(for state: NWListener.State) -> StreamListenerState? {
+        switch state {
+        case .setup: return .starting
+        case .waiting: return .waiting
+        case .ready: return .ready
+        case .failed: return .failed
+        case .cancelled: return .cancelled
+        @unknown default: return nil
+        }
     }
 
     private func cancelWatchdog() {
@@ -279,6 +393,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
             guard let self else { return }
             if let error {
                 BCILog.eeg.error("MindMonitorOSCStream connection error: \(String(describing: error))")
+                self.removeConnection(connection)
                 connection.cancel()
                 return
             }
@@ -289,7 +404,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
         }
     }
 
-    /// True for addresses this transport is expected to decode into a sample —
+    /// True for addresses this transport is expected to decode into a sample -
     /// so a nil decode at one of them means truncation/corruption (a real drop),
     /// not benign non-sample traffic.
     private func isKnownSampleAddress(_ address: String) -> Bool {
@@ -323,14 +438,14 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
 
         do {
             // Mind Monitor wraps every message in an OSC bundle, even a
-            // single one — decodePacket() unwraps that transparently.
+            // single one - decodePacket() unwraps that transparently.
             let messages = try MuseOSCDecoder.decodePacket(data)
             for message in messages {
                 if let sample = MindMonitorDecoder.sample(from: message, timestamp: elapsedSeconds) {
                     lock.lock(); samplesYielded += 1; lastSampleWallClock = Date(); lock.unlock()
                     continuation.yield(sample)
                 } else if let movement = MindMonitorDecoder.movement(from: message, timestamp: elapsedSeconds) {
-                    // /muse/acc + /muse/gyro → the parallel movement channel, NOT
+                    // /muse/acc + /muse/gyro -> the parallel movement channel, NOT
                     // a drop (review finding H2). yield is thread-safe, so unlocked.
                     // Capture the YieldResult: a full bounded buffer silently evicts
                     // the OLDEST sample, so count that as a drop rather than masking
@@ -341,27 +456,27 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
                     case .dropped:
                         lock.lock(); movementBufferDropped += 1; let n = movementBufferDropped; lock.unlock()
                         if n == 1 || n % 256 == 0 {
-                            BCILog.eeg.notice("MindMonitorOSCStream: movement buffer full — dropped \(n, privacy: .public) IMU sample(s) (drain stalled)")
+                            BCILog.eeg.notice("MindMonitorOSCStream: movement buffer full - dropped \(n, privacy: .public) IMU sample(s) (drain stalled)")
                         }
                     case .terminated: break
                     @unknown default: break
                     }
                 } else if isKnownSampleAddress(message.address) {
-                    // A known EEG/movement address whose decode returned nil — i.e.
+                    // A known EEG/movement address whose decode returned nil - i.e.
                     // a TRUNCATED /muse/eeg (<4 floats) or /muse/acc|gyro (<3): genuine
                     // corruption, not benign traffic. Log + count as a real drop so
                     // H2's "no false loss" doesn't invert into "hidden real loss".
-                    BCILog.eeg.error("MindMonitorOSCStream: malformed \(message.address, privacy: .public) message (too few values) — counted as dropped")
+                    BCILog.eeg.error("MindMonitorOSCStream: malformed \(message.address, privacy: .public) message (too few values) - counted as dropped")
                     lock.lock(); packetsDropped += 1; lock.unlock()
                 } else {
-                    // Genuinely non-sample address (/muse/batt, /muse/elements, …):
+                    // Genuinely non-sample address (/muse/batt, /muse/elements, ...):
                     // expected traffic, deliberately kept out of packetsDropped so
                     // it can't masquerade as packet loss.
                     lock.lock(); ignoredNonEEG += 1; lock.unlock()
                 }
             }
         } catch {
-            // A genuinely malformed datagram (decode threw) — the only real
+            // A genuinely malformed datagram (decode threw) - the only real
             // packet-loss/corruption signal.
             BCILog.eeg.error("MindMonitorOSCStream: dropped malformed OSC packet: \(String(describing: error))")
             lock.lock(); packetsDropped += 1; lock.unlock()
@@ -370,7 +485,7 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
 
     // MARK: - Diagnostics
 
-    /// Current transport health snapshot — see `StreamDiagnostics`.
+    /// Current transport health snapshot - see `StreamDiagnostics`.
     public func currentDiagnostics() -> StreamDiagnostics {
         lock.lock()
         defer { lock.unlock() }
@@ -399,7 +514,8 @@ public final class MindMonitorOSCStream: EEGStreaming, MovementStreaming, @unche
             lastInterArrivalMillis: interArrivalMillis.last,
             lastHeartbeat: lastHeartbeat,
             boundPort: port.rawValue,
-            localInterfaceName: localInterfaceName
+            localInterfaceName: localInterfaceName,
+            listenerState: listenerState
         )
     }
 }

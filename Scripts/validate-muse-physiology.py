@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-validate-muse-physiology.py — wear-the-Muse physiological validation.
+validate-muse-physiology.py: wear-the-Muse physiological validation.
 
 Run AFTER putting the Muse S on (forehead sensor centered, hair parted
 under the behind-ear sensors, ~3-5 min to settle contact impedance).
@@ -10,31 +10,31 @@ Pipeline: 5-condition protocol, automated signature checks, pass/fail report.
 Protocol
 ========
   0. Find Muse via BrainFlow BLE scan (board id 39 = MUSE_S_BOARD).
-  1. Eyes open   (30 s)  — relax, look at a fixed point
-  2. Eyes closed (30 s)  — relax, eyes shut
-  3. Blinks     (~5 s)   — blink deliberately, ~5 in 5 s
-  4. Jaw clench (~5 s)   — clench and release, ~3 cycles
-  5. Head turns (~10 s)  — turn head left/right slowly, ~3 cycles
+  1. Eyes open   (30 s)  - relax, look at a fixed point
+  2. Eyes closed (30 s)  - relax, eyes shut
+  3. Blinks     (~5 s)   - blink deliberately, ~5 in 5 s
+  4. Jaw clench (~5 s)   - clench and release, ~3 cycles
+  5. Head turns (~10 s)  - turn head left/right slowly, ~3 cycles
 
 Each segment is event-tagged. Total ~80 s. Recorded to CSV with one
-row per sample (5 minutes would be ~77k rows × 9 cols; 80 s is ~21k).
+row per sample (5 minutes would be ~77k rows x 9 cols; 80 s is ~21k).
 
 Expected signatures (after contact settles)
 ============================================
-  Eyes open   → broadband 1-30 Hz, weak alpha
-  Eyes closed → alpha (8-13 Hz) power RISE on AF7/AF8, ratio
+  Eyes open   -> broadband 1-30 Hz, weak alpha
+  Eyes closed -> alpha (8-13 Hz) power RISE on AF7/AF8, ratio
                  alpha_closed/alpha_open > 1.5 typical
-  Blink       → large low-frequency transient (200-1000 µV, ~200 ms),
+  Blink       -> large low-frequency transient (200-1000 uV, ~200 ms),
                  strongest at AF7/AF8 (frontal)
-  Jaw clench  → broadband HIGH-frequency (20-100 Hz+) burst,
+  Jaw clench  -> broadband HIGH-frequency (20-100 Hz+) burst,
                  high std across all channels
-  Head turn   → slow baseline shift, large low-freq transients
+  Head turn   -> slow baseline shift, large low-freq transients
 
 Pass criteria
 =============
   Signal-to-noise ratio (eyes-closed alpha power / eyes-open alpha power)
   in AF7 or AF8 >= 1.5
-  OR (more lenient) blink signature detected (max abs > 150 µV in
+  OR (more lenient) blink signature detected (max abs > 150 uV in
   frontal channel during blink window)
 
 Output
@@ -59,7 +59,12 @@ BF_LIB = os.path.expanduser("~/Developer/brainflow/compiled")
 if os.path.isdir(BF_LIB):
     os.environ["DYLD_LIBRARY_PATH"] = BF_LIB + ":" + os.environ.get("DYLD_LIBRARY_PATH", "")
 
-from brainflow.board_shim import BoardShim, BoardIds, BrainFlowInputParams  # noqa: E402
+try:
+    from brainflow.board_shim import BoardShim, BoardIds, BrainFlowInputParams  # noqa: E402
+except ImportError:
+    BoardShim = None
+    BoardIds = None
+    BrainFlowInputParams = None
 
 # --- Configuration ---------------------------------------------------------
 
@@ -91,6 +96,8 @@ MIN_VALID_SAMPLES = SEG_OPEN * SAMPLE_RATE * 0.8   # 80% of expected
 
 def bandpower(signal_1d, fs, band):
     """Welch-like simple periodogram power in band (Hz^2 * count)."""
+    signal_1d = np.asarray(signal_1d, dtype=np.float64)
+    signal_1d = signal_1d[np.isfinite(signal_1d)]
     if len(signal_1d) < int(fs):
         return 0.0
     # Detrend
@@ -222,12 +229,18 @@ def analyze(data_open, data_closed, data_blink, data_clench, data_turn):
     results['best_alpha_ratio'] = best_ratio
     results['alpha_pass'] = best_ratio >= ALPHA_RATIO_THRESHOLD
 
-    # 2. Blink detection: max abs value in AF7/AF8 during blink window
+    # 2. Blink detection: max abs AC deflection in AF7/AF8 during blink window
+    #    Subtract per-channel DC baseline (~800 uV on real Muse) so peak
+    #    deflection measures transient blink amplitude rather than DC offset.
     print("\n--- 2. Blink transient detection (frontal channels) ---")
-    blink_max_af7 = float(np.max(np.abs(extract(data_blink, 2))))
-    blink_max_af8 = float(np.max(np.abs(extract(data_blink, 3))))
-    print(f"  AF7 max |µV|: {blink_max_af7:.1f}")
-    print(f"  AF8 max |µV|: {blink_max_af8:.1f}")
+    af7_blink = extract(data_blink, 2)
+    af8_blink = extract(data_blink, 3)
+    af7_finite = af7_blink[np.isfinite(af7_blink)]
+    af8_finite = af8_blink[np.isfinite(af8_blink)]
+    blink_max_af7 = float(np.max(np.abs(af7_finite - np.mean(af7_finite)))) if len(af7_finite) else 0.0
+    blink_max_af8 = float(np.max(np.abs(af8_finite - np.mean(af8_finite)))) if len(af8_finite) else 0.0
+    print(f"  AF7 max |uV|: {blink_max_af7:.1f}")
+    print(f"  AF8 max |uV|: {blink_max_af8:.1f}")
     results['blink_max_af7'] = blink_max_af7
     results['blink_max_af8'] = blink_max_af8
     results['blink_pass'] = max(blink_max_af7, blink_max_af8) >= BLINK_DETECTION_UV
@@ -273,34 +286,38 @@ def analyze(data_open, data_closed, data_blink, data_clench, data_turn):
     turn_max = {}
     for i, ch_idx in enumerate(EEG_CHANNELS):
         x = extract(data_turn, ch_idx)
+        x_finite = x[np.isfinite(x)]
         # Look at slow drift (low-pass via moving average, ~1s window)
         win = SAMPLE_RATE  # 1 second
-        if len(x) >= win:
+        if len(x_finite) >= win:
             kernel = np.ones(win) / win
-            x_lp = np.convolve(x, kernel, mode='same')
+            x_lp = np.convolve(x_finite, kernel, mode='same')
             turn_max[CHANNEL_NAMES[i]] = float(np.max(np.abs(x_lp - x_lp.mean())))
+        elif len(x_finite) > 0:
+            turn_max[CHANNEL_NAMES[i]] = float(np.max(np.abs(x_finite - x_finite.mean())))
         else:
-            turn_max[CHANNEL_NAMES[i]] = float(np.max(np.abs(x - x.mean())))
-        print(f"  {CHANNEL_NAMES[i]:>5}: low-freq max swing = {turn_max[CHANNEL_NAMES[i]]:.1f} µV")
+            turn_max[CHANNEL_NAMES[i]] = 0.0
+        print(f"  {CHANNEL_NAMES[i]:>5}: low-freq max swing = {turn_max[CHANNEL_NAMES[i]]:.1f} uV")
     results['turn_max'] = turn_max
     results['turn_pass'] = max(turn_max.values()) >= HEAD_TURN_UV
 
-    # 5. Overall contact-quality check: RMS should be in physiological range
+    # 5. Overall contact-quality check: AC RMS should be in physiological range
     print("\n--- 5. Contact quality (RMS amplitude per channel) ---")
     rms = {}
     for i, ch_idx in enumerate(EEG_CHANNELS):
         x = extract(data_open, ch_idx)
-        rms[CHANNEL_NAMES[i]] = float(np.sqrt(np.mean(x ** 2)))
-        print(f"  {CHANNEL_NAMES[i]:>5}: RMS = {rms[CHANNEL_NAMES[i]]:.1f} µV")
+        x_ac = x - np.mean(x) if len(x) else x
+        rms[CHANNEL_NAMES[i]] = float(np.sqrt(np.mean(x_ac ** 2))) if len(x_ac) else 0.0
+        print(f"  {CHANNEL_NAMES[i]:>5}: RMS = {rms[CHANNEL_NAMES[i]]:.1f} uV")
     results['rms'] = rms
-    # Healthy resting EEG RMS is 5-50 µV. >200 µV suggests poor contact
-    # (floating) or saturated front-end. <2 µV suggests dead/shorted electrode.
-    # For saturated channels we expect RMS ~ 577 µV (uniformly distributed
+    # Healthy resting EEG RMS is 5-50 uV. >200 uV suggests poor contact
+    # (floating) or saturated front-end. <2 uV suggests dead/shorted electrode.
+    # For saturated channels we expect RMS ~ 577 uV (uniformly distributed
     # in [-1000, 1000]); report them as a separate diagnostic flag so a
     # future session can re-fit the headband.
-    saturated = [ch for ch in CHANNEL_NAMES if rms[ch] > 200.0]
-    dead = [ch for ch in CHANNEL_NAMES if rms[ch] < 2.0]
-    healthy = [ch for ch in CHANNEL_NAMES if 2.0 <= rms[ch] <= 200.0]
+    saturated = [ch for ch in CHANNEL_NAMES if not np.isfinite(rms[ch]) or rms[ch] > 200.0]
+    dead = [ch for ch in CHANNEL_NAMES if np.isfinite(rms[ch]) and rms[ch] < 2.0]
+    healthy = [ch for ch in CHANNEL_NAMES if np.isfinite(rms[ch]) and 2.0 <= rms[ch] <= 200.0]
     rms_ok = (len(saturated) == 0 and len(dead) == 0)
     results['contact_pass'] = rms_ok
     results['contact_saturated'] = saturated
@@ -319,11 +336,11 @@ def analyze(data_open, data_closed, data_blink, data_clench, data_turn):
     print("PHYSIOLOGICAL VALIDATION SUMMARY")
     print("=" * 60)
     checks = [
-        ("Contact quality (RMS 2-200 µV)",      results['contact_pass']),
+        ("Contact quality (RMS 2-200 uV)",      results['contact_pass']),
         ("Alpha rise on eyes-closed (>=1.5x)",   results['alpha_pass']),
-        ("Blink transient (>=40 µV AF7/AF8)",    results['blink_pass']),
+        ("Blink transient (>=40 uV AF7/AF8)",    results['blink_pass']),
         ("Jaw clench beta (>=2x baseline)",      results['clench_pass']),
-        ("Head turn artifact (>=30 µV swing)",   results['turn_pass']),
+        ("Head turn artifact (>=30 uV swing)",   results['turn_pass']),
     ]
     n_pass = sum(1 for _, ok in checks if ok)
     for name, ok in checks:
@@ -331,16 +348,16 @@ def analyze(data_open, data_closed, data_blink, data_clench, data_turn):
         print(f"  [{marker}] {name}")
     print()
     if n_pass == 5:
-        verdict = "DEFINITIVE — Muse is on your head and producing physiological EEG."
+        verdict = "DEFINITIVE: Muse is on your head and producing physiological EEG."
         rc = 0
     elif n_pass >= 3:
-        verdict = "LIKELY — most signatures present, but check electrode contact or relax."
+        verdict = "LIKELY: most signatures present, but check electrode contact or relax."
         rc = 1
     elif n_pass >= 1:
-        verdict = "INCONCLUSIVE — Muse is connected but signal may be artifact. Check contact."
+        verdict = "INCONCLUSIVE: Muse is connected but signal may be artifact. Check contact."
         rc = 1
     else:
-        verdict = "BROKEN — Muse connected but no physiological signal. Check electrode contact."
+        verdict = "BROKEN: Muse connected but no physiological signal. Check electrode contact."
         rc = 2
     print(f"VERDICT ({n_pass}/5): {verdict}")
     results['verdict'] = verdict

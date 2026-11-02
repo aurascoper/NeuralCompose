@@ -71,6 +71,7 @@ def run_sweep(
     max_episode_steps: int,
     goal_tolerance: float,
     device: torch.device,
+    policy: str = "mpc",
 ) -> list[dict]:
     """One row per (case, seed). `rng` only feeds candidate sampling
     (start/goal are fixed by HARD_CASES), so varying seed varies the MPPI
@@ -84,7 +85,7 @@ def run_sweep(
             torch.manual_seed(seed)
             rng = np.random.default_rng(seed)
             result = run_episode(
-                env, model, "mpc", start, goal, config,
+                env, model, policy, start, goal, config,
                 max_episode_steps, goal_tolerance, device, rng,
             )
             ess = (
@@ -98,6 +99,8 @@ def run_sweep(
                     "seed": seed,
                     "reached": result["reached"],
                     "final_distance": result["final_distance"],
+                    "best_distance": result["best_distance"],
+                    "normalized_progress": result["normalized_progress"],
                     "mean_ess": ess,
                 }
             )
@@ -133,6 +136,10 @@ def print_report(rows: list[dict], num_candidates: int) -> None:
         f"mean_final_distance={float(np.mean([r['final_distance'] for r in rows])):.4f}, "
         f"mean_ess={float(np.mean([r['mean_ess'] for r in rows])):.1f}/{num_candidates}"
     )
+    print(
+        f"Graded:    mean_best_distance={float(np.mean([r['best_distance'] for r in rows])):.4f}, "
+        f"mean_normalized_progress={float(np.mean([r['normalized_progress'] for r in rows])):.4f}"
+    )
 
 
 def main() -> None:
@@ -142,6 +149,10 @@ def main() -> None:
     ap.add_argument("--max-episode-steps", type=int, default=50)
     ap.add_argument("--goal-tolerance", type=float, default=GOAL_TOLERANCE)
     ap.add_argument("--max-accel", type=float, default=EnvConfig().max_accel)
+    ap.add_argument("--policy", choices=["mpc", "oracle", "random", "zero"], default="mpc",
+                    help="oracle/random/zero are reference policies, not competitors")
+    ap.add_argument("--unbounded", action="store_true",
+                    help="remove arena walls; must match how the checkpoint was trained")
 
     ap.add_argument("--horizon", type=int, default=MPCConfig().horizon)
     ap.add_argument("--num-candidates", type=int, default=MPCConfig().num_candidates)
@@ -159,6 +170,11 @@ def main() -> None:
         default=MPCConfig().adaptive_temperature,
     )
     ap.add_argument("--min-cost-scale", type=float, default=MPCConfig().min_cost_scale)
+    ap.add_argument(
+        "--goal-latent-from-online-encoder",
+        action="store_true",
+        help="Arm B: encode z_goal with the online encoder so it shares a geometry with z_start",
+    )
     ap.add_argument(
         "--normalize-running-cost-by-horizon",
         action=argparse.BooleanOptionalAction,
@@ -183,6 +199,7 @@ def main() -> None:
         adaptive_temperature=args.adaptive_temperature,
         min_cost_scale=args.min_cost_scale,
         normalize_running_cost_by_horizon=args.normalize_running_cost_by_horizon,
+        goal_latent_from_online_encoder=args.goal_latent_from_online_encoder,
     )
     seeds = parse_seeds(args.seeds)
     device = resolve_device()
@@ -194,14 +211,15 @@ def main() -> None:
     for p in model.parameters():
         p.requires_grad_(False)
 
-    env = ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel))
+    env = ParticleNavigatorEnv(EnvConfig(max_accel=args.max_accel, bounded=not args.unbounded))
 
     print(f"sweep.py: device={device} checkpoint={args.checkpoint}")
     print(f"  config: {config}")
     print(f"  {len(HARD_CASES)} cases x {len(seeds)} seeds = {len(HARD_CASES) * len(seeds)} trials")
     print()
 
-    rows = run_sweep(model, env, config, seeds, args.max_episode_steps, args.goal_tolerance, device)
+    rows = run_sweep(model, env, config, seeds, args.max_episode_steps,
+                     args.goal_tolerance, device, policy=args.policy)
     print_report(rows, config.num_candidates)
 
 
