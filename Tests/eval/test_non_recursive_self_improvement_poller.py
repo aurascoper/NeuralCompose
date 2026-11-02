@@ -356,9 +356,154 @@ def test_rollover_2026_11_02_and_basilisk_m7_verified_audit():
     rec_l25 = poller.apply_asr_phonetic_recovery("What should they be for each", 181)
     assert rec_l25["has_phonetic_recovery"] is True
 
+    rec_l28 = poller.apply_asr_phonetic_recovery(
+        "Why isn't Antigravity opening up the Matlab fixture with NeuralCompose", 184
+    )
+    assert rec_l28["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l28["matched_rules"]}
+
+    rec_l29 = poller.apply_asr_phonetic_recovery(
+        "What wizard interactive visualization should we try to spec and verify between open foam bass mat labs file formats",
+        185,
+    )
+    assert rec_l29["has_phonetic_recovery"] is True
+    rule_ids_l29 = {r["rule_id"] for r in rec_l29["matched_rules"]}
+    assert "asr_rule_01_viral_arc_capsid_openfoam_pymol_chimerax" in rule_ids_l29
+    assert "asr_rule_02_vizard_spice_julia_kernels" in rule_ids_l29
+    assert "asr_rule_03_basilisk_space_exploration_software" in rule_ids_l29
+
+    rec_l30 = poller.apply_asr_phonetic_recovery(
+        "So how do we make sure our swarm is doing this", 186
+    )
+    assert rec_l30["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l30["matched_rules"]}
+
+    rec_l31 = poller.apply_asr_phonetic_recovery(
+        "How does it work with the last two prompts coming to one", 187
+    )
+    assert rec_l31["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l31["matched_rules"]}
+
+    rec_l32 = poller.apply_asr_phonetic_recovery(
+        "Health physics relevant for open MC", 188
+    )
+    assert rec_l32["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l32["matched_rules"]}
+
+    rec_l33 = poller.apply_asr_phonetic_recovery(
+        "Yeah I'd like to be able to make pedagogy and bio feedback mechanism or at home learning you use research reactor in Columbia Missouri",
+        189,
+    )
+    assert rec_l33["has_phonetic_recovery"] is True
+    assert "MURR" in (rec_l33["recovered_canonical_summary"] or "")
+
+    rec_l34 = poller.apply_asr_phonetic_recovery(
+        "I have to forget about you know why can't we prose and more think about", 190
+    )
+    assert rec_l34["has_phonetic_recovery"] is True
+    assert "Neurospora crassa" in (rec_l34["recovered_canonical_summary"] or "")
+
+    rec_l35 = poller.apply_asr_phonetic_recovery(
+        "Will need to update so first we have to clear about 75 to 125 GB of SSD on the macOS to update the Mac 27.2 S",
+        191,
+    )
+    assert rec_l35["has_phonetic_recovery"] is True
+    rule_ids_l35 = {r["rule_id"] for r in rec_l35["matched_rules"]}
+    assert "asr_rule_14_symbolics_turing_jacc_enzyme_neurojax_evojax_neuroarc" in rule_ids_l35
+    assert "asr_rule_03_basilisk_space_exploration_software" not in rule_ids_l35
+
+    rec_l36 = poller.apply_asr_phonetic_recovery(
+        "We need to scope the toolbox kits you know simulate DSP Simca electrical", 192
+    )
+    assert rec_l36["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l36["matched_rules"]}
+
+    rec_l37 = poller.apply_asr_phonetic_recovery(
+        "Performance analyzer TET monitor application compiler board set up and desktop real time", 193
+    )
+    assert rec_l37["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l37["matched_rules"]}
+
+    rec_l38 = poller.apply_asr_phonetic_recovery(
+        "Should we spec and scope the simulate DSP system toolbox Seca and Seca electrical categories and compartments of the visualization and wizard",
+        194,
+    )
+    assert rec_l38["has_phonetic_recovery"] is True
+    rule_ids_l38 = {r["rule_id"] for r in rec_l38["matched_rules"]}
+    assert "asr_rule_02_vizard_spice_julia_kernels" in rule_ids_l38
+    assert "asr_rule_03_basilisk_space_exploration_software" in rule_ids_l38
+
+    rec_l39 = poller.apply_asr_phonetic_recovery(
+        "Do you know much about the evidence bundle manifest.Jason as an alpha fold analysis", 195
+    )
+    assert rec_l39["has_phonetic_recovery"] is True
+    rule_ids_l39 = {r["rule_id"] for r in rec_l39["matched_rules"]}
+    assert "asr_rule_01_viral_arc_capsid_openfoam_pymol_chimerax" in rule_ids_l39
+    assert "asr_rule_03_basilisk_space_exploration_software" not in rule_ids_l39
+
+    rec_l40 = poller.apply_asr_phonetic_recovery(
+        "So should the small modular bio reactors.JL incorporate do symmetry", 196
+    )
+    assert rec_l40["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l40["matched_rules"]}
+
+    rec_l41 = poller.apply_asr_phonetic_recovery(
+        "Maybe we also need to have a NeuralCompose Google play android app with Colin and Rust type script swift and iOS to promote wireless de bugging and send a link or simulation software running on macOS 27.2",
+        197,
+    )
+    assert rec_l41["has_phonetic_recovery"] is True
+    assert "asr_rule_14_symbolics_turing_jacc_enzyme_neurojax_evojax_neuroarc" in {r["rule_id"] for r in rec_l41["matched_rules"]}
+
+    rec_l42 = poller.apply_asr_phonetic_recovery(
+        "Yeah we just need something to do with model context protocol because this memory stuff is getting out of hand and out of memory",
+        198,
+    )
+    assert rec_l42["has_phonetic_recovery"] is True
+    assert "asr_rule_08_moores_law_subverted" in {r["rule_id"] for r in rec_l42["matched_rules"]}
+
+    rec_l45 = poller.apply_asr_phonetic_recovery(
+        "My friends application Brett the core of biofilms will be applying for the essential duties of the materials research technician that that is just now being established specimen preparation",
+        201,
+    )
+    assert rec_l45["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l45["matched_rules"]}
+
+    rec_l46 = poller.apply_asr_phonetic_recovery(
+        "Compacting and salt and consolidating memory for essential duties", 202
+    )
+    assert rec_l46["has_phonetic_recovery"] is True
+    assert "asr_rule_03_basilisk_space_exploration_software" in {r["rule_id"] for r in rec_l46["matched_rules"]}
+
     alara_rep = poller.evaluate_matlab_alara_hippocratism_gate()
     assert alara_rep["matlab_bridge_script"].endswith("/Scripts/matlab_alara_bridge.m")
     assert alara_rep["smbr_matlab_r2026b_verification_receipt"]["all_checks_passed"] is True
+    assert alara_rep["neuralcompose_matlab_fixtures"]["receipt_present"] is True
+    assert alara_rep["neuralcompose_matlab_fixtures"]["mat_v7_present"] is True
+    assert alara_rep["neuralcompose_matlab_fixtures"]["mat_v73_hdf5_present"] is True
+    nc_spec = alara_rep["neurospora_crassa_matlab_r2026b_4_block_state_spec"]
+    assert nc_spec["block_1_frq_wc1_wc2_circadian_oscillator"]["states"] == ["M_frq", "F_c", "F_n", "phi(t)"]
+    assert nc_spec["block_2_syncytial_hyphal_streaming_and_woronin_hex1"]["anastomosis_cycle_rank_beta_1_min"] == 1
+    assert nc_spec["block_2_syncytial_hyphal_streaming_and_woronin_hex1"]["beta_1_verified"] == 3
+    assert nc_spec["block_3_eight_chamber_vogels_medium_simscape_phreeqc_hydraulics"]["chamber_count"] == 8
+    assert nc_spec["block_3_eight_chamber_vogels_medium_simscape_phreeqc_hydraulics"]["phreeqc_pH"] == 5.80
+    assert nc_spec["block_3_eight_chamber_vogels_medium_simscape_phreeqc_hydraulics"]["phreeqc_pe"] == 6.40
+    assert nc_spec["block_4_dhn_melanin_neurosporaxanthin_alara_point_kernel_shielding"]["closed_loop_actuators"] == [
+        "u_valve(t)",
+        "z_shield(t)",
+        "Phi_light(t)",
+    ]
+    assert len(alara_rep["matlab_reactor_pools_and_biofilms_coordination"]["four_pool_biofilm_cascade"]) == 4
+    assert alara_rep["controls_fixture_and_adaptor_schematic"]["control_loop_stable"] is True
+    assert (
+        alara_rep["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"].get("mat_v7_magic_valid")
+        or alara_rep["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"].get("mat_v7_magic_header_valid")
+    ) is True
+    assert alara_rep["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v73_hdf5_magic_valid"] is True
+    assert alara_rep["controls_fixture_and_adaptor_schematic"]["displacement_pole_collar_signal_source"]["beta_1_collar_cycle_rank"] == 2
+    assert alara_rep["controls_fixture_and_adaptor_schematic"]["openfoam_basilisk_matlab_roundtrip_L29"]["roundtrip_beta1_invariant"] is True
+    assert alara_rep["controls_fixture_and_adaptor_schematic"]["biconnected_swarm_verification_L30"]["beta_1_swarm_verification_cycles"] == 2
+    synth_models = [s["model"] for s in alara_rep["multica_synthetic_warrant_sessions"]]
+    assert synth_models == ["claude-sonnet-5", "claude-sonnet-5-5", "claude-haiku-4-5"]
     assert alara_rep["acyclic_tarjan_bridge"]["is_acyclic_dag"] is True
     assert alara_rep["acyclic_tarjan_bridge"]["recursion_depth"] == 0
     assert alara_rep["health_physics_alara_gate"]["alara_compliant"] is True
@@ -366,14 +511,32 @@ def test_rollover_2026_11_02_and_basilisk_m7_verified_audit():
 
     # Verify synthesis-v2 JSON includes basilisk_m7_planetary_reference_verified_audit and utc_midnight_rollover_2026_11_02_audit
     repo_synth = Path(__file__).resolve().parents[2] / "InteractionLogs" / "poller-self-improvement-synthesis-v2.json"
-    synth_data = json.loads(repo_synth.read_text(encoding="utf-8"))
+    doc_synth = poller.DEFAULT_SYNTHESIS_OUT
+    candidate_paths = [p for p in [repo_synth, doc_synth] if p.exists()]
+    assert candidate_paths, f"Neither repo_synth ({repo_synth}) nor doc_synth ({doc_synth}) found on disk"
+    if repo_synth.exists() and doc_synth.exists():
+        synth_data_repo = json.loads(repo_synth.read_text(encoding="utf-8"))
+        synth_data_doc = json.loads(doc_synth.read_text(encoding="utf-8"))
+        lines_repo = synth_data_repo.get("utc_midnight_rollover_2026_11_02_audit", {}).get("total_lines_in_file", 0)
+        lines_doc = synth_data_doc.get("utc_midnight_rollover_2026_11_02_audit", {}).get("total_lines_in_file", 0)
+        if lines_doc > lines_repo:
+            poller._write_and_mirror(repo_synth, doc_synth.read_text(encoding="utf-8"), mirror_to_repo=False)
+            synth_data = synth_data_doc
+        else:
+            synth_data = synth_data_repo
+    elif repo_synth.exists():
+        synth_data = json.loads(repo_synth.read_text(encoding="utf-8"))
+    else:
+        synth_data = json.loads(doc_synth.read_text(encoding="utf-8"))
     assert "basilisk_m7_planetary_reference_verified_audit" in synth_data
     audit = synth_data["basilisk_m7_planetary_reference_verified_audit"]
     assert len(audit["verified_claims_banked"]["m7_budget_closure_invariant_7_criteria"]) == 7
     assert "unverified_not_banked until spkpos is checked on a known body" in audit["unverified_claims_gated"]["status"]
     assert "utc_midnight_rollover_2026_11_02_audit" in synth_data
-    assert synth_data["utc_midnight_rollover_2026_11_02_audit"]["total_lines_in_file"] >= 25
+    assert synth_data["utc_midnight_rollover_2026_11_02_audit"]["total_lines_in_file"] >= 46
     assert "matlab_r2026b_alara_hippocratism_gate" in synth_data
+    assert synth_data["matlab_r2026b_alara_hippocratism_gate"]["controls_fixture_and_adaptor_schematic"]["coherence_pole_mat_vs_json"]["mat_v73_hdf5_magic_valid"] is True
+
 
 
 

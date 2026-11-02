@@ -1,0 +1,735 @@
+{
+  "fixture_id": "m7_multiscale_matlab_simulink_3d_eda_v1",
+  "captured_at_utc": "2026-11-02T07:35:00Z",
+  "matlab_release_target": "R2026b",
+  "matlab_version_target": "26.2.0.3433840",
+  "student_suite_toolboxes": [
+    "MATLAB",
+    "Simulink",
+    "Control System Toolbox",
+    "Curve Fitting Toolbox",
+    "DSP System Toolbox",
+    "Deep Learning Toolbox",
+    "Image Processing Toolbox",
+    "Optimization Toolbox",
+    "Parallel Computing Toolbox",
+    "Signal Processing Toolbox",
+    "Simscape",
+    "Simscape Electrical",
+    "Statistics and Machine Learning Toolbox",
+    "Symbolic Math Toolbox"
+  ],
+  "m7_stage_headers": [
+    "M7.1",
+    "M7.2",
+    "M7.3",
+    "M7.4",
+    "M7.5",
+    "M7.6",
+    "M7.7",
+    "M7.8"
+  ],
+  "m7_stage_definitions": {
+    "M7.1": "Coordinate Frame, Spatial Mesh Topology (4-Cell Hexahedral + 32^3 Voxel Grid), and Unit Homogeneity",
+    "M7.2": "OpenFOAM Darcy-Brinkman-Stokes Porous Flow and GLMM Variance Components (beta_0, beta_1, sigma_b2, ICC)",
+    "M7.3": "PHREEQC Aqueous Speciation, Activity-Averaged pH, and Menke 2026 Clay-EPS-Metal Reactive Transport",
+    "M7.4": "Three-Clock Multirate Synchronization (tau_mission, tau_flow, tau_kinetic) and Basilisk/SPICE.jl SI Seam",
+    "M7.5": "Biofilm CA Redistribution, NutMEG 7 Budget-Closure Criteria, and Neurospora crassa Circadian Syncytium",
+    "M7.6": "Health-Physics ALARA (Time, Distance 1/r^2, Shielding + Melanin Radioprotection) and Epistemic Hippocratism",
+    "M7.7": "Sobolev SMACRO1 Molecular Anchors (CsgA, DsrB, Arc Capsid) and Selfish-Gene / Comfort Reticulated ASR",
+    "M7.8": "4D Spatiotemporal Explorer, Vizard ZeroMQ Broadcast, and MATLAB/Simulink/Simscape 3D EDA Tarjan Bridge"
+  },
+  "schema_type_separation": {
+    "header_type": "string_container_stage_header_M7_1_to_M7_8",
+    "int64_type": "exact_discrete_indices_and_betti_numbers",
+    "float64_type": "ieee754_continuous_si_physical_observables",
+    "discrete_cell_indices_int64": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "betti_numbers_int64": [
+      1,
+      2,
+      0
+    ],
+    "cantor_leaves_int64": 64
+  },
+  "tarjan_bridge_pipeline": {
+    "nodes": [
+      "OpenFOAM_FiniteVolume_CFD",
+      "PHREEQC_Geochemical_Speciation",
+      "FlowCytometry_SingleCell_Bridge",
+      "SmallModularBioReactors_Multiscale_ODE",
+      "MATLAB_R2026b_Simulink_Simscape_3D_EDA"
+    ],
+    "directed_bridge_edges": [
+      [
+        "OpenFOAM_FiniteVolume_CFD",
+        "PHREEQC_Geochemical_Speciation"
+      ],
+      [
+        "PHREEQC_Geochemical_Speciation",
+        "FlowCytometry_SingleCell_Bridge"
+      ],
+      [
+        "FlowCytometry_SingleCell_Bridge",
+        "SmallModularBioReactors_Multiscale_ODE"
+      ],
+      [
+        "SmallModularBioReactors_Multiscale_ODE",
+        "MATLAB_R2026b_Simulink_Simscape_3D_EDA"
+      ]
+    ],
+    "is_dag": true,
+    "max_scc_size": 1,
+    "beta_1_inter_solver": 0,
+    "recursion_depth": 0,
+    "consolidation_rule_immutable": true
+  },
+  "spatial_cells_3d": {
+    "cell_centers_x_m": [
+      0.0005,
+      0.0015,
+      0.0025,
+      0.0035
+    ],
+    "cell_centers_y_m": [
+      0.0005,
+      0.0005,
+      0.0005,
+      0.0005
+    ],
+    "cell_centers_z_m": [
+      0.0005,
+      0.0005,
+      0.0005,
+      0.0005
+    ],
+    "porosity_phi": [
+      0.38,
+      0.36,
+      0.35,
+      0.37
+    ],
+    "permeability_k_m2": [
+      1.45e-12,
+      1.22e-12,
+      1.12e-12,
+      1.33e-12
+    ],
+    "velocity_u_m_s": [
+      0.000125,
+      0.000131,
+      0.000135,
+      0.000128
+    ],
+    "pressure_Pa": [
+      101325.0,
+      101320.5,
+      101316.0,
+      101311.5
+    ],
+    "temperature_K": [
+      298.15,
+      298.22,
+      298.28,
+      298.31
+    ],
+    "pH_profile": [
+      7.18,
+      7.12,
+      7.08,
+      7.05
+    ],
+    "biomass_attached_kg_m3": [
+      0.82,
+      0.74,
+      0.65,
+      0.58
+    ],
+    "eps_fraction": [
+      0.22,
+      0.2,
+      0.18,
+      0.16
+    ],
+    "criterial_status_codes": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "spice_basilisk_seam": {
+    "planet_name": "MARS",
+    "planet_frame": "IAU_MARS",
+    "naif_position_km": [
+      206655000.0,
+      0.0,
+      0.0
+    ],
+    "naif_velocity_km_s": [
+      0.0,
+      26.5,
+      0.0
+    ],
+    "scale_factor_km_to_m": 1000.0,
+    "basilisk_position_si_m": [
+      206655000000.0,
+      0.0,
+      0.0
+    ],
+    "basilisk_velocity_si_m_s": [
+      0.0,
+      26500.0,
+      0.0
+    ],
+    "iau_dcm_rotation_angle_rad": 0.085
+  },
+  "glmm_openfoam_ensemble": {
+    "true_beta0": 1.2,
+    "true_beta1": 0.85,
+    "x_levels": [
+      0.5,
+      1.0,
+      1.5
+    ],
+    "group_offsets": [
+      -0.06,
+      -0.02,
+      0.03,
+      0.05
+    ],
+    "empowerment_cantor_T26_bits": 6.0,
+    "empowerment_conservative_handoff_bits": 1.5945798508362228
+  },
+  "health_physics_alara_and_hippocratism": {
+    "time_exposure_s": 3600.0,
+    "max_allowable_cumulative_dose_Gy": 0.5,
+    "reference_distance_m": 1.0,
+    "standoff_distance_m": 10.0,
+    "inverse_square_attenuation_factor": 0.01,
+    "shielding_regolith_thickness_m": 0.08,
+    "shielding_water_clay_thickness_m": 0.02,
+    "melanin_mass_fraction": 0.18,
+    "alara_dose_reduction_factor": 330.752854,
+    "neurospora_free_running_period_hr": 22.5,
+    "neurospora_entrained_period_hr": 24.0,
+    "epistemic_hippocratism_verdict": "Accepted",
+    "primum_non_nocere_enforced": true
+  },
+  "selfish_gene_and_comfort_reticulated_asr": {
+    "n_nodes": 7,
+    "n_edges": 8,
+    "hgt_reticulation_edges": 2,
+    "beta_0": 1,
+    "beta_1_reticulation_cycles": 2,
+    "selection_levels": [
+      "gene_allele",
+      "organism_phenotype",
+      "syncytial_group",
+      "cultural_protocol"
+    ]
+  },
+  "matlab_reactor_pools_and_biofilms_coordination": {
+    "pool_ids": [
+      "pool_1_inlet_preconditioning",
+      "pool_2_clay_eps_sorption",
+      "pool_3_radiolytic_melanin_shield",
+      "pool_4_effluent_polishing"
+    ],
+    "pool_volumes_L": [
+      0.25,
+      0.25,
+      0.25,
+      0.25
+    ],
+    "inter_pool_flow_L_s": [
+      0.00025,
+      0.00025,
+      0.00025
+    ],
+    "pool_biomass_attached_kg_m3": [
+      0.82,
+      0.74,
+      0.65,
+      0.58
+    ],
+    "pool_biomass_suspended_kg_m3": [
+      0.12,
+      0.14,
+      0.11,
+      0.09
+    ],
+    "pool_eps_fraction": [
+      0.22,
+      0.2,
+      0.18,
+      0.16
+    ],
+    "pool_porosity_phi": [
+      0.38,
+      0.36,
+      0.35,
+      0.37
+    ],
+    "attachment_rate_s_inv": 0.0002,
+    "detachment_rate_s_inv": 5e-05,
+    "dt_s": 10.0,
+    "non_destructive_peer_seam": true
+  },
+  "neuralcompose_antigravity_matlab_collar_L28": {
+    "explicit_cross_process_collar": true,
+    "supported_container_formats": [
+      "MAT_v5_v7_struct",
+      "MAT_v7_3_HDF5",
+      "JSON_intermediate"
+    ],
+    "matlab_fixture_is_signal_source_horizon_leaf": true,
+    "beta_1_collar_cycle_rank": 2,
+    "fast_wireframe_clocks": [
+      "Hyperliquid_perp_150_USDC",
+      "ZEC_USDC_spot",
+      "ZEC_CEC_algo_900_to_2500_ladder"
+    ],
+    "slow_core_clocks": [
+      "MEXC_staking_51_USD"
+    ],
+    "algorithmic_ladder_bounds": [
+      900.0,
+      2500.0
+    ],
+    "algorithmic_exit_trigger_stoppable": true
+  },
+  "controls_fixture_and_adaptor_schematic": {
+    "state_space_A_ctrl": [
+      [
+        -0.08,
+        0.0
+      ],
+      [
+        0.0,
+        -0.15
+      ]
+    ],
+    "state_space_B_ctrl": [
+      0.08,
+      0.15
+    ],
+    "state_space_C_ctrl": [
+      [
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0
+      ]
+    ],
+    "state_space_D_ctrl": [
+      0.0,
+      0.0
+    ],
+    "expected_eigenvalues": [
+      -0.08,
+      -0.15
+    ],
+    "process_boundaries": [
+      "Antigravity_Agent_Coordinator",
+      "MATLAB_R2026b_Simulink_Controls",
+      "SmallModularBioReactors_Julia_Core",
+      "NeuralCompose_Functor_HUD_App"
+    ],
+    "openfoam_basilisk_matlab_roundtrip_L29": {
+      "openfoam_mesh_beta_0": 1,
+      "openfoam_mesh_beta_1": 2,
+      "matlab_interpolated_beta_1": 2,
+      "roundtrip_beta1_invariant": true,
+      "headless_cli_diff_checker_first": true
+    },
+    "biconnected_swarm_and_multica_warrant_sessions_L30": {
+      "swarm_agent_nodes": 4,
+      "swarm_biconnected_edges": 5,
+      "beta_1_swarm_verification_cycles": 2,
+      "single_agent_removal_collapses_swarm": false,
+      "counterfactual_feed_swap_trigger_invariant": true,
+      "synthetic_warrant_models": [
+        "claude-sonnet-5",
+        "claude-sonnet-5-5",
+        "claude-haiku-4-5"
+      ]
+    },
+    "unified_substrate_swap_primitive_L31_L32": {
+      "unified_substrate_swap_L31_valid": true,
+      "stage_rejects_logged_separately_L31": true,
+      "openmc_library_primary": "ENDF/B-VIII.0",
+      "openmc_library_counterfactual": "JEFF-3.3",
+      "dose_rate_endfb80_mSv_hr": 0.0142,
+      "dose_rate_jeff33_mSv_hr": 0.0145,
+      "openmc_tally_variance_rel_diff": 0.020689655172413793,
+      "icrp116_dosimetry_verified_separately": true,
+      "workplace_regulatory_geometry_verified": true
+    }
+  },
+  "neurospora_crassa_4block_matlab_model": {
+    "n_pool": 8,
+    "vogels_chamber_ids": [
+      "vogels_pool_1",
+      "vogels_pool_2",
+      "vogels_pool_3",
+      "vogels_pool_4",
+      "vogels_pool_5",
+      "vogels_pool_6",
+      "vogels_pool_7",
+      "vogels_pool_8"
+    ],
+    "block_1_circadian_frq_wc1_wc2_oscillator": {
+      "v_s": 1.6,
+      "K_I": 1.0,
+      "hill_n": 4,
+      "k_light": 0.4,
+      "v_m": 0.505,
+      "K_m": 0.5,
+      "k_s": 0.5,
+      "v_d": 1.4,
+      "K_d": 0.13,
+      "k_1": 0.5,
+      "k_2": 0.6,
+      "tau_DD_hr": 22.5,
+      "tau_LD_hr": 24.0,
+      "M_frq": [
+        0.92,
+        0.89,
+        0.85,
+        0.81,
+        0.77,
+        0.73,
+        0.69,
+        0.65
+      ],
+      "F_c": [
+        1.14,
+        1.11,
+        1.07,
+        1.03,
+        0.99,
+        0.95,
+        0.91,
+        0.87
+      ],
+      "F_n": [
+        0.95,
+        0.92,
+        0.89,
+        0.86,
+        0.83,
+        0.8,
+        0.77,
+        0.74
+      ],
+      "phi_t_rad": [
+        -2.356194,
+        -2.034444,
+        -1.570796,
+        -0.785398,
+        0.785398,
+        1.570796,
+        2.034444,
+        2.356194
+      ]
+    },
+    "block_2_syncytial_hyphal_biofilm_and_woronin": {
+      "cytoplasmic_streaming_um_s_bounds": [
+        5.0,
+        60.0
+      ],
+      "woronin_body_hex1_septal_plugging_active": true,
+      "B_max_kg_m3": 1.2,
+      "B_i_kg_m3": [
+        0.84,
+        0.8,
+        0.76,
+        0.72,
+        0.68,
+        0.64,
+        0.6,
+        0.56
+      ],
+      "rho_tip_i_m_inv3": [
+        1450000000.0,
+        1380000000.0,
+        1310000000.0,
+        1240000000.0,
+        1180000000.0,
+        1120000000.0,
+        1060000000.0,
+        1010000000.0
+      ],
+      "phi_EPS_i": [
+        0.22,
+        0.21,
+        0.2,
+        0.19,
+        0.18,
+        0.17,
+        0.16,
+        0.15
+      ],
+      "tau_w_i_Pa": [
+        0.045,
+        0.043,
+        0.041,
+        0.039,
+        0.038,
+        0.036,
+        0.035,
+        0.033
+      ],
+      "beta_0": 1,
+      "beta_1": 3
+    },
+    "block_3_multipool_vogels_hydraulics_and_phreeqc_nutmeg": {
+      "S_i_mol_m3": [
+        55.0,
+        51.2,
+        47.6,
+        44.1,
+        40.8,
+        37.6,
+        34.5,
+        31.6
+      ],
+      "C_O2_i_mol_m3": [
+        0.24,
+        0.235,
+        0.23,
+        0.225,
+        0.22,
+        0.215,
+        0.21,
+        0.205
+      ],
+      "V_i_L": [
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25
+      ],
+      "T_i_K": [
+        298.15,
+        298.18,
+        298.2,
+        298.22,
+        298.25,
+        298.27,
+        298.29,
+        298.31
+      ],
+      "pH_i": [
+        5.8,
+        5.82,
+        5.85,
+        5.87,
+        5.9,
+        5.92,
+        5.95,
+        5.98
+      ],
+      "pe_i": [
+        6.4,
+        6.35,
+        6.3,
+        6.25,
+        6.2,
+        6.15,
+        6.1,
+        6.05
+      ],
+      "radiolytic_H2O2_scavenged_uM": [
+        18.5,
+        17.8,
+        17.1,
+        16.4,
+        15.7,
+        15.0,
+        14.3,
+        13.6
+      ],
+      "conidial_cytometry": {
+        "FSC_A": [
+          42000.0,
+          41200.0,
+          40500.0,
+          39800.0,
+          39100.0,
+          38400.0,
+          37700.0,
+          37000.0
+        ],
+        "SSC_A": [
+          18500.0,
+          18100.0,
+          17700.0,
+          17300.0,
+          16900.0,
+          16500.0,
+          16100.0,
+          15700.0
+        ],
+        "FL1_A": [
+          3100.0,
+          3020.0,
+          2940.0,
+          2860.0,
+          2780.0,
+          2700.0,
+          2620.0,
+          2540.0
+        ],
+        "melanin_pg_cell": [
+          14.2,
+          13.8,
+          13.4,
+          13.0,
+          12.6,
+          12.2,
+          11.8,
+          11.4
+        ]
+      },
+      "nutmeg_calibrated_range_K": [
+        288.0,
+        371.0
+      ],
+      "nutmeg_P_M_W_cell": 4.2e-15,
+      "nutmeg_verdict_at_298K": "Accepted",
+      "nutmeg_verdict_below_280K": "Incomplete"
+    },
+    "block_4_alara_melanin_kinetics_and_lqr_mpc_control": {
+      "D_mel_i_kg_m3": [
+        0.18,
+        0.175,
+        0.17,
+        0.165,
+        0.16,
+        0.155,
+        0.15,
+        0.145
+      ],
+      "D_dot_eff_i_Gy_s": [
+        8.2e-07,
+        7.6e-07,
+        7.1e-07,
+        6.6e-07,
+        6.1e-07,
+        5.7e-07,
+        5.3e-07,
+        4.9e-07
+      ],
+      "cumulative_dose_D_i_Gy": [
+        0.0295,
+        0.0274,
+        0.0256,
+        0.0238,
+        0.022,
+        0.0205,
+        0.0191,
+        0.0176
+      ],
+      "alara_80pct_safing_limit_Gy": 0.04,
+      "alara_max_allowable_dose_Gy": 0.05,
+      "u_valve": [
+        0.00025,
+        0.00025,
+        0.00025,
+        0.00025,
+        0.00025,
+        0.00025,
+        0.00025,
+        0.00025
+      ],
+      "z_shield": [
+        0.1,
+        0.105,
+        0.11,
+        0.115,
+        0.12,
+        0.125,
+        0.13,
+        0.135
+      ],
+      "Phi_light": [
+        45.0,
+        45.0,
+        45.0,
+        45.0,
+        45.0,
+        45.0,
+        45.0,
+        45.0
+      ],
+      "hormesis_quarantine_verdict": "Incomplete"
+    }
+  },
+  "neurospora_crassa_matlab_r2026b_4_block_state_spec": {
+    "source_turn": "2026-11-02-L34",
+    "block_1_frq_wc1_wc2_circadian_oscillator": {
+      "states": [
+        "M_frq",
+        "F_c",
+        "F_n",
+        "phi(t)"
+      ],
+      "ode_order": 3,
+      "free_running_period_hr": 22.5,
+      "photoentrainment_input": "Phi_light(t)",
+      "role": "Governs circadian conidiation banding and rhythmic antioxidant/catalase/SOD expression"
+    },
+    "block_2_syncytial_hyphal_streaming_and_woronin_hex1": {
+      "cytoplasmic_streaming_velocity_um_s_range": [
+        5.0,
+        60.0
+      ],
+      "septal_pore_occlusion_protein": "Woronin_body_HEX_1",
+      "anastomosis_cycle_rank_beta_1_min": 1,
+      "beta_1_verified": 3,
+      "role": "Syncytial mass-flow transport with HEX-1 emergency septal plugging and biconnected hyphal fusion loops"
+    },
+    "block_3_eight_chamber_vogels_medium_simscape_phreeqc_hydraulics": {
+      "chamber_count": 8,
+      "state_variables": [
+        "C_sucrose",
+        "C_NH4",
+        "C_NO3",
+        "DO",
+        "pH",
+        "pe",
+        "T"
+      ],
+      "phreeqc_pH": 5.80,
+      "phreeqc_pe": 6.40,
+      "temperature_K": 298.15,
+      "role": "8-chamber Vogels Minimal Medium Simscape hydraulic manifold coupled to USGS PHREEQC speciation"
+    },
+    "block_4_dhn_melanin_neurosporaxanthin_alara_point_kernel_shielding": {
+      "pigments": [
+        "DHN-melanin",
+        "neurosporaxanthin"
+      ],
+      "radical_quenching_efficiency_eta": 0.35,
+      "point_kernel_equation": "D_dot_shielded(r, z, t) = D_dot_0 * (r_0 / r)^2 * B(mu*z) * exp(-mu*z) * (1 - eta_melanin)",
+      "closed_loop_actuators": [
+        "u_valve(t)",
+        "z_shield(t)",
+        "Phi_light(t)"
+      ],
+      "alara_compliant": true
+    }
+  }
+}

@@ -278,5 +278,17 @@ final class TelemetryLoggerTests: XCTestCase {
         XCTAssertFalse(contents.contains("\u{2014}"), "JSONL must not contain em-dash")
         XCTAssertFalse(contents.contains("\u{2013}"), "JSONL must not contain en-dash")
         XCTAssertTrue(contents.contains(" - "), "Em-dashes and en-dashes must be sanitized to ' - '")
+
+        let prosody = ProsodyTraceEvent(
+            index: 34,
+            sourceKind: "dialectic-turn-prosody",
+            utteranceText: "Don't spec a visualization yet\u{2014}spec the parser\u{2013}first.",
+            requested: ProsodyFeatureVector(cadenceClass: "fast\u{2014}slow\u{2013}seam")
+        )
+        await logger.log(prosody)
+        let prosodyURL = dir.appendingPathComponent("prosody-trace-\(todayStr).jsonl")
+        let prosodyContents = try String(contentsOf: prosodyURL, encoding: .utf8)
+        XCTAssertFalse(prosodyContents.contains("\u{2014}"), "prosody-trace JSONL must not contain em-dash")
+        XCTAssertFalse(prosodyContents.contains("\u{2013}"), "prosody-trace JSONL must not contain en-dash")
     }
 }

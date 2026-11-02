@@ -70,7 +70,7 @@ public struct ProsodyFeatureVector: Codable, Sendable, Equatable {
         self.energyEntropy = energyEntropy
         self.emphasis = emphasis
         self.hesitation = hesitation
-        self.cadenceClass = cadenceClass
+        self.cadenceClass = cadenceClass.map(DialecticalTurnEvent.sanitizeDashes)
     }
 
     /// Builds the requested-control portion of the science vector from the
@@ -178,7 +178,7 @@ public struct ProsodyTraceEvent: Codable, Sendable, Equatable {
         self.schemaVersion = schemaVersion
         self.index = index
         self.sourceKind = sourceKind
-        self.utteranceText = utteranceText
+        self.utteranceText = DialecticalTurnEvent.sanitizeDashes(utteranceText)
         self.embeddingModelID = embeddingModelID
         self.embeddingVersion = embeddingVersion
         self.dialogueState = dialogueState

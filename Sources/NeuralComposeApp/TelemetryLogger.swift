@@ -88,6 +88,9 @@ public actor TelemetryLogger: InteractionLogging, DialecticalTurnLogging, Spoken
         let sanitized = Self.sanitizeDashes(rawLine)
         var data = Data(sanitized.utf8)
         data.append(0x0A) // newline
+        // Always seek to the current EOF before writing in case an external
+        // scrubber or compaction pass rewrote the file since the handle opened.
+        try handle.seekToEnd()
         // `write(contentsOf:)`, not `write(_:)` - the latter raises an
         // uncatchable Objective-C NSException on failure (disk full,
         // permission revoked) instead of a Swift `Error`, which this

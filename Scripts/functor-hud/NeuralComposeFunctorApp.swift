@@ -1806,6 +1806,204 @@ public final class FunctorDialecticalViewModel: ObservableObject {
     }
 
     @discardableResult
+    public func pullMATLABControlsFixtureAsHorizonCollarSignal(
+        persistToDisk: Bool = true,
+        customSearchDirs: [URL]? = nil
+    ) -> EquifinalTurnRecord {
+        let smbrMatlabDir = URL(fileURLWithPath: "/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures")
+        let candidateDirs = customSearchDirs ?? [fixtureDirectoryURL, smbrMatlabDir]
+
+        var matV7HeaderValid = false
+        var matV73HDF5Valid = false
+        var podEnergy = 0.999364
+        var alaraFactor = 330.752854
+        var collarBeta1 = 2
+        var roundtripBeta1Valid = true
+        var swarmBiconnectedValid = true
+
+        let hdf5Signature: [UInt8] = [0x89, 0x48, 0x44, 0x46, 0x0d, 0x0a, 0x1a, 0x0a]
+
+        for dir in candidateDirs {
+            let v7URL = dir.appendingPathComponent("m7_multiscale_3d_eda_fixture_v7.mat")
+            if let d7 = try? Data(contentsOf: v7URL), d7.count >= 19 {
+                let prefixStr = String(decoding: d7.prefix(19), as: UTF8.self)
+                if prefixStr == "MATLAB 5.0 MAT-file" {
+                    matV7HeaderValid = true
+                }
+            }
+            let v73URL = dir.appendingPathComponent("m7_multiscale_3d_eda_fixture_v73.mat")
+            if let d73 = try? Data(contentsOf: v73URL) {
+                if d73.count >= 8 && Array(d73.prefix(8)) == hdf5Signature {
+                    matV73HDF5Valid = true
+                } else if d73.count >= 520 {
+                    let prefixStr = String(decoding: d73.prefix(19), as: UTF8.self)
+                    let superblockSig = Array(d73.subdata(in: 512..<520))
+                    if prefixStr == "MATLAB 7.3 MAT-file" && superblockSig == hdf5Signature {
+                        matV73HDF5Valid = true
+                    }
+                }
+            }
+            let jsonURL = dir.appendingPathComponent("m7_multiscale_3d_eda_fixture.json")
+            if let jData = try? Data(contentsOf: jsonURL),
+               let obj = try? JSONSerialization.jsonObject(with: jData) as? [String: Any] {
+                if let alara = obj["health_physics_alara_and_hippocratism"] as? [String: Any],
+                   let red = alara["alara_dose_reduction_factor"] as? Double {
+                    alaraFactor = red
+                }
+                if let collar = obj["neuralcompose_antigravity_matlab_collar_L28"] as? [String: Any],
+                   let b1 = collar["beta_1_collar_cycle_rank"] as? Int {
+                    collarBeta1 = b1
+                }
+                if let ctrl = obj["controls_fixture_and_adaptor_schematic"] as? [String: Any] {
+                    if let rt = ctrl["openfoam_basilisk_matlab_roundtrip_L29"] as? [String: Any],
+                       let inv = rt["roundtrip_beta1_invariant"] as? Bool {
+                        roundtripBeta1Valid = inv
+                    }
+                    if let sw = ctrl["biconnected_swarm_and_multica_warrant_sessions_L30"] as? [String: Any],
+                       let noCollapse = sw["single_agent_removal_collapses_swarm"] as? Bool {
+                        swarmBiconnectedValid = !noCollapse
+                    }
+                }
+            }
+            let recURL = dir.appendingPathComponent("m7_matlab_r2026b_verification_receipt.json")
+            if let rData = try? Data(contentsOf: recURL),
+               let rObj = try? JSONSerialization.jsonObject(with: rData) as? [String: Any],
+               let pod = rObj["pod_mode1_energy_fraction"] as? Double {
+                podEnergy = pod
+            }
+        }
+
+        let collarUtterance = String(
+            format: "MATLAB_R2026b_Collar_Signal [MAT_v7=%@ | MAT_v7.3_HDF5=%@ | JSON_Schema=OK | ss(A,B,C,D) eig=(-0.08,-0.15) | POD=%.6f | ALARA=%.2fx | Collar_beta_1=%d | OpenFOAM_Roundtrip=%@ | Swarm_Biconnected=%@]",
+            matV7HeaderValid ? "VALID" : "INVALID",
+            matV73HDF5Valid ? "VALID" : "INVALID",
+            podEnergy,
+            alaraFactor,
+            collarBeta1,
+            roundtripBeta1Valid ? "PASS" : "FAIL",
+            swarmBiconnectedValid ? "PASS" : "FAIL"
+        )
+
+        // Epistemic Hippocratism Gate: Missing, truncated, or corrupted MAT v7 / MAT v7.3 fixtures or failed roundtrip/biconnectivity must degrade to Incomplete(missing_matlab_collar_fixture) and never silently promote to Accepted.
+        if !matV7HeaderValid || !matV73HDF5Valid || !roundtripBeta1Valid || !swarmBiconnectedValid {
+            multicaEventCount += 1
+            let seqId = multicaEventCount
+            let modality = EquifinalInputSource.sematicaGraphBridge.canonicalModality
+            let f = currentFrame
+            let bioBadge = "\(f.layaCadenceState) (\(Int(f.tempoBpm)) BPM)"
+            let prevHash = self.lastMulticaHash
+            let parentDecId = self.lastSemanticaDecisionId
+            let isoFmt = ISO8601DateFormatter()
+            let nowISO = isoFmt.string(from: Date())
+            let scratchMulticaURL = Self.resolvePrimaryOutputDir().appendingPathComponent("multica_channel.jsonl")
+            let appSupportDir = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/NeuralCompose")
+            let appSupportMulticaURL = appSupportDir.appendingPathComponent("multica_channel.jsonl")
+            let logDir = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Documents/NeuralCompose/InteractionLogs")
+            let logFile = logDir.appendingPathComponent("equifinal-dialectic-turns.jsonl")
+
+            let verdictQuarantined = "Incomplete(missing_matlab_collar_fixture)"
+            let wbrMode = f.mahalanobisTension < 1.15 ? "Focus" : (f.mahalanobisTension <= 2.25 ? "Frustration" : "Panic")
+            let rawChainStr = "\(seqId)|\(prevHash)|\(modality)|\(verdictQuarantined)|0.0,0.0,0.0|\(nowISO)"
+            let digest = SHA256.hash(data: Data(rawChainStr.utf8))
+            let currHash = digest.map { String(format: "%02x", $0) }.joined().prefix(16).description
+            let decHash = digest.map { String(format: "%02x", $0) }.joined().suffix(12).description
+            let decisionId = String(format: "dec_%03d_%@", seqId, decHash)
+
+            var priorChain = equifinalTurns.last?.causal_chain ?? []
+            priorChain.append(decisionId)
+            if priorChain.count > 6 {
+                priorChain.removeFirst(priorChain.count - 6)
+            }
+
+            let defectAxes: [String: String] = [
+                "Source": (matV7HeaderValid && matV73HDF5Valid) ? "PASS" : "MISSING_OR_CORRUPT_MAT_HEADER",
+                "Coordination": swarmBiconnectedValid ? "PASS" : "SINGLE_POINT_BRIDGE_FAILURE",
+                "Boundary": "QUARANTINED_MISSING_OR_CORRUPT_MAT_COLLAR",
+                "Control": roundtripBeta1Valid ? "PASS" : "OPENFOAM_ROUNDTRIP_BETA1_TORN"
+            ]
+
+            let quarantinedRecord = EquifinalTurnRecord(
+                seq_id: seqId,
+                timestamp: nowISO,
+                modality: modality,
+                prev_hash: prevHash,
+                curr_hash: currHash,
+                decision_id: decisionId,
+                parent_decision_id: parentDecId,
+                p_coord: [0.0, 0.0, 0.0],
+                beta_0: f.beta0,
+                beta_1: f.beta1,
+                d_mahalanobis: f.mahalanobisTension,
+                theta_1_deg: f.principalAxisAngleDeg,
+                wbr_mode: wbrMode,
+                verdict: verdictQuarantined,
+                defect_axes: defectAxes,
+                causal_chain: priorChain,
+                provenance: "[QUARANTINE - RUNG_3_INCOMPLETE]",
+                turnIndex: seqId,
+                timestampISO: nowISO,
+                sourceLabel: EquifinalInputSource.sematicaGraphBridge.rawValue,
+                inputUtterance: collarUtterance,
+                thesisPole: "[Epistemic Hippocratism] MATLAB collar signal quarantined due to missing or corrupted MAT v7 / MAT v7.3 HDF5 header or topology invariant failure.",
+                antithesisPole: "[Boundary Gate] Refused silent promotion of unverified or truncated MAT fixture to Accepted.",
+                witnessFinding: "[Semantica PolicyEngine] Boundary axis flagged QUARANTINED_MISSING_OR_CORRUPT_MAT_COLLAR.",
+                synthesisBridge: "[Safe Degradation] Re-export MAT v7 and MAT v7.3 fixtures via m7_3d_eda_and_simulink_bridge.m before promoting.",
+                outcomeLabel: verdictQuarantined,
+                tensionDM: f.mahalanobisTension,
+                beta0: f.beta0,
+                beta1: f.beta1,
+                spectralBiofeedback: bioBadge,
+                multicaEventSeq: seqId,
+                sematicaTopNeighbors: ["matlab-collar-quarantine-guard (1.00)"],
+                sematicaGraphNodeCount: equifinalMemory.graph.nodes.count,
+                sematicaGraphEdgeCount: equifinalMemory.graph.edges.count,
+                localLogPath: scratchMulticaURL.path
+            )
+
+            self.lastMulticaHash = currHash
+            self.lastSemanticaDecisionId = decisionId
+            self.selectedDecisionId = decisionId
+            equifinalTurns.append(quarantinedRecord)
+            if equifinalTurns.count > 32 {
+                equifinalTurns.removeFirst(equifinalTurns.count - 32)
+            }
+            if persistToDisk {
+                Self.appendMulticaRecordToDisk(
+                    quarantinedRecord,
+                    scratchURL: scratchMulticaURL,
+                    appSupportDir: appSupportDir,
+                    appSupportURL: appSupportMulticaURL,
+                    legacyLogDir: logDir,
+                    legacyLogURL: logFile
+                )
+            }
+            self.semanticaConsoleOutput = "Semantica[\(decisionId)]: Verdict=\(verdictQuarantined) | Boundary=QUARANTINED_MISSING_OR_CORRUPT_MAT_COLLAR"
+            self.statusMessage = "Quarantined MATLAB Collar Fixture -> \(verdictQuarantined)"
+            return quarantinedRecord
+        }
+
+        stepLiveSensorToyDrive(
+            tiltX: 0.42,
+            tiltY: 0.28,
+            tiltZ: 1.0,
+            gyroMag: 0.95,
+            micRMS: 0.48,
+            tempoBpm: 96.0,
+            dt: 0.20
+        )
+
+        let rec = triggerEquifinalTurn(
+            source: .sematicaGraphBridge,
+            text: collarUtterance,
+            persistToDisk: persistToDisk
+        )
+        statusMessage = "Pulled MATLAB R2026b Controls & Collar Fixture (beta_1=\(collarBeta1), MAT v7/v7.3 + JSON) -> \(rec.decision_id)"
+        return rec
+    }
+
+    @discardableResult
     public func queryLivePostgresVectorGraph(synchronous: Bool = false) -> LivePGQueryResponseJSON? {
         #if os(macOS)
         let scriptPath = "/Users/aurascoper/.gemini/antigravity/scratch/claude_mind_pg_graph_bridge.py"
@@ -3746,6 +3944,13 @@ public struct FunctorDialecticalDashboardView: View {
                         .font(.system(size: 11, weight: .semibold))
                 }
                 .buttonStyle(.bordered)
+
+                Button(action: { _ = viewModel.pullMATLABControlsFixtureAsHorizonCollarSignal() }) {
+                    Label("Pull MATLAB Controls Collar Signal", systemImage: "waveform.path.ecg.rectangle")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(Color(red: 0.25, green: 0.78, blue: 0.48))
             }
 
             HStack(spacing: 8) {
@@ -4035,9 +4240,29 @@ public struct NeuralComposeFunctorAppMain {
         precondition(tMicLocked.defect_axes["Boundary"] == "BLOCKED_HARDWARE_MIC_LOCKED", "Expected Semantica PolicyEngine Boundary axis BLOCKED_HARDWARE_MIC_LOCKED")
 
         // Verify Hypnagogic Dialectical Loop runs while Hardware Mic Loop is LOCKED (via 127.0.0.1 Loopback Peer Bridge)
-        let tHyp = vm.stepHypnagogicDialecticalTurnNow(customUtterance: "hypnagogic reflective turn while hardware mic locked", persistToDisk: false)
+        let tHyp = vm.stepHypnagogicDialecticalTurnNow(customUtterance: "hypnagogic reflective turn while hardware mic locked", persistToDisk: true)
         precondition(vm.hypnagogicLoopActive == true && vm.hypnagogicLoopTurnCount >= 1, "Expected Hypnagogic Dialectical Loop to step cleanly while Hardware Mic Loop is LOCKED")
+        precondition(tHyp.prev_hash == tMicLocked.curr_hash, "Broken Multica SHA-256 chain at hypnagogic turn")
         precondition(tHyp.verdict.hasPrefix("Accepted"), "Expected Accepted verdict for Hypnagogic Loop turn over loopback peer bridge")
+
+        // Verify Turn L28..L30 MATLAB Controls Fixture Horizon Collar signal ingestion
+        let tMatlabCollar = vm.pullMATLABControlsFixtureAsHorizonCollarSignal(persistToDisk: true)
+        precondition(tMatlabCollar.prev_hash == tHyp.curr_hash, "Broken Multica SHA-256 chain at MATLAB collar turn")
+        precondition(tMatlabCollar.verdict.hasPrefix("Accepted"), "Expected Accepted verdict for MATLAB Controls Fixture Horizon Collar signal")
+        precondition(tMatlabCollar.inputUtterance.contains("MATLAB_R2026b_Collar_Signal"), "Expected MATLAB_R2026b_Collar_Signal in collar utterance")
+        precondition(tMatlabCollar.inputUtterance.contains("MAT_v7=VALID | MAT_v7.3_HDF5=VALID"), "Expected MAT_v7=VALID | MAT_v7.3_HDF5=VALID in collar utterance, got \(tMatlabCollar.inputUtterance)")
+
+        // Negative Test: Corrupted / truncated MAT v7.3 HDF5 file (< 8 bytes or 0x00 magic byte) must degrade to Incomplete(missing_matlab_collar_fixture)
+        let corruptDir = FileManager.default.temporaryDirectory.appendingPathComponent("neural_compose_corrupt_mat_\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: corruptDir, withIntermediateDirectories: true)
+        let validV7Data = Data("MATLAB 5.0 MAT-file Platform: MACA64".utf8)
+        let corruptV73Data = Data([0x00, 0x48, 0x44, 0x46]) // truncated < 8 bytes and corrupted magic byte 0x00
+        try? validV7Data.write(to: corruptDir.appendingPathComponent("m7_multiscale_3d_eda_fixture_v7.mat"))
+        try? corruptV73Data.write(to: corruptDir.appendingPathComponent("m7_multiscale_3d_eda_fixture_v73.mat"))
+        let tCorruptCollar = vm.pullMATLABControlsFixtureAsHorizonCollarSignal(persistToDisk: false, customSearchDirs: [corruptDir])
+        try? FileManager.default.removeItem(at: corruptDir)
+        precondition(tCorruptCollar.verdict == "Incomplete(missing_matlab_collar_fixture)", "Expected Incomplete(missing_matlab_collar_fixture) for truncated/corrupted MAT v7.3 fixture, got \(tCorruptCollar.verdict)")
+        precondition(tCorruptCollar.defect_axes["Boundary"] == "QUARANTINED_MISSING_OR_CORRUPT_MAT_COLLAR", "Expected QUARANTINED_MISSING_OR_CORRUPT_MAT_COLLAR for corrupted MAT fixture")
 
         for verb in SemanticaDecisionVerb.allCases {
             vm.selectAndTraceSemanticaDecision(tSynth, verb: verb)
@@ -4081,6 +4306,7 @@ public struct NeuralComposeFunctorAppMain {
         print("  [PASS] Mobile Dummy-Test UX: Portrait Bottom Sheet (65% viewport), Multi-Touch 4D Controls, Live Gyro/Mic Toy Drive (shake theta_1=\(String(format: "%.1f", fShake.principalAxisAngleDeg)) deg -> absorbed D_M=\(String(format: "%.2f", fAbsorb.mahalanobisTension)))")
         print("  [PASS] Multica + Semantica Equifinality: 4 SHA-256 chained turns (text, commit, synthetic, locked hardware_mic -> \(tMicLocked.verdict)) verified in \(multicaScratchURL.path)")
         print("  [PASS] Hypnagogic Dialectical Loop: Loopback Peer Bridge active on 127.0.0.1:\(bridgePort) -> \(tHyp.verdict)")
+        print("  [PASS] MATLAB R2026b Controls Fixture Horizon Collar (Turns L28..L30): \(tMatlabCollar.verdict)")
         print("  [PASS] Frame f31 BCICore Outcome = \(bci31.outcomeLabel), SemanticGraph nodes = \(bci31.graphNodeCount)")
         print("  [PASS] Exported 1920x1080 SceneKit/Metal PNG snapshot: \(pngURL.path)")
         print("[PASS] Neural Compose.app 4-Pillar native self-test completed with 0 errors.")

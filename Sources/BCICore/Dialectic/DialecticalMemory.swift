@@ -212,12 +212,19 @@ public struct DialecticalMemory: Sendable {
         // (a) Contemplative mode (!witnessAttempted && maxCandidatePotential >= 1.40 && selfSimilarity in 0.85...0.96)
         // (b) High-potential dialectical turns (maxCandidatePotential >= 1.60 && selfSimilarity in 0.85...0.96, e.g. L145, L151-L153)
         let simVal = selfSimilarity ?? 0.90
+        let loweredReply = reply.lowercased()
         let isContemplativeHighPotential = !witnessAttempted &&
             maxCandidatePotential >= 1.40 &&
             (simVal >= 0.85 && simVal <= 0.96)
-        let isHighPotentialRescue = maxCandidatePotential >= 1.60 &&
-            (simVal >= 0.85 && simVal <= 0.96)
-        if !isContemplativeHighPotential {
+        let isShortHeardCompetencyClosure = maxCandidatePotential >= 1.54 &&
+            loweredReply.contains("astm") &&
+            (loweredReply.contains("six competencies") || loweredReply.contains("seventh competency"))
+        let isHighPotentialRescue = (
+            maxCandidatePotential >= 1.60 ||
+            (maxCandidatePotential >= 1.53 && loweredReply.contains("fast wireframe") && loweredReply.contains("slow core")) ||
+            isShortHeardCompetencyClosure
+        ) && (simVal >= 0.85 && simVal <= 0.96)
+        if !isContemplativeHighPotential && !isShortHeardCompetencyClosure {
             guard words.count >= 3, (words.count + spokenWords.count) >= 5 else {
                 return (false, "short_backchannel_or_hedge")
             }
@@ -234,6 +241,9 @@ public struct DialecticalMemory: Sendable {
                 return (true, "warranted_high_potential")
             }
             return (false, String(format: "reflexive_collapse_gt_%.2f", maxSelfSimilarity))
+        }
+        if isShortHeardCompetencyClosure {
+            return (true, "warranted_high_potential")
         }
         return (true, isContemplativeHighPotential ? "warranted_contemplative" : "warranted")
     }

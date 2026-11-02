@@ -30,12 +30,23 @@ if [[ -f "$APP_APPLICATIONS/Contents/Resources/mlx-swift_Cmlx.bundle/Contents/Re
     cp -R "$APP_APPLICATIONS/Contents/Resources/mlx-swift_Cmlx.bundle" "$NC_REPO/.build/mlx-swift_Cmlx.bundle"
 fi
 
-"$NC_REPO/Scripts/build.sh" --with-brainflow
+if [[ -f "$NC_REPO/Scripts/functor-hud/NeuralComposeFunctorApp.swift" ]]; then
+    cp -f "$NC_REPO/Scripts/functor-hud/NeuralComposeFunctorApp.swift" "$SCRATCH_DIR/NeuralComposeFunctorApp.swift"
+fi
+if [[ -f "$NC_REPO/Scripts/functor-hud/semantica_multica_bridge.py" ]]; then
+    cp -f "$NC_REPO/Scripts/functor-hud/semantica_multica_bridge.py" "$SCRATCH_DIR/semantica_multica_bridge.py"
+fi
 
 BIN_OUT="$SCRATCH_DIR/NeuralComposeFunctorBin"
 PRODUCTS_DIR="$NC_REPO/.build/out/Products/Debug"
 INTERMEDIATES_DIR="$NC_REPO/.build/out/Intermediates.noindex"
 APP_OBJ_DIR="$INTERMEDIATES_DIR/NeuralCompose.build/Debug/NeuralCompose-p.build/Objects-normal/arm64"
+
+if [[ "${1:-}" == "--fast-link" ]] && [[ -f "$APP_OBJ_DIR/NeuralComposeApp.o" ]]; then
+    echo "Using existing compiled NeuralComposeApp object files (--fast-link)."
+else
+    "$NC_REPO/Scripts/build.sh" --with-brainflow
+fi
 
 if [[ -d "$NC_REPO/.build/mlx-swift_Cmlx.bundle" ]]; then
     rm -rf "$PRODUCTS_DIR/mlx-swift_Cmlx.bundle"
@@ -66,7 +77,7 @@ swiftc -target arm64-apple-macos14.0 -parse-as-library \
   -Xcc -fmodule-map-file="$NC_REPO/.build/checkouts/swift-numerics/Sources/_NumericsShims/include/module.modulemap" \
   "${LINK_OBJS[@]}" \
   "$PRODUCTS_DIR"/lib*.a \
-  "$SCRATCH_DIR/NeuralComposeFunctorApp.swift" \
+  "$NC_REPO/Scripts/functor-hud/NeuralComposeFunctorApp.swift" \
   -L"$BRAINFLOW_PATH/compiled" -lBoardController \
   -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
   -lc++ -framework Speech -framework Foundation -framework Metal -framework Accelerate \

@@ -87,6 +87,17 @@ def test_should_autobank_turn_warrant_and_collapse_gates():
     assert ok is True
     assert reason == "warranted_high_potential"
 
+    ok_l25, reason_l25 = mg.should_autobank_turn(
+        heard="What should they be for each",
+        spoken="Give the $150 Hyperliquid sleeve the Fast Wireframe role and the $51 MEXC sleeve the Slow Core role, inverted against dollar size because redemption latency governs risk.",
+        outcome="spoke:coherence-seeking",
+        self_similarity=0.9403586,
+        witness_attempted=True,
+        max_candidate_potential=1.5364914,
+    )
+    assert ok_l25 is True
+    assert reason_l25 == "warranted_high_potential"
+
 
 def test_dialectic_payloads_disambiguates_multi_run_and_strips_dashes(tmp_path: Path):
     log_fp = tmp_path / "dialectic-turns-2026-11-01.jsonl"

@@ -1,0 +1,87 @@
+{
+  "verified_at_utc": "2026-11-02T09:18:10Z",
+  "matlab_version": "26.2.0.3433840 (R2026b) Update 1",
+  "all_14_student_suite_toolboxes_present": true,
+  "installed_toolbox_count": 14,
+  "m7_schema_headers_vs_types_valid": true,
+  "spice_basilisk_si_seam_valid": true,
+  "dcm_orthogonality_frobenius_error": 1.5700924586837752E-16,
+  "pod_mode1_energy_fraction": 0.99936400591215657,
+  "control_loop_stable": true,
+  "control_settling_time_s": 18.930963621198092,
+  "simulink_model_simulated": true,
+  "simulink_final_value": 1.0027730136431781,
+  "multipool_biofilm_conserved": true,
+  "multipool_mass_rel_residual": 0,
+  "neurospora_4block_8pool_verified": true,
+  "neurospora_n_pool_vogels_chambers": 8,
+  "mat_v7_and_v73_hdf5_saved": true,
+  "mat_v7_header_prefix": "MATLAB 5.0 MAT-file",
+  "openfoam_matlab_roundtrip_beta1_valid": true,
+  "swarm_biconnected_verification_valid": true,
+  "unified_substrate_swap_L31_L32_valid": true,
+  "openmc_tally_variance_rel_diff": 0.020689655172413786,
+  "tarjan_bridge_dag_valid": true,
+  "beta_1_inter_solver": 0,
+  "health_physics_alara_valid": true,
+  "asr_reticulation_valid": true,
+  "beta_1_reticulation_cycles": 2,
+  "exported_png_width": 2584,
+  "exported_png_height": 1460,
+  "all_checks_passed": true,
+  "neurospora_crassa_matlab_r2026b_4_block_state_spec": {
+    "source_turn": "2026-11-02-L34",
+    "block_1_frq_wc1_wc2_circadian_oscillator": {
+      "states": [
+        "M_frq",
+        "F_c",
+        "F_n",
+        "phi(t)"
+      ],
+      "ode_order": 3,
+      "free_running_period_hr": 22.5,
+      "photoentrainment_input": "Phi_light(t)",
+      "role": "Governs circadian conidiation banding and rhythmic antioxidant/catalase/SOD expression"
+    },
+    "block_2_syncytial_hyphal_streaming_and_woronin_hex1": {
+      "cytoplasmic_streaming_velocity_um_s_range": [
+        5,
+        60
+      ],
+      "septal_pore_occlusion_protein": "Woronin_body_HEX_1",
+      "anastomosis_cycle_rank_beta_1_min": 1,
+      "beta_1_verified": 3,
+      "role": "Syncytial mass-flow transport with HEX-1 emergency septal plugging and biconnected hyphal fusion loops"
+    },
+    "block_3_eight_chamber_vogels_medium_simscape_phreeqc_hydraulics": {
+      "chamber_count": 8,
+      "state_variables": [
+        "C_sucrose",
+        "C_NH4",
+        "C_NO3",
+        "DO",
+        "pH",
+        "pe",
+        "T"
+      ],
+      "phreeqc_pH": 5.8,
+      "phreeqc_pe": 6.4,
+      "temperature_K": 298.15,
+      "role": "8-chamber Vogels Minimal Medium Simscape hydraulic manifold coupled to USGS PHREEQC speciation"
+    },
+    "block_4_dhn_melanin_neurosporaxanthin_alara_point_kernel_shielding": {
+      "pigments": [
+        "DHN-melanin",
+        "neurosporaxanthin"
+      ],
+      "radical_quenching_efficiency_eta": 0.35,
+      "point_kernel_equation": "D_dot_shielded(r, z, t) = D_dot_0 * (r_0 / r)^2 * B(mu*z) * exp(-mu*z) * (1 - eta_melanin)",
+      "closed_loop_actuators": [
+        "u_valve(t)",
+        "z_shield(t)",
+        "Phi_light(t)"
+      ],
+      "alara_compliant": true
+    }
+  }
+}

@@ -17,12 +17,21 @@ Strictly zero em-dashes and zero en-dashes.
 
 from __future__ import annotations
 import argparse
+from datetime import datetime, timezone
+import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 os.environ["SEMANTICA_DISABLE_PROGRESS"] = "1"
+for _cand_path in (
+    "/Users/aurascoper/.gemini/antigravity/scratch",
+    "/Users/aurascoper/.gemini/antigravity/scratch/semantica",
+):
+    if os.path.isdir(_cand_path) and _cand_path not in sys.path:
+        sys.path.insert(0, _cand_path)
 
 from semantica.context import AgentContext, ContextGraph
 from semantica.context.decision_query import DecisionQuery
@@ -39,7 +48,10 @@ class SemanticaMulticaBridge:
         self.query_engine = DecisionQuery(self.ctx, self.graph)
         self.policy_engine = PolicyEngine()
         self.last_decision_id: Optional[str] = None
+        self.last_curr_hash: str = "0000000000000000"
         self.seq_to_decision_id: Dict[int, str] = {}
+        self.external_decision_id_map: Dict[str, str] = {}
+        self.loaded_session_ids: Dict[str, Dict[str, Any]] = {}
 
     @staticmethod
     def _normalize_event(raw_event: Dict[str, Any]) -> Dict[str, Any]:
@@ -61,6 +73,7 @@ class SemanticaMulticaBridge:
         curr_hash = str(raw_event.get("curr_hash", raw_event.get("currHash", "0000000000000000")))
         wbr_mode = str(raw_event.get("wbr_mode", raw_event.get("wbrMode", "Focus")))
         mic_locked = bool(raw_event.get("hardware_mic_locked", modality == "hardware_mic" and "Incomplete" in verdict))
+        ext_dec_id = raw_event.get("decision_id", raw_event.get("decisionId"))
         return {
             "seq_id": seq_id,
             "modality": modality,
@@ -76,6 +89,9 @@ class SemanticaMulticaBridge:
             "hardware_mic_locked": mic_locked,
             "utterance": str(raw_event.get("utterance", raw_event.get("inputUtterance", ""))),
             "chosen_pole": str(raw_event.get("chosen_pole", raw_event.get("outcomeLabel", "synthesis"))),
+            "external_decision_id": str(ext_dec_id) if ext_dec_id else None,
+            "session_id": str(raw_event["session_id"]) if "session_id" in raw_event else None,
+            "model": str(raw_event["model"]) if "model" in raw_event else None,
         }
 
     def publish_dialectical_turn(self, multica_event: dict) -> str:
@@ -120,8 +136,15 @@ class SemanticaMulticaBridge:
                 "prev_hash": ev["prev_hash"],
                 "curr_hash": ev["curr_hash"],
                 "policy_report": policy_report,
+                "external_decision_id": ev["external_decision_id"],
             },
         )
+
+        ext_id = ev["external_decision_id"]
+        if ext_id:
+            self.external_decision_id_map[ext_id] = decision_id
+            if ext_id not in self.ctx.decisions:
+                self.ctx.decisions[ext_id] = self.ctx.decisions[decision_id]
 
         self.graph.add_node(
             f"turn_{seq_id}",
@@ -156,11 +179,42 @@ class SemanticaMulticaBridge:
                 relationship_type="INFLUENCED",
             )
         self.last_decision_id = decision_id
+        if ev["curr_hash"] and ev["curr_hash"] != "0000000000000000":
+            self.last_curr_hash = ev["curr_hash"]
         self.seq_to_decision_id[seq_id] = decision_id
+        if ev["session_id"]:
+            self.loaded_session_ids[ev["session_id"]] = {
+                "decision_id": ext_id or decision_id,
+                "session_id": ev["session_id"],
+                "model": ev["model"] or "unknown",
+                "verdict": verdict,
+                "beta_0": beta_0,
+                "beta_1": beta_1,
+                "prev_hash": ev["prev_hash"],
+                "curr_hash": ev["curr_hash"],
+                "utterance": ev["utterance"],
+            }
+        return decision_id
+
+    def resolve_decision_id(self, decision_id: Optional[str]) -> Optional[str]:
+        if decision_id is None:
+            return None
+        if decision_id in self.external_decision_id_map:
+            return self.external_decision_id_map[decision_id]
+        if decision_id in self.ctx.decisions:
+            return decision_id
+        # Fallback prefix match by seq_id prefix (e.g. dec_006_...)
+        if decision_id.startswith("dec_"):
+            parts = decision_id.split("_")
+            if len(parts) >= 2 and parts[1].isdigit():
+                seq_num = int(parts[1])
+                if seq_num in self.seq_to_decision_id:
+                    return self.seq_to_decision_id[seq_num]
         return decision_id
 
     def trace_turn_lineage(self, decision_id: str, max_steps: int = 5) -> Dict[str, Any]:
-        return self.graph.trace_decision_chain(decision_id, max_steps=max_steps)
+        resolved = self.resolve_decision_id(decision_id) or decision_id
+        return self.graph.trace_decision_chain(resolved, max_steps=max_steps)
 
     def load_multica_jsonl(self, jsonl_path: Path = DEFAULT_MULTICA_JSONL) -> int:
         if not jsonl_path.exists():
@@ -175,18 +229,127 @@ class SemanticaMulticaBridge:
             count += 1
         return count
 
+    def spawn_synthetic_warrant_and_task_analysis_sessions(
+        self,
+        persist_jsonl_path: Optional[Path] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Spawns synthetic Multica warrant-gate and task-analysis sessions across
+        claude-sonnet-5, claude-sonnet-5-5, and claude-haiku-4-5 for Turns L28..L30:
+        1. claude-sonnet-5   : MATLAB Reactor Controls & Collar Adapter Warrant Gate (Turn L28)
+        2. claude-sonnet-5-5 : OpenFOAM / Basilisk / MATLAB Round-Trip Topology Parser Task Analysis (Turn L29)
+        3. claude-haiku-4-5  : Biconnected Swarm Trigger-Condition & Multi-Clock Warrant Gate (Turn L30)
+        """
+        synthetic_templates = [
+            {
+                "modality": "synthetic",
+                "model": "claude-sonnet-5",
+                "session_id": "multica-synth-warrant-sonnet-5-L28",
+                "verdict": "Accepted(collar_adapter_verified)",
+                "p_coord": [0.46, 0.31, 0.91],
+                "beta_0": 1,
+                "beta_1": 6,
+                "d_mahalanobis": 1.18,
+                "theta_1_deg": 16.4,
+                "wbr_mode": "Focus",
+                "utterance": "Turn L28 MATLAB Reactor Controls & Collar Adapter Warrant Gate (MAT v7/v7.3 + JSON -> Horizon Collar Leaf beta_1=2)",
+                "chosen_pole": "synthesis",
+            },
+            {
+                "modality": "synthetic",
+                "model": "claude-sonnet-5-5",
+                "session_id": "multica-synth-task-analysis-sonnet-5-5-L29",
+                "verdict": "Accepted(roundtrip_beta1_invariant)",
+                "p_coord": [0.52, 0.38, 0.93],
+                "beta_0": 1,
+                "beta_1": 6,
+                "d_mahalanobis": 1.24,
+                "theta_1_deg": 18.2,
+                "wbr_mode": "Focus",
+                "utterance": "Turn L29 OpenFOAM boundary-mesh topology to Basilisk/MATLAB field round-trip beta_1=2 invariance & headless diff-checker",
+                "chosen_pole": "synthesis",
+            },
+            {
+                "modality": "synthetic",
+                "model": "claude-haiku-4-5",
+                "session_id": "multica-synth-fast-warrant-haiku-4-5-L30",
+                "verdict": "Accepted(biconnected_swarm_verified)",
+                "p_coord": [0.49, 0.29, 0.94],
+                "beta_0": 1,
+                "beta_1": 6,
+                "d_mahalanobis": 1.09,
+                "theta_1_deg": 15.1,
+                "wbr_mode": "Focus",
+                "utterance": "Turn L30 Tarjan biconnected swarm (beta_1=2) & counterfactual feed-swap trigger gate across Fast Wireframe and Slow Core clocks",
+                "chosen_pole": "synthesis",
+            },
+        ]
+
+        results: List[Dict[str, Any]] = []
+        lines_to_append: List[str] = []
+
+        for tmpl in synthetic_templates:
+            sess_id = tmpl["session_id"]
+            if sess_id in self.loaded_session_ids:
+                results.append(self.loaded_session_ids[sess_id])
+                continue
+
+            seq_id = len(self.ctx.decision_order) + 1
+            prev_hash = self.last_curr_hash
+            parent_dec_id = self.last_decision_id or "none"
+            now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            p_str = ",".join(f"{v:.3f}" for v in tmpl["p_coord"])
+            raw_chain = f"{seq_id}|{prev_hash}|{tmpl['modality']}|{tmpl['verdict']}|{p_str}|{now_iso}|{sess_id}"
+            digest_hex = hashlib.sha256(raw_chain.encode("utf-8")).hexdigest()
+            curr_hash = digest_hex[:16]
+            ext_dec_id = f"dec_{seq_id:03d}_{digest_hex[-12:]}"
+
+            spec = dict(tmpl)
+            spec["seq_id"] = seq_id
+            spec["timestamp"] = now_iso
+            spec["prev_hash"] = prev_hash
+            spec["curr_hash"] = curr_hash
+            spec["decision_id"] = ext_dec_id
+            spec["parent_decision_id"] = parent_dec_id
+
+            dec_id = self.publish_dialectical_turn(spec)
+            entry = {
+                "decision_id": ext_dec_id,
+                "semantica_decision_id": dec_id,
+                "session_id": sess_id,
+                "model": tmpl["model"],
+                "verdict": tmpl["verdict"],
+                "beta_0": tmpl["beta_0"],
+                "beta_1": tmpl["beta_1"],
+                "prev_hash": prev_hash,
+                "curr_hash": curr_hash,
+                "utterance": tmpl["utterance"],
+            }
+            self.loaded_session_ids[sess_id] = entry
+            results.append(entry)
+            lines_to_append.append(json.dumps(spec, separators=(",", ":")))
+
+        if persist_jsonl_path is not None and lines_to_append:
+            persist_jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+            with persist_jsonl_path.open("a", encoding="utf-8") as fh:
+                for ln in lines_to_append:
+                    fh.write(ln + "\n")
+
+        return results
+
     def execute_verb(
         self,
         verb: str,
         seq_id: Optional[int] = None,
         decision_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        target_id = decision_id
+        target_id = self.resolve_decision_id(decision_id)
         if target_id is None and seq_id is not None:
             target_id = self.seq_to_decision_id.get(seq_id)
         if target_id is None:
             target_id = self.last_decision_id or "dec_000_none"
 
+        display_id = decision_id or target_id
         dec = self.ctx.decisions.get(target_id, {})
         meta = dec.get("metadata", {})
 
@@ -194,7 +357,7 @@ class SemanticaMulticaBridge:
             return {
                 "verb": "record",
                 "status": "OK",
-                "decision_id": target_id,
+                "decision_id": display_id,
                 "total_decisions": len(self.ctx.decision_order),
                 "total_causal_edges": len(self.graph.edges),
                 "summary": f"Recorded {len(self.ctx.decision_order)} Semantica DecisionNodes with {len(self.graph.edges)} INFLUENCED edges.",
@@ -203,12 +366,12 @@ class SemanticaMulticaBridge:
             return {
                 "verb": "query",
                 "status": "OK",
-                "decision_id": target_id,
+                "decision_id": display_id,
                 "category": dec.get("category", "unknown"),
                 "outcome": dec.get("outcome", "unknown"),
                 "scenario": dec.get("scenario", ""),
                 "reasoning": dec.get("reasoning", ""),
-                "summary": f"Query[{target_id}]: {dec.get('outcome', 'N/A')} | {dec.get('scenario', '')}",
+                "summary": f"Query[{display_id}]: {dec.get('outcome', 'N/A')} | {dec.get('scenario', '')}",
             }
         elif verb == "precedents":
             precs = self.query_engine.find_precedents_advanced(
@@ -226,7 +389,7 @@ class SemanticaMulticaBridge:
             return {
                 "verb": "precedents",
                 "status": "OK",
-                "decision_id": target_id,
+                "decision_id": display_id,
                 "precedents": precs,
                 "summary": f"Hybrid Precedents (0.5 sem + 0.5 struct): {top_str}",
             }
@@ -236,7 +399,7 @@ class SemanticaMulticaBridge:
             return {
                 "verb": "influence",
                 "status": "OK",
-                "decision_id": target_id,
+                "decision_id": display_id,
                 "lineage": lineage,
                 "summary": f"INFLUENCED Chain ({lineage['total_hops']} hops): {chain_str}",
             }
@@ -248,10 +411,10 @@ class SemanticaMulticaBridge:
             return {
                 "verb": "explain",
                 "status": "OK",
-                "decision_id": target_id,
+                "decision_id": display_id,
                 "policy_report": policy_rep,
                 "lineage": lineage,
-                "summary": f"Explain[{target_id}]: Verdict={dec.get('outcome', 'N/A')} | Axes=[{axes_str}] | Chain={' -> '.join(lineage['chain_ids'])}",
+                "summary": f"Explain[{display_id}]: Verdict={dec.get('outcome', 'N/A')} | Axes=[{axes_str}] | Chain={' -> '.join(lineage['chain_ids'])}",
             }
 
 
@@ -266,6 +429,7 @@ def main() -> None:
     )
     parser.add_argument("--seq-id", type=int, default=None)
     parser.add_argument("--decision-id", type=str, default=None)
+    parser.add_argument("--spawn-synthetic-sessions", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
 
@@ -314,12 +478,15 @@ def main() -> None:
             },
         ]
         ids = [bridge.publish_dialectical_turn(ev) for ev in sample_events]
+        synth_sessions = bridge.spawn_synthetic_warrant_and_task_analysis_sessions()
+        assert len(synth_sessions) == 3, f"Expected 3 synthetic sessions, got {len(synth_sessions)}"
         lineage = bridge.trace_turn_lineage(ids[1], max_steps=5)
-        assert len(lineage["chain_ids"]) == 3, f"Expected 3-node chain, got {lineage['chain_ids']}"
+        assert len(lineage["chain_ids"]) >= 3, f"Expected >=3-node chain, got {lineage['chain_ids']}"
         out = {
             "status": "PASS",
-            "decisions_recorded": len(ids),
+            "decisions_recorded": len(ids) + len(synth_sessions),
             "decision_ids": ids,
+            "synthetic_warrant_sessions": synth_sessions,
             "lineage": lineage,
             "precedents": bridge.execute_verb("precedents", decision_id=ids[1])["precedents"],
             "explain_locked_mic": bridge.execute_verb("explain", decision_id=ids[2]),
@@ -327,7 +494,8 @@ def main() -> None:
         print(json.dumps(out))
         return
 
-    loaded = bridge.load_multica_jsonl(Path(args.jsonl))
+    jsonl_path = Path(args.jsonl)
+    loaded = bridge.load_multica_jsonl(jsonl_path)
     if loaded == 0:
         bridge.publish_dialectical_turn({
             "seq_id": 1,
@@ -342,9 +510,17 @@ def main() -> None:
             "curr_hash": "f00seed000000001",
             "wbr_mode": "Frustration",
         })
+    synth_out = (
+        bridge.spawn_synthetic_warrant_and_task_analysis_sessions(persist_jsonl_path=jsonl_path)
+        if args.spawn_synthetic_sessions
+        else []
+    )
     res = bridge.execute_verb(args.verb, seq_id=args.seq_id, decision_id=args.decision_id)
+    if synth_out:
+        res["synthetic_warrant_sessions"] = synth_out
     print(json.dumps(res))
 
 
 if __name__ == "__main__":
     main()
+

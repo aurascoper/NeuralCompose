@@ -1,0 +1,273 @@
+{
+  "schema": "neuralcompose-master-event-contract-receipt-v1",
+  "contract_schema_id": "neuralcompose-master-event-contract-schema-v1",
+  "verified_at_utc": "2026-11-02T09:45:48.724321+00:00",
+  "all_gates_passed": true,
+  "max_scc_size": 1,
+  "beta_1_inter_solver": 0,
+  "recursion_depth": 0,
+  "consolidation_rule_immutable": true,
+  "subsystems_verified": [
+    "NeuralCompose",
+    "MomentumAutomata",
+    "ReactorPools",
+    "BiofilmsSessions"
+  ],
+  "multica_defect_axes_verified": {
+    "Boundary": true,
+    "Control": true,
+    "Source": true,
+    "Coordination": true
+  },
+  "neurospora_crassa_4block_8pool_summary": {
+    "verified": true,
+    "n_pool": 8,
+    "tau_DD_hr": 22.5,
+    "tau_LD_hr": 24.0,
+    "beta_0": 1,
+    "beta_1_syncytial_loops": 3,
+    "woronin_body_hex1_active": true,
+    "nutmeg_verdict_at_298K": "Accepted",
+    "nutmeg_verdict_below_280K": "Incomplete",
+    "hormesis_quarantine_verdict": "Incomplete",
+    "actuators_verified": [
+      "u_valve",
+      "z_shield",
+      "Phi_light"
+    ],
+    "c_o2_mol_m3": [
+      0.24,
+      0.235,
+      0.23,
+      0.225,
+      0.22,
+      0.215,
+      0.21,
+      0.205
+    ]
+  },
+  "gates": {
+    "G1": {
+      "gate_id": "G1",
+      "gate_passed": true,
+      "epistemic_verdict": "Accepted",
+      "unit_scale_km_to_m": 1000.0,
+      "converted_position_si_m": [
+        206655000000.0,
+        0.0,
+        0.0
+      ],
+      "converted_velocity_si_m_s": [
+        0.0,
+        26500.0,
+        0.0
+      ],
+      "position_rel_err": 0.0,
+      "velocity_rel_err": 0.0,
+      "dcm_carried_separately": true,
+      "dcm_orthogonality_frobenius_err": 1.5700924586837752e-16,
+      "dcm_pck_vintage_frobenius_diff": 2.8284271245904914e-07,
+      "reentrant_spice_lock_enforced": true
+    },
+    "G2": {
+      "gate_id": "G2",
+      "gate_passed": true,
+      "stage_headers": [
+        "M7.1",
+        "M7.2",
+        "M7.3",
+        "M7.4",
+        "M7.5",
+        "M7.6",
+        "M7.7",
+        "M7.8"
+      ],
+      "int64_keys_verified": [
+        "beta_0",
+        "beta_1",
+        "beta_2",
+        "chamber_index",
+        "codon_count",
+        "n_pool"
+      ],
+      "float64_keys_verified": [
+        "FL1_A",
+        "FSC_A",
+        "SSC_A",
+        "concentration_mol_m3",
+        "dose_rate_Gy_s",
+        "melanin_pg_cell",
+        "position_m",
+        "pressure_Pa",
+        "temperature_K",
+        "velocity_m_s"
+      ],
+      "ieee754_binary_approximation_residual": 5.551115123125783e-17
+    },
+    "G3": {
+      "gate_id": "G3",
+      "gate_passed": true,
+      "nodes": [
+        "OpenFOAM_FiniteVolume_CFD",
+        "PHREEQC_Geochemical_Speciation",
+        "FlowCytometry_SingleCell_Bridge",
+        "SmallModularBioReactors_Multiscale_ODE",
+        "MATLAB_R2026b_Simulink_Simscape_3D_EDA"
+      ],
+      "directed_edges": [
+        [
+          "OpenFOAM_FiniteVolume_CFD",
+          "PHREEQC_Geochemical_Speciation"
+        ],
+        [
+          "PHREEQC_Geochemical_Speciation",
+          "FlowCytometry_SingleCell_Bridge"
+        ],
+        [
+          "FlowCytometry_SingleCell_Bridge",
+          "SmallModularBioReactors_Multiscale_ODE"
+        ],
+        [
+          "SmallModularBioReactors_Multiscale_ODE",
+          "MATLAB_R2026b_Simulink_Simscape_3D_EDA"
+        ]
+      ],
+      "max_scc_size": 1,
+      "beta_1_inter_solver": 0,
+      "recursion_depth": 0,
+      "consolidation_rule_immutable": true,
+      "pod_dmd_residual": 0.012,
+      "pod_dmd_tolerance": 0.05,
+      "cache_miss_fresh_openfoam_solve_triggered": false,
+      "live_openfoam_calls_in_session": 1,
+      "session_openfoam_call_ceiling": 4
+    },
+    "G4": {
+      "gate_id": "G4",
+      "gate_passed": true,
+      "settlement_bridge": "propose_match_and_settle",
+      "orderbook_beta_1": 2,
+      "balance_tree_beta_1": 0,
+      "max_scc_size": 1,
+      "classification_axis": "redemption_unwinding_latency_not_dollar_size",
+      "fast_wireframe": {
+        "tau_redemption_s": 2.0,
+        "positions": [
+          "Hyperliquid_perp_150_USDC",
+          "ZEC_USDC_spot"
+        ]
+      },
+      "slow_core": {
+        "tau_redemption_s": 86400.0,
+        "positions": [
+          "MEXC_staking_51_USD"
+        ],
+        "unbonding_countdown_active": true
+      },
+      "plasticity_shell": {
+        "tau_redemption_s": 3.4,
+        "positions": [
+          "ZEC_CEC_algo_900_to_2500_ladder"
+        ],
+        "cost_basis_bounds_usd": [
+          900.0,
+          2500.0
+        ],
+        "stoppable_exit_trigger_lever_verified": true
+      }
+    },
+    "G5": {
+      "gate_id": "G5",
+      "gate_passed": true,
+      "process_boundaries": [
+        "Antigravity_Agent_Coordinator",
+        "MATLAB_R2026b_Simulink_Controls",
+        "SmallModularBioReactors_Julia_Core",
+        "NeuralCompose_Functor_HUD_App"
+      ],
+      "collar_leaves": [
+        "u_valve",
+        "z_shield",
+        "Phi_light"
+      ],
+      "collar_leaf_count_c": 3,
+      "delta_beta_1_collar_cycle_rank": 2,
+      "beta_1_inter_solver": 0,
+      "mat_v7_magic_verified": true,
+      "mat_v73_hdf5_magic_verified": true,
+      "json_intermediate_verified": true
+    },
+    "G6": {
+      "gate_id": "G6",
+      "gate_passed": true,
+      "primitive_name": "Unified_Headless_Substrate_Swap_Verification_Primitive_L29_to_L32",
+      "L29_mesh_field_substrate_swap": {
+        "openfoam_mesh_beta_0": 1,
+        "openfoam_mesh_beta_1": 2,
+        "matlab_interpolated_beta_0": 1,
+        "matlab_interpolated_beta_1": 2,
+        "delta_beta_0": 0,
+        "delta_beta_1": 0,
+        "max_interpolation_tearing_residual": 1.2e-06,
+        "topological_tearing_detected": false
+      },
+      "L30_biconnected_swarm_feed_swap": {
+        "swarm_node_count": 4,
+        "swarm_edge_count": 5,
+        "beta_1_swarm_verification_cycles": 2,
+        "cut_vertices": [],
+        "bridge_edges": [],
+        "counterfactual_feed_swap_trigger_invariant": true
+      },
+      "L31_unified_headless_cli_and_reject_log": {
+        "single_headless_pass_fail_primitive": true,
+        "log_stage_rejects_separately": true,
+        "stage1_mesh_filter_rejects": [
+          "cand_torn_mesh_reject"
+        ],
+        "stage2_swarm_filter_rejects": [
+          "cand_divergent_swarm_reject"
+        ],
+        "verified_survivors": [
+          "cand_valid_mesh_and_swarm"
+        ]
+      },
+      "L32_openmc_cross_section_and_dosimetry_swap": {
+        "libraries_compared": [
+          "ENDF/B-VIII.0",
+          "JEFF-3.3"
+        ],
+        "dose_rate_endfb80_mSv_hr": 0.0142,
+        "dose_rate_jeff33_mSv_hr": 0.0145,
+        "tally_dose_rel_diff": 0.020906,
+        "tally_rel_variance_tol": 0.05,
+        "icrp116_ansi_ans_6_1_1_module_verified_separately": true,
+        "workplace_regulatory_geometry_verified": true,
+        "reference_geometries": [
+          "MURR_Columbia_MO_10MW_Open_Pool_Research_Reactor",
+          "Mars_Kilopower_10m_Standoff_8Pool_Bioreactor_Array"
+        ]
+      }
+    },
+    "G7": {
+      "gate_id": "G7",
+      "gate_passed": true,
+      "epistemic_hippocratism_verdict": "Accepted",
+      "cumulative_dose_Gy": 0.0295,
+      "alara_80pct_safing_limit_Gy": 0.04,
+      "max_allowable_dose_Gy": 0.05,
+      "payload_safing_triggered": false,
+      "inverse_square_attenuation_factor": 0.01,
+      "shielding_thickness_m": 0.1,
+      "melanin_mass_fraction": 0.18,
+      "temperature_K": 298.15,
+      "below_280K_nutmeg_quarantined": false,
+      "quarantined_hypotheses": {
+        "unverified_low_dose_radiation_hormesis": "Incomplete",
+        "direct_net_atp_radiosynthesis_without_electron_donor_mass_balance": "Incomplete",
+        "nutmeg_maintenance_power_below_280K": "Incomplete",
+        "unverified_spice_jl_units_prior_to_spkpos_check": "Incomplete"
+      }
+    }
+  }
+}

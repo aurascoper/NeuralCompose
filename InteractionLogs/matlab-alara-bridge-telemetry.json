@@ -1,6 +1,6 @@
 {
   "schema": "neuralcompose-matlab-alara-hippocratism-bridge-v1",
-  "generatedAt": "2026-11-02T07:57:29.555868+00:00",
+  "generatedAt": "2026-11-02T10:34:24.558637+00:00",
   "matlab_app_path": "/Applications/MATLAB_R2026b.app",
   "matlab_installed_on_disk": true,
   "matlab_version": "26.2.0.3433840",
@@ -28,8 +28,195 @@
     "all_checks_passed": true,
     "installed_toolbox_count": 14,
     "tarjan_bridge_dag_valid": true,
-    "health_physics_alara_valid": true
+    "health_physics_alara_valid": true,
+    "simulink_model_simulated": true,
+    "mat_v7_and_v73_hdf5_saved": true,
+    "openfoam_matlab_roundtrip_beta1_valid": true,
+    "swarm_biconnected_verification_valid": true
   },
+  "neuralcompose_matlab_fixtures": {
+    "fixtures_dir": "/Users/aurascoper/Developer/NeuralCompose/matlab_fixtures",
+    "receipt_present": true,
+    "json_fixture_present": true,
+    "mat_v7_present": true,
+    "mat_v73_hdf5_present": true,
+    "bridge_script_present": true,
+    "spatiotemporal_png_present": true
+  },
+  "neurospora_crassa_matlab_r2026b_4_block_state_spec": {
+    "source_turn": "2026-11-02-L34",
+    "block_1_frq_wc1_wc2_circadian_oscillator": {
+      "states": [
+        "M_frq",
+        "F_c",
+        "F_n",
+        "phi(t)"
+      ],
+      "ode_order": 3,
+      "free_running_period_hr": 22.5,
+      "photoentrainment_input": "Phi_light(t)",
+      "role": "Governs circadian conidiation banding and rhythmic antioxidant/catalase/SOD expression"
+    },
+    "block_2_syncytial_hyphal_streaming_and_woronin_hex1": {
+      "cytoplasmic_streaming_velocity_um_s_range": [
+        5.0,
+        60.0
+      ],
+      "septal_pore_occlusion_protein": "Woronin_body_HEX_1",
+      "anastomosis_cycle_rank_beta_1_min": 1,
+      "beta_1_verified": 3,
+      "role": "Syncytial mass-flow transport with HEX-1 emergency septal plugging and biconnected hyphal fusion loops"
+    },
+    "block_3_eight_chamber_vogels_medium_simscape_phreeqc_hydraulics": {
+      "chamber_count": 8,
+      "state_variables": [
+        "C_sucrose",
+        "C_NH4",
+        "C_NO3",
+        "DO",
+        "pH",
+        "pe",
+        "T"
+      ],
+      "phreeqc_pH": 5.8,
+      "phreeqc_pe": 6.4,
+      "temperature_K": 298.15,
+      "role": "8-chamber Vogel's Minimal Medium Simscape hydraulic manifold coupled to USGS PHREEQC speciation"
+    },
+    "block_4_dhn_melanin_neurosporaxanthin_alara_point_kernel_shielding": {
+      "pigments": [
+        "DHN-melanin",
+        "neurosporaxanthin"
+      ],
+      "radical_quenching_efficiency_eta": 0.35,
+      "point_kernel_equation": "D_dot_shielded(r, z, t) = D_dot_0 * (r_0 / r)^2 * B(mu*z) * exp(-mu*z) * (1 - eta_melanin)",
+      "closed_loop_actuators": [
+        "u_valve(t)",
+        "z_shield(t)",
+        "Phi_light(t)"
+      ],
+      "alara_compliant": true
+    }
+  },
+  "matlab_reactor_pools_and_biofilms_coordination": {
+    "four_pool_biofilm_cascade": [
+      "Pool_1_Radiolytic_H2_SO4_Anode",
+      "Pool_2_Melanin_Shielded_Cryptococcus_Neurospora_Biofilm_Wall",
+      "Pool_3_Desulfovibrio_DsrAB_DsrC_CsgA_Curli_Conductive_Biofilm_Cathode",
+      "Pool_4_Closed_Loop_Perfusion_and_Cytometry_Sensor_Collar"
+    ],
+    "openmc_health_physics_tally_boundary_L32": {
+      "cross_section_libraries_compared": [
+        "ENDF/B-VIII.0",
+        "JEFF-3.3"
+      ],
+      "dose_conversion_standard": "ICRP-116 / ANSI/ANS-6.1.1 flux-to-dose-rate h_E(E)",
+      "activation_isotopes_tracked": [
+        "N-16",
+        "Ar-41",
+        "Co-60"
+      ]
+    },
+    "murr_columbia_missouri_pedagogy_and_biofeedback_L33": {
+      "reference_facility": "University of Missouri Research Reactor (MURR, Columbia, MO, 10 MW open-pool light-water research reactor)",
+      "digital_twin_mode": "Safe reduced-order point-kinetics + pool thermal-hydraulics Simulink/Simscape educational twin",
+      "biofeedback_coupling": "Muse S EEG spectral gloss + prosodic cadence -> moderator temperature & control-blade reactivity scram drill"
+    }
+  },
+  "controls_fixture_and_adaptor_schematic": {
+    "state_space_A_ctrl": [
+      [
+        -0.08,
+        0.0
+      ],
+      [
+        0.0,
+        -0.15
+      ]
+    ],
+    "state_space_B_ctrl": [
+      0.08,
+      0.15
+    ],
+    "state_space_C_ctrl": [
+      [
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0
+      ]
+    ],
+    "state_space_D_ctrl": [
+      0.0,
+      0.0
+    ],
+    "closed_loop_eigenvalues": [
+      -0.08,
+      -0.15
+    ],
+    "control_loop_stable": true,
+    "coherence_pole_mat_vs_json": {
+      "mat_v7_binary_path": "/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures/m7_multiscale_3d_eda_fixture_v7.mat",
+      "mat_v7_magic_header_valid": true,
+      "mat_v7_magic_valid": true,
+      "mat_v73_hdf5_path": "/Users/aurascoper/Developer/SmallModularBioReactors.jl/matlab_fixtures/m7_multiscale_3d_eda_fixture_v73.mat",
+      "mat_v73_hdf5_magic_valid": true,
+      "json_intermediate_schema": "neuralcompose-matlab-alara-hippocratism-bridge-v1"
+    },
+    "displacement_pole_collar_signal_source": {
+      "wired_into": "DoubleTreeHorizonBridge",
+      "role": "Glued_Double_Tree_Horizon_Collar_Leaf_Signal_Source",
+      "beta_1_collar_cycle_rank": 2
+    },
+    "witness_4_process_runtime_boundary": [
+      "Antigravity_Agent_Coordinator",
+      "MATLAB_R2026b_Simulink_Controls",
+      "SmallModularBioReactors_Julia_Core",
+      "NeuralCompose_Functor_HUD_App"
+    ],
+    "openfoam_basilisk_matlab_roundtrip_L29": {
+      "openfoam_mesh_beta_0": 1,
+      "openfoam_mesh_beta_1": 2,
+      "matlab_interpolated_beta_1": 2,
+      "roundtrip_beta1_invariant": true,
+      "headless_cli_diff_checker_passed": true
+    },
+    "biconnected_swarm_verification_L30": {
+      "swarm_agent_nodes": 4,
+      "swarm_biconnected_edges": 5,
+      "beta_1_swarm_verification_cycles": 2,
+      "single_agent_removal_collapses_swarm": false,
+      "counterfactual_feed_swap_trigger_invariant": true
+    }
+  },
+  "multica_synthetic_warrant_sessions": [
+    {
+      "session_id": "multica-synth-warrant-sonnet-5-L28",
+      "model": "claude-sonnet-5",
+      "role": "warrant_gate_and_collar_adapter_audit",
+      "source_turn": "2026-11-02-L28",
+      "verdict": "Accepted(collar_adapter_verified)",
+      "analysis": "Verified MAT v5/v7 struct ('MATLAB 5.0 MAT-file') vs MAT v7.3 HDF5 (0x89 'HDF') binary container detection and JSON intermediate schema, wiring the MATLAB ss(A,B,C,D) controls fixture into NeuralCompose as a Glued Double-Tree Horizon Collar signal source (beta_1=2) across the 4-process Antigravity / MATLAB R2026b / SmallModularBioReactors.jl / Neural Compose.app boundary."
+    },
+    {
+      "session_id": "multica-synth-task-analysis-sonnet-5-5-L29",
+      "model": "claude-sonnet-5-5",
+      "role": "task_analysis_openfoam_basilisk_matlab_roundtrip",
+      "source_turn": "2026-11-02-L29",
+      "verdict": "Accepted(roundtrip_beta1_invariant)",
+      "analysis": "Verified OpenFOAM boundary-mesh topology (beta_0=1, beta_1=2) to Basilisk/MATLAB sampled field round-trip format conversion via headless CLI diff-checker prior to Vizard / NeuralCompose interactive visualization stepping, preserving cycle rank beta_1=2 and Tarjan bridge count=4."
+    },
+    {
+      "session_id": "multica-synth-fast-warrant-haiku-4-5-L30",
+      "model": "claude-haiku-4-5",
+      "role": "biconnected_swarm_and_multiclock_trigger_gate",
+      "source_turn": "2026-11-02-L30",
+      "verdict": "Accepted(biconnected_swarm_verified)",
+      "analysis": "Verified Tarjan biconnectivity (beta_1=2, zero single-agent bridge collapse) and counterfactual feed-swap trigger invariance across Fast Wireframe (Hyperliquid $150 USDC, ZEC/USDC spot, ZEC/CEC 900..2500 stoppable algo ladder) and Slow Core (MEXC $51 staking unbonding clock)."
+    }
+  ],
   "acyclic_tarjan_bridge": {
     "stages": [
       "OpenFOAM_CFD",

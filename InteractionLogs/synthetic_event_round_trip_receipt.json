@@ -1,0 +1,39 @@
+{
+  "receipt_id": "synthetic_event_round_trip_receipt_v1",
+  "verified_at_utc": "2026-11-02T09:46:10.908858+00:00",
+  "all_tests_passed": true,
+  "subsystem_round_trip": {
+    "S1_round_trip": true,
+    "S2_round_trip": true,
+    "S3_round_trip": true,
+    "S4_round_trip": true
+  },
+  "causal_transitions_count": 3,
+  "category_type_separation_checks": {
+    "header_float_conflation_caught": true,
+    "header_int_conflation_caught": true,
+    "betti_float_conflation_caught": true,
+    "continuous_bool_conflation_caught": true
+  },
+  "alara_closed_loop_checks": {
+    "nominal_accepted": true,
+    "safing_trip_incomplete": true,
+    "scram_rejected": true,
+    "cold_nutmeg_incomplete": true,
+    "hormesis_promotion_forbidden": true
+  },
+  "tarjan_pipeline_checks": {
+    "pipeline_dag_verified": true,
+    "nilpotency_degree": 5,
+    "feedback_cycle_caught": true
+  },
+  "logic_gates_evaluated": {
+    "G1": true,
+    "G2": true,
+    "G3": true,
+    "G4": true,
+    "G5": true,
+    "G6": true,
+    "G7": true
+  }
+}
