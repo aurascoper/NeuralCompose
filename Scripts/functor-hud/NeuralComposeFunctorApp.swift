@@ -685,6 +685,7 @@ public final class FunctorDialecticalViewModel: ObservableObject {
     public var onSelectHypnagogicMode: ((String) -> Void)? = nil
     public var onSelectHypnagogicRuntime: ((String) -> Void)? = nil
     private var lastObservedInteractionLogCount: Int = -1
+    private var lastObservedLogFilename: String = ""
     private var pollTickCounter: Int = 0
 
     // Mobile Dummy-Test UX Controls: Portrait Bottom Sheet, Multi-Touch 4D Controls, & Live Gyro / Mic Drive Toy Mode
@@ -1463,13 +1464,21 @@ public final class FunctorDialecticalViewModel: ObservableObject {
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
         df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
         let todayLog = logDir.appendingPathComponent("dialectic-turns-\(df.string(from: Date())).jsonl")
         guard let content = try? String(contentsOf: todayLog, encoding: .utf8) else { return }
         let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
-        if lastObservedInteractionLogCount < 0 {
-            // Initialize watermark to current EOF so startup does not replay historical turns into multica_channel.jsonl
-            lastObservedInteractionLogCount = lines.count
-            return
+        if todayLog.lastPathComponent != lastObservedLogFilename {
+            let wasColdStartup = lastObservedLogFilename.isEmpty
+            lastObservedLogFilename = todayLog.lastPathComponent
+            if wasColdStartup {
+                // Initialize watermark to current EOF so startup does not replay historical turns into multica_channel.jsonl
+                lastObservedInteractionLogCount = lines.count
+                return
+            } else {
+                // Live UTC midnight rollover: reset watermark to 0 so lines[0..<lines.count] of the new day's file are emitted
+                lastObservedInteractionLogCount = 0
+            }
         }
         guard lines.count > lastObservedInteractionLogCount else { return }
         let newLines = lines[lastObservedInteractionLogCount..<lines.count]

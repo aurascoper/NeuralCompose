@@ -65,7 +65,7 @@ DEFAULT_TELEMETRY_DIR = Path.home() / "Documents" / "NeuralCompose" / "Interacti
 DEFAULT_SQLITE_DB = Path.home() / "Library" / "Application Support" / "claude-mind" / "memory.sqlite"
 DEFAULT_PG_DSN = os.environ.get(
     "CLAUDE_MIND_PG_DSN",
-    "postgresql://aurascoper@127.0.0.1:5432/claude_mind_codex_local_20261014",
+    "postgresql://localhost:5432/claude_mind_codex_local_20261014",
 )
 LEDGER_PATH = REPO_ROOT / "WorldModel" / "EXPERIMENT_LEDGER.md"
 SEEDS_DIR = REPO_ROOT / "docs" / "seeds"
@@ -96,12 +96,17 @@ TRANSIENT_CONTROL_OR_TRANSIT_PHRASES = (
 def _sanitize_dashes(text: str) -> str:
     """Enforce zero em-dashes, zero en-dashes, and scrub private household/device identifiers."""
     out = text.replace("\u2014", " - ").replace("\u2013", "-")
-    out = out.replace("Hunter Hunter Kendra", "colleague greeting")
-    out = out.replace("Hunter, Kendra", "Colleagues")
-    out = out.replace("Hunter's MacBook Air", "the local MacBook Air")
-    out = out.replace("Hunter\u2019s MacBook Air", "the local MacBook Air")
-    out = out.replace("Kendra", "colleague")
-    out = out.replace("Uncle Tom", "Family Member")
+    out = re.sub(r"Hunter['\u2019]s\s+MacBook\s+Air", "the local MacBook Air", out, flags=re.IGNORECASE)
+    out = re.sub(r"Hunter['\u2019]s\s+MacBook", "the local MacBook", out, flags=re.IGNORECASE)
+    out = re.sub(r"Hunter\s+Hunter\s+Kendra", "colleague greeting", out, flags=re.IGNORECASE)
+    out = re.sub(r"Hunter,\s*Kendra", "Colleagues", out, flags=re.IGNORECASE)
+    out = re.sub(r"Speaker\s+Speaker\s+\[REDACTED_NAME\]", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bKendra\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bHunter\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\[REDACTED_NAME\]\s+\[REDACTED_NAME\]\s+\[REDACTED_NAME\]", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bUncle\s+Tom\b", "Family Member", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bEllen\s+Wan\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
+    out = re.sub(r"\bAndrew\s+Hoffman\b", "[REDACTED_NAME]", out, flags=re.IGNORECASE)
     return out
 
 
@@ -153,7 +158,7 @@ def should_autobank_turn(
         float(max_candidate_potential) >= 1.60
         and 0.85 <= sim_val <= 0.96
     )
-    if not (is_contemplative_high_pot or is_high_potential_rescue):
+    if not is_contemplative_high_pot:
         if len(words) < 3 or (len(words) + len(spoken_words)) < 5:
             return False, "short_backchannel_or_hedge"
     else:
@@ -654,24 +659,41 @@ def golden_reconciliation_payloads(telemetry_dir: Path, today: str) -> Iterator[
 
     basilisk_m7_text = _sanitize_dashes(
         f"canonical:basilisk-as-m7-planetary-reference-confirmed ({today}) | "
-        "Confirmed (primary URLs): (1) Basilisk spiceInterface (spiceInterface.html) emits SpicePlanetStateMsgPayload "
+        "Confirmed (primary URLs): (1) Basilisk spiceInterface "
+        "(https://avslab.github.io/basilisk/Documentation/simulation/environment/spiceInterface/spiceInterface.html) emits "
+        "SpicePlanetStateMsgPayload (https://hanspeterschaub.info/basilisk/Documentation/architecture/msgPayloadDefC/SpicePlanetStateMsgPayload.html) "
         "with PositionVector[3] in SI m, VelocityVector[3] in m/s, J2000Current in s, planet-fixed DCM J20002Pfix[3][3] "
-        "and J20002Pfix_dot[3][3], default IAU_+planet frames (60 s knot spacing, cubic Hermite interpolation; apply 1e3 "
-        "boundary conversion if coupling km/km/s kernels). (2) Vizard (Vizard.html, vizInterface.html) Unity Freeware "
-        "protobuf over ZeroMQ (PING, SIM_UPDATE, OK, REQUEST_INPUT, VIZARD_INPUT, REQUEST_IMAGE_): liveStream=True "
-        "lockstep tcp://localhost:5556, broadcastStream=True pub/sub tcp://localhost:5570 (read-only tap for Julia/HUD), "
-        "noDisplay=True headless opNav. (3) simSynch (simSynch.html) wall-clock slaving with acceleration factor. "
-        "(4) Confirmed coupling precedents: PlanetProfile (Styczinski et al. 2023 doi:10.1029/2022ea002748, spiceypy + "
-        "MoonMag), NutMEG (Higgins & Cockell 2020 PMC7653372, P_M(T) calibrated 288..371 K, flag < 280 K uncalibrated; "
-        "280..330 K methanogen biomass 1e9->1e6 cells/L, CH4 62->3 uM, peak growth 0.007->0.14 h^-1, ATP yield 0.5..1.5 "
-        "mol ATP/mol CO2, Enceladus P ~ 1e-10 M), Affholder et al. 2021 (Enceladus H2/CH4 Bayesian flux closure), "
-        "Sauterey et al. 2022 (Mars H2-methanogen habitability). (5) Traceable 7 budget-closure criteria. (6) Unconfirmed "
-        "(unverified_not_banked): SPICE.jl km units, simSynch.h field names, Europa precedent. (7) ARC Finals Gate: "
-        "r4-salt3 finishes ~8 AM CST; select before 5:59 PM CST Monday (A=31.94 triple-pass, B=r4-salt3 if >29.72 else r2-salt1)."
+        "and J20002Pfix_dot[3][3], default IAU_+planet frames (60 s knot spacing, cubic Hermite interpolation). "
+        "(2) Vizard (https://hanspeterschaub.info/basilisk/Vizard/Vizard.html, "
+        "https://hanspeterschaub.info/bskOlderDocs/bsk_2_6_0/_sources/Documentation/simulation/vizard/vizInterface/vizInterface.rst.txt, "
+        "https://hanspeterschaub.info/basilisk/Vizard/vizardAdvanced/vizardLiveComm.html) Unity Freeware protobuf over ZeroMQ "
+        "(PING, SIM_UPDATE, OK, REQUEST_INPUT, VIZARD_INPUT, REQUEST_IMAGE_): liveStream=True lockstep tcp://localhost:5556, "
+        "broadcastStream=True pub/sub tcp://localhost:5570 (non-blocking read-only tap for Julia/HUD), noDisplay=True headless opNav. "
+        "(3) simSynch (https://www.hanspeterschaub.info/basilisk/_sources/Documentation/simulation/simSynch/simSynch.rst.txt) "
+        "slaves simulation to wall clock with an acceleration factor (scenarioBasicOrbitStream: "
+        "https://avslab.github.io/basilisk/examples/scenarioBasicOrbitStream.html). "
+        "(4) Confirmed coupling precedents: PlanetProfile (https://pypi.org/project/PlanetProfile/, Styczinski, Vance & Melwani Daswani 2023 "
+        "doi:10.1029/2022ea002748, spiceypy + MoonMag), NutMEG (Higgins & Cockell 2020 https://pmc.ncbi.nlm.nih.gov/articles/PMC7653372, "
+        "P_M(T) calibrated 288..371 K, flag < 280 K uncalibrated; 280..330 K methanogen biomass 1e9->1e6 cells/L, CH4 62->3 uM, "
+        "peak growth 0.007->0.14 h^-1, ATP yield 0.5..1.5 mol ATP/mol CO2, Enceladus P ~ 1e-10 M), Affholder et al. 2021 "
+        "(https://hal.sorbonne-universite.fr/hal-03384808, https://astrobites.org/2021/06/15/bayesian-enceladus-plume/, Enceladus H2/CH4 "
+        "Bayesian flux closure), Sauterey et al. 2022 (https://www.nature.com/articles/s41550-022-01786-w.pdf, "
+        "https://arxiv.org/abs/2210.04948v1, Mars H2-methanogen habitability & cooling feedback). "
+        "(5) Section 5 Traceable 7 Budget-Closure Criteria: [1] Catabolic energy supply from local chemistry; "
+        "[2] Explicit temperature-dependent maintenance power P_M(T) with < 280 K out-of-range flag; "
+        "[3] Net growth after maintenance matching 280..330 K biomass/CH4/rate shifts; "
+        "[4] Nutrient limitation gate CO2, H2, P ~ 1e-10 M; [5] ATP yield uncertainty range 0.5..1.5 mol ATP/mol CO2; "
+        "[6] Material closure against observable flux via Bayes factor; [7] Interior state self-consistent with SPICE geometry via PlanetProfile. "
+        "(6) Unconfirmed (unverified_not_banked): SPICE.jl (https://github.com/JuliaAstro/SPICE.jl) km units (held unverified_not_banked "
+        "until spkpos is checked on a known body; apply 1e3 boundary conversion convert_spice_state_to_basilisk_si(raw_state_km) in a single "
+        "isolated function tested against a Basilisk-generated state at the same epoch, carrying IAU frame DCM separately, never conflating "
+        "1e3 unit conversion with propulsion scaling pro_factor or accelFactor), simSynch.h field names (accelFactor, displayTime, "
+        "timeInitialized), Europa precedent (unverified_not_banked). "
+        "(7) ARC Finals Gate: r4-salt3 finishes ~8 AM CST; select before 5:59 PM CST Monday (A=31.94 triple-pass, B=r4-salt3 if >29.72 else r2-salt1)."
     )
     yield RememberPayload(
         source="golden-reconcile",
-        text=_truncate(basilisk_m7_text, 1500),
+        text=_truncate(basilisk_m7_text, 2600),
         occurred_at=iso_at(today, 2),
         tags=[
             "golden-reconcile",
@@ -719,9 +741,10 @@ def sync_payloads_to_sql(
 
         for p in payloads:
             key_tag = p.key()
+            clean_text = _sanitize_dashes(p.text)
             cur.execute(
                 """
-                SELECT m.Z_PK
+                SELECT m.Z_PK, m.ZTEXT
                 FROM ZMEMORYRECORD m
                 JOIN Z_3TAGS mt ON mt.Z_3MEMORIES = m.Z_PK
                 JOIN ZTAGRECORD t ON t.Z_PK = mt.Z_11TAGS
@@ -730,7 +753,10 @@ def sync_payloads_to_sql(
                 """,
                 (key_tag,),
             )
-            if cur.fetchone() is not None:
+            existing = cur.fetchone()
+            if existing is not None:
+                if existing[1] != clean_text:
+                    cur.execute("UPDATE ZMEMORYRECORD SET ZTEXT = ? WHERE Z_PK = ?", (clean_text, int(existing[0])))
                 stats["sqlite_skipped"] += 1
                 continue
 
@@ -739,7 +765,6 @@ def sync_payloads_to_sql(
             now_cd = datetime.now(timezone.utc).timestamp() - COREDATA_EPOCH_OFFSET
             occ_cd = _parse_iso_to_epoch(p.occurred_at) - COREDATA_EPOCH_OFFSET
             mem_uuid = uuid.uuid5(uuid.NAMESPACE_URL, f"neuralcompose:{key_tag}").bytes
-            clean_text = _sanitize_dashes(p.text)
 
             cur.execute(
                 """
@@ -795,9 +820,7 @@ def sync_payloads_to_sql(
         )
         if chk.returncode != 0:
             break
-        if chk.stdout.strip() not in ("0", ""):
-            stats["pg_skipped"] += 1
-            continue
+        already_exists = chk.stdout.strip() not in ("0", "")
 
         tag_sql_parts = []
         for t_name in all_tags:
@@ -813,13 +836,16 @@ def sync_payloads_to_sql(
             "BEGIN;\n"
             f"INSERT INTO memories (id, text, created_at, occurred_at, source, conversation_id, language, sentiment, metadata, tombstoned) "
             f"VALUES ('{mem_uuid_str}'::uuid, '{clean_text}', NOW(), '{occ_sql}'::timestamptz, '{src_sql}', '{conv_sql}', 'en', 0.0, '{{\"x\":0.0,\"y\":0.0,\"z\":0.0}}'::jsonb, FALSE) "
-            "ON CONFLICT (id) DO NOTHING;\n"
+            "ON CONFLICT (id) DO UPDATE SET text = EXCLUDED.text;\n"
             + "\n".join(tag_sql_parts)
             + "\nCOMMIT;"
         )
         ins = subprocess.run(["psql", pg_dsn, "-q", "-c", insert_sql], capture_output=True, text=True)
         if ins.returncode == 0:
-            stats["pg_inserted"] += 1
+            if already_exists:
+                stats["pg_skipped"] += 1
+            else:
+                stats["pg_inserted"] += 1
 
     return stats
 
