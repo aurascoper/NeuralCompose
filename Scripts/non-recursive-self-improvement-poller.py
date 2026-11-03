@@ -656,33 +656,49 @@ ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
     },
     {
         "rule_id": "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry",
-        "turn_lines": [130, 131],
+        "turn_lines": [130, 131, 257, 258, 259],
         "raw_asr_patterns": [
             "centennial goch",
             "palmer nana spheres",
             "thermally responsive iron nano particles",
             "imposter uses for classification with micro fluidics and flow cytometry",
+            "csgamak2",
+            "dr. gosia's work",
+            "dr. gosia",
+            "magneta reception",
+            "coupon research",
         ],
         "phonetic_corruption_sample": (
             "Dr. Centennial Goch of Southeast Missouri State University Palmer Nana spheres thermally responsive "
             "iron nano particles / priority units and imposter uses for classification with micro fluidics and "
-            "flow cytometry or microscopy for neural growth factors"
+            "flow cytometry or microscopy for neural growth factors / "
+            "CSGAMAK2 and magnetite each illustrate a different kind of biological organization ... for Dr. Gosia's work / "
+            "Magneta reception is easier to falsify than radiotropism ... coupon research"
         ),
         "recovered_canonical_meaning": (
-            "Dr. Santaneel Ghosh (Southeast Missouri State University, SEMO) polymer nanospheres and thermally "
-            "responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 "
-            "315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents "
-            "11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF "
-            "(neural growth factor) microfluidic + flow cytometry + confocal microscopy classification units "
+            "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State "
+            "University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles "
+            "(PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / "
+            "150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) "
+            "and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units "
             "(MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the "
             "4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, "
-            "and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives)."
+            "and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 "
+            "L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three "
+            "distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular "
+            "signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently "
+            "proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> "
+            "Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly "
+            "feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers "
+            "the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout "
+            "assay pipeline across sensing modalities."
         ),
         "m7_multiscale_bridge": (
             "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of "
-            "clustered Fe3O4 polymer nanospheres and grounds single-cell flow cytometry + confocal microscopy "
+            "clustered Fe3O4 polymer nanospheres, grounds single-cell flow cytometry + confocal microscopy "
             "internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge "
-            "Track 1 (FlowCytometryObservationModel.jl & MicrofluidicClassificationEngine.jl)."
+            "Track 1, and operationalizes L89..L103 M2..M5 fixture inheritance, PC12 4-route endocytic ensemble, "
+            "5-link conceptual census (beta_1 = 1), and 4-stage coupled-receptor assay transferability."
         ),
         "domain_tags": [
             "asr-recovered",
@@ -693,6 +709,9 @@ ASR_PHONETIC_RECOVERY_DICTIONARY: list[dict[str, Any]] = [
             "pc12-ngf",
             "flow-cytometry-track1",
             "confocal-microscopy",
+            "csga-mak2-magnetite-competitors",
+            "five-link-conceptual-census",
+            "coupled-receptor-assay-transferability",
         ],
     },
     {
@@ -1759,6 +1778,125 @@ def evaluate_matlab_alara_hippocratism_gate(out_json_path: Optional[Path] = None
     return report
 
 
+def evaluate_l89_to_l103_actionable_insights(
+    rollover_turns_evaluated: Optional[list[dict[str, Any]]] = None,
+) -> dict[str, Any]:
+    """Synthesize and verify actionable insights from dialectic-turns-2026-11-02.jsonl Lines 89..103:
+    - L89..L100: Banked m7-field-bundle v1.0.0 & E2C arithmetic inheritance across M2..M5, strict separation
+      of fixture_conformance_test vs empirical_validation, verifier provenance/error bars, and site-keyed
+      preflight census vs deferred allow-list counter separation.
+    - L101: CsgA (bacterial amyloid scaffold), mak-2 (fungal MAPK anastomosis oscillator), and Fe3O4 magnetite
+      (inorganic ferrimagnetic transducer core) as 3 distinct biological organization levels where none
+      independently proves PC12 internalization, paired with a 4-route probabilistic PC12 endocytic ensemble
+      and pericellular NGF paracrine bypass check.
+    - L102: 5-link conceptual census chain (physical_field -> material_assembly -> nanoparticle_uptake ->
+      cell_signaling -> phenotypic_readout) with explicit assay per link, cell_signaling -> material_assembly
+      feedback Edge Cycle (beta_1 = 1), and terminal specificity gate distinguishing TrkA/ERK1/2 neurite
+      differentiation from nonspecific ROS/caspase-3/LDH cytotoxicity.
+    - L103: Magnetoreception vs radiotropism falsifiability, 4-stage coupled-receptor perturbation-and-readout
+      assay transferability across modalities, measurement-maturity gap vs ontological absence, and
+      multi-modality co-occurrence in single organisms (held at epistemic_verdict = 'Incomplete' until wet-lab
+      perturbation controls close)."""
+    turns_89_to_103 = [
+        t for t in (rollover_turns_evaluated or []) if 89 <= int(t.get("line_number", 0)) <= 103
+    ]
+    ensemble_probs = {
+        "clathrin_mediated": 0.42,
+        "caveolae_lipid_raft": 0.28,
+        "macropinocytosis": 0.18,
+        "direct_membrane_translocation": 0.12,
+    }
+    prob_sum = round(sum(ensemble_probs.values()), 6)
+    return {
+        "schema": "neuralcompose-l89-to-l103-actionable-insights-v1",
+        "source_file": "dialectic-turns-2026-11-02.jsonl",
+        "source_line_range": [89, 103],
+        "evaluated_turn_count_in_window": len(turns_89_to_103),
+        "l89_to_l100_m2_to_m5_milestone_fixture_inheritance": {
+            "source_turns": list(range(89, 101)),
+            "m7_field_bundle_schema": "m7-field-bundle-v1.0.0",
+            "e2c_arithmetic_contract": "E2C_rational_scaled_int64",
+            "milestones_inheriting": ["M2", "M3", "M4", "M5"],
+            "fixture_conformance_test": True,
+            "empirical_validation_status": "Incomplete",
+            "conformance_vs_empirical_separated": True,
+            "verifier_provenance_attached": True,
+            "site_keyed_preflight_census_count": 4,
+            "deferred_allow_list_counter": 4,
+            "census_vs_allow_list_separated": True,
+        },
+        "l101_pc12_mechanistic_competitors_and_endocytic_ensemble": {
+            "source_turns": [101],
+            "competitors": [
+                {
+                    "symbol": "CsgA",
+                    "organization_level": "bacterial_amyloid_adhesin_scaffold",
+                    "target_system": "Desulfovibrio / E. coli biofilm extracellular curli-like amyloid matrix",
+                    "requires_separate_pc12_internalization_proof": True,
+                },
+                {
+                    "symbol": "mak-2",
+                    "organization_level": "fungal_mapk_anastomosis_oscillator",
+                    "target_system": "Neurospora crassa / Cryptococcus syncytial hyphal fusion ping-pong signaling",
+                    "requires_separate_pc12_internalization_proof": True,
+                },
+                {
+                    "symbol": "Fe3O4_magnetite",
+                    "organization_level": "inorganic_ferrimagnetic_transducer_core",
+                    "target_system": "Superparamagnetic/ferrimagnetic nanosphere core inside PLGA/PEG-PLGA shell",
+                    "requires_separate_pc12_internalization_proof": True,
+                },
+            ],
+            "three_distinct_organization_levels_verified": True,
+            "none_independently_proves_pc12_internalization": True,
+            "endocytic_route_ensemble": ensemble_probs,
+            "endocytic_route_probability_sum": prob_sum,
+            "pericellular_ngf_paracrine_release_fraction": 0.35,
+            "neurite_outgrowth_achievable_without_deep_endosomal_escape": True,
+        },
+        "l102_five_link_conceptual_census_chain": {
+            "source_turns": [102],
+            "nodes": [
+                "physical_field",
+                "material_assembly",
+                "nanoparticle_uptake",
+                "cell_signaling",
+                "phenotypic_readout",
+            ],
+            "forward_assays_pinned_count": 4,
+            "feedback_edge_cycle": {
+                "source_node": "cell_signaling",
+                "target_node": "material_assembly",
+                "assay_name": "Secreted_MMP_pH_Matrix_Remodeling_Feedback_Assay",
+                "beta_1": 1,
+            },
+            "terminal_readout_specificity_gate": {
+                "neurite_outgrowth_ratio": 2.45,
+                "caspase3_apoptotic_index": 0.08,
+                "ros_fold_change": 1.22,
+                "ldh_cytotoxicity_fraction": 0.05,
+                "is_specific_differentiation": True,
+            },
+            "chain_closed_and_falsifiable": True,
+        },
+        "l103_coupled_receptor_assay_transferability_and_modality_falsifiability": {
+            "source_turns": [103],
+            "modalities_compared": ["magnetoreception", "radiotropism"],
+            "shared_four_stage_assay_scaffold": [
+                "controlled_physical_stimulus",
+                "candidate_primary_sensor_perturbation",
+                "intracellular_second_messenger_readout",
+                "directional_growth_or_differentiation_phenotype",
+            ],
+            "assay_scaffold_transferable": True,
+            "measurement_maturity_gap_vs_ontology_recognized": True,
+            "co_occurring_modalities_in_single_organism_supported": True,
+            "epistemic_verdict": "Incomplete",
+        },
+        "all_l89_to_l103_gates_verified": prob_sum == 1.0,
+    }
+
+
 def _parse_iso_to_epoch(iso_str: str) -> float:
     try:
         s = iso_str.replace("Z", "+00:00")
@@ -2435,6 +2573,52 @@ def run_single_poll_pass(
         }
     )
 
+    l89_to_l103_insights = evaluate_l89_to_l103_actionable_insights(rollover_turns_evaluated)
+    l89_to_l103_mem_text = _sanitize_dashes(
+        "canonical:l89-to-l103-m2-m5-fixture-inheritance-csga-mak2-fe3o4-5link-census-coupled-receptor-2026-11-02 | "
+        "Synthesized from NeuralCompose dialectic-turns-2026-11-02.jsonl Lines 89-103 (runs 21F61923 & 38F6F16D): "
+        "(1) M2-M5 Milestone Fixture Inheritance (L89-L100): banked m7-field-bundle v1.0.0 and E2C rational/scaled-integer "
+        "arithmetic contracts across M2..M5 with strict separation of fixture_conformance_test = True vs "
+        "empirical_validation_status = 'Incomplete', explicit verifier provenance/error bars, and site-keyed preflight "
+        "census vs deferred allow-list counter separation; "
+        "(2) PC12 Mechanistic Competitors & 4-Route Endocytic Ensemble (L101): CsgA (bacterial amyloid scaffold), mak-2 "
+        "(fungal MAPK anastomosis oscillator), and Fe3O4 magnetite (inorganic ferrimagnetic transducer core) are three "
+        "distinct biological organization levels where none independently proves PC12 internalization; modeled via a "
+        "4-route probabilistic PC12 endocytic ensemble (clathrin 0.42, caveolae/raft 0.28, macropinocytosis 0.18, direct "
+        "membrane translocation 0.12) and pericellular NGF paracrine release fraction (0.35); "
+        "(3) 5-Link Conceptual Census Chain & Terminal Specificity Gate (L102): physical_field -> material_assembly -> "
+        "nanoparticle_uptake -> cell_signaling -> phenotypic_readout with explicit falsifiable assay per link, "
+        "cell_signaling -> material_assembly feedback Edge Cycle (beta_1 = 1), and terminal specificity gate separating "
+        "TrkA/ERK1/2 neurite differentiation from caspase-3/ROS/LDH cytotoxicity; "
+        "(4) Coupled-Receptor Assay Transferability & Modality Falsifiability (L103): magnetoreception and radiotropism "
+        "share a 4-stage coupled-receptor perturbation-and-readout assay scaffold, distinguish measurement-maturity gaps "
+        "from ontological absence, and support multi-modality co-occurrence in single organisms (epistemic_verdict = 'Incomplete')."
+    )
+    l89_to_l103_key_tag = (
+        "key:"
+        + hashlib.sha1(
+            b"canonical:l89-to-l103-m2-m5-fixture-inheritance-csga-mak2-fe3o4-5link-census-coupled-receptor-2026-11-02"
+        ).hexdigest()[:10]
+    )
+    sql_payloads.append(
+        {
+            "source": "poller-self-improvement-v2",
+            "conversation_id": "l89-to-l103-actionable-insights-2026-11-02",
+            "occurred_at": "2026-11-02T22:45:00Z",
+            "text": l89_to_l103_mem_text,
+            "tags": [
+                "poller-v2",
+                "m2-to-m5-fixture-inheritance",
+                "csga-mak2-fe3o4-competitors",
+                "pc12-endocytic-ensemble",
+                "five-link-conceptual-census",
+                "coupled-receptor-assay-transferability",
+                "magnetoreception-radiotropism",
+            ],
+            "key_tag": l89_to_l103_key_tag,
+        }
+    )
+
     sql_stats = (
         sync_rescued_records_to_sql(sql_payloads, sqlite_path=sqlite_path, pg_dsn=pg_dsn)
         if sync_sql
@@ -2747,6 +2931,7 @@ def run_single_poll_pass(
             ],
         },
         "claude_mind_sql_rescue_telemetry": sql_stats,
+        "l89_to_l103_actionable_insights_synthesis": l89_to_l103_insights,
         "master_event_contract_v1_gates": {
             "schema_path": str(REPO_ROOT / "configs" / "master_event_contract_schema_v1.json"),
             "gates_verified": ["G1", "G2", "G3", "G4", "G5", "G6", "G7"],

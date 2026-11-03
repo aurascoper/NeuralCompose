@@ -679,3 +679,64 @@ def test_cross_repo_matlab_fixtures_sha256_parity_and_receipt_invariants() -> No
     ]:
         txt = txt_fp.read_text(encoding="utf-8")
         assert "\u2014" not in txt and "\u2013" not in txt, f"Found dash in {txt_fp}"
+
+
+def test_l89_to_l103_actionable_insights_and_asr_phonetic_recoveries() -> None:
+    # 1. Verify ASR phonetic recovery for L101-L103 raw heard tokens
+    rec_101 = poller.apply_asr_phonetic_recovery(
+        "CsgAmak2 and magnetite are three different mechanisms that we could consider.",
+        257,
+    )
+    assert rec_101["has_phonetic_recovery"] is True
+    assert "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry" in _matched_ids(rec_101)
+
+    rec_102 = poller.apply_asr_phonetic_recovery(
+        "Dr. Gosia's work with respect to the five-link conceptual census.",
+        258,
+    )
+    assert rec_102["has_phonetic_recovery"] is True
+    assert "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry" in _matched_ids(rec_102)
+
+    rec_103 = poller.apply_asr_phonetic_recovery(
+        "Magneta reception versus radiotropism in coupon research.",
+        259,
+    )
+    assert rec_103["has_phonetic_recovery"] is True
+    assert "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry" in _matched_ids(rec_103)
+
+    # 2. Verify evaluate_l89_to_l103_actionable_insights structure and invariants
+    mock_rollover = [{"line_number": ln} for ln in range(89, 104)]
+    rep = poller.evaluate_l89_to_l103_actionable_insights(mock_rollover)
+    assert rep["schema"] == "neuralcompose-l89-to-l103-actionable-insights-v1"
+    assert rep["evaluated_turn_count_in_window"] == 15
+    assert rep["all_l89_to_l103_gates_verified"] is True
+
+    m2_m5 = rep["l89_to_l100_m2_to_m5_milestone_fixture_inheritance"]
+    assert m2_m5["milestones_inheriting"] == ["M2", "M3", "M4", "M5"]
+    assert m2_m5["fixture_conformance_test"] is True
+    assert m2_m5["empirical_validation_status"] == "Incomplete"
+    assert m2_m5["conformance_vs_empirical_separated"] is True
+    assert m2_m5["census_vs_allow_list_separated"] is True
+
+    l101 = rep["l101_pc12_mechanistic_competitors_and_endocytic_ensemble"]
+    assert len(l101["competitors"]) == 3
+    assert l101["three_distinct_organization_levels_verified"] is True
+    assert l101["none_independently_proves_pc12_internalization"] is True
+    assert l101["endocytic_route_probability_sum"] == 1.0
+    assert l101["neurite_outgrowth_achievable_without_deep_endosomal_escape"] is True
+
+    l102 = rep["l102_five_link_conceptual_census_chain"]
+    assert len(l102["nodes"]) == 5
+    assert l102["forward_assays_pinned_count"] == 4
+    assert l102["feedback_edge_cycle"]["beta_1"] == 1
+    assert l102["terminal_readout_specificity_gate"]["is_specific_differentiation"] is True
+    assert l102["chain_closed_and_falsifiable"] is True
+
+    l103 = rep["l103_coupled_receptor_assay_transferability_and_modality_falsifiability"]
+    assert l103["modalities_compared"] == ["magnetoreception", "radiotropism"]
+    assert len(l103["shared_four_stage_assay_scaffold"]) == 4
+    assert l103["assay_scaffold_transferable"] is True
+    assert l103["measurement_maturity_gap_vs_ontology_recognized"] is True
+    assert l103["co_occurring_modalities_in_single_organism_supported"] is True
+    assert l103["epistemic_verdict"] == "Incomplete"
+

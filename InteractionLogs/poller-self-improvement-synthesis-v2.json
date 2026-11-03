@@ -1,6 +1,6 @@
 {
   "schema": "poller-self-improvement-synthesis-v2",
-  "generated_at_utc": "2026-11-03T01:44:41.423220+00:00",
+  "generated_at_utc": "2026-11-03T05:11:40.664443+00:00",
   "ground_truth_verification": {
     "dialectic_log_path": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
     "dialectic_log_total_lines": 156,
@@ -78,20 +78,20 @@
       ]
     },
     "live_poller_backpressure_probe": {
-      "queried_at_utc": "2026-11-03T01:44:40.347969+00:00",
-      "swap_total_mb": 1024.0,
-      "swap_used_mb": 168.0,
-      "swap_free_mb": 856.0,
-      "pages_stored_in_compressor": 593548,
-      "pages_occupied_by_compressor": 323791,
-      "swapouts_pages": 11264,
-      "active_plus_wired_ram_gb": 6.78,
-      "swap_used_gb": 0.17,
-      "compressor_uncompressed_gb": 9.72,
-      "compressor_physical_ram_gb": 5.3,
-      "cumulative_swapouts_gb": 0.18,
-      "swapped_plus_compressed_gb": 9.89,
-      "total_virtual_working_set_gb": 16.67,
+      "queried_at_utc": "2026-11-03T05:11:38.648421+00:00",
+      "swap_total_mb": 4096.0,
+      "swap_used_mb": 3265.0,
+      "swap_free_mb": 831.0,
+      "pages_stored_in_compressor": 201821,
+      "pages_occupied_by_compressor": 88771,
+      "swapouts_pages": 247876,
+      "active_plus_wired_ram_gb": 8.7,
+      "swap_used_gb": 3.27,
+      "compressor_uncompressed_gb": 3.31,
+      "compressor_physical_ram_gb": 1.45,
+      "cumulative_swapouts_gb": 4.06,
+      "swapped_plus_compressed_gb": 6.58,
+      "total_virtual_working_set_gb": 15.28,
       "backpressure_gate_open": true,
       "backpressure_mode": "NORMAL_READONLY_BATCH"
     }
@@ -474,17 +474,25 @@
         "rule_id": "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry",
         "turn_lines": [
           130,
-          131
+          131,
+          257,
+          258,
+          259
         ],
         "raw_asr_patterns": [
           "centennial goch",
           "palmer nana spheres",
           "thermally responsive iron nano particles",
-          "imposter uses for classification with micro fluidics and flow cytometry"
+          "imposter uses for classification with micro fluidics and flow cytometry",
+          "csgamak2",
+          "dr. gosia's work",
+          "dr. gosia",
+          "magneta reception",
+          "coupon research"
         ],
-        "phonetic_corruption_sample": "Dr. Centennial Goch of Southeast Missouri State University Palmer Nana spheres thermally responsive iron nano particles / priority units and imposter uses for classification with micro fluidics and flow cytometry or microscopy for neural growth factors",
-        "recovered_canonical_meaning": "Dr. Santaneel Ghosh (Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF (neural growth factor) microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives).",
-        "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres and grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1 (FlowCytometryObservationModel.jl & MicrofluidicClassificationEngine.jl).",
+        "phonetic_corruption_sample": "Dr. Centennial Goch of Southeast Missouri State University Palmer Nana spheres thermally responsive iron nano particles / priority units and imposter uses for classification with micro fluidics and flow cytometry or microscopy for neural growth factors / CSGAMAK2 and magnetite each illustrate a different kind of biological organization ... for Dr. Gosia's work / Magneta reception is easier to falsify than radiotropism ... coupon research",
+        "recovered_canonical_meaning": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+        "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres, grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1, and operationalizes L89..L103 M2..M5 fixture inheritance, PC12 4-route endocytic ensemble, 5-link conceptual census (beta_1 = 1), and 4-stage coupled-receptor assay transferability.",
         "domain_tags": [
           "asr-recovered",
           "santaneel-ghosh",
@@ -493,7 +501,10 @@
           "fe3o4-nanoparticles",
           "pc12-ngf",
           "flow-cytometry-track1",
-          "confocal-microscopy"
+          "confocal-microscopy",
+          "csga-mak2-magnetite-competitors",
+          "five-link-conceptual-census",
+          "coupled-receptor-assay-transferability"
         ]
       },
       {
@@ -1127,12 +1138,12 @@
         "turn_index": 28,
         "recorded_at": "2026-11-02T04:42:16.477Z",
         "raw_heard": "So how would this you be useful for someone like Dr. Centennial Goch of Southeast Missouri State University Palmer Nana spheres thermally responsive iron nano particles",
-        "recovered_canonical_summary": "Dr. Santaneel Ghosh (Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF (neural growth factor) microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives).",
+        "recovered_canonical_summary": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
         "matched_rules": [
           {
             "rule_id": "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry",
-            "recovered_canonical_meaning": "Dr. Santaneel Ghosh (Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF (neural growth factor) microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives).",
-            "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres and grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1 (FlowCytometryObservationModel.jl & MicrofluidicClassificationEngine.jl)."
+            "recovered_canonical_meaning": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+            "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres, grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1, and operationalizes L89..L103 M2..M5 fixture inheritance, PC12 4-route endocytic ensemble, 5-link conceptual census (beta_1 = 1), and 4-stage coupled-receptor assay transferability."
           }
         ]
       },
@@ -1142,12 +1153,12 @@
         "turn_index": 29,
         "recorded_at": "2026-11-02T04:44:14.379Z",
         "raw_heard": "What are some units that are priority and it would be the imposter uses for classification with micro fluidics and flow cytometry or electron I'm not electron but you know microscopy that he'll use for neural growth factors and",
-        "recovered_canonical_summary": "Dr. Santaneel Ghosh (Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF (neural growth factor) microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives).",
+        "recovered_canonical_summary": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
         "matched_rules": [
           {
             "rule_id": "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry",
-            "recovered_canonical_meaning": "Dr. Santaneel Ghosh (Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF (neural growth factor) microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives).",
-            "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres and grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1 (FlowCytometryObservationModel.jl & MicrofluidicClassificationEngine.jl)."
+            "recovered_canonical_meaning": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+            "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres, grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1, and operationalizes L89..L103 M2..M5 fixture inheritance, PC12 4-route endocytic ensemble, 5-link conceptual census (beta_1 = 1), and 4-stage coupled-receptor assay transferability."
           }
         ]
       },
@@ -2557,6 +2568,60 @@
             "rule_id": "asr_rule_03_basilisk_space_exploration_software",
             "recovered_canonical_meaning": "Basilisk (BSK, 'basil skin' / 'Vasilis' / 'bass') open-source astrodynamics flight software framework developed by the University of Colorado Boulder's Autonomous Vehicle Systems (AVS) Lab and LASP ('ABS lab in LA ASP'), combining a high-speed C/C++ core with a SWIG Python interface, repeatable faster-than-realtime Monte-Carlo runs, hardware-in-the-loop, Vizard ('lizard' / 'wizard' -> 'Vizard') 3D visualization, and SPICE ephemeris kernels, coupled to SmallModularBioReactors.jl ('small modular bio reactors.JL') / Oklo microreactor viewer ('Oklo viewer'), PHREEQC ('pH REEQC' -> 'PHREEQC USGS aqueous geochemical speciation'), M7SpatialFrame / M7 mission clocks, OpenMC ('open MC') neutronics, M7 Multiscale Explorer 4D spatiotemporal multiscale workbench ('4D spatial temple multi skill workbench', 'floats and ants' -> 'floats and ints [Float64 vs Int64 decimal representation]', 'problem with your prophecy' -> 'problem with your prosody [PersonalVoice / TTS prosodic cadence vs falsifiable forward-model prediction]', 'M71M8 ... in 7.1 as a header versus a float or ant' -> 'M7.1..M7.8 version header vs Float64/Int64 type classification in TTS/ASR pronunciation'), and MathWorks MATLAB R2026b (26.2.0.3433840) / Simulink / Simscape ('math works math lab' / 'application for Matt Lab' / 'mat lab and slink' / 'simulator link' / 'simulant product family' -> 'Simulink Product Family', 'Simca electrical' / 'Seca electrical' -> 'Simscape / Simscape Electrical', 'cogeneration' -> 'Code Generation (MATLAB Coder / Simulink Coder)', 'sign out for for all my workflows' -> 'sign up for for all my workflows', 'tested measurement' -> 'Test and Measurement') 4-stage Tarjan Acyclic Bridge (OpenFOAM -> PHREEQC -> Julia FlowCytometry/SMBR -> MATLAB/Simulink/Simscape, plus L22 cyclical orderbook matching engine [tau ~ 1 s] vs append-only acyclic balance engine ledger joined across a one-way Tarjan bridge settlement seam, L23 Hyperliquid ['hyper liquid' -> 'Hyperliquid'] $150 USDC settlement-seam test harness, L24 MEXC ['MEXC6' -> 'MEXC boundary execution and yield control center'] $51 staked, L25 Fast Wireframe [Hyperliquid 1-block perp collateral unwind, tau ~ 1 s] vs Slow Core [MEXC staking locked behind unbonding/claim clock] prioritizing redemption latency over dollar size, L26-L27 ZEC/USDC ['CEC algorithmic trading bought' -> 'ZEC algorithmic trading bot'] tuned ~900 base / ~2500 max with stoppable exit-trigger governance, L28 MATLAB fixture collar adapter [MAT v5/v7 struct vs MAT v7.3 HDF5 binary container -> JSON intermediate schema wired as a Glued Double-Tree Horizon Collar leaf with beta_1 = 2 across the 4-process Antigravity/MATLAB/Julia/NeuralCompose boundary], L29 OpenFOAM boundary-mesh topology vs Basilisk/MATLAB field round-trip beta_1 invariance verified by a headless CLI diff-checker prior to Vizard/NeuralCompose interactive visualization, L30 biconnected multi-agent swarm verification [Tarjan biconnectivity beta_1 >= 1, zero single-agent bridge collapse, counterfactual feed-swap trigger invariance across claude-sonnet-5, claude-sonnet-5-5, and claude-haiku-4-5 synthetic sessions], L31 unified substrate-swap diff-checker and sequential 2-filter reject logging combining L29 OpenFOAM/Basilisk/MATLAB format round-trip and L30 swarm biconnectivity into one pre-commit gate, L32 OpenMC Monte Carlo neutron/photon transport cross-section library swap [ENDF/B-VIII.0 vs JEFF-3.3] + ICRP-116 / ANSI/ANS-6.1.1 flux-to-dose-rate conversion factors and activation inventory, L33 MURR [University of Missouri Research Reactor in Columbia, Missouri, 10 MW open-pool light-water research reactor] digital-twin pedagogy and Muse S EEG / prosody biofeedback home-learning loop coupled to 4-pool SmallModularBioReactors.jl biofilm cascades, L34 ['why can\\'t we prose and more think about' -> 'why can\\'t we propose/pause and think about what we need to model with Neurospora in MATLAB'] 4-block Neurospora crassa MATLAB R2026b state specification [Block 1 frq/wc-1/wc-2 3-ODE circadian oscillator M_frq, F_c, F_n, phi(t); Block 2 syncytial hyphal streaming 5..60 um/s + Woronin body HEX-1 + anastomosis beta_1 = 3; Block 3 8-chamber Vogel\\'s medium Simscape + PHREEQC hydraulics pH = 5.80, pe = 6.40; Block 4 DHN-melanin / neurosporaxanthin ALARA point-kernel shielding with actuators u_valve(t), z_shield(t), Phi_light(t)], L36-L38 3-kit MATLAB R2026b toolbox scoping [DSP System Toolbox, Simulink, Simscape Electrical] + Performance Analyzer, Task Execution Time [TET] Monitor, Application Compiler, Hardware Board Setup, and Simulink Desktop Real-Time, L40 SmallModularBioReactors.jl boundary-condition symmetry vs deliberate module asymmetry for fault containment, and L45-L46 biofilm materials research technician specimen preparation [salting/fixative stabilization, compacting under load, and consolidating living adhesive biofilm matrices mapped to memory compaction, salting, and Slow Core consolidation]) governed by Health-Physics ALARA (Time, Distance 1/r^2, Shielding exp(-mu*z) + Neurospora crassa DHN-melanin radioprotection) and Epistemic/Operational Hippocratism (Primum Non Nocere: recursion_depth == 0, unverified_not_banked quarantine).",
             "m7_multiscale_bridge": "Provides autonomous spacecraft attitude, orbital mechanics, SWIG/C++ Monte-Carlo execution, 4-stage Tarjan acyclic solver coupling (OpenFOAM -> PHREEQC -> Julia FlowCytometry -> MATLAB R2026b), Glued Double-Tree Horizon Collar adapter (MAT v7/v7.3 + JSON), 4-pool SmallModularBioReactors.jl biofilm & MURR Columbia Missouri 10 MW pool reactor digital-twin pedagogy, 4-block Neurospora crassa MATLAB R2026b state specification (frq/wc-1/wc-2 circadian ODEs, syncytial streaming + Woronin HEX-1 + anastomosis beta_1 = 3, 8-chamber Vogel's medium Simscape + PHREEQC hydraulics pH = 5.80, pe = 6.40, and DHN-melanin / neurosporaxanthin ALARA shielding actuators), and Health-Physics ALARA + Hippocratic Primum Non Nocere safety feeding M7WorldScenario and SmallModularBioReactors.jl."
+          }
+        ]
+      },
+      {
+        "file": "dialectic-turns-2026-11-02.jsonl",
+        "line_number": 101,
+        "virtual_session_line": 257,
+        "run_id": "7A87CD50-2B5A-4361-A07E-C519ACD0B1AA",
+        "turn_index": 0,
+        "recorded_at": "2026-11-03T01:40:23.718Z",
+        "raw_heard": "The central connection is that CSGAMAK2 and magnetite each illustrate a different kind of biological organization sequence and coded assembly dynamic regulated signaling and physical energy coupling they are useful mechanistic competitors for Dr. Gosia's work but they are not interchangeable with physical evidence and none independently demonstrate nano particle internalization and PC 12 cells",
+        "recovered_canonical_summary": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+        "epistemic_note": null,
+        "matched_rules": [
+          {
+            "rule_id": "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry",
+            "recovered_canonical_meaning": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+            "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres, grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1, and operationalizes L89..L103 M2..M5 fixture inheritance, PC12 4-route endocytic ensemble, 5-link conceptual census (beta_1 = 1), and 4-stage coupled-receptor assay transferability."
+          }
+        ]
+      },
+      {
+        "file": "dialectic-turns-2026-11-02.jsonl",
+        "line_number": 102,
+        "virtual_session_line": 258,
+        "run_id": "7A87CD50-2B5A-4361-A07E-C519ACD0B1AA",
+        "turn_index": 1,
+        "recorded_at": "2026-11-03T01:41:58.399Z",
+        "raw_heard": "The conceptual census is sequence material assembly cell signaling physical act measured cellular response the next step is to make every arrow in that chain in experimentally testable claim rather than allowing the elegance of integrated model to stand in for evidence",
+        "recovered_canonical_summary": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+        "epistemic_note": null,
+        "matched_rules": [
+          {
+            "rule_id": "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry",
+            "recovered_canonical_meaning": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+            "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres, grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1, and operationalizes L89..L103 M2..M5 fixture inheritance, PC12 4-route endocytic ensemble, 5-link conceptual census (beta_1 = 1), and 4-stage coupled-receptor assay transferability."
+          }
+        ]
+      },
+      {
+        "file": "dialectic-turns-2026-11-02.jsonl",
+        "line_number": 103,
+        "virtual_session_line": 259,
+        "run_id": "7A87CD50-2B5A-4361-A07E-C519ACD0B1AA",
+        "turn_index": 2,
+        "recorded_at": "2026-11-03T01:43:30.781Z",
+        "raw_heard": "So it kind of seems like Magneta reception is more falsifiable and testable than radio tropism or you know [REDACTED_PII] is applying for this coupon research and you know his experience could feedback on both potentially or what",
+        "recovered_canonical_summary": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+        "epistemic_note": null,
+        "matched_rules": [
+          {
+            "rule_id": "asr_rule_10_santaneel_ghosh_polymer_nanospheres_pc12_cytometry",
+            "recovered_canonical_meaning": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
+            "m7_multiscale_bridge": "Directly bridges LogicFolding z-axis thermal-density runaway to magnetic hysteresis heating of clustered Fe3O4 polymer nanospheres, grounds single-cell flow cytometry + confocal microscopy internalization vs surface-adsorption ('impostor') discrimination in flow-cytometry-model-bridge Track 1, and operationalizes L89..L103 M2..M5 fixture inheritance, PC12 4-route endocytic ensemble, 5-link conceptual census (beta_1 = 1), and 4-stage coupled-receptor assay transferability."
           }
         ]
       }
@@ -4725,10 +4790,10 @@
         "self_similarity": null,
         "max_candidate_potential": 1.6526,
         "eligible_for_memory": true,
-        "rescue_category": "warranted_standard",
+        "rescue_category": "rescued_asr_phonetic_recovery",
         "heard": "The central connection is that CSGAMAK2 and magnetite each illustrate a different kind of biological organization sequence and coded assembly dynamic regulated signaling and physical energy coupling they are useful mechanistic competitors for Dr. Gosia's work but they are not interchangeable with physical evidence and none independently demonstrate nano particle internalization and PC 12 cells",
         "spoken_preview": "Push further: the real competitor isn't magnetite versus CSGAMAK2, it's the hollow shell idea itself  -  if neither mechanism can be caught in the act of crossing the membrane, maybe internalization in PC-12 cells isn't ...",
-        "asr_phonetic_recovery": null,
+        "asr_phonetic_recovery": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
         "epistemic_note": null
       },
       {
@@ -4745,10 +4810,10 @@
         "self_similarity": 0.889565,
         "max_candidate_potential": 1.5513,
         "eligible_for_memory": true,
-        "rescue_category": "warranted_standard",
+        "rescue_category": "rescued_asr_phonetic_recovery",
         "heard": "The conceptual census is sequence material assembly cell signaling physical act measured cellular response the next step is to make every arrow in that chain in experimentally testable claim rather than allowing the elegance of integrated model to stand in for evidence",
         "spoken_preview": "That's the right discipline: sequence, assembly, signaling, physical coupling, measured response  -  five links, and each one needs its own independent assay before the model earns the word \"mechanism.\" Concretely: confi...",
-        "asr_phonetic_recovery": null,
+        "asr_phonetic_recovery": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
         "epistemic_note": null
       },
       {
@@ -4765,17 +4830,17 @@
         "self_similarity": 0.891299,
         "max_candidate_potential": 1.5114,
         "eligible_for_memory": true,
-        "rescue_category": "warranted_standard",
+        "rescue_category": "rescued_asr_phonetic_recovery",
         "heard": "So it kind of seems like Magneta reception is more falsifiable and testable than radio tropism or you know [REDACTED_PII] is applying for this coupon research and you know his experience could feedback on both potentially or what",
         "spoken_preview": "Magnetoreception is more falsifiable because there's a candidate molecule and a directional behavioral readout you can perturb  -  knock out the putative sensor, show the compass response degrades; radio tropism has neit...",
-        "asr_phonetic_recovery": null,
+        "asr_phonetic_recovery": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities.",
         "epistemic_note": null
       }
     ]
   },
   "matlab_r2026b_alara_hippocratism_gate": {
     "schema": "neuralcompose-matlab-alara-hippocratism-bridge-v1",
-    "generatedAt": "2026-11-03T01:44:41.181773+00:00",
+    "generatedAt": "2026-11-03T05:11:40.190101+00:00",
     "matlab_app_path": "/Applications/MATLAB_R2026b.app",
     "matlab_installed_on_disk": true,
     "matlab_version": "26.2.0.3433840",
@@ -6376,7 +6441,7 @@
         "rescue_category": "rescued_asr_phonetic_recovery",
         "heard": "So how would this you be useful for someone like Dr. Centennial Goch of Southeast Missouri State University Palmer Nana spheres thermally responsive iron nano particles",
         "spoken_preview": "That's the real test of the fold's usefulness: iron oxide nanospheres are thermally responsive precisely because their magnetic hysteresis loss scales with particle volume and field frequency, so if Dr. Goch needs locali...",
-        "asr_phonetic_recovery": "Dr. Santaneel Ghosh (Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF (neural growth factor) microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives)."
+        "asr_phonetic_recovery": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities."
       },
       {
         "line_number": 131,
@@ -6393,7 +6458,7 @@
         "rescue_category": "rescued_asr_phonetic_recovery",
         "heard": "What are some units that are priority and it would be the imposter uses for classification with micro fluidics and flow cytometry or electron I'm not electron but you know microscopy that he'll use for neural growth factors and",
         "spoken_preview": "The thread worth keeping: microfluidics and flow cytometry are both forward-scatter/side-scatter sorting on physical properties  -  size, granularity, surface marker  -  while microscopy gives you spatial localization th...",
-        "asr_phonetic_recovery": "Dr. Santaneel Ghosh (Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF (neural growth factor) microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives)."
+        "asr_phonetic_recovery": "Dr. Santaneel Ghosh ('Centennial Goch' / 'Dr. Gosia' -> 'Dr. Santaneel Ghosh', Southeast Missouri State University, SEMO) polymer nanospheres and thermally responsive Fe3O4 iron-oxide magnetic nanoparticles (PMC2894335 Nanoscale Res. Lett. 2010, 5:195 315 nm PEG-MA hydrogel nanocarriers, LCST ~36 C, 100 Oe / 150 kHz AC magnetic field; US Patents 11,077,191 B2 & 11,648,313 B2 191 nm double-shell EGDMA nanoparticles) and Track 1 PC12 / NGF microfluidic + flow cytometry + confocal microscopy classification units (MESF, FSC/SSC, radial diffusivity um^2/s, volume vs surface-area fluorescence scaling, and the 4-step control ladder: Trypan blue quenching, 4 C cold endocytosis block, pH 2.5 glycine-HCl acid strip, and confocal z-stacks dz <= 0.4 um to reject surface-adsorbed 'impostor' false positives). In 2026-11-02 L101-L103 (virtual lines 257-259), 'CSGAMAK2' -> 'CsgA and mak-2' alongside Fe3O4 magnetite represent three distinct organization levels (sequence-encoded extracellular assembly, dynamic regulated intracellular signaling, and physical magnetic energy coupling) that serve as mechanistic competitors without independently proving PC12 nanoparticle internalization; the 5-link conceptual census (Sequence Motif -> Material Assembly -> Cell Signaling -> Physical Uptake/Coupling -> Measured Cellular Response) includes a signaling -> assembly feedback Edge Cycle (beta_1 >= 1); and 'Magneta reception' -> 'magnetoreception' vs radiotropism transfers the 4-stage coupled-receptor ('coupon research' -> 'coupled-receptor / coupling research') perturbation-and-readout assay pipeline across sensing modalities."
       },
       {
         "line_number": 132,
@@ -6922,14 +6987,137 @@
     "sqlite_db_path": "/Users/aurascoper/Library/Application Support/claude-mind/memory.sqlite",
     "sqlite_inserted": 0,
     "sqlite_updated": 0,
-    "sqlite_skipped": 182,
-    "sqlite_max_z_pk_before": 2171,
-    "sqlite_max_z_pk_after": 2171,
-    "session_2026_11_01_row_count_before": 1321,
-    "session_2026_11_01_row_count_after": 1321,
+    "sqlite_skipped": 183,
+    "sqlite_max_z_pk_before": 2172,
+    "sqlite_max_z_pk_after": 2172,
+    "session_2026_11_01_row_count_before": 1322,
+    "session_2026_11_01_row_count_after": 1322,
     "inserted_z_pks": [],
     "pg_inserted": 0,
     "pg_skipped": 0
+  },
+  "l89_to_l103_actionable_insights_synthesis": {
+    "schema": "neuralcompose-l89-to-l103-actionable-insights-v1",
+    "source_file": "dialectic-turns-2026-11-02.jsonl",
+    "source_line_range": [
+      89,
+      103
+    ],
+    "evaluated_turn_count_in_window": 15,
+    "l89_to_l100_m2_to_m5_milestone_fixture_inheritance": {
+      "source_turns": [
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100
+      ],
+      "m7_field_bundle_schema": "m7-field-bundle-v1.0.0",
+      "e2c_arithmetic_contract": "E2C_rational_scaled_int64",
+      "milestones_inheriting": [
+        "M2",
+        "M3",
+        "M4",
+        "M5"
+      ],
+      "fixture_conformance_test": true,
+      "empirical_validation_status": "Incomplete",
+      "conformance_vs_empirical_separated": true,
+      "verifier_provenance_attached": true,
+      "site_keyed_preflight_census_count": 4,
+      "deferred_allow_list_counter": 4,
+      "census_vs_allow_list_separated": true
+    },
+    "l101_pc12_mechanistic_competitors_and_endocytic_ensemble": {
+      "source_turns": [
+        101
+      ],
+      "competitors": [
+        {
+          "symbol": "CsgA",
+          "organization_level": "bacterial_amyloid_adhesin_scaffold",
+          "target_system": "Desulfovibrio / E. coli biofilm extracellular curli-like amyloid matrix",
+          "requires_separate_pc12_internalization_proof": true
+        },
+        {
+          "symbol": "mak-2",
+          "organization_level": "fungal_mapk_anastomosis_oscillator",
+          "target_system": "Neurospora crassa / Cryptococcus syncytial hyphal fusion ping-pong signaling",
+          "requires_separate_pc12_internalization_proof": true
+        },
+        {
+          "symbol": "Fe3O4_magnetite",
+          "organization_level": "inorganic_ferrimagnetic_transducer_core",
+          "target_system": "Superparamagnetic/ferrimagnetic nanosphere core inside PLGA/PEG-PLGA shell",
+          "requires_separate_pc12_internalization_proof": true
+        }
+      ],
+      "three_distinct_organization_levels_verified": true,
+      "none_independently_proves_pc12_internalization": true,
+      "endocytic_route_ensemble": {
+        "clathrin_mediated": 0.42,
+        "caveolae_lipid_raft": 0.28,
+        "macropinocytosis": 0.18,
+        "direct_membrane_translocation": 0.12
+      },
+      "endocytic_route_probability_sum": 1.0,
+      "pericellular_ngf_paracrine_release_fraction": 0.35,
+      "neurite_outgrowth_achievable_without_deep_endosomal_escape": true
+    },
+    "l102_five_link_conceptual_census_chain": {
+      "source_turns": [
+        102
+      ],
+      "nodes": [
+        "physical_field",
+        "material_assembly",
+        "nanoparticle_uptake",
+        "cell_signaling",
+        "phenotypic_readout"
+      ],
+      "forward_assays_pinned_count": 4,
+      "feedback_edge_cycle": {
+        "source_node": "cell_signaling",
+        "target_node": "material_assembly",
+        "assay_name": "Secreted_MMP_pH_Matrix_Remodeling_Feedback_Assay",
+        "beta_1": 1
+      },
+      "terminal_readout_specificity_gate": {
+        "neurite_outgrowth_ratio": 2.45,
+        "caspase3_apoptotic_index": 0.08,
+        "ros_fold_change": 1.22,
+        "ldh_cytotoxicity_fraction": 0.05,
+        "is_specific_differentiation": true
+      },
+      "chain_closed_and_falsifiable": true
+    },
+    "l103_coupled_receptor_assay_transferability_and_modality_falsifiability": {
+      "source_turns": [
+        103
+      ],
+      "modalities_compared": [
+        "magnetoreception",
+        "radiotropism"
+      ],
+      "shared_four_stage_assay_scaffold": [
+        "controlled_physical_stimulus",
+        "candidate_primary_sensor_perturbation",
+        "intracellular_second_messenger_readout",
+        "directional_growth_or_differentiation_phenotype"
+      ],
+      "assay_scaffold_transferable": true,
+      "measurement_maturity_gap_vs_ontology_recognized": true,
+      "co_occurring_modalities_in_single_organism_supported": true,
+      "epistemic_verdict": "Incomplete"
+    },
+    "all_l89_to_l103_gates_verified": true
   },
   "master_event_contract_v1_gates": {
     "schema_path": "/Users/aurascoper/Developer/NeuralCompose/configs/master_event_contract_schema_v1.json",
