@@ -1,6 +1,6 @@
 {
   "schema": "poller-self-improvement-synthesis-v2",
-  "generated_at_utc": "2026-11-03T00:24:47.728095+00:00",
+  "generated_at_utc": "2026-11-03T00:32:40.724683+00:00",
   "ground_truth_verification": {
     "dialectic_log_path": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
     "dialectic_log_total_lines": 156,
@@ -78,20 +78,20 @@
       ]
     },
     "live_poller_backpressure_probe": {
-      "queried_at_utc": "2026-11-03T00:24:46.600971+00:00",
+      "queried_at_utc": "2026-11-03T00:32:39.664902+00:00",
       "swap_total_mb": 1024.0,
       "swap_used_mb": 176.0,
       "swap_free_mb": 848.0,
-      "pages_stored_in_compressor": 556517,
-      "pages_occupied_by_compressor": 283307,
+      "pages_stored_in_compressor": 527157,
+      "pages_occupied_by_compressor": 272839,
       "swapouts_pages": 11264,
-      "active_plus_wired_ram_gb": 6.2,
+      "active_plus_wired_ram_gb": 6.95,
       "swap_used_gb": 0.18,
-      "compressor_uncompressed_gb": 9.12,
-      "compressor_physical_ram_gb": 4.64,
+      "compressor_uncompressed_gb": 8.64,
+      "compressor_physical_ram_gb": 4.47,
       "cumulative_swapouts_gb": 0.18,
-      "swapped_plus_compressed_gb": 9.3,
-      "total_virtual_working_set_gb": 15.5,
+      "swapped_plus_compressed_gb": 8.82,
+      "total_virtual_working_set_gb": 15.77,
       "backpressure_gate_open": true,
       "backpressure_mode": "NORMAL_READONLY_BATCH"
     }
@@ -4712,7 +4712,7 @@
   },
   "matlab_r2026b_alara_hippocratism_gate": {
     "schema": "neuralcompose-matlab-alara-hippocratism-bridge-v1",
-    "generatedAt": "2026-11-03T00:24:47.467297+00:00",
+    "generatedAt": "2026-11-03T00:32:40.496669+00:00",
     "matlab_app_path": "/Applications/MATLAB_R2026b.app",
     "matlab_installed_on_disk": true,
     "matlab_version": "26.2.0.3433840",
