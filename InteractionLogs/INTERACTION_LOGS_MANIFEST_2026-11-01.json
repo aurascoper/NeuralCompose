@@ -164,9 +164,9 @@
       "sha256": "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7"
     },
     "dialectic-turns-2026-11-02.jsonl": {
-      "bytes": 299176,
-      "lines": 100,
-      "sha256": "3ae9b4f0460a284803edca3188e552fa2bb9f259224b49c118b5b4a40e1c2812",
+      "bytes": 310365,
+      "lines": 103,
+      "sha256": "65e68f00f6dc3fc0e164fc20a998f8068455567c81affa3746c1f4012c363af0",
       "historical_28_line_prefix_bytes": 100060,
       "historical_28_line_prefix_sha256": "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013",
       "historical_51_line_prefix_bytes": 175552,
@@ -208,7 +208,7 @@
     "matlab-alara-bridge-telemetry.json": {
       "bytes": 14874,
       "lines": 434,
-      "sha256": "ae0fe8a88fef9a5cb6d054e64bad92be985d49b96245ad3251efe26e5fba0d3e"
+      "sha256": "7cc1c486a986eb0ba4d84c170265ef0bebf2bd47abb516c65dfb33375c17a58c"
     },
     "offline-dream-cron.err.log": {
       "bytes": 2365,
@@ -226,14 +226,14 @@
       "sha256": "786916ef49c0d401d2b58b1b8bb1786d86b3a3b8f3f2cb22278cf0ee64b26dcf"
     },
     "poller-self-improvement-synthesis-v2.json": {
-      "bytes": 1289137,
-      "lines": 6890,
-      "sha256": "63035f8a040b2b8273eed1ef61c0ba4de1fc1ce81080c190455b2ecb7d4b44e9"
+      "bytes": 1292848,
+      "lines": 6953,
+      "sha256": "705af475b06a0abe8bc3db7406edd21fce26083a6aa9bc23ace59609e1d70549"
     },
     "poller_watermark.json": {
       "bytes": 1039,
       "lines": 22,
-      "sha256": "0c3f9e4c15c20e114549f66cec3d0fab00984b13840526bf20c6c4781e2bb599"
+      "sha256": "c76424431ed6e67a4849a7514b006f88981711d836dacb2347e70bc51597c065"
     },
     "CLAUDE_MIND_SQLITE_VERIFICATION_RECEIPT_2026-11-02.json": {
       "bytes": 15163,
@@ -260,8 +260,8 @@
       "lines": 156
     },
     "dialectic-turns-2026-11-02.jsonl": {
-      "lines": 100,
-      "eligible_warranted_turns": 99,
+      "lines": 103,
+      "eligible_warranted_turns": 102,
       "historical_28_line_prefix_bytes": 100060,
       "historical_28_line_prefix_sha256": "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013",
       "historical_51_line_prefix_bytes": 175552,
@@ -274,9 +274,9 @@
       "historical_87_line_prefix_sha256": "f9369fa28e2ca5b486e8dfb6fe996b3e50b22df50ff92adeafa5ec51d73a5abf",
       "historical_88_line_prefix_bytes": 261800,
       "historical_88_line_prefix_sha256": "432ec1bc11e9da1f7bae2c93cdd4d1f5705f240cf8b13e65048ecdef1195be97",
-      "full_current_bytes": 299176,
-      "full_current_sha256": "3ae9b4f0460a284803edca3188e552fa2bb9f259224b49c118b5b4a40e1c2812"
+      "full_current_bytes": 310365,
+      "full_current_sha256": "65e68f00f6dc3fc0e164fc20a998f8068455567c81affa3746c1f4012c363af0"
     },
-    "total_turns_across_3_files": 378
+    "total_turns_across_3_files": 381
   }
 }

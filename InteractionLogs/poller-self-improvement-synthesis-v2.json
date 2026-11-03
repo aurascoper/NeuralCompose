@@ -1,13 +1,13 @@
 {
   "schema": "poller-self-improvement-synthesis-v2",
-  "generated_at_utc": "2026-11-03T00:32:40.724683+00:00",
+  "generated_at_utc": "2026-11-03T01:44:41.423220+00:00",
   "ground_truth_verification": {
     "dialectic_log_path": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
     "dialectic_log_total_lines": 156,
     "dialectic_log_sha256": "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7",
     "rollover_2026_11_02_log_path": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-02.jsonl",
-    "rollover_2026_11_02_total_lines": 100,
-    "rollover_2026_11_02_sha256": "3ae9b4f0460a284803edca3188e552fa2bb9f259224b49c118b5b4a40e1c2812",
+    "rollover_2026_11_02_total_lines": 103,
+    "rollover_2026_11_02_sha256": "65e68f00f6dc3fc0e164fc20a998f8068455567c81affa3746c1f4012c363af0",
     "read_only_ingestion_verified": true,
     "fabricated_l0_claims_rejected": {
       "gemma_4_gpt_5_4_hy_world_2_0_present_in_logs": false,
@@ -78,20 +78,20 @@
       ]
     },
     "live_poller_backpressure_probe": {
-      "queried_at_utc": "2026-11-03T00:32:39.664902+00:00",
+      "queried_at_utc": "2026-11-03T01:44:40.347969+00:00",
       "swap_total_mb": 1024.0,
-      "swap_used_mb": 176.0,
-      "swap_free_mb": 848.0,
-      "pages_stored_in_compressor": 527157,
-      "pages_occupied_by_compressor": 272839,
+      "swap_used_mb": 168.0,
+      "swap_free_mb": 856.0,
+      "pages_stored_in_compressor": 593548,
+      "pages_occupied_by_compressor": 323791,
       "swapouts_pages": 11264,
-      "active_plus_wired_ram_gb": 6.95,
-      "swap_used_gb": 0.18,
-      "compressor_uncompressed_gb": 8.64,
-      "compressor_physical_ram_gb": 4.47,
+      "active_plus_wired_ram_gb": 6.78,
+      "swap_used_gb": 0.17,
+      "compressor_uncompressed_gb": 9.72,
+      "compressor_physical_ram_gb": 5.3,
       "cumulative_swapouts_gb": 0.18,
-      "swapped_plus_compressed_gb": 8.82,
-      "total_virtual_working_set_gb": 15.77,
+      "swapped_plus_compressed_gb": 9.89,
+      "total_virtual_working_set_gb": 16.67,
       "backpressure_gate_open": true,
       "backpressure_mode": "NORMAL_READONLY_BATCH"
     }
@@ -2673,7 +2673,10 @@
       97,
       98,
       99,
-      100
+      100,
+      101,
+      102,
+      103
     ],
     "canonical_key_tag": "key:31a8fe980f",
     "verified_claims_banked": {
@@ -2705,8 +2708,8 @@
   },
   "utc_midnight_rollover_2026_11_02_audit": {
     "dialectic_log_path": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-02.jsonl",
-    "total_lines_in_file": 100,
-    "sha256": "3ae9b4f0460a284803edca3188e552fa2bb9f259224b49c118b5b4a40e1c2812",
+    "total_lines_in_file": 103,
+    "sha256": "65e68f00f6dc3fc0e164fc20a998f8068455567c81affa3746c1f4012c363af0",
     "turns_evaluated": [
       {
         "file": "dialectic-turns-2026-11-02.jsonl",
@@ -4707,12 +4710,72 @@
         "spoken_preview": "E2C arithmetic verification plus the OpenFOAM reference fixture is exactly the right order of operations  -  you don't advance a milestone chain on a solver you haven't pinned against ground truth. Each fixture is the sa...",
         "asr_phonetic_recovery": null,
         "epistemic_note": null
+      },
+      {
+        "file": "dialectic-turns-2026-11-02.jsonl",
+        "line_number": 101,
+        "virtual_session_line": 257,
+        "run_id": "7A87CD50-2B5A-4361-A07E-C519ACD0B1AA",
+        "turn_index": 0,
+        "recorded_at": "2026-11-03T01:40:23.718Z",
+        "inferred_mode": "reflective",
+        "witness_attempted": true,
+        "outcome": "spoke:displacement-seeking",
+        "gloss_scalar": 0.5,
+        "self_similarity": null,
+        "max_candidate_potential": 1.6526,
+        "eligible_for_memory": true,
+        "rescue_category": "warranted_standard",
+        "heard": "The central connection is that CSGAMAK2 and magnetite each illustrate a different kind of biological organization sequence and coded assembly dynamic regulated signaling and physical energy coupling they are useful mechanistic competitors for Dr. Gosia's work but they are not interchangeable with physical evidence and none independently demonstrate nano particle internalization and PC 12 cells",
+        "spoken_preview": "Push further: the real competitor isn't magnetite versus CSGAMAK2, it's the hollow shell idea itself  -  if neither mechanism can be caught in the act of crossing the membrane, maybe internalization in PC-12 cells isn't ...",
+        "asr_phonetic_recovery": null,
+        "epistemic_note": null
+      },
+      {
+        "file": "dialectic-turns-2026-11-02.jsonl",
+        "line_number": 102,
+        "virtual_session_line": 258,
+        "run_id": "7A87CD50-2B5A-4361-A07E-C519ACD0B1AA",
+        "turn_index": 1,
+        "recorded_at": "2026-11-03T01:41:58.399Z",
+        "inferred_mode": "reflective",
+        "witness_attempted": true,
+        "outcome": "spoke:coherence-seeking",
+        "gloss_scalar": 0.26,
+        "self_similarity": 0.889565,
+        "max_candidate_potential": 1.5513,
+        "eligible_for_memory": true,
+        "rescue_category": "warranted_standard",
+        "heard": "The conceptual census is sequence material assembly cell signaling physical act measured cellular response the next step is to make every arrow in that chain in experimentally testable claim rather than allowing the elegance of integrated model to stand in for evidence",
+        "spoken_preview": "That's the right discipline: sequence, assembly, signaling, physical coupling, measured response  -  five links, and each one needs its own independent assay before the model earns the word \"mechanism.\" Concretely: confi...",
+        "asr_phonetic_recovery": null,
+        "epistemic_note": null
+      },
+      {
+        "file": "dialectic-turns-2026-11-02.jsonl",
+        "line_number": 103,
+        "virtual_session_line": 259,
+        "run_id": "7A87CD50-2B5A-4361-A07E-C519ACD0B1AA",
+        "turn_index": 2,
+        "recorded_at": "2026-11-03T01:43:30.781Z",
+        "inferred_mode": "reflective",
+        "witness_attempted": true,
+        "outcome": "spoke:coherence-seeking",
+        "gloss_scalar": 0.164,
+        "self_similarity": 0.891299,
+        "max_candidate_potential": 1.5114,
+        "eligible_for_memory": true,
+        "rescue_category": "warranted_standard",
+        "heard": "So it kind of seems like Magneta reception is more falsifiable and testable than radio tropism or you know [REDACTED_PII] is applying for this coupon research and you know his experience could feedback on both potentially or what",
+        "spoken_preview": "Magnetoreception is more falsifiable because there's a candidate molecule and a directional behavioral readout you can perturb  -  knock out the putative sensor, show the compass response degrades; radio tropism has neit...",
+        "asr_phonetic_recovery": null,
+        "epistemic_note": null
       }
     ]
   },
   "matlab_r2026b_alara_hippocratism_gate": {
     "schema": "neuralcompose-matlab-alara-hippocratism-bridge-v1",
-    "generatedAt": "2026-11-03T00:32:40.496669+00:00",
+    "generatedAt": "2026-11-03T01:44:41.181773+00:00",
     "matlab_app_path": "/Applications/MATLAB_R2026b.app",
     "matlab_installed_on_disk": true,
     "matlab_version": "26.2.0.3433840",
@@ -5146,8 +5209,8 @@
   },
   "multica_channel_quantum_monism_panic_burst": {
     "multica_log_path": "/Users/aurascoper/Library/Application Support/NeuralCompose/multica_channel.jsonl",
-    "total_lines": 1662,
-    "sha256": "7cc37b7f9e241ae402bd644d6518d2e1da833af5d18610156c52d514d57941f3",
+    "total_lines": 1665,
+    "sha256": "e0102cbedc8122e065727589910d2c91cc9836c96aac1aba354b43a25ba8a837",
     "quantum_monism_panic_window_lines": [
       342,
       1249
@@ -6859,11 +6922,11 @@
     "sqlite_db_path": "/Users/aurascoper/Library/Application Support/claude-mind/memory.sqlite",
     "sqlite_inserted": 0,
     "sqlite_updated": 0,
-    "sqlite_skipped": 179,
-    "sqlite_max_z_pk_before": 2168,
-    "sqlite_max_z_pk_after": 2168,
-    "session_2026_11_01_row_count_before": 1318,
-    "session_2026_11_01_row_count_after": 1318,
+    "sqlite_skipped": 182,
+    "sqlite_max_z_pk_before": 2171,
+    "sqlite_max_z_pk_after": 2171,
+    "session_2026_11_01_row_count_before": 1321,
+    "session_2026_11_01_row_count_after": 1321,
     "inserted_z_pks": [],
     "pg_inserted": 0,
     "pg_skipped": 0
@@ -6885,6 +6948,6 @@
       "L31",
       "L32"
     ],
-    "rollover_2026_11_02_line_count": 100
+    "rollover_2026_11_02_line_count": 103
   }
 }

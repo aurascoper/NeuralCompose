@@ -1,12 +1,12 @@
 {
   "schema": "neuralcompose-non-recursive-poller-watermark-v2",
-  "updated_at_utc": "2026-11-03T00:32:40.697136+00:00",
+  "updated_at_utc": "2026-11-03T01:44:41.394409+00:00",
   "dialectic_log_file": "/Users/aurascoper/Documents/NeuralCompose/InteractionLogs/dialectic-turns-2026-11-01.jsonl",
   "dialectic_log_sha256": "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7",
   "last_processed_line": 156,
-  "rollover_2026_11_02_lines": 100,
-  "rollover_2026_11_02_line_count": 100,
-  "rollover_2026_11_02_sha256": "3ae9b4f0460a284803edca3188e552fa2bb9f259224b49c118b5b4a40e1c2812",
+  "rollover_2026_11_02_lines": 103,
+  "rollover_2026_11_02_line_count": 103,
+  "rollover_2026_11_02_sha256": "65e68f00f6dc3fc0e164fc20a998f8068455567c81affa3746c1f4012c363af0",
   "previous_watermark_line": 156,
   "effective_baseline_line": 156,
   "new_lines_since_watermark": 0,
@@ -17,6 +17,6 @@
   "consolidation_rule_sha256": "e8a9db6b2aab85c36530ca4ec9c91172cce4873f5e7c37dc58312c7be110a793",
   "negative_tamper_self_test_passed": true,
   "rescued_turns_L75_to_end": 82,
-  "sqlite_max_z_pk": 2168,
-  "session_memory_ordinal_max": 1318
+  "sqlite_max_z_pk": 2171,
+  "session_memory_ordinal_max": 1321
 }

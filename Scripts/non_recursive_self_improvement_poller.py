@@ -160,6 +160,30 @@ def _refresh_interaction_logs_manifest() -> None:
                 entry["lines"] = n_lines
                 entry["sha256"] = sha_hex
                 changed = True
+        summary = manifest.get("append_only_dialectic_corpus_summary")
+        if isinstance(summary, dict) and isinstance(files_obj, dict):
+            e_1031 = files_obj.get("dialectic-turns-2026-10-31.jsonl", {})
+            e_1101 = files_obj.get("dialectic-turns-2026-11-01.jsonl", {})
+            e_1102 = files_obj.get("dialectic-turns-2026-11-02.jsonl", {})
+            n_1031 = int(e_1031.get("lines", 122))
+            n_1101 = int(e_1101.get("lines", 156))
+            n_1102 = int(e_1102.get("lines", 100))
+            s_1102 = summary.get("dialectic-turns-2026-11-02.jsonl")
+            if isinstance(s_1102, dict):
+                if (
+                    s_1102.get("lines") != n_1102
+                    or s_1102.get("full_current_bytes") != e_1102.get("bytes")
+                    or s_1102.get("full_current_sha256") != e_1102.get("sha256")
+                ):
+                    s_1102["lines"] = n_1102
+                    s_1102["eligible_warranted_turns"] = max(0, n_1102 - 1)
+                    s_1102["full_current_bytes"] = e_1102.get("bytes")
+                    s_1102["full_current_sha256"] = e_1102.get("sha256")
+                    changed = True
+            total_3 = n_1031 + n_1101 + n_1102
+            if summary.get("total_turns_across_3_files") != total_3:
+                summary["total_turns_across_3_files"] = total_3
+                changed = True
         if changed:
             manifest_txt = _sanitize_dashes(json.dumps(manifest, indent=2)) + "\n"
             if resolved_repo_dir.is_dir():
