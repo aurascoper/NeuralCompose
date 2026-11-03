@@ -115,6 +115,61 @@ def _atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> Non
                 pass
 
 
+def _refresh_interaction_logs_manifest() -> None:
+    """Recompute bytes, lines, and sha256 for all entries in INTERACTION_LOGS_MANIFEST_2026-11-01.json
+    from REPO_ROOT/InteractionLogs and atomically mirror the updated manifest between
+    REPO_ROOT/InteractionLogs and DEFAULT_LOG_DIR."""
+    resolved_doc_dir = DEFAULT_LOG_DIR.resolve()
+    resolved_repo_dir = (REPO_ROOT / "InteractionLogs").resolve()
+    manifest_name = "INTERACTION_LOGS_MANIFEST_2026-11-01.json"
+    manifest_path = resolved_repo_dir / manifest_name
+    if not manifest_path.exists():
+        manifest_path = resolved_doc_dir / manifest_name
+    if not manifest_path.exists():
+        return
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        changed = False
+        files_obj = manifest.get("files", {})
+        if isinstance(files_obj, dict):
+            pairs = [(Path(k).name, v) for k, v in files_obj.items() if isinstance(v, dict)]
+        else:
+            pairs = [
+                (Path(entry.get("file", "")).name, entry)
+                for entry in files_obj
+                if isinstance(entry, dict)
+            ]
+        for rel_name, entry in pairs:
+            if not rel_name:
+                continue
+            target_fp = resolved_repo_dir / rel_name
+            if not target_fp.exists():
+                target_fp = resolved_doc_dir / rel_name
+            if not target_fp.exists():
+                continue
+            raw_bytes = target_fp.read_bytes()
+            n_bytes = len(raw_bytes)
+            n_lines = len(raw_bytes.decode("utf-8").splitlines())
+            sha_hex = hashlib.sha256(raw_bytes).hexdigest()
+            if (
+                entry.get("bytes") != n_bytes
+                or entry.get("lines") != n_lines
+                or entry.get("sha256") != sha_hex
+            ):
+                entry["bytes"] = n_bytes
+                entry["lines"] = n_lines
+                entry["sha256"] = sha_hex
+                changed = True
+        if changed:
+            manifest_txt = _sanitize_dashes(json.dumps(manifest, indent=2)) + "\n"
+            if resolved_repo_dir.is_dir():
+                _atomic_write_text(resolved_repo_dir / manifest_name, manifest_txt)
+            if resolved_doc_dir.is_dir():
+                _atomic_write_text(resolved_doc_dir / manifest_name, manifest_txt)
+    except Exception:
+        pass
+
+
 def _write_and_mirror(primary_path: Path, content: str, mirror_to_repo: bool = True) -> None:
     """Atomically write content to primary_path and optionally mirror between
     DEFAULT_LOG_DIR and REPO_ROOT/InteractionLogs if primary_path belongs to either."""
@@ -128,9 +183,11 @@ def _write_and_mirror(primary_path: Path, content: str, mirror_to_repo: bool = T
     if resolved_doc_dir.is_dir() and resolved_primary.parent == resolved_doc_dir:
         repo_target = resolved_repo_dir / primary_path.name
         _atomic_write_text(repo_target, content)
+        _refresh_interaction_logs_manifest()
     elif resolved_repo_dir.is_dir() and resolved_primary.parent == resolved_repo_dir:
         doc_target = resolved_doc_dir / primary_path.name
         _atomic_write_text(doc_target, content)
+        _refresh_interaction_logs_manifest()
 
 
 def verify_non_recursive_consolidation_guard(

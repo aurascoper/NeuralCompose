@@ -208,7 +208,7 @@
     "matlab-alara-bridge-telemetry.json": {
       "bytes": 14874,
       "lines": 434,
-      "sha256": "21960c703006dc652ccdc39a8d025bf5fa1174ba8c9f19d92b526c29cdbcc01d"
+      "sha256": "a96d1ff3d1aba59e1551947fa6fc06ff330b72279360084fd00305a22ea964e6"
     },
     "offline-dream-cron.err.log": {
       "bytes": 2365,
@@ -226,14 +226,14 @@
       "sha256": "786916ef49c0d401d2b58b1b8bb1786d86b3a3b8f3f2cb22278cf0ee64b26dcf"
     },
     "poller-self-improvement-synthesis-v2.json": {
-      "bytes": 1289139,
+      "bytes": 1289134,
       "lines": 6890,
-      "sha256": "d21621004f6e543050c0cf48eb588b56daa774d99d1522f876970a9d94021e67"
+      "sha256": "54f1ec4ddeb9992512801f30a3d9587eace276cb1f54181a61a4f32c2ed44a8a"
     },
     "poller_watermark.json": {
       "bytes": 1039,
       "lines": 22,
-      "sha256": "45998dd9bfd7c000455cf239a599640832174bc56109b519861cbe375f26118f"
+      "sha256": "651f83a2e22ebb3545676db78a6da5fdc53376f0e52d1080c5fd752d5970e3e5"
     },
     "CLAUDE_MIND_SQLITE_VERIFICATION_RECEIPT_2026-11-02.json": {
       "bytes": 15163,

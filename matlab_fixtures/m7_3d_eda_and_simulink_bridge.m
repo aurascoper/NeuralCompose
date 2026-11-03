@@ -463,26 +463,66 @@ function receipt = m7_3d_eda_and_simulink_bridge()
 
     biofilms_cpm_refusal_preserved = pos_biofilms.valid && ~neg_basis.valid && ...
                                      strcmp(neg_basis.error_code, 'ERR_BIOMASS_BASIS_OCCUPANCY_MEAN_REFUSED');
-    rna_biofilm_toy_5term_mass_ledger_closed = pos_rnatoy.valid;
 
-    % oklo_pool_mobile 4-phase surrogate parity check (b = 0.17, 30 min steam pulse / 180 min cycle)
-    phases_mobile = [0.0, 0.15, 0.50, 0.85];
+    b_rnatoy = jsondecode(fileread(fullfile(bundle_dir, 'valid_rna_biofilm_toy_ledger_bundle.json')));
+    ml_rnatoy = b_rnatoy.mass_ledger;
+    dm_expected_rnatoy = double(ml_rnatoy.injected_gross) - double(ml_rnatoy.inject_clip) - ...
+                         double(ml_rnatoy.diffusion_clip) - double(ml_rnatoy.birth_sink) + double(ml_rnatoy.death_return);
+    rna_biofilm_toy_5term_mass_ledger_closed = pos_rnatoy.valid && ...
+        (abs(double(ml_rnatoy.delta_M) - dm_expected_rnatoy) <= 1.0e-8) && ...
+        (abs(double(ml_rnatoy.diffusion_clip)) <= 1.0e-12);
+
+    % oklo_pool_mobile 6-field surrogate parity check across [0.0, 0.15, 0.50, 1.0] (b = 0.17, 30 min pulse / 180 min cycle)
+    phases_mobile = [0.0, 0.15, 0.50, 1.0];
     b_mobile = 0.17;
     pulse_mobile = zeros(size(phases_mobile));
+    desiccation_mobile = zeros(size(phases_mobile));
+    temp_act = zeros(size(phases_mobile));
+    temp_nul = zeros(size(phases_mobile));
+    hyd_act  = zeros(size(phases_mobile));
+    h2_act   = zeros(size(phases_mobile));
+    h2_nul   = zeros(size(phases_mobile));
+    u235_act = zeros(size(phases_mobile));
+    u235_nul = zeros(size(phases_mobile));
+    poly_act = zeros(size(phases_mobile));
+    poly_nul = zeros(size(phases_mobile));
+    comp_act = zeros(size(phases_mobile));
+    comp_nul = zeros(size(phases_mobile));
     for idx_m = 1:numel(phases_mobile)
-        ph = mod(phases_mobile(idx_m), 1.0);
+        ph = min(max(phases_mobile(idx_m), 0.0), 1.0);
         if ph < b_mobile
             pulse_mobile(idx_m) = sin(pi * ph / b_mobile);
         else
-            pulse_mobile(idx_m) = 0.0;
+            pulse_mobile(idx_m) = exp(-8.0 * (ph - b_mobile));
         end
+        if (ph >= 0.10) && (ph <= 0.35)
+            desiccation_mobile(idx_m) = sin(pi * (ph - 0.10) / 0.25);
+        else
+            desiccation_mobile(idx_m) = 0.0;
+        end
+        temp_act(idx_m) = 58.0 + 38.0 * pulse_mobile(idx_m);
+        temp_nul(idx_m) = 64.0 + 4.0 * sin(ph * 2.0 * pi);
+        hyd_act(idx_m)  = min(max(0.92 - 0.68 * desiccation_mobile(idx_m) + 0.12 * pulse_mobile(idx_m), 0.08), 1.0);
+        h2_act(idx_m)   = 18.0 + 95.0 * pulse_mobile(idx_m);
+        h2_nul(idx_m)   = 4.0;
+        u235_act(idx_m) = 0.720 - 0.004 * ph;
+        u235_nul(idx_m) = 0.720;
+        poly_act(idx_m) = min(0.15 + 0.55 * desiccation_mobile(idx_m) + 0.22 * ph, 1.0);
+        poly_nul(idx_m) = 0.08 + 0.05 * desiccation_mobile(idx_m);
+        comp_act(idx_m) = round(12.0 + 28.0 * poly_act(idx_m));
+        comp_nul(idx_m) = round(12.0 + 28.0 * poly_nul(idx_m));
     end
-    t_core_mobile = 158.0 + 320.0 .* pulse_mobile;
-    oklo_pool_mobile_parity_verified = (abs(pulse_mobile(1) - 0.0) < 1e-12) && ...
-                                       (pulse_mobile(2) > 0.30) && ...
-                                       (t_core_mobile(2) > t_core_mobile(1) + 80.0) && ...
-                                       (abs(pulse_mobile(3)) < 1e-12) && ...
-                                       (abs(pulse_mobile(4)) < 1e-12);
+    oklo_pool_mobile_parity_verified = (abs(temp_act(1) - 58.0) < 1e-12) && ...
+                                       (abs(hyd_act(1) - 0.92) < 1e-12) && ...
+                                       (abs(h2_act(1) - 18.0) < 1e-12) && ...
+                                       (abs(u235_act(1) - 0.720) < 1e-12) && ...
+                                       (abs(poly_act(1) - 0.15) < 1e-12) && ...
+                                       (comp_act(1) == 16) && ...
+                                       (temp_act(2) > 70.0) && (h2_act(2) > 50.0) && ...
+                                       (abs(pulse_mobile(3) - exp(-8.0 * 0.33)) < 1e-12) && ...
+                                       (abs(u235_act(4) - 0.716) < 1e-12) && ...
+                                       all(h2_nul == 4.0) && all(u235_nul == 0.720) && ...
+                                       all(comp_act >= comp_nul);
     oklo_pool_mobile_android_build_present = false;
 
     % L84..L88 Layer-Down Solver Clearinghouse & Wireframe Self-Confidence check
@@ -886,6 +926,25 @@ function res = validate_m7_field_bundle_v1(bundle_fp)
                 res.error_code = 'ERR_NAN_IN_NUMERIC_PAYLOAD';
                 return;
             end
+        end
+    end
+    if isfield(b, 'mass_ledger')
+        ml = b.mass_ledger;
+        req_ml = {'delta_M', 'injected_gross', 'inject_clip', 'diffusion_clip', 'birth_sink', 'death_return'};
+        for kml = 1:numel(req_ml)
+            if ~isfield(ml, req_ml{kml})
+                res.error_code = 'ERR_MISSING_REQUIRED_FIELD';
+                return;
+            end
+        end
+        expected_dm = double(ml.injected_gross) - double(ml.inject_clip) - double(ml.diffusion_clip) - double(ml.birth_sink) + double(ml.death_return);
+        tol_ml = 1.0e-8;
+        if isfield(ml, 'tolerance') && isnumeric(ml.tolerance) && (ml.tolerance > 0)
+            tol_ml = double(ml.tolerance);
+        end
+        if (abs(double(ml.delta_M) - expected_dm) > tol_ml) || (abs(double(ml.diffusion_clip)) > tol_ml)
+            res.error_code = 'ERR_MASS_LEDGER_RESIDUAL_EXCEEDED';
+            return;
         end
     end
     res.valid = true;
