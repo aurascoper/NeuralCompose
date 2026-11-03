@@ -1,0 +1,42 @@
+{
+  "schema": "m7-field-bundle",
+  "schema_version": "1.0.0",
+  "input_family": "biofilms_cpm_snapshot",
+  "producer": {
+    "repo": "Biofilms-publish",
+    "commit": "frozen-audit-snapshot",
+    "solver": "Cellular_Potts_Model_2D"
+  },
+  "clock": {
+    "type": "numerical_mcs",
+    "value": null,
+    "mcs_step": 100,
+    "seconds_per_mcs": null,
+    "unit": "MCS"
+  },
+  "mesh": {
+    "type": "cartesian_2d",
+    "dims": [50, 50, 1],
+    "bounds_m": null,
+    "lattice_pitch_m": null
+  },
+  "fields": {
+    "biomass_occupancy_mean": {
+      "unit": "occupancy_fraction",
+      "basis": "occupancy_fraction_uncalibrated",
+      "dtype": "float64",
+      "path": "porosity.csv",
+      "sha256": "55d38dce4f1d9d092ea64c954987e4dd7d750b8cae6f8ac3b8e4ad2f80b59b50"
+    }
+  },
+  "refusal_gates": {
+    "radiodialysis_coupled_gate": "RADIODIALYSIS: BLOCKED",
+    "radiodialysis_refusal_reason": "biomass_basis_is_occupancy_mean_in_g_cm3_slot",
+    "growth_survival_status": "unsupported_by_current_model",
+    "radiotropic_vs_radiotrophic": "radiotropic_hamiltonian_bias_not_radiotrophic_metabolism"
+  },
+  "evidence": {
+    "status": "Incomplete",
+    "calibration": "uncalibrated"
+  }
+}

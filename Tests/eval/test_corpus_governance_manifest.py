@@ -130,18 +130,23 @@ def test_synchronized_interaction_logs_and_manifest_integrity():
         elif rel_path.endswith(".json"):
             json.loads(text)
 
-    # Verify the 329-turn append-only corpus (122 + 156 + 51 = 329) and prefix invariance on 2026-11-02
+    # Verify append-only corpus and prefix invariance on 2026-11-02 (28, 51, 73, 76, 87, 88, and current lines)
     f_1031 = (REPO_ROOT / "InteractionLogs" / "dialectic-turns-2026-10-31.jsonl").read_bytes()
     f_1101 = (REPO_ROOT / "InteractionLogs" / "dialectic-turns-2026-11-01.jsonl").read_bytes()
     f_1102 = (REPO_ROOT / "InteractionLogs" / "dialectic-turns-2026-11-02.jsonl").read_bytes()
     assert hashlib.sha256(f_1031).hexdigest() == "d6d1921f6cd02ca27fde497100462cb33475b7049d7b2712a10ec839f55de0d2"
     assert hashlib.sha256(f_1101).hexdigest() == "8e27c4784b265d77c8c16828fe98786d1d926849446ab4bf59ff2f720374ffe7"
     assert hashlib.sha256(f_1102[:100060]).hexdigest() == "a3966f7816eb7d4ee13d838bf2453146ed9e74c8952b1304acf57df53a221013"
-    assert hashlib.sha256(f_1102).hexdigest() == "4bed458a31ac5e5b549bb2b02afde1013cd1ef13dac2202adf5c06db8bbdb786"
+    assert hashlib.sha256(f_1102[:175552]).hexdigest() == "4bed458a31ac5e5b549bb2b02afde1013cd1ef13dac2202adf5c06db8bbdb786"
+    assert hashlib.sha256(f_1102[:228000]).hexdigest() == "fdf0ce09c3c75c1d5e9529cca223d5822ce8d91e925a504ad9c02fd7b38bf30f"
+    assert hashlib.sha256(f_1102[:237030]).hexdigest() == "4ccc43665ebb7dfa8f098e0c306d3ca92f6763b0537571b7a4ed261ab90d5e8f"
+    assert hashlib.sha256(f_1102[:259128]).hexdigest() == "f9369fa28e2ca5b486e8dfb6fe996b3e50b22df50ff92adeafa5ec51d73a5abf"
+    assert hashlib.sha256(f_1102[:261800]).hexdigest() == "432ec1bc11e9da1f7bae2c93cdd4d1f5705f240cf8b13e65048ecdef1195be97"
+    entry_1102 = files_obj["dialectic-turns-2026-11-02.jsonl"]
+    assert hashlib.sha256(f_1102).hexdigest() == entry_1102["sha256"]
     n_1031 = len(f_1031.decode("utf-8").splitlines())
     n_1101 = len(f_1101.decode("utf-8").splitlines())
     n_1102 = len(f_1102.decode("utf-8").splitlines())
-    assert (n_1031, n_1101, n_1102) == (122, 156, 51)
-    assert n_1031 + n_1101 + n_1102 == 329
-
-
+    assert (n_1031, n_1101) == (122, 156)
+    assert n_1102 >= 88 and n_1102 == entry_1102["lines"]
+    assert n_1031 + n_1101 + n_1102 == data["append_only_dialectic_corpus_summary"]["total_turns_across_3_files"]

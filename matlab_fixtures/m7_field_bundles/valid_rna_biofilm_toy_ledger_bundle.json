@@ -1,0 +1,49 @@
+{
+  "schema": "m7-field-bundle",
+  "schema_version": "1.0.0",
+  "input_family": "rna_biofilm_toy_summary",
+  "producer": {
+    "repo": "rna_biofilm_toy",
+    "commit": "frozen-audit-snapshot",
+    "solver": "RNA_Replicator_Biofilm_3D_Cylinder"
+  },
+  "clock": {
+    "type": "numerical_step",
+    "value": 40,
+    "unit": "step"
+  },
+  "mesh": {
+    "type": "cylindrical_lattice_3d",
+    "dims": [24, 24, 36],
+    "bounds_m": null,
+    "lattice_pitch_m": null
+  },
+  "fields": {
+    "monomer_inventory": {
+      "unit": "1",
+      "basis": "cell_count",
+      "dtype": "float64",
+      "path": "porosity.csv",
+      "sha256": "55d38dce4f1d9d092ea64c954987e4dd7d750b8cae6f8ac3b8e4ad2f80b59b50"
+    }
+  },
+  "mass_ledger": {
+    "step": 40,
+    "M_prev": 72410.0,
+    "M_curr": 74290.0,
+    "delta_M": 1880.0,
+    "injected_gross": 2025.0,
+    "inject_clip": 0.0,
+    "diffusion_clip": 0.0,
+    "birth_sink": 180.0,
+    "death_return": 35.0,
+    "births": 12,
+    "deaths": 7,
+    "residual": 0.0,
+    "tolerance": 1.0e-8
+  },
+  "evidence": {
+    "status": "Accepted",
+    "calibration": "synthetic_benchmark"
+  }
+}

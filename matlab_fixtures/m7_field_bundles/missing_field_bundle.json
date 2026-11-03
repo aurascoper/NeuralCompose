@@ -1,0 +1,24 @@
+{
+  "schema": "m7-field-bundle",
+  "schema_version": "1.0.0",
+  "input_family": "openfoam_phreeqc_continuum",
+  "producer": {
+    "repo": "flow-cytometry-model-bridge",
+    "commit": "0b8f09d",
+    "solver": "OpenFOAM_dbsFoam_PHREEQC_Menke2026"
+  },
+  "mesh": {
+    "type": "cartesian_3d",
+    "dims": [8, 1, 1],
+    "bounds_m": [[0.0, 0.08], [0.0, 0.01], [0.0, 0.01]]
+  },
+  "fields": {
+    "theta_mobile": {
+      "unit": "1",
+      "basis": "mobile_water",
+      "dtype": "float64",
+      "path": "porosity.csv",
+      "sha256": "55d38dce4f1d9d092ea64c954987e4dd7d750b8cae6f8ac3b8e4ad2f80b59b50"
+    }
+  }
+}

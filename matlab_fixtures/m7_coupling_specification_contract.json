@@ -1,0 +1,122 @@
+{
+  "schema": "m7-coupling-specification-contract",
+  "schema_version": "1.0.0",
+  "contract_date": "2026-11-02",
+  "untouched_repos": {
+    "oklo_shareable_portal": {
+      "commit": "28f1df2",
+      "dirty_files": 0,
+      "untouched_verified": true
+    }
+  },
+  "level_1_physical_and_lattice_substrates": {
+    "m7_field_bundle_version": "1.0.0",
+    "valid_field_bases": [
+      "bulk_volume",
+      "pore_water",
+      "mobile_water",
+      "surface_area",
+      "cell_count",
+      "occupancy_fraction_uncalibrated"
+    ],
+    "menke_2026_porosity_contract": {
+      "theta_mobile_role": "physical_mobile_water_solute_inventory",
+      "phi_dbs_role": "numerical_darcy_brinkman_stokes_drag_porosity",
+      "invariant": "0 < theta_mobile <= phi_dbs < 1"
+    },
+    "openfoam_phreeqc_fixture_ingestion_verified": true,
+    "openfoam_phreeqc_live_solver_handoff_verified": false,
+    "biofilms_cpm_refusal_contract": {
+      "clock": "numerical_mcs",
+      "seconds_per_mcs": null,
+      "lattice_pitch_m": null,
+      "radiodialysis_coupled_gate": "RADIODIALYSIS: BLOCKED",
+      "radiodialysis_refusal_reason": "biomass_basis_is_occupancy_mean_in_g_cm3_slot",
+      "growth_survival_status": "unsupported_by_current_model",
+      "radiotropic_vs_radiotrophic": "radiotropic_hamiltonian_bias_not_radiotrophic_metabolism",
+      "evidence_status": "Incomplete"
+    },
+    "rna_biofilm_toy_5term_mass_ledger": {
+      "equation": "M(t) - M(t-1) = injected_gross - inject_clip - diffusion_clip - birth_sink + death_return",
+      "injected_gross": 2025.0,
+      "diffusion_clip": 0.0,
+      "residual_tolerance": 1.0e-8
+    },
+    "oklo_pool_mobile_parity": {
+      "fields": ["temperature", "hydration", "h2_concentration", "u235_ratio", "polymer_yield", "compartments"],
+      "boundary_phases": [0.0, 0.15, 0.50, 1.0],
+      "pulse_width_b": 0.17,
+      "android_build_present": false
+    }
+  },
+  "level_2_six_subsystem_biochemical_network": {
+    "subsystems": [
+      "2A_carbon_electron_donor_atp_jin_bethke",
+      "2B_vogels_nitrogen_nh4_no3_partition",
+      "2C_redox_radiolysis_ros_melanin_4stage",
+      "2D_four_pool_metal_speciation_biosorption",
+      "2E_cell_wall_chitin_glucan_melanin_and_5component_eps",
+      "2F_diffusible_signaling_pde"
+    ],
+    "quarantined_claims": {
+      "direct_atp_radiosynthesis_without_electron_donor": "Incomplete",
+      "low_dose_radiation_hormesis": "Incomplete",
+      "nutmeg_below_280K": "Incomplete"
+    }
+  },
+  "level_3_genetic_and_epigenetic_regulation": {
+    "memory_classes": [
+      "transcriptional_short_horizon",
+      "chromatin_epigenetic",
+      "physiological_metabolic",
+      "genetic_inheritance"
+    ],
+    "eukaryotic_fungal_marks": ["H3K9me3_dim5", "wc1_wc2_frq_phase", "histone_H4K16ac"],
+    "prokaryotic_bacterial_marks": ["dam_methylation", "dcm_methylation", "phase_variation_switch"],
+    "csga_motif_reconciled": {
+      "pattern": "Q-X-G-X-G-N-X-A-X(3)-Q",
+      "fixed_residues": 6,
+      "total_span_aa": 12,
+      "single_window_prob": 1.5625e-8,
+      "expected_random_hits_per_mb_6frame": 0.015625
+    },
+    "speculative_snp_covariates_L75_status": "Incomplete"
+  },
+  "level_4_biophysical_mechanics_and_magnetoreception": {
+    "bacterial_eps_components": ["curli_amyloid", "cellulose", "edna", "alginate_pel_psl", "pga"],
+    "fungal_matrix_components": ["chitin", "beta_13_16_glucan", "dhn_dopa_melanin"],
+    "magnetite_e2c_50uT": {
+      "sphere_d25nm_298_15K": 0.7155,
+      "sphere_d25nm_300K": 0.7111,
+      "sphere_d25nm_Ms5e5": 0.7453,
+      "cube_d25nm_298_15K": 1.3665,
+      "cube_d25nm_300K": 1.3580,
+      "cube_d25nm_Ms5e5": 1.4234,
+      "sphere_r25nm_d50nm_300K": 5.6886,
+      "sphere_r25nm_d50nm_310K": 5.5051,
+      "evidence_edge_tag_50uT": "REFUTED_THERMAL_BOUND",
+      "evidence_edge_tag_10mT": "ENGINEERED_MT_ACTUATION"
+    }
+  },
+  "level_5_multicellular_graph_and_septal_flow": {
+    "five_canonical_graphs": [
+      "hyphal_anastomosis_network",
+      "eps_crosslink_network",
+      "fun_neurology_reticulated_asr",
+      "selfish_gene_comfort_asr_dag",
+      "tarjan_solver_bridge_dag"
+    ],
+    "structural_beta_1": 3,
+    "woronin_hex1_pore_occlusion_modeled": true,
+    "topology_distinct_from_instantaneous_flow": true
+  },
+  "level_6_observation_bundle_and_clearinghouse_L84_L88": {
+    "observation_channels": 8,
+    "identifiable_parameters_with_quench_and_ac": 5,
+    "clearinghouse_turn_range": "L84..L88",
+    "solver_a": "MATLAB_POD_DMD_ROM_Simulink_ALARA",
+    "solver_b": "OpenFOAM_dbsFoam_PHREEQC_Conservative_FV",
+    "beta_1_inter_solver": 0,
+    "fast_wireframe_self_confidence_calibrated": true
+  }
+}
