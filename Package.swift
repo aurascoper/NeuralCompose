@@ -36,6 +36,7 @@ let package = Package(
         .library(name: "BCIVoice",      targets: ["BCIVoice"]),
         .library(name: "BCICloudBridge", targets: ["BCICloudBridge"]),
         .library(name: "BCIPeerBridge",  targets: ["BCIPeerBridge"]),
+        .library(name: "BCIBiofeedback", targets: ["BCIBiofeedback"]),
         .library(name: "WorldModelDemo", targets: ["WorldModelDemo"]),
         .executable(name: "EmbeddingBench", targets: ["EmbeddingBench"]),
         .executable(name: "SemanticEval", targets: ["SemanticEval"]),
@@ -165,6 +166,29 @@ let package = Package(
             dependencies: ["BCICore"],
             path: "Sources/BCIPeerBridge",
             swiftSettings: strictConcurrency
+        ),
+
+        // -- Biofeedback egress (OSC + virtual MIDI out) -------------------
+        // ADR-011. Turns per-channel band powers, channel health and the
+        // Track A events into health-gated OSC and MIDI for DAWs and
+        // patchers (Ableton via Max for Live or MIDI Learn, Logic, Reaper,
+        // Bitwig, Max, TouchDesigner, SuperCollider). Depends on BCICore
+        // (frames, health) and BCIEEG (OSCMessage + OSCEncoder) only; no
+        // MLX, no third-party deps. Network (UDP to a user-chosen host,
+        // loopback by default) and CoreMIDI (in-machine) are system
+        // frameworks behind `canImport`. This is a scoped network-egress
+        // exception after BCICloudBridge and BCIPeerBridge, and the only one
+        // that emits derived EEG features; decision_registry.md entry 10.
+        // Imported only by NeuralComposeApp; must never become a dependency
+        // of any other BCI* target.
+        .target(
+            name: "BCIBiofeedback",
+            dependencies: ["BCICore", "BCIEEG"],
+            path: "Sources/BCIBiofeedback",
+            swiftSettings: strictConcurrency,
+            linkerSettings: [
+                .linkedFramework("CoreMIDI", .when(platforms: [.macOS])),
+            ]
         ),
 
         // ── World Model demo (synthetic-task JEPA+MPC, CoreML/ANE) ────────
@@ -363,6 +387,13 @@ let package = Package(
             name: "BCIPeerBridgeTests",
             dependencies: ["BCIPeerBridge", "BCICore"],
             path: "Tests/BCIPeerBridgeTests"
+        ),
+        .testTarget(
+            name: "BCIBiofeedbackTests",
+            // BCIEEG for the OSCMessage type and MuseOSCDecoder, which the
+            // encoder round-trip and mirror tests decode against.
+            dependencies: ["BCIBiofeedback", "BCICore", "BCIEEG"],
+            path: "Tests/BCIBiofeedbackTests"
         ),
         .testTarget(
             name: "WorldModelDemoTests",
