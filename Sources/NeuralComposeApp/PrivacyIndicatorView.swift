@@ -58,6 +58,10 @@ struct PrivacyIndicatorView: View {
     @Binding var hypnagogicMode: HypnagogicMode
     @Binding var hypnagogicRuntimePreference: HypnagogicRuntimePreference
     var hypnagogicRuntimeDiagnostics: HypnagogicRuntimeDiagnostics
+    /// Biofeedback egress tier resolved at launch (ADR-011, registry entry
+    /// 10). Read-only here: it is env-var configured until the mapping UI
+    /// lands. `.disabled` hides the badge and the Network row line.
+    var biofeedback: BiofeedbackConfiguration = .disabled
     /// Latest app-watchdog snapshot for the degraded badge (read-only display).
     var health: HealthSnapshot? = nil
     var onReconnectMuse: () -> Void = {}
@@ -78,6 +82,7 @@ struct PrivacyIndicatorView: View {
                 worldModelDemoBadge
                 spokenLoopBadge
                 hypnagogicLoopBadge
+                biofeedbackBadge
                 voiceBadge
                 cmdBadge
                 if !isReconnecting && (mode.acquisition == .synthetic || lastError != nil) {
@@ -135,13 +140,24 @@ struct PrivacyIndicatorView: View {
                     }
                     GridRow {
                         Text("Network").bold()
-                        if hypnagogicLoopEnabled {
+                        if hypnagogicLoopEnabled || biofeedback.isEnabled {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("\(hypnagogicRuntimeDiagnostics.configuration.providerLabel) active — Hypnagogic (\(hypnagogicMode.label))")
-                                    .foregroundStyle(hypnagogicRuntimeDiagnostics.configuration.runtimeName.lowercased() == "ollama" ? .orange : .red)
-                                Text(hypnagogicRuntimeEgressDescription)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                if hypnagogicLoopEnabled {
+                                    Text("\(hypnagogicRuntimeDiagnostics.configuration.providerLabel) active — Hypnagogic (\(hypnagogicMode.label))")
+                                        .foregroundStyle(hypnagogicRuntimeDiagnostics.configuration.runtimeName.lowercased() == "ollama" ? .orange : .red)
+                                    Text(hypnagogicRuntimeEgressDescription)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                // Biofeedback egress lines (ADR-011): MIDI and
+                                // loopback stay on the machine (orange, like a
+                                // local runtime); a LAN host and the raw EEG
+                                // toggle are the two things worth red.
+                                ForEach(biofeedback.statusLines, id: \.self) { line in
+                                    Text(line)
+                                        .font(.caption2)
+                                        .foregroundStyle(biofeedbackLineColor(line))
+                                }
                             }
                         } else {
                             Text("Disabled at runtime").foregroundStyle(.green)
@@ -508,6 +524,29 @@ struct PrivacyIndicatorView: View {
                 .background(Color.red.opacity(0.18))
                 .cornerRadius(4)
         }
+    }
+
+    /// Biofeedback egress badge. Orange for the in-machine tiers (MIDI,
+    /// OSC loopback), red for a LAN destination or when raw EEG is being
+    /// re-broadcast; hidden when the feature is off.
+    @ViewBuilder
+    private var biofeedbackBadge: some View {
+        if biofeedback.isEnabled {
+            let hot = biofeedback.tier == .lan || biofeedback.includeRawEEG
+            Label(biofeedback.badgeLabel, systemImage: "waveform.path")
+                .font(.caption)
+                .foregroundStyle(hot ? Color.red : Color.orange)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background((hot ? Color.red : Color.orange).opacity(0.15))
+                .cornerRadius(4)
+                .help(biofeedback.statusLines.joined(separator: "\n"))
+        }
+    }
+
+    private func biofeedbackLineColor(_ line: String) -> Color {
+        if line.hasPrefix("Raw ") || line.hasSuffix("(LAN)") { return .red }
+        return .orange
     }
 
     /// Transient, event-driven badge — visible only while the mic is

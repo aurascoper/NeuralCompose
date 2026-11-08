@@ -208,7 +208,7 @@ let package = Package(
         // ── Application ──────────────────────────────────────────────────
         .executableTarget(
             name: "NeuralComposeApp",
-            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice", "BCICloudBridge", "BCIPeerBridge", "WorldModelDemo"],
+            dependencies: ["BCICore", "BCIEEG", "BCIBridge", "BCIClassifier", "BCILLM", "BCIVoice", "BCICloudBridge", "BCIPeerBridge", "BCIBiofeedback", "WorldModelDemo"],
             path: "Sources/NeuralComposeApp",
             // Info.plist lives in Resources/ for reference / Xcode builds but
             // is intentionally NOT declared as a SwiftPM resource: SwiftPM
@@ -402,7 +402,7 @@ let package = Package(
         ),
         .testTarget(
             name: "NeuralComposeAppTests",
-            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice", "BCIPeerBridge", "BCICloudBridge"],
+            dependencies: ["NeuralComposeApp", "BCICore", "BCIEEG", "BCIClassifier", "BCILLM", "BCIVoice", "BCIPeerBridge", "BCICloudBridge", "BCIBiofeedback"],
             path: "Tests/NeuralComposeAppTests"
         ),
     ],

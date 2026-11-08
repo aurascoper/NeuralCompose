@@ -5,6 +5,7 @@ import BCIEEG
 import BCIClassifier
 import BCILLM
 import BCIVoice
+import BCIBiofeedback
 import WorldModelDemo
 
 /// Composition root. Knows nothing about SwiftUI; constructs the pipeline
@@ -65,6 +66,17 @@ public struct AppContainer: Sendable {
     /// absent or malformed). Kept for the hypnagogic listener, which the view
     /// model builds lazily and which reads the recognition vocabulary from it.
     public let voiceProfile: VoiceProfile?
+    /// Biofeedback egress (ADR-011, registry entry 10). `nil` unless the
+    /// launch environment enabled at least one transport, so constructing an
+    /// `AppContainer` directly (tests, previews) never opens a UDP socket or
+    /// a CoreMIDI port. When present, `AppViewModel` feeds it the raw window
+    /// (before channel substitution), the classifier's intent, IMU samples,
+    /// and, only with the explicit raw toggle, raw EEG samples.
+    public let biofeedback: BiofeedbackCoordinator?
+    /// The resolved egress configuration, kept beside the coordinator so the
+    /// privacy indicator can name the tier (MIDI, loopback, LAN) and the raw
+    /// toggle without reaching into the actor.
+    public let biofeedbackConfiguration: BiofeedbackConfiguration
 
     public var pipelineMode: PipelineMode {
         PipelineMode(
@@ -116,9 +128,13 @@ public struct AppContainer: Sendable {
         worldModelDemoResolved: WorldModelDemoFactory.Resolved = .init(
             engine: BaselineWorldModelDemoPlanner(), kind: .baseline, warning: nil
         ),
-        voiceProfile: VoiceProfile? = nil
+        voiceProfile: VoiceProfile? = nil,
+        biofeedback: BiofeedbackCoordinator? = nil,
+        biofeedbackConfiguration: BiofeedbackConfiguration = .disabled
     ) {
         self.voiceProfile = voiceProfile
+        self.biofeedback = biofeedback
+        self.biofeedbackConfiguration = biofeedbackConfiguration
         self.streamResolved = streamResolved
         self.classifierResolved = classifierResolved
         self.predictorResolved = predictorResolved
@@ -229,6 +245,12 @@ public struct AppContainer: Sendable {
         let worldModelDemo = WorldModelDemoFactory.live()
         BCILog.worldModelDemo.notice("world model demo backend: \(worldModelDemo.kind.rawValue, privacy: .public)")
 
+        // Biofeedback egress: off unless the environment says otherwise.
+        // Resolved last; it depends on nothing above and nothing above may
+        // depend on it (ADR-011: imported only by the app target).
+        let biofeedbackConfiguration = BiofeedbackConfiguration.resolve(environment: ProcessInfo.processInfo.environment)
+        let biofeedback = await makeBiofeedback(configuration: biofeedbackConfiguration)
+
         return AppContainer(
             streamResolved: stream,
             classifierResolved: classifier,
@@ -244,7 +266,61 @@ public struct AppContainer: Sendable {
             interactionLogger: interactionLogger,
             jepaTransitionCapture: jepaTransitionCapture,
             worldModelDemoResolved: worldModelDemo,
-            voiceProfile: voiceProfile
+            voiceProfile: voiceProfile,
+            biofeedback: biofeedback,
+            biofeedbackConfiguration: biofeedbackConfiguration
+        )
+    }
+
+    /// Builds the egress coordinator for a configuration, or `nil` when no
+    /// transport is enabled or every enabled transport failed to open. Each
+    /// transport logs its destination at `.notice` so a session log always
+    /// records where features were sent (ADR-011 §3).
+    static func makeBiofeedback(configuration: BiofeedbackConfiguration) async -> BiofeedbackCoordinator? {
+        guard configuration.isEnabled else { return nil }
+        var sinks: [any BiofeedbackSink] = []
+
+        if let osc = configuration.osc {
+            let sender = OSCUDPSender(host: osc.host, port: osc.port)
+            await sender.start()
+            sinks.append(sender)
+            BCILog.pipeline.notice("biofeedback OSC egress -> \(osc.endpoint, privacy: .public) (\(osc.isLoopback ? "loopback" : "LAN", privacy: .public))\(configuration.includeRawEEG ? ", raw /muse/eeg ON" : "", privacy: .public)")
+        }
+
+        if configuration.midi {
+            #if canImport(CoreMIDI)
+            do {
+                let source = try CoreMIDIVirtualSource()
+                sinks.append(source)
+                BCILog.pipeline.notice("biofeedback MIDI egress: virtual source \"\(source.name, privacy: .public)\" (in-machine)")
+            } catch {
+                BCILog.pipeline.error("biofeedback MIDI egress unavailable: \(String(describing: error), privacy: .public)")
+            }
+            #else
+            BCILog.pipeline.error("biofeedback MIDI egress requested but CoreMIDI is unavailable on this platform")
+            #endif
+        }
+
+        guard !sinks.isEmpty else { return nil }
+
+        var mappings: [BiofeedbackMapping] = []
+        if let path = configuration.mappingsPath {
+            do {
+                mappings = try BiofeedbackConfiguration.loadMappings(at: path)
+                BCILog.pipeline.notice("biofeedback mappings: \(mappings.count, privacy: .public) from \(path, privacy: .public)")
+            } catch {
+                BCILog.pipeline.error("biofeedback mappings not loaded from \(path, privacy: .public): \(String(describing: error), privacy: .public)")
+            }
+        }
+
+        let options = BiofeedbackCoordinator.Options(
+            mirror: MindMonitorMirror(perChannel: configuration.perChannel),
+            includeRawEEG: configuration.includeRawEEG
+        )
+        return BiofeedbackCoordinator(
+            sink: sinks.count == 1 ? sinks[0] : CompositeBiofeedbackSink(sinks),
+            mappings: mappings,
+            options: options
         )
     }
 

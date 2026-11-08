@@ -92,17 +92,28 @@ public struct MindMonitorMirror: Sendable, Hashable, Codable {
             arguments: MindMonitorMirror.channelOrder.map { .float(MindMonitorMirror.horseshoe(frame.status(of: $0))) }
         ))
 
-        if frame.blink {
-            messages.append(OSCMessage(address: MindMonitorMirror.blinkAddress, arguments: [.int32(1)]))
-        }
-        if frame.jawClench {
-            messages.append(OSCMessage(address: MindMonitorMirror.jawClenchAddress, arguments: [.int32(1)]))
-        }
+        messages += MindMonitorMirror.eventMessages(blink: frame.blink, jawClench: frame.jawClench)
         if let accel = frame.accel {
             messages.append(OSCMessage(address: MindMonitorMirror.accelAddress, arguments: [.float(accel.x), .float(accel.y), .float(accel.z)]))
         }
         if let gyro = frame.gyro {
             messages.append(OSCMessage(address: MindMonitorMirror.gyroAddress, arguments: [.float(gyro.x), .float(gyro.y), .float(gyro.z)]))
+        }
+        return messages
+    }
+
+    /// The two Track A event messages, sent only when true, in Mind Monitor's
+    /// shape (one int32 of 1). Split out from `messages(for:)` so
+    /// `BiofeedbackCoordinator` can emit events on the classifier's tick
+    /// without re-sending the band and horseshoe messages of the window
+    /// that preceded it.
+    public static func eventMessages(blink: Bool, jawClench: Bool) -> [OSCMessage] {
+        var messages: [OSCMessage] = []
+        if blink {
+            messages.append(OSCMessage(address: blinkAddress, arguments: [.int32(1)]))
+        }
+        if jawClench {
+            messages.append(OSCMessage(address: jawClenchAddress, arguments: [.int32(1)]))
         }
         return messages
     }
