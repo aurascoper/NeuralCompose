@@ -1,6 +1,6 @@
 # NeuralCompose
 
-Privacy-first, fully on-device macOS prototype for **EEG-driven communication**. A Muse headband streams brain signals through BrainFlow, a Core ML classifier on the Apple Neural Engine detects intent (jaw clench / blink / rest / select), and a local MLX LLM suggests next words. The user "types" by letting a cycling 3-token carousel highlight a candidate, then committing with a brain-signal selection. **No network at runtime. No cloud. No telemetry.**
+Privacy-first, fully on-device macOS prototype for **EEG-driven communication**. A Muse headband streams brain signals through BrainFlow, a Core ML classifier on the Apple Neural Engine detects intent (jaw clench / blink / rest / select), and a local MLX LLM suggests next words. The user "types" by letting a cycling 3-token carousel highlight a candidate, then committing with a brain-signal selection. **No cloud. No telemetry. Network egress only through the three registered exceptions (registry entries 8, 9, and 10).**
 
 ## Stack
 - Swift 6.0, macOS 14+, SwiftPM (no Xcode project needed for the default build)
@@ -22,6 +22,7 @@ Only the non-obvious constraints; the directory tree speaks for itself otherwise
 - `Sources/BCIBridge/` — Obj-C++ shim for BrainFlow. Default builds with `BCI_BRIDGE_STUB`; define `BCI_BRAINFLOW_AVAILABLE` + `-lBrainflow` to wire in the real library.
 - `Sources/BCICore/` — pure-Swift, **no third-party deps** (protocols, models, ring buffer, intent FSM)
 - `Sources/BCILLM/` — **isolated MLX adapter**; ONLY target that imports MLX/transformers
+- `Sources/BCIBiofeedback/` : biofeedback egress (ADR-011): `BandPowerEstimator` -> `BiofeedbackFrame` -> `FeatureMapper` (health-gated mappings) / `MindMonitorMirror` (Mind Monitor-compatible OSC) -> `BiofeedbackSink` conformers (`OSCUDPSender`, `CoreMIDIVirtualSource`, recording/null stubs). Off by default; derived features only, never raw EEG unless the explicit raw toggle is on
 - `WorldModel/` — **decoupled research spike** (PyTorch, not MLX; no dependency on `Sources/`) — constraints live in `WorldModel/CLAUDE.md` (auto-loads when working there)
 - `HARDWARE_SETUP.md`, `MODEL_SETUP.md`, `CALIBRATION.md`, `TROUBLESHOOTING.md` — operational docs (keep up to date)
 
