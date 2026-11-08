@@ -23,6 +23,12 @@ public enum AppCommand: Sendable, Equatable, Hashable {
     case beginSleepProtocol
     case resetComposition
     case speak
+    /// Transport: voice the last utterance again (the last thing the app or
+    /// the active hypnagogic loop spoke; the composed sentence when nothing
+    /// has been spoken yet). Re-speaks only, never regenerates.
+    case repeatLastUtterance
+    /// Transport: step the speech rate down for this and later utterances.
+    case slowDownSpeech
     case refine
     case startDictation
     case stopDictation
@@ -52,6 +58,8 @@ extension AppCommand {
         case .beginSleepProtocol: return "protocol.sleep-begin"
         case .resetComposition:   return "composition.reset"
         case .speak:              return "tts.speak"
+        case .repeatLastUtterance: return "tts.repeat"
+        case .slowDownSpeech:     return "tts.slow-down"
         case .refine:             return "refine.run"
         case .startDictation:     return "dictation.start"
         case .stopDictation:      return "dictation.stop"

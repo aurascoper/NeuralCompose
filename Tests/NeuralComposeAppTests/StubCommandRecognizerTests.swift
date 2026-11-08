@@ -90,6 +90,28 @@ final class StubCommandRecognizerTests: XCTestCase {
         XCTAssertEqual(recognizer.recognize("improve it", in: vocab), .refine)
     }
 
+    // MARK: - Transport commands
+
+    func testTransportPhrasesResolve() {
+        XCTAssertEqual(recognizer.recognize("say that again", in: vocab), .repeatLastUtterance)
+        XCTAssertEqual(recognizer.recognize("repeat that", in: vocab), .repeatLastUtterance)
+        XCTAssertEqual(recognizer.recognize("what did you say", in: vocab), .repeatLastUtterance)
+        XCTAssertEqual(recognizer.recognize("slow down", in: vocab), .slowDownSpeech)
+        XCTAssertEqual(recognizer.recognize("speak slower", in: vocab), .slowDownSpeech)
+        XCTAssertEqual(recognizer.recognize("too fast", in: vocab), .slowDownSpeech)
+    }
+
+    func testExactAliasBeatsALongerAliasItPrefixes() {
+        // "say" is a .speak alias and the first word of "say that again"
+        // (.repeatLastUtterance). The longest-prefix rule is for truncated
+        // phrases; an exact alias is the whole phrase and wins.
+        XCTAssertEqual(recognizer.recognize("say", in: vocab), .speak)
+        XCTAssertEqual(recognizer.recognize("say please", in: vocab), .speak)
+        // A truncation that no exact alias claims still resolves by the
+        // longest alias it prefixes.
+        XCTAssertEqual(recognizer.recognize("say that", in: vocab), .slowDownSpeech)
+    }
+
     func testSynonymAliasesMatch() {
         XCTAssertEqual(recognizer.recognize("begin recording", in: vocab), .startRecording)
         XCTAssertEqual(recognizer.recognize("end recording", in: vocab), .stopRecording)

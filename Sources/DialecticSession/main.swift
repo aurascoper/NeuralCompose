@@ -9,6 +9,7 @@ import Foundation
 //
 // Usage:
 //   dialectic-session [--runtime R] [--model M] [--dry-run] <profile> <out.jsonl> <heard...>
+//   dialectic-session [--runtime R] [--model M] --seed-file <path> <profile> <out.jsonl> [heard...]
 //   dialectic-session --runtime-report [--runtime R] [--model M]
 //   dialectic-session --dry-run [--runtime R] [--model M] [profile]
 //
@@ -84,9 +85,10 @@ if opts.dryRun {
     }
 }
 
-// Live path: positional contract (profile, out.jsonl, heard...).
-// `opts` already carries the parsed values; no need to re-parse
-// `CommandLine.arguments` (which would treat `--runtime` and
+// Live path: positional contract (profile, out.jsonl, heard...), with any
+// `--seed-file` lines already folded into `opts.heardLines` ahead of the
+// positional ones. `opts` already carries the parsed values; no need to
+// re-parse `CommandLine.arguments` (which would treat `--runtime` and
 // `--model` as positional).
 guard let profile = ContextProfile(rawValue: opts.profile) else {
     FileHandle.standardError.write(Data("error: invalid profile '\(opts.profile)'\n".utf8))
@@ -142,7 +144,8 @@ let witnessGenerator: GenerationRuntimeTextGeneratingAdapter? = witnessPrompt.ma
 }
 
 print("● dialectic-session — profile=\(profile.rawValue) witness=\(profile.witnessEnabled) "
-      + "runtime=\(opts.runtime) model=\(opts.model) turns=\(heardLines.count) → \(outPath)")
+      + "runtime=\(opts.runtime) model=\(opts.model) turns=\(heardLines.count) → \(outPath)"
+      + (opts.seedFilePath.map { " seed-file=\($0)" } ?? ""))
 
 // Fail fast if the output file can't be opened.
 guard let logger = FileLogger(outPath) else { exit(1) }

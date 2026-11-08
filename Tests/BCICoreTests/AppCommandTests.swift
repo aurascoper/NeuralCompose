@@ -35,6 +35,8 @@ final class AppCommandTests: XCTestCase {
             .beginSleepProtocol,
             .resetComposition,
             .speak,
+            .repeatLastUtterance,
+            .slowDownSpeech,
             .refine,
             .startDictation,
             .stopDictation,
@@ -57,6 +59,8 @@ final class AppCommandTests: XCTestCase {
             .beginSleepProtocol,
             .resetComposition,
             .speak,
+            .repeatLastUtterance,
+            .slowDownSpeech,
             .refine,
             .startDictation,
             .stopDictation,
@@ -83,6 +87,8 @@ final class AppCommandTests: XCTestCase {
             .beginSleepProtocol,
             .resetComposition,
             .speak,
+            .repeatLastUtterance,
+            .slowDownSpeech,
             .refine,
             .startDictation,
             .stopDictation,
@@ -106,6 +112,8 @@ final class AppCommandTests: XCTestCase {
         XCTAssertEqual(AppCommand.beginSleepProtocol.id, "protocol.sleep-begin")
         XCTAssertEqual(AppCommand.resetComposition.id,   "composition.reset")
         XCTAssertEqual(AppCommand.speak.id,              "tts.speak")
+        XCTAssertEqual(AppCommand.repeatLastUtterance.id, "tts.repeat")
+        XCTAssertEqual(AppCommand.slowDownSpeech.id,     "tts.slow-down")
         XCTAssertEqual(AppCommand.refine.id,             "refine.run")
         XCTAssertEqual(AppCommand.startDictation.id,     "dictation.start")
         XCTAssertEqual(AppCommand.stopDictation.id,      "dictation.stop")

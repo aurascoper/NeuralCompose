@@ -31,6 +31,12 @@ final class AppCommandDispatcherTests: XCTestCase {
         func speak() async {
             callLog.append("speak")
         }
+        func repeatLastUtterance() async {
+            callLog.append("repeatLastUtterance")
+        }
+        func slowDownSpeech() async {
+            callLog.append("slowDownSpeech")
+        }
         func refineComposedText() async {
             callLog.append("refineComposedText")
         }
@@ -104,6 +110,18 @@ final class AppCommandDispatcherTests: XCTestCase {
         XCTAssertEqual(spy.callLog, ["speak"])
     }
 
+    func testRepeatLastUtteranceCallsRepeatLastUtterance() async {
+        let (d, spy) = makeDispatcher()
+        await d.perform(.repeatLastUtterance)
+        XCTAssertEqual(spy.callLog, ["repeatLastUtterance"])
+    }
+
+    func testSlowDownSpeechCallsSlowDownSpeech() async {
+        let (d, spy) = makeDispatcher()
+        await d.perform(.slowDownSpeech)
+        XCTAssertEqual(spy.callLog, ["slowDownSpeech"])
+    }
+
     func testRefineCallsRefineComposedText() async {
         let (d, spy) = makeDispatcher()
         await d.perform(.refine)
@@ -173,6 +191,8 @@ final class AppCommandDispatcherTests: XCTestCase {
             .stopRecording,
             .resetComposition,
             .speak,
+            .repeatLastUtterance,
+            .slowDownSpeech,
             .refine,
             .startDictation,
             .stopDictation,
@@ -220,7 +240,7 @@ final class AppCommandDispatcherTests: XCTestCase {
     func testDispatcherExposesItsCommandDescriptors() {
         let (d, _) = makeDispatcher()
         let vocab = d.commandDescriptors
-        XCTAssertEqual(vocab.count, 12, "default vocabulary should have 12 entries (10 existing + startCommand + stopCommand)")
+        XCTAssertEqual(vocab.count, 14, "default vocabulary should have 14 entries (12 existing + repeatLastUtterance + slowDownSpeech)")
         // Every case in the enum has a descriptor.
         let caseSet = Set(vocab.map { $0.command })
         let allCases = AppCommand.allCasesForTesting
@@ -248,6 +268,8 @@ extension AppCommand {
             .beginSleepProtocol,
             .resetComposition,
             .speak,
+            .repeatLastUtterance,
+            .slowDownSpeech,
             .refine,
             .startDictation,
             .stopDictation,

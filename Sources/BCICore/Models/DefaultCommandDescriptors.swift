@@ -79,6 +79,32 @@ public enum DefaultCommandDescriptors {
                 "say",
             ]
         ),
+        // Transport commands. These are what people say back to the voice in
+        // the interaction logs; without them "say that again" was sent to the
+        // generators as a prompt. The first alias of each is the phrase the
+        // logs record most.
+        CommandDescriptor(
+            command: .repeatLastUtterance,
+            title: "Repeat Last Utterance",
+            aliases: [
+                "say that again",
+                "repeat that",
+                "repeat last",
+                "say again",
+                "what did you say",
+            ]
+        ),
+        CommandDescriptor(
+            command: .slowDownSpeech,
+            title: "Slow Down Speech",
+            aliases: [
+                "slow down",
+                "speak slower",
+                "slower",
+                "say that slower",
+                "too fast",
+            ]
+        ),
         CommandDescriptor(
             command: .refine,
             title: "Refine",

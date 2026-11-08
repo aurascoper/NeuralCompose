@@ -108,6 +108,8 @@ final class AppViewModelVoiceCommandTests: XCTestCase {
         func startImaginedSpeechSession() async { callLog.append("startImaginedSpeechSession") }
         func resetComposition() async { callLog.append("resetComposition") }
         func speak() async { callLog.append("speak") }
+        func repeatLastUtterance() async { callLog.append("repeatLastUtterance") }
+        func slowDownSpeech() async { callLog.append("slowDownSpeech") }
         func refineComposedText() async { callLog.append("refineComposedText") }
         func startDictation() async { callLog.append("startDictation") }
         func stopDictation() async { callLog.append("stopDictation") }
@@ -333,5 +335,39 @@ final class AppViewModelVoiceCommandTests: XCTestCase {
         XCTAssertNil(viewModel.commandWarning)
         XCTAssertEqual(recognizer.callLog, ["requestAuthorization", "startCommand", "cancelCommand"])
         XCTAssertTrue(dispatchSpy.callLog.isEmpty, "cancel should never reach the dispatcher")
+    }
+
+    // MARK: - Transport commands & typed-prompt privacy contract
+
+    func testTypedPromptInputEnqueuesWithoutRequestingMicAuthorizationAndRetainsRuntimeDisclosure() async {
+        let recognizer = SpyVoiceCommandRecognizer()
+        recognizer.authorizationResult = false
+        let viewModel = await makeViewModel(recognizer: recognizer)
+
+        viewModel.dialecticInputSource = .typedPrompt
+        await viewModel.submitTypedPrompt("  What is the phase-space horizon?  ")
+
+        let pending = await viewModel.typedPromptListener.pendingCount()
+        XCTAssertEqual(pending, 1, "typed prompt should be queued in TypedPromptListener")
+        XCTAssertTrue(
+            recognizer.callLog.isEmpty,
+            "selecting typedPrompt and submitting text must never request mic/speech authorization"
+        )
+        // Cloud/runtime disclosure remains intact when switching to typed prompts.
+        XCTAssertFalse(viewModel.hypnagogicRuntimeDiagnostics.configuration.runtimeName.isEmpty)
+    }
+
+    func testSlowDownSpeechStepsDownScaleToFloorViaSpeechRatePolicy() async {
+        let recognizer = SpyVoiceCommandRecognizer()
+        let viewModel = await makeViewModel(recognizer: recognizer)
+
+        XCTAssertEqual(viewModel.speechRateScale, 1.0, accuracy: 1e-6)
+        await viewModel.slowDownSpeech()
+        XCTAssertEqual(viewModel.speechRateScale, 1.0 - SpeechRatePolicy.scaleStep, accuracy: 1e-6)
+
+        for _ in 0..<6 {
+            await viewModel.slowDownSpeech()
+        }
+        XCTAssertEqual(viewModel.speechRateScale, SpeechRatePolicy.minimumScale, accuracy: 1e-6)
     }
 }
