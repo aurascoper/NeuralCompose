@@ -393,7 +393,11 @@ let package = Package(
             // BCIEEG for the OSCMessage type and MuseOSCDecoder, which the
             // encoder round-trip and mirror tests decode against.
             dependencies: ["BCIBiofeedback", "BCICore", "BCIEEG"],
-            path: "Tests/BCIBiofeedbackTests"
+            path: "Tests/BCIBiofeedbackTests",
+            // Fixtures/*.json are read by file path (relative to #filePath)
+            // like BCIEEGTests' reference_pipeline.json, so they are excluded
+            // rather than bundled as SwiftPM resources.
+            exclude: ["Fixtures"]
         ),
         .testTarget(
             name: "WorldModelDemoTests",

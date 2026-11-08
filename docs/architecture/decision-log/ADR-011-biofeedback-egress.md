@@ -206,6 +206,13 @@ with the fixtures as acceptance. Rejected for now.
 - `Sources/BCIEEG/OSC/OSCEncoder.swift`: the production encoder, mirror
   of `MuseOSCDecoder`.
 - Tests: `Tests/BCIBiofeedbackTests/*`, `Tests/BCIEEGTests/OSCEncoderTests.swift`.
+- Replay evidence (Principle 3): `GoldenEgressReplayTests` pins the golden
+  recording's 303 windows (health tallies, three spot windows, every
+  window's Bels and mapper output in `Fixtures/golden_egress_v1.json`);
+  `MuseValidationAlphaTests` checks eyes-closed alpha doubles on TP9 and
+  TP10 and not on AF7 and AF8 in the `alpha_pass: true` sessions, with
+  013820 as the expected negative (`Fixtures/muse_validation_alpha_v1.json`).
+  Both read the gitignored recordings and skip when absent.
 - `Evaluation/reports/decision_registry.md` entry 10.
 
 ## Change protocol for this ADR

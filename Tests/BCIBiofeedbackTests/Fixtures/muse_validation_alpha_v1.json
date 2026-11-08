@@ -1,0 +1,214 @@
+{
+  "sessions" : [
+    {
+      "channels" : {
+        "AF7" : {
+          "closedMeanBels" : 1.1628113,
+          "closedMedianBels" : 1.1427163,
+          "openMeanBels" : 1.2071356,
+          "openMedianBels" : 1.2518879
+        },
+        "AF8" : {
+          "closedMeanBels" : 1.2012099,
+          "closedMedianBels" : 1.1876851,
+          "openMeanBels" : 1.162716,
+          "openMedianBels" : 1.1641926
+        },
+        "TP10" : {
+          "closedMeanBels" : 1.1799974,
+          "closedMedianBels" : 1.186709,
+          "openMeanBels" : 1.1756805,
+          "openMedianBels" : 1.1798713
+        },
+        "TP9" : {
+          "closedMeanBels" : 1.1957399,
+          "closedMedianBels" : 1.197246,
+          "openMeanBels" : 1.2121084,
+          "openMedianBels" : 1.2001603
+        }
+      },
+      "closedWindows" : 29,
+      "maxIntraSegmentGap" : 124.407478,
+      "openClosedBoundaryGap" : -12.186603,
+      "openWindows" : 29,
+      "rowCount" : 20480,
+      "session" : "muse_validation_20260710-004345"
+    },
+    {
+      "channels" : {
+        "AF7" : {
+          "closedMeanBels" : 0.86350787,
+          "closedMedianBels" : 0.8829258,
+          "openMeanBels" : 0.61273056,
+          "openMedianBels" : 0.6007746
+        },
+        "AF8" : {
+          "closedMeanBels" : 0.69149107,
+          "closedMedianBels" : 0.693334,
+          "openMeanBels" : 0.59288585,
+          "openMedianBels" : 0.6197864
+        },
+        "TP10" : {
+          "closedMeanBels" : 1.6265401,
+          "closedMedianBels" : 1.7006164,
+          "openMeanBels" : 1.2633278,
+          "openMedianBels" : 1.2366877
+        },
+        "TP9" : {
+          "closedMeanBels" : 1.6504335,
+          "closedMedianBels" : 1.7037543,
+          "openMeanBels" : 1.2422476,
+          "openMedianBels" : 1.1389204
+        }
+      },
+      "closedWindows" : 29,
+      "maxIntraSegmentGap" : 0.00616908073425293,
+      "openClosedBoundaryGap" : 3.2294018268585205,
+      "openWindows" : 29,
+      "rowCount" : 20480,
+      "session" : "muse_validation_20260710-004400"
+    },
+    {
+      "channels" : {
+        "AF7" : {
+          "closedMeanBels" : 4.5521398,
+          "closedMedianBels" : 4.583882,
+          "openMeanBels" : 4.5368295,
+          "openMedianBels" : 4.609186
+        },
+        "AF8" : {
+          "closedMeanBels" : 0.6323093,
+          "closedMedianBels" : 0.6712124,
+          "openMeanBels" : 0.5565753,
+          "openMedianBels" : 0.570149
+        },
+        "TP10" : {
+          "closedMeanBels" : 1.615241,
+          "closedMedianBels" : 1.8101693,
+          "openMeanBels" : 1.0654714,
+          "openMedianBels" : 1.0668612
+        },
+        "TP9" : {
+          "closedMeanBels" : 1.3205372,
+          "closedMedianBels" : 1.2936194,
+          "openMeanBels" : 1.1898112,
+          "openMedianBels" : 1.2061517
+        }
+      },
+      "closedWindows" : 29,
+      "maxIntraSegmentGap" : 0.006300926208496094,
+      "openClosedBoundaryGap" : 3.2443840503692627,
+      "openWindows" : 29,
+      "rowCount" : 21248,
+      "session" : "muse_validation_20260710-013446"
+    },
+    {
+      "alphaPass" : false,
+      "channels" : {
+        "AF7" : {
+          "closedMeanBels" : 5.151505,
+          "closedMedianBels" : 5.1434927,
+          "openMeanBels" : 5.0885944,
+          "openMedianBels" : 5.265174
+        },
+        "AF8" : {
+          "closedMeanBels" : 0.5562445,
+          "closedMedianBels" : 0.5603571,
+          "openMeanBels" : 0.75695175,
+          "openMedianBels" : 0.6509377
+        },
+        "TP10" : {
+          "closedMeanBels" : 1.517766,
+          "closedMedianBels" : 1.519019,
+          "openMeanBels" : 1.4168241,
+          "openMedianBels" : 1.2767777
+        },
+        "TP9" : {
+          "closedMeanBels" : 1.5534751,
+          "closedMedianBels" : 1.519179,
+          "openMeanBels" : 1.6610582,
+          "openMedianBels" : 1.4575857
+        }
+      },
+      "closedWindows" : 29,
+      "maxIntraSegmentGap" : 0.005915164947509766,
+      "openClosedBoundaryGap" : 3.244307041168213,
+      "openWindows" : 29,
+      "rowCount" : 21248,
+      "session" : "muse_validation_20260710-013820"
+    },
+    {
+      "alphaPass" : true,
+      "channels" : {
+        "AF7" : {
+          "closedMeanBels" : 5.2349396,
+          "closedMedianBels" : 5.2521973,
+          "openMeanBels" : 5.303242,
+          "openMedianBels" : 5.3750105
+        },
+        "AF8" : {
+          "closedMeanBels" : 0.6692484,
+          "closedMedianBels" : 0.6834955,
+          "openMeanBels" : 0.5091705,
+          "openMedianBels" : 0.48019785
+        },
+        "TP10" : {
+          "closedMeanBels" : 1.6482562,
+          "closedMedianBels" : 1.6472626,
+          "openMeanBels" : 1.2033712,
+          "openMedianBels" : 1.0821176
+        },
+        "TP9" : {
+          "closedMeanBels" : 1.582542,
+          "closedMedianBels" : 1.6463454,
+          "openMeanBels" : 1.198579,
+          "openMedianBels" : 1.1848251
+        }
+      },
+      "closedWindows" : 29,
+      "maxIntraSegmentGap" : 0.006318092346191406,
+      "openClosedBoundaryGap" : 3.244736909866333,
+      "openWindows" : 29,
+      "rowCount" : 21248,
+      "session" : "muse_validation_20260710-014223"
+    },
+    {
+      "alphaPass" : true,
+      "channels" : {
+        "AF7" : {
+          "closedMeanBels" : 5.1181884,
+          "closedMedianBels" : 5.1977086,
+          "openMeanBels" : 5.2981906,
+          "openMedianBels" : 5.347684
+        },
+        "AF8" : {
+          "closedMeanBels" : 0.5456802,
+          "closedMedianBels" : 0.4743655,
+          "openMeanBels" : 0.5433463,
+          "openMedianBels" : 0.5762776
+        },
+        "TP10" : {
+          "closedMeanBels" : 1.5353314,
+          "closedMedianBels" : 1.5816242,
+          "openMeanBels" : 1.2551749,
+          "openMedianBels" : 1.2100643
+        },
+        "TP9" : {
+          "closedMeanBels" : 1.5875185,
+          "closedMedianBels" : 1.6369286,
+          "openMeanBels" : 1.2755804,
+          "openMedianBels" : 1.2092782
+        }
+      },
+      "closedWindows" : 29,
+      "maxIntraSegmentGap" : 0.005194187164306641,
+      "openClosedBoundaryGap" : 3.1989572048187256,
+      "openWindows" : 29,
+      "rowCount" : 21248,
+      "session" : "muse_validation_20260710-015723"
+    }
+  ],
+  "strideSamples" : 256,
+  "version" : 1,
+  "windowSamples" : 512
+}
