@@ -21,6 +21,10 @@ public protocol AppCommandDispatchTarget: AnyObject {
     func startImaginedSpeechSession() async
     func resetComposition() async
     func speak() async
+    /// Transport: re-speak the last utterance (see `AppCommand.repeatLastUtterance`).
+    func repeatLastUtterance() async
+    /// Transport: step the speech rate down (see `AppCommand.slowDownSpeech`).
+    func slowDownSpeech() async
     func refineComposedText() async
     func startDictation() async
     func stopDictation() async

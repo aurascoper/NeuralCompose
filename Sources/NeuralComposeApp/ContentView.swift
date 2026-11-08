@@ -54,6 +54,7 @@ struct ContentView: View {
                 worldModelDemoEnabled: $viewModel.worldModelDemoEnabled,
                 spokenGenerationLoopEnabled: $viewModel.spokenGenerationLoopEnabled,
                 hypnagogicLoopEnabled: $viewModel.hypnagogicLoopEnabled,
+                hypnagogicInputIsTyped: viewModel.dialecticInputSource == .typedPrompt,
                 hypnagogicMode: $viewModel.hypnagogicMode,
                 hypnagogicRuntimePreference: $viewModel.hypnagogicRuntimePreference,
                 hypnagogicRuntimeDiagnostics: viewModel.hypnagogicRuntimeDiagnostics,
@@ -101,6 +102,15 @@ struct ContentView: View {
             if uiMode == .research {
                 Divider()
                 ImaginedSpeechCalibrationView(viewModel: viewModel)
+                    .transition(.opacity)
+            }
+
+            // Hypnagogic input: mic or typed prompts. Only while the loop is
+            // enabled; the typed field is the keyboard path into the same
+            // listen/generate/speak cadence.
+            if viewModel.hypnagogicLoopEnabled {
+                Divider()
+                TypedPromptPanel(viewModel: viewModel)
                     .transition(.opacity)
             }
 

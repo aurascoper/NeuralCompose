@@ -105,6 +105,20 @@ final class FuzzyCommandRecognizerTests: XCTestCase {
         XCTAssertEqual(recognizer.recognize("stop command listening", in: vocab), .stopCommand)
     }
 
+    // MARK: - Transport commands
+
+    func testTransportPhrasesResolveDistinctly() {
+        XCTAssertEqual(recognizer.recognize("say that again", in: vocab), .repeatLastUtterance)
+        XCTAssertEqual(recognizer.recognize("please repeat that", in: vocab), .repeatLastUtterance)
+        XCTAssertEqual(recognizer.recognize("slow down", in: vocab), .slowDownSpeech)
+        XCTAssertEqual(recognizer.recognize("say that slower", in: vocab), .slowDownSpeech)
+    }
+
+    func testSpeakAliasesStillWinOverTransportAliasesThatShareAWord() {
+        XCTAssertEqual(recognizer.recognize("say", in: vocab), .speak)
+        XCTAssertEqual(recognizer.recognize("say it", in: vocab), .speak)
+    }
+
     // MARK: - Vocabulary independence
 
     func testEmptyVocabReturnsNil() {

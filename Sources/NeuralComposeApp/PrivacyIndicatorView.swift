@@ -52,6 +52,11 @@ struct PrivacyIndicatorView: View {
     /// listening and sends transcript text only to its configured reference
     /// runtime; audio always remains on-device.
     @Binding var hypnagogicLoopEnabled: Bool
+    /// True while the loop takes typed prompts instead of the mic. The badge
+    /// then reads "Typed + Cloud": no audio is captured, but transcript text
+    /// still leaves the machine exactly as on the mic path. Defaults to false
+    /// so existing call sites keep the mic wording.
+    var hypnagogicInputIsTyped: Bool = false
     /// The interaction mode when enabled: `mirror` (plain reply) or
     /// `focused`/`reflective`/`contemplative` (the dialectic competition, two
     /// cloud calls/turn).
@@ -516,7 +521,8 @@ struct PrivacyIndicatorView: View {
     @ViewBuilder
     private var hypnagogicLoopBadge: some View {
         if hypnagogicLoopEnabled {
-            Label("Listening + Cloud", systemImage: "antenna.radiowaves.left.and.right")
+            Label(hypnagogicInputIsTyped ? "Typed + Cloud" : "Listening + Cloud",
+                  systemImage: hypnagogicInputIsTyped ? "keyboard" : "antenna.radiowaves.left.and.right")
                 .font(.caption)
                 .foregroundStyle(.red)
                 .padding(.horizontal, 8)

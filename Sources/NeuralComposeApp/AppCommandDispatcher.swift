@@ -70,6 +70,10 @@ public final class AppCommandDispatcher {
             await target.resetComposition()
         case .speak:
             await target.speak()
+        case .repeatLastUtterance:
+            await target.repeatLastUtterance()
+        case .slowDownSpeech:
+            await target.slowDownSpeech()
         case .refine:
             await target.refineComposedText()
         case .startDictation:

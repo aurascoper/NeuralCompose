@@ -141,3 +141,60 @@ public struct SpeechProsody: Sendable, Equatable, Codable {
         )
     }
 }
+
+/// Shared speech-rate control contract for the "slow down" transport command
+/// across both speaking surfaces, with two explicit adapters:
+///
+/// 1. **Multiplicative scale adapter (`scaled(_:by:)`)**: used by
+///    `AppViewModel.speak(text:)` over `ProsodyWobble.plan(_:)` phrases so
+///    the relative rate ratio between hedged and committed clauses survives.
+/// 2. **Additive offset adapter (`offset(_:by:)`)**: used by
+///    `HypnagogicDialecticLoop` over competition-blended pole prosodies so the
+///    cadence separation between the coherence and displacement poles is
+///    preserved rather than compressed toward zero.
+public enum SpeechRatePolicy: Sendable, Equatable {
+    /// Rate assumed when a prosody leaves `rate` as `nil` (synthesizer default).
+    public static let defaultSpeechRate: Float = 0.5
+
+    // MARK: - Multiplicative scale adapter (composed speech / ProsodyWobble)
+
+    /// Each "slow down" on the composed-speech surface lowers the scale by 0.15.
+    public static let scaleStep: Float = 0.15
+    /// Floor for the multiplicative scale multiplier.
+    public static let minimumScale: Float = 0.5
+
+    /// Steps a multiplicative rate scale down once, clamped to `minimumScale`.
+    public static func stepDownScale(_ currentScale: Float) -> Float {
+        max(minimumScale, currentScale - scaleStep)
+    }
+
+    /// Scales a planned prosody's rate by `scale` (1.0 leaves it unchanged).
+    public static func scaled(_ prosody: SpeechProsody, by scale: Float) -> SpeechProsody {
+        guard scale != 1.0 else { return prosody }
+        var copy = prosody
+        copy.rate = (prosody.rate ?? defaultSpeechRate) * scale
+        return copy
+    }
+
+    // MARK: - Additive offset adapter (dialectic competition prosody)
+
+    /// Each "slow down" in the dialectic loop subtracts 0.08 from the blended rate.
+    public static let offsetStep: Float = 0.08
+    /// Floor for the cumulative negative rate offset.
+    public static let maxSlowDownOffset: Float = -0.20
+    /// Absolute floor for an offset-adjusted rate so hypnagogic speech stays audible.
+    public static let minimumSpeechRate: Float = 0.25
+
+    /// Steps an additive rate offset down once, clamped to `maxSlowDownOffset`.
+    public static func stepDownOffset(_ currentOffset: Float) -> Float {
+        max(maxSlowDownOffset, currentOffset - offsetStep)
+    }
+
+    /// Applies an additive `offset` to `prosody.rate`, floored at `minimumSpeechRate`.
+    public static func offset(_ prosody: SpeechProsody, by offset: Float) -> SpeechProsody {
+        guard offset != 0 else { return prosody }
+        var copy = prosody
+        copy.rate = max(minimumSpeechRate, (prosody.rate ?? defaultSpeechRate) + offset)
+        return copy
+    }
+}

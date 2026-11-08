@@ -487,8 +487,46 @@ Some MLX, Core ML, live network, hardware, and operator-attended tests are inten
 | `NEURALCOMPOSE_RUNTIME` | Selects generation runtime, currently `claude` or `ollama` on the packaged runtime path |
 | `NEURALCOMPOSE_MODEL` | Requested model identity |
 | `NEURALCOMPOSE_INTERACTION_LOG` | Enables opt-in local interaction logging when supported by the selected path |
+| `NEURALCOMPOSE_BIOFEEDBACK_OSC` | Biofeedback egress over OSC: `1` for loopback on UDP 7000, a bare port for loopback on that port, or `host:port` for a LAN destination. Absent, `0` or malformed: off |
+| `NEURALCOMPOSE_BIOFEEDBACK_MIDI` | `1` creates the CoreMIDI virtual source "NeuralCompose Biofeedback" (in-machine, no network) |
+| `NEURALCOMPOSE_BIOFEEDBACK_RAW_EEG` | `1` re-broadcasts raw `/muse/eeg` over OSC. Ignored without OSC; MIDI cannot carry it |
+| `NEURALCOMPOSE_BIOFEEDBACK_PER_CHANNEL` | `1` sends four floats per band (one per channel) instead of the single healthy-channel average |
+| `NEURALCOMPOSE_BIOFEEDBACK_MAPPINGS` | Path to a JSON array of `BiofeedbackMapping` routes. Optional; without it only the Mind Monitor mirror runs |
 
 Environment variables configure a launch; they are not durable application preferences. Start a new process after changing them.
+
+## Biofeedback out (OSC and CoreMIDI)
+
+Off by default. When enabled (ADR-011, `decision_registry.md` entry 10), `BCIBiofeedback` turns each EEG window into a `BiofeedbackFrame` of derived features and sends them to music and visual tools: per-channel band powers, per-channel contact quality, the Track A blink and jaw clench events, and IMU readings when the transport has them. Raw EEG never leaves the process unless you pass the explicit raw toggle, and then only over OSC.
+
+```bash
+./Scripts/run-biofeedback-osc.sh                         # synthetic EEG -> OSC loopback 7000 (dry run, no hardware)
+./Scripts/run-biofeedback-osc.sh --board muses           # live Muse S over BLE
+./Scripts/run-biofeedback-osc.sh --board osc --port 7000 # Mind Monitor in (UDP 5000) -> features out (7000)
+./Scripts/run-biofeedback-osc.sh --host 192.168.1.20     # send to another machine on the LAN
+./Scripts/run-biofeedback-osc.sh --midi                  # also create the "NeuralCompose Biofeedback" MIDI source
+./Scripts/run-biofeedback-osc.sh --per-channel           # 4 floats per band instead of 1 average
+./Scripts/run-biofeedback-osc.sh --mappings ~/maps.json  # load a [BiofeedbackMapping] JSON set
+./Scripts/run-biofeedback-osc.sh --raw-eeg               # explicit raw /muse/eeg re-broadcast
+```
+
+The script only exports the five `NEURALCOMPOSE_BIOFEEDBACK_*` variables above and runs the app; set them yourself for any other launch path.
+
+**Mind Monitor-compatible addresses.** `MindMonitorMirror` speaks Mind Monitor's OSC scheme so a consumer written for it (the Muse Port Max for Live device, TouchDesigner, SuperCollider, Bitwig's OSC input) can be pointed at NeuralCompose unchanged:
+
+| Address | Payload |
+|---|---|
+| `/muse/elements/delta_absolute`, `theta_absolute`, `alpha_absolute`, `beta_absolute`, `gamma_absolute` | 1 float (average over healthy channels) or, with `--per-channel`, 4 floats; Bels |
+| `/muse/elements/horseshoe` | 4 floats, 1 good / 2 medium / 4 bad |
+| `/muse/elements/blink`, `/muse/elements/jaw_clench` | 1 int, sent only on the event tick |
+| `/muse/acc`, `/muse/gyro` | 3 floats (g, deg/s) when the frame has them |
+| `/muse/eeg` | raw samples, only with `--raw-eeg` |
+
+Not mirrored: `/muse/batt` and `/muse/elements/touching_forehead` (neither reaches the frame; the horseshoe carries contact quality). Mirror values are not health gated, exactly as Mind Monitor's are not: the consumer gets the horseshoe and decides.
+
+**Custom mappings.** A `BiofeedbackMapping` routes one feature through shaping (linear or log10 normalisation into 0 to 1, smoothing) to an output of your choice: an OSC address of your own with one float, a MIDI control change (7 or 14 bit) or a MIDI note gate for blink and jaw clench. Every mapping carries a `HealthPolicy` for the electrode under it (dead, saturated, stale), which is the difference from feeding Mind Monitor straight into a DAW. The virtual MIDI source appears in Ableton Live, Logic, Reaper and friends as "NeuralCompose Biofeedback".
+
+**Privacy.** Loopback (`127.0.0.1`, the default) and MIDI never leave the machine; the privacy banner shows them in orange. Any other host is a LAN destination over unauthenticated UDP, shown in red along with the raw EEG toggle; keep it on a private network. The badge is hidden while the feature is off. The OSC port here is an outbound port and is separate from the inbound Mind Monitor listener; see `HARDWARE_SETUP.md`, "Outbound biofeedback OSC and Mind Monitor port separation".
 
 ## Architecture
 
@@ -500,6 +538,7 @@ NeuralComposeApp
   ├── BCILLM           isolated MLX runtime and deterministic fallbacks
   ├── BCIVoice         speech recognition and synthesis seams
   ├── BCICloudBridge   explicit opt-in generation egress
+  ├── BCIBiofeedback   opt-in OSC and CoreMIDI egress of derived EEG features (ADR-011)
   └── WorldModelDemo   synthetic-task research demo, separate from live EEG claims
 ```
 
@@ -508,6 +547,7 @@ Load-bearing boundaries:
 - `BCICore` owns portable interfaces and deterministic mechanisms.
 - MLX imports are isolated to `BCILLM`.
 - Cloud generation is isolated to `BCICloudBridge`.
+- Biofeedback egress is isolated to `BCIBiofeedback`: derived features only, off by default, loopback by default.
 - The interface consumes resolved runtime and pipeline state rather than inventing provider or locality claims.
 - Synthetic research demos do not imply validation on physical EEG.
 
@@ -531,6 +571,7 @@ NeuralCompose/
 │   ├── BCILLM/
 │   ├── BCIVoice/
 │   ├── BCICloudBridge/
+│   ├── BCIBiofeedback/
 │   ├── NeuralComposeApp/
 │   ├── DialecticSession/
 │   └── WorldModelDemo/

@@ -217,6 +217,27 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         }
     }
 
+    /// Microphone (default) or typed prompts as the loop's input. Changing it
+    /// while the loop is active rebuilds the loop on the new listener, the
+    /// same way a mode change does. See `DialecticInputSource`.
+    @Published public var dialecticInputSource: DialecticInputSource = .microphone {
+        didSet {
+            guard oldValue != dialecticInputSource, hypnagogicLoopEnabled else { return }
+            reconcileHypnagogicLoop()
+        }
+    }
+
+    /// The typed-prompt listener. One instance for the view model's lifetime,
+    /// so prompts typed while the loop rebuilds are not lost; it is handed to
+    /// the loop only while `dialecticInputSource == .typedPrompt`.
+    public let typedPromptListener = TypedPromptListener()
+
+    /// Queues one typed prompt for the hypnagogic loop. Harmless when the loop
+    /// is off or on the mic: the line waits for the next typed-input loop.
+    public func submitTypedPrompt(_ text: String) async {
+        await typedPromptListener.submit(text)
+    }
+
     /// Finder and DMG launches do not inherit shell variables, so the app keeps
     /// an explicit runtime choice. `NEURALCOMPOSE_RUNTIME` / `_MODEL` still win
     /// when supplied, preserving scripted-harness reproducibility.
@@ -256,6 +277,16 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     @Published public private(set) var isDictating: Bool = false
     @Published public private(set) var isSpeaking: Bool = false
     @Published public private(set) var voiceWarning: String?
+    /// The last text `speak(text:)` voiced, for the "say that again" command.
+    /// Nil until the first explicit speak; the composed sentence is the
+    /// fallback. Loop speech is tracked by the loop itself, not here.
+    @Published public private(set) var lastSpokenText: String?
+    /// Multiplier on every requested speech rate in `speak(text:)`, stepped
+    /// down by `slowDownSpeech()` and never below `minimumSpeechRateScale`
+    /// (`SpeechRatePolicy.minimumScale`). 1.0 leaves the planned prosody untouched.
+    @Published public private(set) var speechRateScale: Float = 1.0
+    public static let slowDownRateStep: Float = SpeechRatePolicy.scaleStep
+    public static let minimumSpeechRateScale: Float = SpeechRatePolicy.minimumScale
 
     // ── Voice command listening - push-to-talk ASR → AppCommand. Same
     //    privacy posture as dictation: mic open only between explicit
@@ -328,6 +359,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private var hypnagogicLoop: (any HypnagogicRunnable)?
     /// The mode of the currently-built loop, so a change rebuilds it.
     private var hypnagogicLoopBuilt: HypnagogicMode?
+    /// The input source the current loop was built on, so a switch between
+    /// mic and typed prompts rebuilds it too.
+    private var hypnagogicLoopBuiltInput: DialecticInputSource?
     private var hypnagogicLoopReconcile: Task<Void, Never>?
     /// Stable relay of the dialectic loop's spoken-node events (Stage 1d). The
     /// 3D workspace subscribes here once at bind time, decoupled from loop
@@ -1050,7 +1084,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
     private func ensureHypnagogicLoopRunning() async {
         // Already running the requested mode? Nothing to do. A change tears the
         // old loop down first.
-        if hypnagogicLoop != nil, hypnagogicLoopBuilt == hypnagogicMode { return }
+        if hypnagogicLoop != nil,
+           hypnagogicLoopBuilt == hypnagogicMode,
+           hypnagogicLoopBuiltInput == dialecticInputSource { return }
         await ensureHypnagogicLoopStopped()
 
         let listener: any HypnagogicListening
@@ -1064,6 +1100,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                 return
             }
             (listener, speaker) = bridgePair
+        } else if dialecticInputSource == .typedPrompt {
+            // Typed prompts: the keyboard replaces the mic, speech output
+            // stays on. No microphone or speech authorization is requested,
+            // and nothing is captured; the egress of transcript text to the
+            // configured runtime is unchanged.
+            listener = typedPromptListener
+            speaker = voiceOutput
         } else {
             let micListener = HypnagogicListener(
                 contextualStrings: VoiceProfile.effectiveRecognitionVocabulary(for: container.voiceProfile),
@@ -1151,6 +1194,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
 
             hypnagogicLoop = loop
             hypnagogicLoopBuilt = hypnagogicMode
+            hypnagogicLoopBuiltInput = dialecticInputSource
             hypnagogicRuntimeDiagnostics = diagnostics
             // Forward this loop's spoken-node events into the stable relay the 3D
             // workspace subscribes to. Only the dialectic loop emits them.
@@ -1182,6 +1226,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         await hypnagogicLoop?.stop()
         hypnagogicLoop = nil
         hypnagogicLoopBuilt = nil
+        hypnagogicLoopBuiltInput = nil
         hypnagogicRuntimeDiagnostics = hypnagogicRuntimeDiagnostics.stopped()
     }
 
@@ -1658,16 +1703,57 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         guard !isSpeaking, !text.isEmpty else { return }
         isSpeaking = true
         defer { isSpeaking = false }
+        lastSpokenText = text
         do {
             // Phrase-by-phrase confidence-*wobbled* prosody (Stage 2): hedged
             // clauses softer/slower/rising, committed ones firmer/falling, so the
             // voice doesn't land every clause identically (the robotic tell).
+            // A standing "slow down" scales every planned rate the same way,
+            // so the wobble's relative shape survives.
             for (phrase, prosody) in ProsodyWobble.plan(text) {
-                try await voiceOutput.speak(phrase, prosody: prosody, onWord: nil)
+                try await voiceOutput.speak(phrase, prosody: scaledForRate(prosody), onWord: nil)
             }
         } catch {
             voiceWarning = "Speech failed: \(error.localizedDescription)"
         }
+    }
+
+    // MARK: - Transport commands ("say that again", "slow down")
+
+    /// Re-speaks the last utterance. While a dialectic hypnagogic loop is
+    /// running the loop owns the last voiced turn, so the request goes to it;
+    /// otherwise the last `speak(text:)` text is voiced again, or the composed
+    /// sentence when nothing has been spoken yet. Never regenerates.
+    public func repeatLastUtterance() async {
+        if let dialectic = hypnagogicLoop as? HypnagogicDialecticLoop {
+            do {
+                try await dialectic.repeatLastUtterance()
+            } catch {
+                voiceWarning = "Repeat failed: \(error.localizedDescription)"
+            }
+            return
+        }
+        await speak(text: lastSpokenText ?? composedText)
+    }
+
+    /// Steps the speech rate down for this and later utterances via
+    /// `SpeechRatePolicy`. The app's own voice scales its planned prosody by
+    /// `speechRateScale`; a running dialectic loop is told as well, so its
+    /// replies slow in step and the last reply is re-spoken at the new rate.
+    public func slowDownSpeech() async {
+        speechRateScale = SpeechRatePolicy.stepDownScale(speechRateScale)
+        if let dialectic = hypnagogicLoop as? HypnagogicDialecticLoop {
+            do {
+                try await dialectic.slowDownSpeech()
+            } catch {
+                voiceWarning = "Slow down failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Applies `speechRateScale` to a planned prosody via `SpeechRatePolicy.scaled(_:by:)`.
+    private func scaledForRate(_ prosody: SpeechProsody) -> SpeechProsody {
+        SpeechRatePolicy.scaled(prosody, by: speechRateScale)
     }
 
     // MARK: - Semantic Dialectic Engine

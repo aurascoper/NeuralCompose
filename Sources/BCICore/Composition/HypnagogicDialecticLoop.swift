@@ -162,6 +162,23 @@ public actor HypnagogicDialecticLoop {
     private var field: DialecticalField
     /// Fast biological clock - EMA-smoothed `SpectralState` gloss.
     private var gloss = SpectralGloss()
+    /// The last utterance this loop voiced, so a transport command ("say that
+    /// again", "slow down") can re-speak it without a generation call. Holds
+    /// the unadjusted competition prosody; the rate offset is applied at speak
+    /// time so repeated slow-downs compound from the same base.
+    private var lastVoicedTurn: VoicedTurn?
+    /// Cumulative rate offset from "slow down" requests, applied to every later
+    /// voiced turn and to replays. Steps by `slowDownStep`, floored at
+    /// `maxSlowDownOffset`; the resulting rate never drops below
+    /// `minimumSpeechRate`.
+    private var speechRateOffset: Float = 0
+
+    private struct VoicedTurn {
+        let text: String
+        let prosody: SpeechProsody
+        let nodeID: String
+        let embedding: Embedding
+    }
 
     public init(
         listener: any HypnagogicListening,
@@ -338,6 +355,14 @@ public actor HypnagogicDialecticLoop {
             memory.autoforgetIfNeeded(selfSimilarity: nil, forceReset: true)
             history.trimToRecent(0)
             try await logSilentTurn(heard: heard, advanceSilenceCounter: false)
+            return
+        }
+        // Transport commands are spoken back to the voice, not to the topic:
+        // without this intercept "say that again" reached both generators as
+        // a philosophical prompt. Re-speak (and, for slow-down, re-rate) the
+        // last voiced turn; never generate, never advance the silence count.
+        if let transport = Self.classifyTransportCommand(heard) {
+            try await performTransportCommand(transport, heard: heard)
             return
         }
         let discourseKind = Self.classifyDiscourse(heard)
@@ -542,8 +567,14 @@ public actor HypnagogicDialecticLoop {
             // a close call carries the losing pole's colour (audible tension).
             let probs = DialecticalDynamics.probabilities(
                 potentials: scored.map(\.potential), tau: result.selectionTemperature)
-            let turnProsody = SpeechProsody.blend(
+            let blendedProsody = SpeechProsody.blend(
                 zip(scored, probs).map { (roleProsody(for: $0.candidate.roleID), $1) })
+            // Any standing "slow down" request shapes this turn too; the base
+            // blend is what a later replay re-rates from.
+            let turnProsody = adjustedForSpeechRate(blendedProsody)
+            lastVoicedTurn = VoicedTurn(
+                text: candidate.text, prosody: blendedProsody,
+                nodeID: nodeID, embedding: candidate.embedding)
             await logRequestedProsody(for: record, text: candidate.text, prosody: turnProsody)
             try await speakChunks(candidate.text, prosody: turnProsody,
                                   grounding: (nodeID: nodeID, embedding: candidate.embedding))
@@ -600,6 +631,97 @@ public actor HypnagogicDialecticLoop {
         }
         lastTurnAt = Date()
         turnIndex += 1
+    }
+
+    // MARK: - Transport commands
+
+    /// What a transport utterance asks of the voice itself, as opposed to a
+    /// prompt about the topic.
+    public enum TransportCommand: String, Sendable, Equatable {
+        /// Voice the last spoken turn again, unchanged.
+        case repeatLast
+        /// Step the speech rate down, then voice the last spoken turn again at
+        /// the new rate.
+        case slowDown
+    }
+
+    /// Each "slow down" lowers the requested rate by this much (`SpeechRatePolicy.offsetStep`).
+    public static let slowDownStep: Float = SpeechRatePolicy.offsetStep
+    /// The offset never goes below this (`SpeechRatePolicy.maxSlowDownOffset`),
+    /// so a run of slow-downs cannot push the voice to a crawl.
+    public static let maxSlowDownOffset: Float = SpeechRatePolicy.maxSlowDownOffset
+    /// Floor for any adjusted rate (`SpeechRatePolicy.minimumSpeechRate`).
+    public static let minimumSpeechRate: Float = SpeechRatePolicy.minimumSpeechRate
+    /// Rate assumed when a prosody declares none (`SpeechRatePolicy.defaultSpeechRate`).
+    static let defaultSpeechRate: Float = SpeechRatePolicy.defaultSpeechRate
+
+    /// The standing rate offset (0 until the first slow-down). Read-only; for
+    /// diagnostics and tests.
+    public var currentSpeechRateOffset: Float { speechRateOffset }
+    /// Text of the last voiced turn, or nil before the first one.
+    public var lastVoicedText: String? { lastVoicedTurn?.text }
+
+    /// Recognizes the transport phrases heard in the interaction logs. Exact
+    /// match after the same normalization `isMemoryResetCommand` applies, plus
+    /// a leading or trailing "please". Slow-down phrases are checked first so
+    /// "can you repeat that slower" asks for the slower replay, not a plain
+    /// repeat. Anything else is a prompt and returns nil.
+    public static func classifyTransportCommand(_ heard: String) -> TransportCommand? {
+        var normalized = heard.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        if normalized.hasPrefix("please ") { normalized.removeFirst("please ".count) }
+        if normalized.hasSuffix(" please") { normalized.removeLast(" please".count) }
+        let slowDownPhrases: Set<String> = [
+            "slow down", "speak slower", "slower", "say that slower", "say it slower",
+            "can you repeat that slower", "could you repeat that slower",
+            "can you say that slower", "could you say that slower", "too fast",
+        ]
+        if slowDownPhrases.contains(normalized) { return .slowDown }
+        let repeatPhrases: Set<String> = [
+            "say that again", "repeat that", "repeat last", "say again", "say it again",
+            "can you repeat that", "could you repeat that", "can you say that again",
+            "could you say that again", "what did you say", "come again",
+        ]
+        if repeatPhrases.contains(normalized) { return .repeatLast }
+        return nil
+    }
+
+    /// App-side entry for the "Repeat Last Utterance" command: re-speaks the
+    /// last voiced turn without logging a turn (nothing was heard). No-op
+    /// before the first voiced turn.
+    public func repeatLastUtterance() async throws {
+        try await performTransportCommand(.repeatLast, heard: nil)
+    }
+
+    /// App-side entry for the "Slow Down Speech" command: lowers the standing
+    /// rate offset and, if a turn has been voiced, re-speaks it at the new rate.
+    public func slowDownSpeech() async throws {
+        try await performTransportCommand(.slowDown, heard: nil)
+    }
+
+    /// Shared by the in-turn intercept (`heard` is the transcript, logged as a
+    /// candidate-less turn so the run's turn count still advances) and the
+    /// app-side entries (`heard` nil, nothing logged).
+    private func performTransportCommand(_ command: TransportCommand, heard: String?) async throws {
+        if command == .slowDown {
+            speechRateOffset = SpeechRatePolicy.stepDownOffset(speechRateOffset)
+        }
+        if let heard {
+            try await logSilentTurn(heard: heard, advanceSilenceCounter: false)
+        }
+        guard let last = lastVoicedTurn else { return }
+        phase = .speaking
+        try await speakChunks(last.text, prosody: adjustedForSpeechRate(last.prosody),
+                              grounding: (nodeID: last.nodeID, embedding: last.embedding))
+    }
+
+    /// Applies the standing slow-down offset to a prosody via `SpeechRatePolicy`.
+    private func adjustedForSpeechRate(_ prosody: SpeechProsody) -> SpeechProsody {
+        SpeechRatePolicy.offset(prosody, by: speechRateOffset)
     }
 
     /// Discourse classification for distinguishing direct speech to NeuralCompose
