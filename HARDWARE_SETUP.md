@@ -161,6 +161,38 @@ broadly to receive on whatever interface Tailscale creates. The actual
 security boundary is "only devices on your VPN can reach this port," which
 is the VPN's job, not the app's — see `MindMonitorOSCStream`'s doc comment.
 
+### Outbound biofeedback OSC and Mind Monitor port separation
+
+The Mind Monitor transport above is inbound: `MindMonitorOSCStream` listens
+on UDP 5000 (or `--port`) for the phone's packets. The biofeedback egress
+(`./Scripts/run-biofeedback-osc.sh`, ADR-011) is outbound: `OSCUDPSender`
+sends derived features to `127.0.0.1:7000` by default, or to the
+`--host`/`--port` you give it. They are different sockets in different
+directions, so both can run at once:
+
+```bash
+./Scripts/run-biofeedback-osc.sh --board osc --port 7000   # in: Mind Monitor on UDP 5000; out: features on UDP 7000
+```
+
+Keep the two ports distinct. Sending features back to the port Mind Monitor
+delivers on would feed NeuralCompose its own output. `7000` is the Muse Port
+Max for Live default; many OSC tools use `9000`, so `--port 9000` is the
+other common choice. Loopback stays on this Mac; any other `--host` is the
+LAN tier and the privacy banner shows it in red.
+
+**One BLE central at a time (Muse native-BLE profiles).** The direct BrainFlow
+paths (`museTwoNativeBLE`, `museSNativeBLE`, `museSAthena`) make this Mac the
+headband's Bluetooth central. On these supported Muse revisions the headband
+maintains a single active BLE central connection, so Mind Monitor on the phone
+must be quit (not merely backgrounded) before the Mac can discover the
+band, and the band must be power-cycled if it was paired to the phone
+moments ago. The reverse holds too: while Mind Monitor streams to you over
+OSC, do not also launch a native BLE profile. Pick one path per session:
+
+- Headband near the Mac: native BLE profile, biofeedback out on 7000.
+- Headband on the phone: Mind Monitor in on 5000 over the VPN, biofeedback
+  out on 7000. The phone, not this Mac, is the BLE central.
+
 ## Installing BrainFlow
 
 NeuralCompose links BrainFlow as a system library, not as a SwiftPM package.
