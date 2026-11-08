@@ -8,6 +8,7 @@ import BCILLM
 import BCIVoice
 import BCICloudBridge
 import BCIPeerBridge
+import BCIBiofeedback
 
 public struct CalibrationMetrics: Sendable {
     public let channelCount: Int
@@ -556,8 +557,13 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         let containerRef = container
         let spectralEstimatorRef = self.spectralEstimator
         let jepaTransitionCaptureRef = self.jepaTransitionCapture
+        // Biofeedback egress (ADR-011): nil unless a transport was enabled at
+        // launch. `rawEEGEgress` is read once here so the 256 Hz sample loop
+        // only hops to the actor when raw re-broadcast is actually on.
+        let biofeedbackRef = container.biofeedback
+        let rawEEGEgress = biofeedbackRef?.includesRawEEG ?? false
         streamTask = Task.detached(priority: .userInitiated) {
-            [weak self, windowing, metrics = metricsRef, channel, samples, spectralEstimatorRef, jepaTransitionCaptureRef] in
+            [weak self, windowing, metrics = metricsRef, channel, samples, spectralEstimatorRef, jepaTransitionCaptureRef, biofeedbackRef] in
             var current = initialResolved
             // Movement (accel/gyro) - parallel to the EEG sample loop, OSC-only.
             // The IMU channel outlives per-attempt EEG stop()/start() cycles, so
@@ -574,6 +580,9 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                 (self?.isCalibrating ?? false) ? self?.calibrationRecorder : nil
                             }
                             await recorder?.recordMovement(movement)
+                            // IMU to the egress: cached, forwarded with the
+                            // next window frame (/muse/acc, /muse/gyro).
+                            await biofeedbackRef?.ingest(movement: movement)
                         }
                     }
                 }
@@ -601,6 +610,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                         }
                         // Single-owner fan-out (see liveSampleStream()).
                         samples.send(sample)
+                        // Raw EEG egress is the one payload ADR-011 keeps
+                        // behind an explicit toggle. Gated here on a constant
+                        // so the default path pays no actor hop per sample.
+                        if rawEEGEgress {
+                            await biofeedbackRef?.ingest(sample: sample)
+                        }
 
                         // Record sample if in calibration mode (Track A) or
                         // in imagined-speech recording (Track B). The two
@@ -650,6 +665,12 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                                 // window. Cheap and avoids needing the full CalibrationMetrics
                                 // struct when not recording.
                                 let quality = Self.signalQuality(of: window)
+                                // Biofeedback egress reads the RAW window, before the
+                                // substitution below. The cleaned window has a lifted
+                                // electrode overwritten with its contralateral partner,
+                                // which would hide the bad contact from the horseshoe
+                                // and from every mapping's HealthPolicy (ADR-011 §4).
+                                await biofeedbackRef?.ingest(window: window)
                                 // Substitute dead/saturated channels with their healthy
                                 // contralateral partner (TP9<->TP10, AF7<->AF8) before
                                 // downstream spectral estimation, JEPA capture, and
@@ -781,7 +802,7 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
         let classifierRef = self.classifier
         let smootherRef = self.smoother
         classifyTask = Task.detached(priority: .userInitiated) {
-            [weak self, metrics = metricsRef, channel, composition, classifications] in
+            [weak self, metrics = metricsRef, channel, composition, classifications, biofeedbackRef] in
             for await window in channel.stream {
                 if Task.isCancelled { break }
                 let cStart = DispatchTime.now()
@@ -816,6 +837,11 @@ public final class AppViewModel: ObservableObject, AppCommandDispatchTarget {
                     effectiveIntent = prediction.confidence >= 0.60 ? prediction.intent : .rest
                 }
                 await self?.setCurrentIntent(effectiveIntent)
+                // Track A events to the egress on the classifier's own tick,
+                // so a blink reaches the DAW with classifier latency rather
+                // than one window stride later. `.rest` is sent too: it is
+                // what closes an open note gate.
+                await biofeedbackRef?.note(intent: effectiveIntent, at: window.endTimestamp)
                 await composition.applyIntent(smoothed)
             }
         }

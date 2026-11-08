@@ -63,9 +63,13 @@ reproducible from a recording.
    - *OSC to a LAN host*: any other host. Surfaced in the privacy
      indicator with the destination, and logged at `.notice` on start,
      mirroring what ADR-004 requires of the inbound listener.
-   The feature as a whole is off by default; while off, the app wires
-   `NullBiofeedbackSink` so the mapper path stays exercised with nothing
-   leaving the process.
+   The feature as a whole is off by default. While off, the app
+   constructs no coordinator at all (`AppContainer.biofeedback == nil`):
+   no band powers are computed and no sink exists, so there is nothing to
+   exercise and nothing to leak. `NullBiofeedbackSink` is the protocol's
+   stub for tests and previews. (Amended 2026-11-07 by the PR 2 wiring;
+   the original text had the app wire the null sink while off, which
+   would have spent an FFT per window for no consumer.)
 
 4. **Health gating is mandatory and lives in one place.** Every
    `BiofeedbackMapping` carries a `HealthPolicy` (`holdLast` by default,
@@ -189,6 +193,16 @@ with the fixtures as acceptance. Rejected for now.
   recording and composite sinks.
 - `Sources/BCIBiofeedback/OSCUDPSender.swift`,
   `CoreMIDIVirtualSource.swift`: the two transports.
+- `Sources/BCIBiofeedback/BiofeedbackCoordinator.swift`: the one object
+  that holds a mapper and a sink; raw window in, intent in, IMU in, and the
+  single runtime call site of `MindMonitorMirror.rawEEG(_:)`.
+- `Sources/NeuralComposeApp/BiofeedbackConfiguration.swift`: env-var
+  resolution (`NEURALCOMPOSE_BIOFEEDBACK_OSC`, `_MIDI`, `_RAW_EEG`,
+  `_PER_CHANNEL`, `_MAPPINGS`), tier and indicator strings.
+- `Sources/NeuralComposeApp/AppContainer.swift` (`makeBiofeedback`),
+  `AppViewModel.swift` (four call sites: raw window, classifier intent,
+  IMU, gated raw sample), `PrivacyIndicatorView.swift` (badge and Network
+  row), `Scripts/run-biofeedback-osc.sh`.
 - `Sources/BCIEEG/OSC/OSCEncoder.swift`: the production encoder, mirror
   of `MuseOSCDecoder`.
 - Tests: `Tests/BCIBiofeedbackTests/*`, `Tests/BCIEEGTests/OSCEncoderTests.swift`.

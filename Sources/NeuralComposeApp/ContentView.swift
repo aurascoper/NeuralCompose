@@ -57,6 +57,7 @@ struct ContentView: View {
                 hypnagogicMode: $viewModel.hypnagogicMode,
                 hypnagogicRuntimePreference: $viewModel.hypnagogicRuntimePreference,
                 hypnagogicRuntimeDiagnostics: viewModel.hypnagogicRuntimeDiagnostics,
+                biofeedback: viewModel.container.biofeedbackConfiguration,
                 health: viewModel.healthSnapshot,
                 onReconnectMuse: { Task { await viewModel.reconnectLiveEEG() } }
             )
